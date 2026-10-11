@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useTournament } from '../features/tournament/store';
 import { TopNavSwitcher } from '../components/TopNavSwitcher';
-import { Layers, Plus, Trophy, AlertTriangle, Sparkles } from 'lucide-react';
+import { Layers, Plus, Trophy, AlertTriangle, Sparkles, ShieldCheck, Eye, LayoutDashboard, Globe } from 'lucide-react';
 import { Tournament } from '../features/tournament/types';
 import { TournamentCard } from '../features/tournament/components/TournamentCard';
 import { CreateTournamentModal } from '../features/tournament/components/CreateTournamentModal';
 import { usePinAuth } from '../features/auth/AuthContext';
 
 export const TournamentSwitcherPage: React.FC = () => {
-  const { isSystemAdmin } = usePinAuth();
+  const { isSystemAdmin, session, canManage } = usePinAuth();
+  const isTournamentAdmin = session?.role === 'TOURNAMENT_ADMIN';
+  const [systemViewTab, setSystemViewTab] = useState<'admin' | 'public'>('admin');
   const {
     tournaments,
     deleteTournament,
@@ -229,15 +231,155 @@ export const TournamentSwitcherPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(480px, 1fr))', gap: '1.5rem' }}>
-            {tournaments.map(tournament => (
-              <TournamentCard
-                key={tournament.id}
-                tournament={tournament}
-                onDeleteClick={setTournamentToDelete}
-                showOrgBadge={true}
-              />
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+            {/* 1. Scoped Workspace for Tournament Admin */}
+            {isTournamentAdmin && (
+              (() => {
+                const managedTourneys = tournaments.filter(
+                  t => canManage(t.slug) || canManage(t.id)
+                );
+                if (managedTourneys.length === 0) return null;
+                return (
+                  <section
+                    style={{
+                      background: 'rgba(255, 201, 5, 0.04)',
+                      border: '1px solid rgba(255, 201, 5, 0.28)',
+                      borderRadius: 'var(--radius-lg, 12px)',
+                      padding: '1.5rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <ShieldCheck size={20} color="var(--color-gold-bright)" />
+                        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+                          {managedTourneys.length > 1
+                            ? `Your Managed Tournaments (${managedTourneys.length})`
+                            : 'Your Managed Tournament'}
+                        </h2>
+                      </div>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--color-gold-bright)', fontWeight: 600 }}>
+                        🏆 Tournament Director Access Active
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(480px, 1fr))', gap: '1.5rem' }}>
+                      {managedTourneys.map(tournament => (
+                        <TournamentCard
+                          key={`managed-${tournament.id}`}
+                          tournament={tournament}
+                          variant="admin"
+                          showOrgBadge={true}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })()
+            )}
+
+            {/* 2. System Admin Workspace View Mode Switcher */}
+            {isSystemAdmin && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderBottom: '1px solid var(--color-border)',
+                  paddingBottom: '0.75rem',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <LayoutDashboard size={18} color="#38bdf8" />
+                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
+                    System Admin Workspace:
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: 'var(--radius-full, 9999px)',
+                    padding: '3px',
+                    gap: '3px',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSystemViewTab('admin')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.35rem 0.85rem',
+                      borderRadius: 'var(--radius-full, 9999px)',
+                      border: 'none',
+                      fontSize: '0.78rem',
+                      fontWeight: systemViewTab === 'admin' ? 700 : 500,
+                      background: systemViewTab === 'admin' ? 'var(--color-gold-bright, #ffc905)' : 'transparent',
+                      color: systemViewTab === 'admin' ? '#090d16' : 'var(--color-text-secondary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <ShieldCheck size={13} />
+                    <span>Organizer Tools</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSystemViewTab('public')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      padding: '0.35rem 0.85rem',
+                      borderRadius: 'var(--radius-full, 9999px)',
+                      border: 'none',
+                      fontSize: '0.78rem',
+                      fontWeight: systemViewTab === 'public' ? 700 : 500,
+                      background: systemViewTab === 'public' ? 'var(--color-gold-bright, #ffc905)' : 'transparent',
+                      color: systemViewTab === 'public' ? '#090d16' : 'var(--color-text-secondary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Eye size={13} />
+                    <span>Public Preview</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 3. Public Directory (Or System Admin Full List) */}
+            <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Globe size={18} color="var(--color-gold-bright)" />
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+                    {isSystemAdmin && systemViewTab === 'admin' ? 'All Managed Tournaments' : 'Public Tournaments Directory'}
+                  </h2>
+                </div>
+                <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                  {isSystemAdmin && systemViewTab === 'admin'
+                    ? 'Full Administrative Controls'
+                    : 'Friction-Free Public Spectator Access'}
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(480px, 1fr))', gap: '1.5rem' }}>
+                {tournaments.map(tournament => (
+                  <TournamentCard
+                    key={tournament.id}
+                    tournament={tournament}
+                    variant={isSystemAdmin && systemViewTab === 'admin' ? 'admin' : 'public'}
+                    onDeleteClick={isSystemAdmin ? setTournamentToDelete : undefined}
+                    showOrgBadge={true}
+                  />
+                ))}
+              </div>
+            </section>
           </div>
         )}
       </div>

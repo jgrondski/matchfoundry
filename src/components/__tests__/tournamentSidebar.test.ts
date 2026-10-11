@@ -184,5 +184,26 @@ describe('TournamentSidebar helpers', () => {
         expect(getTournamentTargetUrl(noTiers, 'bracket', false)).toBe('/lone-star-2026/brackets');
       });
     });
+
+    describe('manageable tournaments filtering in sidebar dropdown', () => {
+      it('filters out unmanageable tournaments for Tournament Admins while retaining all for System Admins', () => {
+        const canManage = (slug?: string) => slug === 'ctwc-2026' || slug === 'kc-2026-open';
+
+        // For Tournament Admin:
+        const tournamentAdminManageable = mockTournaments.filter(
+          t => canManage(t.slug) || canManage(t.id)
+        );
+        expect(tournamentAdminManageable.map(t => t.slug)).toEqual(['ctwc-2026', 'kc-2026-open']);
+        expect(tournamentAdminManageable.map(t => t.slug)).not.toContain('lone-star-2026');
+
+        // For System Admin:
+        const isSystemAdmin = true;
+        const systemAdminManageable = mockTournaments.filter(
+          t => isSystemAdmin || canManage(t.slug) || canManage(t.id)
+        );
+        expect(systemAdminManageable).toHaveLength(mockTournaments.length);
+      });
+    });
   });
 });
+

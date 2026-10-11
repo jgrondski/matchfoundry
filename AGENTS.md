@@ -56,6 +56,7 @@
 - `npm run test:brackets` — Fast, targeted bracket math & visualizer tests (~1-2s).
 - `npm run test:api` — Relational database & backend API middleware tests (~3-5s).
 - `npm run test:ui` — Component, form, drawer, and navigation tests (~2-3s).
+- `npm run test:e2e` — Playwright headless Golden Journeys end-to-end smoke tests (~5s).
 - `npx vitest run <file>` — Single file unit test during development.
 - `npm run typecheck` — TypeScript check (`tsc --noEmit`).
 - `npm test` — Full regression test suite (run at milestone completion).
@@ -91,5 +92,18 @@
 - **Data Management & Simulation Isolation:** Destructive data management and simulation controls ("Clear All Tournament Data", "Simulate Full Tournament", "Seed Qualifiers Only") and corresponding API endpoints (`/api/simulate/sample`, bulk reset operations) are strictly restricted to System Admins. Tournament Admins cannot view, access, or trigger simulation or data wipe actions.
 - **Encrypted at Rest:** Tournament PINs are encrypted via AES-256-GCM (`pinCrypto.ts`), allowing System Admins to safely reveal them (`👁️ 7492`) without disrupting active sessions.
 - **API Mutation Protection:** All mutation endpoints (`POST`, `PUT`, `DELETE`) require `Authorization: Bearer <sessionToken>` and enforce role/tournament scope.
+
+## 11. Quality Assurance, Testing Pyramid & Walking Skeleton Journeys
+- **The Testing Pyramid Invariant**:
+  - **Tier 1 (Base): Pure Math & Store Unit Tests (Vitest)** — Bracket logic, tiebreakers, seeding, and cryptographic primitives. 100% in-memory, deterministic, executed in <2 seconds.
+  - **Tier 2 (Middle): Integration & Composed Page Tests (Vitest + RTL + pg-mem)** — Simulates user interaction flows with mock APIs and in-memory PostgreSQL (`pg-mem`). Exercises form state, modals, and conditional renders without live server dependencies.
+  - **Tier 3 (Top): Golden User Journeys (Playwright Headless CLI)** — Strictly 3–5 mission-critical end-to-end paths (`e2e/golden-journeys.spec.ts`) that test the true walking skeleton (real Vite dev server, routing gates, cookie/localStorage persistence, live API middleware). Executed in <6 seconds via `npm run test:e2e`.
+- **Pre-Completion Walking Skeleton Mandate**:
+  - Never declare a feature or milestone "finished" based solely on isolated unit tests or static typechecks.
+  - Before presenting work as complete, execute the Walking Skeleton journeys:
+    1. **Public Spectator**: Starts on `/` unauthenticated $\rightarrow$ clicks tournament card $\rightarrow$ verifies public view renders with zero login hurdles $\rightarrow$ navigates back to `/`.
+    2. **Security & Recovery**: Tries accessing protected route $\rightarrow$ gets bounced to `/admin?redirect=...` $\rightarrow$ unlocks with `.env` emergency recovery PIN $\rightarrow$ completes redirected journey with System Admin capabilities.
+    3. **Delegated Admin Isolation**: Sets scoped tournament PIN $\rightarrow$ logs out $\rightarrow$ logs in as Tournament Admin $\rightarrow$ verifies access to tournament workspace while all global administrative directories (`/organizations`, `/players`) remain sealed.
+- **Fast Feedback Rule**: Keep Playwright tests focused strictly on smoke/journey level validation. All edge-case math and permutations belong in Vitest unit tests to preserve CI execution speed.
 
 

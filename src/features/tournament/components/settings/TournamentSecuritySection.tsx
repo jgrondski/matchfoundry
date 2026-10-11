@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KeyRound, Eye, EyeOff, ShieldCheck, Check, AlertCircle } from 'lucide-react';
 import { usePinAuth, getAuthHeaders } from '../../../auth/AuthContext';
+import { SharedPinWarningModal, SharedTournamentInfo } from './SharedPinWarningModal';
 import { labelStyle, inputStyle } from './types';
 
 interface TournamentSecuritySectionProps {
@@ -18,12 +19,16 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateFeedback, setUpdateFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Shared PIN warning modal state
+  const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
+  const [sharedTournaments, setSharedTournaments] = useState<SharedTournamentInfo[]>([]);
+
   // System Admin reveal state
   const [revealedPin, setRevealedPin] = useState<string | null>(null);
   const [isRevealing, setIsRevealing] = useState(false);
   const [showRevealed, setShowRevealed] = useState(false);
 
-  const handleUpdatePin = async (e?: React.SyntheticEvent) => {
+  const handleUpdatePin = async (e?: React.SyntheticEvent, confirmed: boolean = false) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -45,13 +50,26 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
           'Content-Type': 'application/json',
           ...getAuthHeaders(),
         },
-        body: JSON.stringify({ pin: pinToSave }),
+        body: JSON.stringify({ pin: pinToSave, confirmed }),
       });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Failed to update tournament PIN');
       }
-      setUpdateFeedback({ type: 'success', message: 'Tournament PIN successfully updated!' });
+
+      if (data.isShared && !data.success) {
+        setSharedTournaments(data.sharedTournaments || []);
+        setIsWarningModalOpen(true);
+        setIsUpdating(false);
+        return;
+      }
+
+      setIsWarningModalOpen(false);
+      setSharedTournaments([]);
+      const successMessage = data.isShared
+        ? `Tournament PIN successfully updated! (Shared with ${data.sharedTournaments?.length || 1} other tournament${data.sharedTournaments?.length === 1 ? '' : 's'})`
+        : 'Tournament PIN successfully updated!';
+      setUpdateFeedback({ type: 'success', message: successMessage });
       setNewPin('');
       if (isSystemAdmin) {
         setRevealedPin(pinToSave);
@@ -260,6 +278,17 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
           </div>
         )}
       </div>
+
+      <SharedPinWarningModal
+        isOpen={isWarningModalOpen}
+        onClose={() => {
+          setIsWarningModalOpen(false);
+          setSharedTournaments([]);
+        }}
+        onConfirm={() => handleUpdatePin(undefined, true)}
+        sharedTournaments={sharedTournaments}
+        isSubmitting={isUpdating}
+      />
     </section>
   );
 };

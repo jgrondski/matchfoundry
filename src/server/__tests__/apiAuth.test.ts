@@ -107,6 +107,100 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       expect(data.token).toBeDefined();
     });
 
+    it('authenticates shared PIN across multiple tournaments and returns all matching tournament IDs and slugs', async () => {
+      const tourney1Id = crypto.randomUUID();
+      const tourney1 = createEmptyTournament({ slug: 'tourney-alpha', name: 'Tournament Alpha' });
+      tourney1.id = tourney1Id;
+      tourney1.slug = 'tourney-alpha';
+      tourney1.organizationId = 'org_ctwc';
+      tourney1.adminPinEncrypted = encryptPin('7777');
+      await saveFullTournament(tourney1);
+
+      const tourney2Id = crypto.randomUUID();
+      const tourney2 = createEmptyTournament({ slug: 'tourney-beta', name: 'Tournament Beta' });
+      tourney2.id = tourney2Id;
+      tourney2.slug = 'tourney-beta';
+      tourney2.organizationId = 'org_ctwc';
+      tourney2.adminPinEncrypted = encryptPin('7777'); // Same shared PIN
+      await saveFullTournament(tourney2);
+
+      const tourney3Id = crypto.randomUUID();
+      const tourney3 = createEmptyTournament({ slug: 'tourney-gamma', name: 'Tournament Gamma' });
+      tourney3.id = tourney3Id;
+      tourney3.slug = 'tourney-gamma';
+      tourney3.organizationId = 'org_ctwc';
+      tourney3.adminPinEncrypted = encryptPin('8888'); // Different PIN
+      await saveFullTournament(tourney3);
+
+      // Log in with shared PIN "7777" without selecting a specific scope
+      const req = createMockReq({
+        url: '/api/auth/pin',
+        method: 'POST',
+        body: { pin: '7777' },
+      });
+      const res = createMockRes();
+      await middleware(req, res as any, () => {});
+
+      expect(res.getStatusCode()).toBe(200);
+      const data = res.getBody();
+      expect(data.role).toBe('TOURNAMENT_ADMIN');
+      expect(data.tournamentIds).toContain(tourney1Id);
+      expect(data.tournamentIds).toContain(tourney2Id);
+      expect(data.tournamentIds).not.toContain(tourney3Id);
+      expect(data.tournamentSlugs).toContain('tourney-alpha');
+      expect(data.tournamentSlugs).toContain('tourney-beta');
+      expect(data.tournamentSlugs).not.toContain('tourney-gamma');
+
+      // Verify token authorizes mutations on both tourney-alpha and tourney-beta
+      const token = data.token;
+
+      const updateReq1 = createMockReq({
+        url: `/api/tournaments/${tourney1Id}/pin`,
+        method: 'PUT',
+        body: { pin: '7777' },
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const updateRes1 = createMockRes();
+      await middleware(updateReq1, updateRes1 as any, () => {});
+      expect(updateRes1.getStatusCode()).toBe(200);
+
+      const updateReq2 = createMockReq({
+        url: `/api/tournaments/${tourney2Id}/pin`,
+        method: 'PUT',
+        body: { pin: '7777' },
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const updateRes2 = createMockRes();
+      await middleware(updateReq2, updateRes2 as any, () => {});
+      expect(updateRes2.getStatusCode()).toBe(200);
+      expect(updateRes2.getBody().isShared).toBe(true);
+      expect(updateRes2.getBody().success).toBe(false);
+      expect(updateRes2.getBody().sharedTournaments[0].id).toBe(tourney1Id);
+
+      // Confirm with confirmed: true
+      const confirmReq2 = createMockReq({
+        url: `/api/tournaments/${tourney2Id}/pin`,
+        method: 'PUT',
+        body: { pin: '7777', confirmed: true },
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const confirmRes2 = createMockRes();
+      await middleware(confirmReq2, confirmRes2 as any, () => {});
+      expect(confirmRes2.getStatusCode()).toBe(200);
+      expect(confirmRes2.getBody().success).toBe(true);
+
+      // But accessing tourney-gamma with this token fails with 403 Forbidden
+      const updateReq3 = createMockReq({
+        url: `/api/tournaments/${tourney3Id}/pin`,
+        method: 'PUT',
+        body: { pin: '9999' },
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const updateRes3 = createMockRes();
+      await middleware(updateReq3, updateRes3 as any, () => {});
+      expect(updateRes3.getStatusCode()).toBe(403);
+    });
+
     it('returns 401 Unauthorized for invalid PIN', async () => {
       const req = createMockReq({
         url: '/api/auth/pin',

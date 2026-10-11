@@ -301,7 +301,10 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
     },
   ];
 
-  const filteredTournaments = filterTournamentsByQuery(tournaments, tournamentSearchQuery);
+  const manageableTournaments = tournaments.filter(
+    t => isSystemAdmin || canManage(t.slug) || canManage(t.id)
+  );
+  const filteredTournaments = filterTournamentsByQuery(manageableTournaments, tournamentSearchQuery);
 
   return (
     <>
@@ -512,6 +515,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
             {/* Upgraded Workspace & Context Dropdown Menu */}
             {isTournamentMenuOpen && (
               <div
+                data-testid="tournament-dropdown-menu"
                 style={{
                   position: 'absolute',
                   top: '100%',
@@ -588,7 +592,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                     justifyContent: 'space-between',
                   }}
                 >
-                  <span>Tournaments ({tournaments.length})</span>
+                  <span>Tournaments ({manageableTournaments.length})</span>
                   {tournamentSearchQuery && (
                     <span style={{ fontSize: '0.62rem', color: 'var(--color-gold-bright, #ffc905)' }}>
                       Filtered ({filteredTournaments.length})

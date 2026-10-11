@@ -21,16 +21,17 @@ export const AdminLoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Auto redirect if already authorized for the requested destination
+  const availableTournaments = tournaments.filter(
+    t => !(session?.role === 'TOURNAMENT_ADMIN' && (canManage(t.slug) || canManage(t.id)))
+  );
+
+  // Auto redirect ONLY if arriving with a specific redirectUrl and already authorized
   useEffect(() => {
+    if (!redirectUrl) return;
     if (isSystemAdmin) {
-      if (redirectUrl) {
-        navigate(redirectUrl, { replace: true });
-      }
-    } else if (selectedTourneySlug && canManage(selectedTourneySlug)) {
-      if (redirectUrl && !needSystem) {
-        navigate(redirectUrl, { replace: true });
-      }
+      navigate(redirectUrl, { replace: true });
+    } else if (selectedTourneySlug && canManage(selectedTourneySlug) && !needSystem) {
+      navigate(redirectUrl, { replace: true });
     }
   }, [isSystemAdmin, selectedTourneySlug, canManage, navigate, redirectUrl, needSystem]);
 
@@ -100,6 +101,24 @@ export const AdminLoginPage: React.FC = () => {
           gap: '1.25rem',
         }}
       >
+        {/* Back Link */}
+        <Link
+          to="/"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            color: 'var(--color-text-muted, #8b949e)',
+            fontSize: '0.8rem',
+            textDecoration: 'none',
+            alignSelf: 'flex-start',
+            transition: 'color 0.15s ease',
+          }}
+        >
+          <ArrowLeft size={14} />
+          <span>Back to All Tournaments</span>
+        </Link>
+
         {/* Top Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           <div
@@ -132,27 +151,52 @@ export const AdminLoginPage: React.FC = () => {
           <div
             style={{
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.65rem 0.85rem',
-              backgroundColor: 'rgba(56, 189, 248, 0.1)',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
+              flexDirection: 'column',
+              gap: '0.65rem',
+              padding: '0.85rem 1rem',
+              backgroundColor: isSystemAdmin ? 'rgba(56, 189, 248, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+              border: isSystemAdmin ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(245, 158, 11, 0.35)',
               borderRadius: '8px',
-              color: '#38bdf8',
-              fontSize: '0.8rem',
             }}
           >
-            <div>
-              <strong>Active Session:</strong> {session.role === 'SYSTEM_ADMIN' ? '🛡️ System Admin' : '🏆 Tournament Admin'}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+              <div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: isSystemAdmin ? '#38bdf8' : 'var(--color-gold-bright)' }}>
+                  Active Session:{' '}
+                  {isSystemAdmin
+                    ? '🛡️ System Admin (All Access)'
+                    : session.tournamentSlugs && session.tournamentSlugs.length > 1
+                    ? `🏆 Tournament Admin (${session.tournamentSlugs.length} Tournaments: ${session.tournamentSlugs.join(', ')})`
+                    : `🏆 Tournament Admin (${session.tournamentSlug || 'Scoped'})`}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
+                  {isSystemAdmin
+                    ? 'You have global access across all tournaments.'
+                    : session.tournamentSlugs && session.tournamentSlugs.length > 1
+                    ? 'You are authenticated for multiple tournaments. Enter credentials below to switch.'
+                    : 'You are authenticated for this tournament. Enter credentials below to switch.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="btn btn-secondary"
+                style={{ padding: '0.3rem 0.6rem', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}
+              >
+                <LogOut size={12} /> Log Out
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="btn btn-secondary"
-              style={{ padding: '0.25rem 0.55rem', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
-            >
-              <LogOut size={12} /> Log Out
-            </button>
+            {!isSystemAdmin && session.tournamentSlug && (
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
+                <Link
+                  to={`/${session.tournamentSlug}/manage/qualifiers`}
+                  className="btn btn-primary"
+                  style={{ fontSize: '0.76rem', padding: '0.35rem 0.75rem', textDecoration: 'none' }}
+                >
+                  Go to {session.tournamentSlug} Workspace →
+                </Link>
+              </div>
+            )}
           </div>
         )}
 
@@ -243,7 +287,7 @@ export const AdminLoginPage: React.FC = () => {
               }}
             >
               <option value="">Global / System Admin (All Tournaments)</option>
-              {tournaments.map(t => (
+              {availableTournaments.map(t => (
                 <option key={t.id} value={t.slug}>
                   {t.name} ({t.slug})
                 </option>

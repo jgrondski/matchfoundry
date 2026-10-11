@@ -54,7 +54,7 @@ describe('Frontend PIN Authentication & Session State Management', () => {
 
       const loaded = getStoredSession();
       expect(loaded).not.toBeNull();
-      expect(loaded?.role).toBe('MASTER_ADMIN');
+      expect(loaded?.role).toBe('SYSTEM_ADMIN');
       expect(loaded?.token).toBe('signed-hmac-jwt-token');
 
       expect(getAuthHeaders()).toEqual({

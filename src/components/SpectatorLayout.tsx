@@ -1,15 +1,18 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Tournament, TournamentTier } from '../features/tournament/types';
 import { useOrganization } from '../features/organizations/store';
+import { usePinAuth } from '../features/auth/AuthContext';
 import {
   Trophy,
   BarChart3,
   GitBranch,
   Layers,
-  Lock,
   Share2,
   Building2,
+  ArrowLeft,
+  Settings,
+  KeyRound,
 } from 'lucide-react';
 import { ErrorBoundary } from './ErrorBoundary';
 
@@ -35,6 +38,9 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
   onOpenShare,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isSystemAdmin, canManage } = usePinAuth();
+  const hasManageAccess = isSystemAdmin || canManage(tournament.slug);
   const { getOrganizationById } = useOrganization();
   const org = tournament.organizationId ? getOrganizationById(tournament.organizationId) : undefined;
 
@@ -94,8 +100,31 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
           userSelect: 'none',
         }}
       >
-        {/* Left: Tournament Identity */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+        {/* Left: Global Back Link + Tournament Identity */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0 }}>
+          <Link
+            to="/"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.3rem 0.55rem',
+              borderRadius: 'var(--radius-sm, 6px)',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid var(--color-border-subtle, rgba(255,255,255,0.08))',
+              color: 'var(--color-text-secondary, #94a3b8)',
+              fontSize: '0.76rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              flexShrink: 0,
+              transition: 'all 0.15s ease',
+            }}
+            title="Return to All Tournaments Directory"
+          >
+            <ArrowLeft size={13} />
+            <span className="hidden-mobile">All Tournaments</span>
+          </Link>
+
           <Link
             to={`/${tournament.slug}`}
             style={{
@@ -220,21 +249,41 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
             </button>
           )}
 
-          <Link
-            to={defaultTierSlug ? `/${tournament.slug}/manage/bracket/${defaultTierSlug}` : `/${tournament.slug}/manage/bracket`}
-            className="btn btn-secondary"
-            style={{
-              padding: '0.35rem 0.65rem',
-              fontSize: '0.75rem',
-              gap: '0.35rem',
-              color: 'var(--color-text-muted)',
-              borderRadius: 'var(--radius-sm)',
-            }}
-            title="Switch to Tournament Director / Admin Mode"
-          >
-            <Lock size={12} />
-            <span>Admin</span>
-          </Link>
+          {hasManageAccess ? (
+            <Link
+              to={defaultTierSlug ? `/${tournament.slug}/manage/bracket/${defaultTierSlug}` : `/${tournament.slug}/manage/bracket`}
+              className="btn btn-secondary"
+              style={{
+                padding: '0.35rem 0.65rem',
+                fontSize: '0.75rem',
+                gap: '0.35rem',
+                color: 'var(--color-gold-bright, #ffc905)',
+                borderColor: 'rgba(255, 201, 5, 0.35)',
+                background: 'rgba(255, 201, 5, 0.08)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+              title="Open Tournament Director Management Portal"
+            >
+              <Settings size={12} />
+              <span>Manage</span>
+            </Link>
+          ) : (
+            <Link
+              to={`/admin?slug=${tournament.slug}&redirect=${encodeURIComponent(location.pathname)}`}
+              className="btn btn-secondary"
+              style={{
+                padding: '0.35rem 0.65rem',
+                fontSize: '0.75rem',
+                gap: '0.35rem',
+                color: 'var(--color-text-muted)',
+                borderRadius: 'var(--radius-sm)',
+              }}
+              title="Staff & Director PIN Login"
+            >
+              <KeyRound size={12} />
+              <span>Staff Login</span>
+            </Link>
+          )}
         </div>
       </header>
 

@@ -215,10 +215,22 @@ export const TopNavSwitcher: React.FC = () => {
                   fontSize: '0.74rem',
                   fontWeight: 700,
                 }}
-                title={isSystemAdmin ? 'Authenticated with System Admin Key' : 'Authenticated with Tournament Admin PIN'}
+                title={
+                  isSystemAdmin
+                    ? 'Authenticated with System Admin Key'
+                    : session.tournamentSlugs && session.tournamentSlugs.length > 1
+                    ? `Authenticated with Tournament Admin PIN (${session.tournamentSlugs.join(', ')})`
+                    : `Authenticated with Tournament Admin PIN (${session.tournamentSlug || 'Scoped'})`
+                }
               >
                 <ShieldCheck size={12} />
-                <span>{isSystemAdmin ? 'System Admin' : 'Tournament Admin'}</span>
+                <span>
+                  {isSystemAdmin
+                    ? 'System Admin'
+                    : session.tournamentSlugs && session.tournamentSlugs.length > 1
+                    ? `Admin: ${session.tournamentSlugs.length} Tournaments`
+                    : `Admin: ${session.tournamentSlug || 'Tournament'}`}
+                </span>
               </span>
 
               <button

@@ -17,6 +17,8 @@ export interface SessionPayload {
   role: AdminRole;
   tournamentId?: string;
   tournamentSlug?: string;
+  tournamentIds?: string[];
+  tournamentSlugs?: string[];
   issuedAt: number;
   expiresAt: number;
 }
@@ -125,6 +127,8 @@ export function createSessionToken(
     role: AdminRole;
     tournamentId?: string;
     tournamentSlug?: string;
+    tournamentIds?: string[];
+    tournamentSlugs?: string[];
     customDurationMs?: number;
   },
   secretKey?: string
@@ -139,6 +143,8 @@ export function createSessionToken(
     role: normalizedRole,
     ...(params.tournamentId ? { tournamentId: params.tournamentId } : {}),
     ...(params.tournamentSlug ? { tournamentSlug: params.tournamentSlug } : {}),
+    ...(params.tournamentIds && params.tournamentIds.length > 0 ? { tournamentIds: params.tournamentIds } : {}),
+    ...(params.tournamentSlugs && params.tournamentSlugs.length > 0 ? { tournamentSlugs: params.tournamentSlugs } : {}),
     issuedAt,
     expiresAt,
   };

@@ -111,7 +111,9 @@ function checkAuth(
       if (
         !targetTournamentId ||
         session.tournamentId === targetTournamentId ||
-        session.tournamentSlug === targetTournamentId
+        session.tournamentSlug === targetTournamentId ||
+        session.tournamentIds?.includes(targetTournamentId) ||
+        session.tournamentSlugs?.includes(targetTournamentId)
       ) {
         return session;
       }
@@ -230,60 +232,61 @@ export function createApiMiddleware() {
           }
         }
 
-        // 3. Check Tournament PIN
+        // 3. Check Tournament PINs across all tournaments
         try {
           const db = getDb();
-          if (tournamentSlugOrId) {
-            const cond = isUuid(tournamentSlugOrId)
-              ? or(eq(tournaments.id, tournamentSlugOrId), eq(tournaments.slug, tournamentSlugOrId))
-              : eq(tournaments.slug, tournamentSlugOrId);
-            const tourneyRows = await db
-              .select()
-              .from(tournaments)
-              .where(cond);
-            if (tourneyRows.length > 0 && tourneyRows[0].adminPinEncrypted) {
-              const storedPin = decryptPin(tourneyRows[0].adminPinEncrypted);
-              if (safeCompareStrings(candidatePin, storedPin)) {
-                const token = createSessionToken({
-                  role: 'TOURNAMENT_ADMIN',
-                  tournamentId: tourneyRows[0].id,
-                  tournamentSlug: tourneyRows[0].slug,
-                });
-                return sendJson(res, 200, {
-                  success: true,
-                  role: 'TOURNAMENT_ADMIN',
-                  tournamentId: tourneyRows[0].id,
-                  tournamentSlug: tourneyRows[0].slug,
-                  token,
-                });
-              }
-            }
-          } else {
-            // Check all tournaments
-            const allTourneys = await db.select().from(tournaments);
-            for (const t of allTourneys) {
-              if (t.adminPinEncrypted) {
-                try {
-                  const storedPin = decryptPin(t.adminPinEncrypted);
-                  if (safeCompareStrings(candidatePin, storedPin)) {
-                    const token = createSessionToken({
-                      role: 'TOURNAMENT_ADMIN',
-                      tournamentId: t.id,
-                      tournamentSlug: t.slug,
-                    });
-                    return sendJson(res, 200, {
-                      success: true,
-                      role: 'TOURNAMENT_ADMIN',
-                      tournamentId: t.id,
-                      tournamentSlug: t.slug,
-                      token,
-                    });
-                  }
-                } catch {
-                  // Ignore
+          const allTourneys = await db.select().from(tournaments);
+          type TournamentRow = typeof tournaments.$inferSelect;
+          const matchingTourneys: TournamentRow[] = [];
+
+          for (const t of allTourneys) {
+            if (t.adminPinEncrypted) {
+              try {
+                const storedPin = decryptPin(t.adminPinEncrypted);
+                if (safeCompareStrings(candidatePin, storedPin)) {
+                  matchingTourneys.push(t);
                 }
+              } catch {
+                // Ignore decryption error
               }
             }
+          }
+
+          if (matchingTourneys.length > 0) {
+            // If the user specified a tournament scope, verify that it's among the matches
+            if (tournamentSlugOrId) {
+              const scopedMatch = matchingTourneys.find(
+                (t: TournamentRow) => t.id === tournamentSlugOrId || t.slug === tournamentSlugOrId
+              );
+              if (!scopedMatch) {
+                return sendError(res, 401, 'Invalid PIN for selected tournament');
+              }
+            }
+
+            const primaryTourney = tournamentSlugOrId
+              ? (matchingTourneys.find((t: TournamentRow) => t.id === tournamentSlugOrId || t.slug === tournamentSlugOrId) || matchingTourneys[0])
+              : matchingTourneys[0];
+
+            const tournamentIds = matchingTourneys.map((t: TournamentRow) => t.id);
+            const tournamentSlugs = matchingTourneys.map((t: TournamentRow) => t.slug);
+
+            const token = createSessionToken({
+              role: 'TOURNAMENT_ADMIN',
+              tournamentId: primaryTourney.id,
+              tournamentSlug: primaryTourney.slug,
+              tournamentIds,
+              tournamentSlugs,
+            });
+
+            return sendJson(res, 200, {
+              success: true,
+              role: 'TOURNAMENT_ADMIN',
+              tournamentId: primaryTourney.id,
+              tournamentSlug: primaryTourney.slug,
+              tournamentIds,
+              tournamentSlugs,
+              token,
+            });
           }
         } catch {
           // Ignore DB error
@@ -306,6 +309,9 @@ export function createApiMiddleware() {
           valid: true,
           role: session.role,
           tournamentId: session.tournamentId,
+          tournamentSlug: session.tournamentSlug,
+          tournamentIds: session.tournamentIds,
+          tournamentSlugs: session.tournamentSlugs,
           expiresAt: session.expiresAt,
         });
       }
@@ -484,9 +490,50 @@ export function createApiMiddleware() {
         if (subAction === 'pin' && method === 'PUT') {
           if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
           const pin = typeof body?.pin === 'string' ? body.pin.trim() : '';
+          const confirmed = Boolean(body?.confirmed);
           if (!pin) return sendError(res, 400, 'PIN is required');
-          const encrypted = encryptPin(pin);
+
           const db = getDb();
+          const allTourneys = await db.select().from(tournaments);
+          type TournamentRow = typeof tournaments.$inferSelect;
+
+          // Locate current tournament row to exclude it from other matches
+          const currentTourney = allTourneys.find(
+            (t: TournamentRow) => t.id === tourneyId || t.slug === tourneyId
+          );
+
+          // Find other tournaments sharing this candidate PIN
+          const matchingOtherTourneys: { id: string; name: string; slug: string }[] = [];
+          for (const t of allTourneys) {
+            if (currentTourney && (t.id === currentTourney.id || t.slug === currentTourney.slug)) {
+              continue;
+            }
+            if (t.adminPinEncrypted) {
+              try {
+                const storedPin = decryptPin(t.adminPinEncrypted);
+                if (safeCompareStrings(pin, storedPin)) {
+                  matchingOtherTourneys.push({
+                    id: t.id,
+                    name: t.name,
+                    slug: t.slug,
+                  });
+                }
+              } catch {
+                // Ignore decryption failure
+              }
+            }
+          }
+
+          if (matchingOtherTourneys.length > 0 && !confirmed) {
+            return sendJson(res, 200, {
+              success: false,
+              isShared: true,
+              sharedTournaments: matchingOtherTourneys,
+              message: `This PIN is already shared with ${matchingOtherTourneys.map(t => t.name).join(', ')}.`,
+            });
+          }
+
+          const encrypted = encryptPin(pin);
           const pinCond = isUuid(tourneyId)
             ? or(eq(tournaments.id, tourneyId), eq(tournaments.slug, tourneyId))
             : eq(tournaments.slug, tourneyId);
@@ -494,7 +541,11 @@ export function createApiMiddleware() {
             .update(tournaments)
             .set({ adminPinEncrypted: encrypted })
             .where(pinCond);
-          return sendJson(res, 200, { success: true });
+          return sendJson(res, 200, {
+            success: true,
+            isShared: matchingOtherTourneys.length > 0,
+            sharedTournaments: matchingOtherTourneys,
+          });
         }
 
         // GET /api/tournaments/:id/reveal-pin (Master Admin reveals plaintext PIN)

@@ -7,6 +7,8 @@ export interface AuthSession {
   role: 'SYSTEM_ADMIN' | 'TOURNAMENT_ADMIN' | 'MASTER_ADMIN';
   tournamentId?: string;
   tournamentSlug?: string;
+  tournamentIds?: string[];
+  tournamentSlugs?: string[];
   expiresAt?: number;
 }
 
@@ -91,6 +93,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role,
         tournamentId: data.tournamentId,
         tournamentSlug: data.tournamentSlug,
+        tournamentIds: data.tournamentIds || (data.tournamentId ? [data.tournamentId] : []),
+        tournamentSlugs: data.tournamentSlugs || (data.tournamentSlug ? [data.tournamentSlug] : []),
         // Default 7 days
         expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
       };
@@ -124,7 +128,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!tournamentIdOrSlug) return true;
         return (
           session.tournamentId === tournamentIdOrSlug ||
-          session.tournamentSlug === tournamentIdOrSlug
+          session.tournamentSlug === tournamentIdOrSlug ||
+          Boolean(session.tournamentIds?.includes(tournamentIdOrSlug)) ||
+          Boolean(session.tournamentSlugs?.includes(tournamentIdOrSlug))
         );
       }
       return false;

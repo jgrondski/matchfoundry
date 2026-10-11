@@ -16,20 +16,26 @@ import {
   BarChart3,
   Trophy,
   Settings,
+  ExternalLink,
 } from 'lucide-react';
+import { usePinAuth } from '../../auth/AuthContext';
 
 interface TournamentCardProps {
   tournament: Tournament;
   onDeleteClick?: (tournament: Tournament) => void;
   showOrgBadge?: boolean;
+  variant?: 'public' | 'admin';
 }
 
 export const TournamentCard: React.FC<TournamentCardProps> = ({
   tournament,
   onDeleteClick,
   showOrgBadge = true,
+  variant = 'public',
 }) => {
   const { getOrganizationById } = useOrganization();
+  const { isSystemAdmin, canManage } = usePinAuth();
+  const hasManageAccess = isSystemAdmin || canManage(tournament.slug);
   const org = tournament.organizationId ? getOrganizationById(tournament.organizationId) : undefined;
 
   const hasTiers = tournament.tiers && tournament.tiers.length > 0;
@@ -50,6 +56,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
   return (
     <div
+      data-testid={`tournament-card-${tournament.slug}`}
       style={{
         background: 'var(--color-bg-surface, #131722)',
         borderRadius: 'var(--radius-lg, 12px)',
@@ -172,10 +179,13 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {tournament.tiers.map(tier => {
                 const tierColor = tier.primaryColor || '#ffc905';
+                const tierLink = variant === 'admin'
+                  ? `/${tournament.slug}/manage/bracket/${tier.slug}`
+                  : `/${tournament.slug}/${tier.slug}`;
                 return (
                   <Link
                     key={tier.id}
-                    to={`/${tournament.slug}/manage/bracket/${tier.slug}`}
+                    to={tierLink}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -211,55 +221,121 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           </div>
         ) : (
           <div style={{ padding: '0.85rem', background: 'var(--color-bg-base, #0c0d12)', borderRadius: 'var(--radius-md, 8px)', border: '1px dashed var(--color-border, rgba(255,255,255,0.1))', color: 'var(--color-text-muted, #64748b)', fontSize: '0.85rem' }}>
-            No bracket tiers configured yet. Visit Settings to set up tournament tiers.
+            No bracket tiers configured yet.{variant === 'admin' && ' Visit Settings to set up tournament tiers.'}
           </div>
         )}
       </div>
 
-      {/* Action Buttons Row with Matching Lucide Icons */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', borderTop: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))', paddingTop: '1rem' }}>
-        {hasTiers && defaultTier && (
+      {/* Action Buttons Row */}
+      {variant === 'public' ? (
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', borderTop: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))', paddingTop: '1rem', alignItems: 'center' }}>
           <Link
-            to={`/${tournament.slug}/manage/bracket/${defaultTier.slug}`}
+            to={hasTiers && defaultTier ? `/${tournament.slug}/${defaultTier.slug}` : `/${tournament.slug}/brackets`}
             className="btn btn-primary"
+            style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <GitBranch size={14} /> Live Brackets
+          </Link>
+
+          <Link
+            to={`/${tournament.slug}/leaderboard`}
+            className="btn btn-secondary"
+            style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <BarChart3 size={14} /> {tournament.seedingMethod === 'MANUAL' ? 'Seeding' : 'Qualifiers'}
+          </Link>
+
+          <Link
+            to={`/${tournament.slug}/standings`}
+            className="btn btn-secondary"
+            style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Trophy size={14} color="var(--color-gold-bright, #ffc905)" /> Standings
+          </Link>
+
+          {hasManageAccess && (
+            <Link
+              to={`/${tournament.slug}/manage/qualifiers`}
+              className="btn btn-secondary"
+              style={{
+                padding: '0.55rem 0.85rem',
+                fontSize: '0.8rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                marginLeft: 'auto',
+                borderColor: 'rgba(255, 201, 5, 0.4)',
+                color: 'var(--color-gold-bright, #ffc905)',
+                background: 'rgba(255, 201, 5, 0.08)',
+              }}
+              title="Open Tournament Director Management Portal"
+            >
+              <Settings size={14} /> Manage
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', borderTop: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))', paddingTop: '1rem', alignItems: 'center' }}>
+          {hasTiers && defaultTier && (
+            <Link
+              to={`/${tournament.slug}/manage/bracket/${defaultTier.slug}`}
+              className="btn btn-primary"
+              style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <GitBranch size={14} /> Brackets
+            </Link>
+          )}
+
+          <Link
+            to={hasTiers && defaultTier ? `/${tournament.slug}/manage/sheet?tier=${defaultTier.slug}` : `/${tournament.slug}/manage/sheet`}
+            className="btn btn-secondary"
             style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
           >
-            <GitBranch size={14} /> Brackets
+            <Sheet size={14} /> Sheet
           </Link>
-        )}
 
-        <Link
-          to={hasTiers && defaultTier ? `/${tournament.slug}/manage/sheet?tier=${defaultTier.slug}` : `/${tournament.slug}/manage/sheet`}
-          className="btn btn-secondary"
-          style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-        >
-          <Sheet size={14} /> Sheet
-        </Link>
+          <Link
+            to={`/${tournament.slug}/manage/qualifiers`}
+            className={!hasTiers ? 'btn btn-primary' : 'btn btn-secondary'}
+            style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <BarChart3 size={14} /> Qualifiers
+          </Link>
 
-        <Link
-          to={`/${tournament.slug}/manage/qualifiers`}
-          className={!hasTiers ? 'btn btn-primary' : 'btn btn-secondary'}
-          style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-        >
-          <BarChart3 size={14} /> Qualifiers
-        </Link>
+          <Link
+            to={`/${tournament.slug}/manage/standings`}
+            className="btn btn-secondary"
+            style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Trophy size={14} color="var(--color-gold-bright, #ffc905)" /> Standings
+          </Link>
 
-        <Link
-          to={`/${tournament.slug}/manage/standings`}
-          className="btn btn-secondary"
-          style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-        >
-          <Trophy size={14} color="var(--color-gold-bright, #ffc905)" /> Standings
-        </Link>
+          <Link
+            to={`/${tournament.slug}/manage/settings`}
+            className="btn btn-secondary"
+            style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+          >
+            <Settings size={14} /> Settings
+          </Link>
 
-        <Link
-          to={`/${tournament.slug}/manage/settings`}
-          className="btn btn-secondary"
-          style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-        >
-          <Settings size={14} /> Settings
-        </Link>
-      </div>
+          <Link
+            to={hasTiers && defaultTier ? `/${tournament.slug}/${defaultTier.slug}` : `/${tournament.slug}/brackets`}
+            className="btn btn-secondary"
+            style={{
+              padding: '0.55rem 0.75rem',
+              fontSize: '0.8rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              marginLeft: 'auto',
+              color: 'var(--color-text-muted, #94a3b8)',
+            }}
+            title="Open public spectator view"
+          >
+            <ExternalLink size={13} /> Public View
+          </Link>
+        </div>
+      )}
     </div>
   );
 };
