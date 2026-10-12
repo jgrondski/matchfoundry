@@ -79,6 +79,15 @@ The golden journeys codified in [`e2e/golden-journeys.spec.ts`](file:///Users/jg
   6. On `/`, a dedicated **"Your Managed Tournament"** section displays only their tournament in admin mode.
   7. Attempting to directly navigate to `/organizations` bounces back to `/admin` requesting System Admin authorization.
 
+### Journey 4: Multi-Tournament Shared PIN Access & Scope Unification
+- **Goal**: Confirm that when an organizer configures the same PIN across multiple tournaments, entering that single PIN once unlocks access to all matching tournaments simultaneously, populates the switcher dropdown with only those managed tournaments, and issues a shared-PIN warning modal upon collision during configuration.
+- **Path**:
+  1. Organizer assigns identical PIN (`7711`) to two separate tournaments.
+  2. Setup modal displays shared PIN confirmation modal informing user that access will be merged.
+  3. User logs out and navigates to `/admin`.
+  4. User enters single shared PIN `7711`.
+  5. Both tournaments appear under managed views, and tournament switcher dropdown contains both unlocked tournaments with seamless switching.
+
 ---
 
 ## 4. Verification Command Matrix
@@ -88,24 +97,28 @@ The golden journeys codified in [`e2e/golden-journeys.spec.ts`](file:///Users/jg
 | `npm run test:brackets` | Math, bracket trees, tiebreakers | ~1–2s | Active bracket feature work |
 | `npm run test:api` | Relational integrity, auth endpoints | ~3–5s | API or database changes |
 | `npm run test:ui` | Components, forms, drawers, navigation | ~2–3s | UI component changes |
-| `npm run test:e2e` | Playwright 3 Golden Journeys | ~5–6s | Pre-completion milestone validation & CI |
+| `npm run test:e2e` | Playwright 4 Golden Journeys | ~5–6s | Pre-completion milestone validation & CI |
 | `npm run typecheck` | TypeScript compilation (`tsc --noEmit`) | ~1–2s | Every code modification |
+| `npm run build` | Full production bundle compilation | ~3–4s | Pre-deployment & CI validation |
 | `npm test` | Full Vitest test suite | ~6–8s | Pre-commit / Milestone completion |
 
 ---
 
 ## 5. CI/CD Pipeline Parity
 
-In CI/CD environments (GitHub Actions, GitLab CI), tests run sequentially to prevent resource contention:
+In CI/CD environments (GitHub Actions via `.github/workflows/ci.yml`), tests run sequentially to prevent resource contention:
 
 ```yaml
-# Example CI Step
-- name: Run Quality Verification Suite
-  run: |
-    npm run typecheck
-    npm test
-    npm run test:e2e
+- name: TypeScript typecheck
+  run: npm run typecheck
+
+- name: Run test suite
+  run: npm test
+
+- name: Build production bundle
+  run: npm run build
 ```
 
 - **Database**: Vitest tests run against `pg-mem`, which requires no active PostgreSQL server in CI.
+- **Production Bundling**: `npm run build` executes `tsc --noEmit && vite build`, guaranteeing that client-side asset graph and serverless routes build without failure prior to deployment.
 - **Playwright**: Uses Vite's built-in dev server orchestration configured in `playwright.config.ts` (`webServer.command: "npm run dev"`, `reuseExistingServer: true`).

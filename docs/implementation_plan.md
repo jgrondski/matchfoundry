@@ -253,6 +253,8 @@ Per workspace guidelines in `AGENTS.md`:
     * Tournament Admin scoped access enforced for management views (`/:slug/manage/*`). Unauthorized access auto-redirects to public bracket view.
     * Master Admin privileges across organizations, global player directory, and tournament PIN reveals (`👁️ Reveal PIN`).
     * Destructive data management and simulation controls (`DataSimulationSection.tsx`, `/api/simulate/sample`, clear-all) strictly restricted to Master Admin.
-    * Two-way AES-256-GCM PIN encryption with immutable `MASTER_ADMIN_RECOVERY_PIN` environment failsafe.
-    * Vercel Serverless Function adapter (`api/index.ts`) and SPA rewrite routing (`vercel.json`) deployed.
-    * Fully backed by automated tests: 42 test files, 479 tests passing with zero TypeScript errors.
+    * Two-way AES-256-GCM PIN encryption with immutable `SYSTEM_ADMIN_RECOVERY_PIN` environment failsafe.
+    * Vercel Serverless Function adapter (`api/index.ts`) and SPA rewrite routing (`vercel.json`) configured.
+    * Complete cloud deployment & CI/CD playbook codified in `docs/DEPLOYMENT_PLAYBOOK.md`.
+    * CI/CD automation in `.github/workflows/ci.yml` running typecheck, test suite, and production bundle builds on push and PR.
+    * Fully backed by automated tests: 42 test files, 488 tests passing + Playwright Golden Journeys with zero TypeScript errors.
