@@ -127,13 +127,17 @@ function checkAuth(
 
 export function createApiMiddleware() {
   return async (req: IncomingMessage, res: ServerResponse, _next?: () => void) => {
-    let rawUrl = req.url || '';
+    const forwardedUrl =
+      (req.headers['x-matched-path'] as string) ||
+      (req.headers['x-forwarded-url'] as string) ||
+      req.url ||
+      '';
+    let rawUrl = forwardedUrl;
+
 
     if (!rawUrl.startsWith('/api')) {
       rawUrl = '/api' + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl);
     }
-
-
 
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -153,8 +157,14 @@ export function createApiMiddleware() {
     try {
       const body: any = await parseBody(req);
 
+      // GET /api root ping
+      if ((pathname === '/api' || pathname === '/api/') && method === 'GET') {
+        return sendJson(res, 200, { status: 'ok', service: 'matchfoundry-api', timestamp: Date.now() });
+      }
+
       // GET /api/health
       if (pathname === '/api/health' && method === 'GET') {
+
         try {
           const db = getDb();
           await db.execute(sql`SELECT 1`);
