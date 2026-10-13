@@ -5,6 +5,7 @@
 - **Root-Cause Lifecycle Diagnosis**: For recurring bugs, hydration issues, or rendering anomalies, trace the complete data and component lifecycle from cold mount to steady state. Strictly avoid band-aids (such as adding more boolean flags or reactive `useEffect` patches).
 - **Consult Before Sweeping Execution**: When addressing systemic or multi-file issues, propose the architectural design first, debate tradeoffs with the user, and gain explicit alignment before touching files.
 - **Continuous Codification**: Once an architectural agreement is reached (e.g., 3-Tier UI Pattern, storage policies), immediately codify it in `docs/` and `AGENTS.md`, backed by automated regression tests to prevent backsliding.
+- **Strict Push Prohibition (Zero Autonomous Push)**: NEVER execute `git push` (especially to `main` or any remote production-tracking branch) without explicit, affirmative approval from the user. All commits and working changes must remain strictly local until the user explicitly asks or confirms to push.
 
 ## 2. Bug Fixes & Regression Testing
 - **Mandatory Regression Tests**: Whenever fixing a bug or addressing a regression reported by the user, always write comprehensive automated regression tests.
