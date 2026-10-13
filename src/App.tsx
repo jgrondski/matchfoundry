@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TournamentProvider } from './features/tournament/store';
 import { OrganizationProvider } from './features/organizations/store';
@@ -17,22 +17,13 @@ import { PlayerDirectoryPage } from './routes/PlayerDirectoryPage';
 import { OBSHubPage } from './routes/OBSHubPage';
 import { ObsOverlayPage } from './routes/ObsOverlayPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { assertDatabaseConfig } from './db/config';
 import { Database, AlertTriangle } from 'lucide-react';
 import { AuthProvider } from './features/auth/AuthContext';
 import { RequireTournamentAdmin, RequireMasterAdmin } from './features/auth/RouteGuards';
 import { AdminLoginPage } from './routes/AdminLoginPage';
 
 export const App: React.FC = () => {
-  const [configError, setConfigError] = useState<string | null>(null);
-
-  useEffect(() => {
-    try {
-      assertDatabaseConfig();
-    } catch (err) {
-      setConfigError(err instanceof Error ? err.message : 'Database configuration error');
-    }
-  }, []);
+  const [configError] = useState<string | null>(null);
 
   if (configError) {
     return (

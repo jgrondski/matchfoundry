@@ -126,9 +126,8 @@ interface TournamentContextType {
   batchAddManualSeeds: (tournamentId: string, playerIds: string[], position: 'TOP' | 'BOTTOM') => void;
 }
 
-import { assertDatabaseConfig } from '../../db/config';
-
 /**
+
  * Generates an RFC4122 v4 compliant UUID string.
  */
 export function generateUUID(): string {
@@ -263,7 +262,6 @@ export const TournamentProvider: React.FC<{
   initialTournaments?: Tournament[];
   initialHydrated?: boolean;
 }> = ({ children, initialTournaments, initialHydrated }) => {
-  assertDatabaseConfig();
   const [tournaments, setTournaments] = useState<Tournament[]>(initialTournaments || []);
   const [globalPlayers, setGlobalPlayers] = useState<PlayerProfile[]>([]);
   const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);

@@ -126,11 +126,14 @@ function checkAuth(
 }
 
 export function createApiMiddleware() {
-  return async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
-    const rawUrl = req.url || '';
+  return async (req: IncomingMessage, res: ServerResponse, _next?: () => void) => {
+    let rawUrl = req.url || '';
+
     if (!rawUrl.startsWith('/api')) {
-      return next();
+      rawUrl = '/api' + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl);
     }
+
+
 
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
