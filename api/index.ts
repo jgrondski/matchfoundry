@@ -1,10 +1,13 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import { createApiMiddleware } from '../src/server/api';
 
-const middleware = createApiMiddleware();
+let middleware: any = null;
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
+    if (!middleware) {
+      const { createApiMiddleware } = await import('../src/server/api');
+      middleware = createApiMiddleware();
+    }
     return await middleware(req, res, () => {
       res.statusCode = 404;
       res.setHeader('Content-Type', 'application/json');
@@ -16,7 +19,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({
       error: 'Internal Server Error',
+      name: err?.name,
       message: err?.message || String(err),
+      stack: err?.stack,
     }));
   }
 }
