@@ -128,11 +128,12 @@ function checkAuth(
 export function createApiMiddleware() {
   return async (req: IncomingMessage, res: ServerResponse, _next?: () => void) => {
     const forwardedUrl =
-      (req.headers['x-matched-path'] as string) ||
-      (req.headers['x-forwarded-url'] as string) ||
+      (req.headers?.['x-matched-path'] as string) ||
+      (req.headers?.['x-forwarded-url'] as string) ||
       req.url ||
       '';
     let rawUrl = forwardedUrl;
+
 
 
     if (!rawUrl.startsWith('/api')) {
