@@ -4,8 +4,11 @@
 - **Active Pushback & Tradeoff Analysis**: Do not act as an uncritical code generator. When evaluating architectural decisions or proposed patterns, proactively identify risks, failure modes, and long-term maintenance costs (e.g., callback explosion, unnecessary indirection, premature abstractions). Offer balanced pushback and simpler alternatives.
 - **Root-Cause Lifecycle Diagnosis**: For recurring bugs, hydration issues, or rendering anomalies, trace the complete data and component lifecycle from cold mount to steady state. Strictly avoid band-aids (such as adding more boolean flags or reactive `useEffect` patches).
 - **Consult Before Sweeping Execution**: When addressing systemic or multi-file issues, propose the architectural design first, debate tradeoffs with the user, and gain explicit alignment before touching files.
-- **Strict Push Prohibition (Zero Autonomous Push)**: NEVER execute `git push` (especially to `main` or any remote production-tracking branch) without explicit, affirmative approval from the user. All commits and working changes must remain strictly local until the user explicitly asks or confirms to push.
-- **Branch-and-PR Deployment Pipeline**: All substantial work, features, and refactors must occur on dedicated feature branches (`feature/*`, `fix/*`). Changes are proposed via Pull Request, validated through automated GitHub Actions CI checks (`typecheck`, `test`, `build`), and merged to `main` strictly upon user review. Production deployments to `matchfoundry.gg` are gated on passing PR merges.
+- **Strict Git Boundary Mandate (Zero Autonomous Branching, Commits, or Pushing)**:
+  - NEVER create branches (`git branch`, `git checkout -b`, `git switch -c`). The user chooses all branch names and decides when/if to branch.
+  - NEVER commit changes (`git commit`). All changes must remain strictly uncommitted in the working tree for user inspection.
+  - NEVER push changes (`git push`). Remote pushing is completely prohibited.
+  - The agent is permitted ONLY to edit local files and perform local synchronization (`git pull`, `git merge`, `git rebase` locally when asked). The user retains 100% control over reviewing uncommitted diffs on whichever branch or working directory they choose before committing or pushing.
 
 ## 2. Bug Fixes & Regression Testing
 - **Mandatory Regression Tests**: Whenever fixing a bug or addressing a regression reported by the user, always write comprehensive automated regression tests.
