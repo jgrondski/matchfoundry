@@ -134,7 +134,10 @@ export function createApiMiddleware() {
       '';
     let rawUrl = forwardedUrl;
 
-
+    // In Vite dev server (where _next is provided), pass non-API requests through to Vite
+    if (_next && !rawUrl.startsWith('/api')) {
+      return _next();
+    }
 
     if (!rawUrl.startsWith('/api')) {
       rawUrl = '/api' + (rawUrl.startsWith('/') ? rawUrl : '/' + rawUrl);

@@ -88,7 +88,10 @@ export const TopNavSwitcher: React.FC = () => {
           }}
         >
           <Trophy size={18} color="var(--color-gold-bright, #ffc905)" />
-          <span>TOURNAMENT <span style={{ color: 'var(--color-gold-bright, #ffc905)' }}>MANAGER</span></span>
+          <span>
+            MATCH<span style={{ color: 'var(--color-gold-bright, #ffc905)' }}>FOUNDRY</span>
+            <sup style={{ fontSize: '0.65em', marginLeft: '1px', color: 'var(--color-gold-bright, #ffc905)' }}>™</sup>
+          </span>
         </Link>
 
         {/* Center: Global Navigation Pills (Strictly restricted to System Admin) */}

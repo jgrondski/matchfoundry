@@ -31,11 +31,11 @@ This playbook provides a complete, step-by-step operational guide for connecting
 ```
 
 ### Core Architecture Components:
-1. **Frontend**: Vite Single-Page Application (SPA) compiled to `dist/`, served via Vercel Edge Network.
-2. **Backend API**: Node.js Serverless Function handler in `api/index.ts` wrapping `createApiMiddleware()`, routed via `vercel.json` (`/api/(.*)` -> `/api/index.ts`).
+1. **Frontend**: Vite Single-Page Application (SPA) compiled to `dist/`, served via Vercel Edge Network at `https://www.matchfoundry.gg`.
+2. **Backend API**: Node.js Serverless Function handler in pure TypeScript `api/index.ts` wrapping `createApiMiddleware()`, transpiled natively on demand by `@vercel/node` and routed via `vercel.json` (`/api/(.*)` -> `/api`). Zero runtime artifacts are committed to Git.
 3. **Database**: Neon Serverless PostgreSQL. In `src/db/index.ts`, connection strings containing `neon.tech` automatically switch to the `@neondatabase/serverless` connectionless HTTP driver (`drizzle-orm/neon-http`), eliminating connection pool exhaustion on serverless lambdas.
-4. **CI/CD Quality Gate**: GitHub Actions (`.github/workflows/ci.yml`) automatically executes static typecheck, unit and integration tests, and production bundle builds on all pushes and pull requests.
-5. **Continuous Deployment**: Vercel Git Integration automatically deploys production builds on pushes to `main`, and provides preview deployment URLs for all feature branches and pull requests.
+4. **CI/CD Quality Gate**: GitHub Actions (`.github/workflows/ci.yml`) automatically executes static typecheck, unit and integration tests, and production bundle builds on all pull requests and pushes to `main`.
+5. **Continuous Deployment**: Feature branch PRs generate preview deployment URLs for testing; verified PR merges to `main` deploy to production `matchfoundry.gg`.
 
 ---
 

@@ -16,7 +16,7 @@ This document is the consolidated, single source of truth for the implementation
 | **Phase 6** | Direct / Manual Seeding & Bulk Import | **Complete** | Qual-less tournament seeding, multiline paste import, drag/drop reordering, tier dividers, direct bracket generation. |
 | **Phase 7** | Relational Database & API Backend | **Complete** | PostgreSQL (Neon/Docker) + Drizzle ORM, REST API middleware, authentic player pool (1,620 competitors). |
 | **Phase 8** | Architectural Hardening & Tournament Rules | **Complete** | Decoupled domain hooks, canonical defaults, CLI seeder, 415 automated tests, bye seed alternation (1 vs N), points qual 0-pt tiebreaker, OBS draft overlays. |
-| **Phase 9** | **Production Cloud Deployment & Multi-Tier PIN Security** | **Next Up (Phase 9)** | Vercel Serverless runtime, Neon cloud PostgreSQL migration, 3-tier PIN access security (Public, Tournament Admin, Master Admin with AES-256 revealable PINs & secret recovery PIN), Data Management & Simulation isolated strictly to Master Admin. |
+| **Phase 9** | **Production Cloud Deployment, MatchFoundry™ Brand Launch & CI/CD** | **Complete** | Vercel Serverless runtime (`api/index.ts`), Neon cloud PostgreSQL migration, MatchFoundry™ rebrand & strategic trademark rollout, zero runtime git artifacts, and Branch/PR CI/CD deployment gating. |
 | **Phase 10**| **Live & Online Qualifiers Engine** | **Upcoming (Phase 10)** | Competitor self-service portal (`/:slug/qualify`), Twitch OAuth 2.0 on production HTTPS, 6–8 char NES Authwords, countdown telemetry, judge review queue, Discord webhooks. |
 | **Phase 11**| **Mobile-Responsive Viewport Overhaul (360×800)** | **Upcoming (Phase 11)** | Handheld 360×800 dense table card views (Leaderboard, Standings, Roster, Global Players), collapsed mobile nav & breadcrumbs. |
 | **Phase 12**| **Universal Match Data Export & Custom Analytics** | **Upcoming (Phase 12)** | Universal match data export (CSV with UTF-8 BOM, Google Sheets TSV clipboard copy, JSON) with custom column selection and reordering. |
@@ -146,34 +146,58 @@ flowchart TD
 
 ---
 
-### Phase 9: Production Cloud Deployment & Multi-Tier PIN Access Security [COMPLETE]
-* **Goal:** Deploy Tournament Manager to the public web (Vercel Serverless + Neon PostgreSQL) with 3-tier PIN access control so real-world users can safely view brackets while management operations are fully secured.
-1. **Unified Vercel Serverless Runtime (`api/index.ts` & `vercel.json`):**
-   * Wrap the existing `createApiMiddleware()` from `src/server/api.ts` into a Vercel Serverless Function adapter (`api/index.ts`).
-   * Configure `vercel.json` rewrites to route `/api/(.*)` to the serverless function and all other routes to the static Vite frontend (`dist/index.html`).
-   * Maintain 100% code reuse between local Vite dev server (`npm run dev`) and production Vercel deployment.
-2. **Neon Cloud PostgreSQL Migration & CLI Pipelines:**
-   * Leverage built-in `@neondatabase/serverless` connection support in `src/db/index.ts`.
-   * Configure production `DATABASE_URL` against Neon serverless Postgres.
-   * Run schema migrations (`npm run db:push`) and populate initial database with organizations and the 1,620 authentic competitors via `npm run db:seed`.
-3. **Multi-Tier PIN Security Engine (Spec Sec 10 / 12):**
-   * **Security Hierarchy:**
-     * **Level 0 (Public / Spectator):** Unauthenticated visitors have access to public views (`/:slug/brackets`, `/:slug/quals`, `/:slug/standings`, `/:slug/qualify`, OBS overlays). Any attempt to access `/manage/*` or global admin routes (`/organizations`, `/players`) auto-redirects to the public tournament view.
-     * **Level 1 (Tournament Admin):** Scoped by per-tournament PIN (`admin_pin_encrypted` in `tournaments` table). Grants access to the full tournament management left-nav (`/:slug/manage/*`). Unauthorized access attempts to global admin views redirect back to the tournament management dashboard.
-     * **Level 2 (Master Admin):** Authenticated via Master PIN (`master_pin_encrypted` in DB). Grants unrestricted global access: organization directory, all tournaments, global player directory, and viewing/editing all tournament PINs.
-     * **Emergency Master Recovery PIN:** Configured via environment variable (`MASTER_ADMIN_RECOVERY_PIN` in `.env`) providing an immutable fallback that can never be locked out even if the database is altered.
-   * **Data Management & Simulation Access Control:**
-     * Destructive controls in `DataSimulationSection.tsx` ("Clear All Tournament Data", "Simulate Full Tournament", "Seed Qualifiers Only") and corresponding API endpoints (`/api/simulate/sample`, bulk reset operations) are **strictly isolated to Master/System Admins**.
-     * Tournament Admins cannot view, access, or trigger simulation or data wipe actions, preventing accidental wiping of real tournament data by event directors or floor judges.
-   * **AES-256-GCM Two-Way Encryption (`pinCrypto.ts`):**
-     * Encrypts tournament PINs at rest using server secret key `PIN_ENCRYPTION_KEY`.
-     * Enables Master Admins to safely reveal and copy tournament PINs in the dashboard (`👁️ 7492`) without resetting them or invalidating active judge sessions.
-   * **Session Management & API Route Mutation Guards:**
-     * Dedicated PIN Login page (`/admin` or `/auth/pin`).
-     * Issues signed 7-day session token stored in `localStorage` (with explicit "Lock / Log Out" button in navbar). PINs themselves remain permanent unless explicitly modified.
-     * Server API middleware enforces `Authorization: Bearer <sessionToken>` on all mutation routes (`POST`, `PUT`, `DELETE`).
-4. **CI/CD Automation:**
-   * GitHub Actions workflow validating typechecks (`npm run typecheck`) and regression tests (`npm test`) on pull requests and pushes to `main`.
+### Phase 9: Production Cloud Deployment, MatchFoundry™ Brand Launch & CI/CD [COMPLETE]
+* **Goal:** Deliver a fully deployed, production-grade tournament management platform on the public web (`matchfoundry.gg` on Vercel + Neon PostgreSQL), fortified by multi-tier PIN access security, a strategic MatchFoundry™ rebrand with common-law trademark protections, and a gated Branch/PR CI/CD delivery pipeline.
+
+* **Track 9A: Multi-Tier PIN Security Engine [COMPLETE]**
+  1. **Security Hierarchy:**
+     * **Level 0 (Public / Spectator):** Frictionless read-only access to public views (`/:slug/brackets`, `/:slug/quals`, `/:slug/standings`, `/:slug/qualify`, OBS overlays). Protected routes redirect to PIN login.
+     * **Level 1 (Tournament Admin):** Scoped by per-tournament PIN (`admin_pin_encrypted`). Unlocks management left-nav (`/:slug/manage/*`). Unauthorized navigation to global admin views bounces to admin login.
+     * **Level 2 (Master / System Admin):** Authenticated via Master PIN or immutable environment fallback `SYSTEM_ADMIN_RECOVERY_PIN`. Grants global access across all tournaments, organizations, and player catalogs.
+  2. **Data Management & Simulation Isolation:**
+     * Destructive simulation controls ("Clear All Tournament Data", "Simulate Full Tournament", "Seed Qualifiers Only") and bulk endpoints (`/api/simulate/sample`) are strictly hidden and restricted to System Admins. Tournament Admins cannot view or trigger data wipe operations.
+  3. **AES-256-GCM Two-Way Encryption (`pinCrypto.ts`):**
+     * Encrypts tournament PINs at rest using secret `PIN_ENCRYPTION_KEY`, allowing System Admins to safely reveal PINs (`👁️ 7492`) without invalidating active sessions.
+  4. **Signed Session Tokens & API Route Guards:**
+     * Signed 7-day tokens verified by `createApiMiddleware()` on all mutation methods (`POST`, `PUT`, `DELETE`).
+
+* **Track 9B: Production Cloud Infrastructure & Serverless Bundler [COMPLETE]**
+  1. **Neon Serverless PostgreSQL:** Provisioned and migrated schema across all 9 relational tables; connected via `@neondatabase/serverless` connectionless HTTP driver (`drizzle-orm/neon-http`).
+  2. **Standalone Serverless Bundler Pipeline:** Transitioned serverless API entry point from temporary build bundle to pure TypeScript `api/index.ts` transpiled on the fly by `@vercel/node`.
+  3. **Vercel SPA & API Routing:** Configured `vercel.json` rewrites routing `/api/(.*)` to the serverless function and all other routes to `dist/index.html` with `x-matched-path` header normalization.
+  4. **Custom Domain & DNS:** Live on custom domain `https://www.matchfoundry.gg` via Cloudflare DNS and Vercel Edge Network.
+
+* **Track 9C: MatchFoundry™ Brand Identity & Trademark Rollout [COMPLETE]**
+  1. **Strategic Trademark (`™`) Placement:**
+     * Assert common-law trademark rights on primary anchors without cluttering body text:
+       * Primary header logo: `MATCH` + gold `FOUNDRY` + superscript `™` in `TopNavSwitcher.tsx` and `TournamentSidebar.tsx`.
+       * Page title: `<title>MatchFoundry™ | Tournament Command Center</title>` in `index.html`.
+       * Hero & login subtitle: `MatchFoundry™ Access Control` in `AdminLoginPage.tsx` and `TournamentSwitcherPage.tsx`.
+       * Subtle footer/legal line: `© 2026 MatchFoundry™. All rights reserved.` in `TournamentSwitcherPage.tsx` and `AdminLoginPage.tsx`.
+  2. **Package & Metadata Unification:**
+     * Updated `package.json` and `package-lock.json` name from `tournament-manager` to `matchfoundry`.
+     * Updated Discord webhook test dispatches in `OrganizationDashboard.tsx`.
+     * Added automated brand verification test suite in `src/components/__tests__/rebrand.test.tsx`.
+
+* **Track 9D: Gated Branch/PR CI/CD Pipeline & Zero-Artifact Git Hygiene [COMPLETE]**
+  1. **Zero Built Artifacts in Git (Purge `api/index.js`):**
+     * Purged the temporary compiled bundle `api/index.js` and `src/server/serverless.ts` from git tracking.
+     * Added `api/*.js` to `.gitignore` so runtime build artifacts can never be committed.
+     * Restored `api/index.ts` as pure TypeScript source code using static imports (`createApiMiddleware()`), letting Vercel's native `@vercel/node` compiler transpile on the fly.
+     * Removed `build:api` script and `esbuild` bundling step from `package.json` to keep build scripts clean and standard (`"build": "tsc --noEmit && vite build"`).
+  2. **Trunk-Based PR Workflow:**
+     * Dedicated feature branch: `feature/matchfoundry-rebrand-and-cicd` $\rightarrow$ Pull Request to `main`.
+     * Automated GitHub Actions CI workflow triggered on PR:
+       * `npm run typecheck`
+       * `npm test` (full Vitest suite: 43 test files, 494 passing tests)
+       * `npm run build` (pure client bundle verification)
+     * Vercel automated preview deployments for live browser verification before merge.
+  3. **Production Deployment Gate:**
+     * Vercel production deployment triggers strictly upon merging PR into `main` after all CI status checks pass.
+     * Prevents untested or breaking changes from ever landing on production `main`.
+  4. **Local/Cloud Isolation Verification:**
+     * Local development remains cleanly bound to Docker PostgreSQL (port 5432) with git-ignored `.env`, while Vercel production connects exclusively to Neon via dashboard secrets.
+     * Golden journeys smoke tests passing cleanly in Playwright (`npm run test:e2e`).
 
 ---
 

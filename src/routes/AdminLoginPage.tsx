@@ -141,7 +141,7 @@ export const AdminLoginPage: React.FC = () => {
               Staff & Admin Login
             </h1>
             <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted, #8b949e)' }}>
-              Tournament Manager Access Control
+              MatchFoundry™ Access Control
             </p>
           </div>
         </div>
@@ -416,6 +416,11 @@ export const AdminLoginPage: React.FC = () => {
           </Link>
         </div>
       </div>
+
+      {/* Footer / Common-Law Trademark Notice */}
+      <footer style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-text-muted, #64748b)' }}>
+        <p style={{ margin: 0 }}>© 2026 MatchFoundry™. All rights reserved.</p>
+      </footer>
     </div>
   );
 };

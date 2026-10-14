@@ -53,7 +53,8 @@ export const TournamentSwitcherPage: React.FC = () => {
               <Layers size={24} color="#090d16" />
             </div>
             <span style={{ fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-text-primary)' }}>
-              TOURNAMENT <span style={{ color: 'var(--color-gold-bright)' }}>MANAGER</span>
+              MATCH<span style={{ color: 'var(--color-gold-bright)' }}>FOUNDRY</span>
+              <sup style={{ fontSize: '0.6em', marginLeft: '2px', color: 'var(--color-gold-bright)' }}>™</sup>
             </span>
           </div>
           <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em', marginBottom: '0.75rem' }}>
@@ -471,6 +472,20 @@ export const TournamentSwitcherPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Footer / Common-Law Trademark Notice */}
+      <footer
+        style={{
+          marginTop: 'auto',
+          padding: '2.5rem 1rem 1.5rem',
+          textAlign: 'center',
+          color: 'var(--color-text-muted, #64748b)',
+          fontSize: '0.8rem',
+          borderTop: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))',
+        }}
+      >
+        <p style={{ margin: 0 }}>© 2026 MatchFoundry™. All rights reserved.</p>
+      </footer>
     </div>
   );
 };
