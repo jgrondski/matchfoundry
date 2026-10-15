@@ -12,9 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Serverless build artifacts
-api/*.js
-
 
 # Environment variables
 .env

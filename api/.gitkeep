@@ -1,2 +1,0 @@
-# Keep api directory tracked in git.
-# Build artifacts (api/*.js) are generated during npm run build and ignored by git.
