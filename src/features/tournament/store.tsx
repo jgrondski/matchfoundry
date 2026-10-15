@@ -1790,7 +1790,12 @@ export const TournamentProvider: React.FC<{
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '15px' }}>🔴</span>
             <span>
-              <strong>PostgreSQL Database Offline:</strong> Unable to connect on port 5433 ({dbError || 'Connection refused'}). Tournaments cannot be loaded or saved. Please ensure the Docker container is running (<code>npm run db:up</code>).
+              <strong>PostgreSQL Database Offline:</strong>{' '}
+              {typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? (
+                <>Unable to connect on port 5433 ({dbError || 'Connection refused'}). Tournaments cannot be loaded or saved. Please ensure the Docker container is running (<code>npm run db:up</code>).</>
+              ) : (
+                <>Unable to connect to database ({dbError || 'Connection refused'}). Tournaments cannot be loaded or saved.</>
+              )}
             </span>
           </div>
           <button

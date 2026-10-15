@@ -139,21 +139,25 @@ export const TournamentSwitcherPage: React.FC = () => {
               PostgreSQL Database Offline
             </h2>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', maxWidth: '460px', lineHeight: 1.5 }}>
-              Unable to connect to the database on port 5433 ({dbError || 'Connection refused'}). Tournaments cannot be loaded or modified while PostgreSQL is disconnected.
+              {typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                ? `Unable to connect to the database on port 5433 (${dbError || 'Connection refused'}). Tournaments cannot be loaded or modified while PostgreSQL is disconnected.`
+                : `Unable to connect to the database (${dbError || 'Connection refused'}). Tournaments cannot be loaded or modified while PostgreSQL is disconnected.`}
             </p>
-            <div
-              style={{
-                background: 'rgba(0, 0, 0, 0.4)',
-                padding: '0.5rem 1rem',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.85rem',
-                color: '#fca5a5',
-                fontFamily: 'monospace',
-                marginTop: '0.25rem',
-              }}
-            >
-              npm run db:up
-            </div>
+            {typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
+              <div
+                style={{
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  padding: '0.5rem 1rem',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '0.85rem',
+                  color: '#fca5a5',
+                  fontFamily: 'monospace',
+                  marginTop: '0.25rem',
+                }}
+              >
+                npm run db:up
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.75rem' }}>
               <button
                 onClick={() => retryConnection()}

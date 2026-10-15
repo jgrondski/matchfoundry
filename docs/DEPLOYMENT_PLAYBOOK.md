@@ -32,7 +32,7 @@ This playbook provides a complete, step-by-step operational guide for connecting
 
 ### Core Architecture Components:
 1. **Frontend**: Vite Single-Page Application (SPA) compiled to `dist/`, served via Vercel Edge Network at `https://www.matchfoundry.gg`.
-2. **Backend API**: Node.js Serverless Function handler in pure TypeScript `api/index.ts` wrapping `createApiMiddleware()`, transpiled natively on demand by `@vercel/node` and routed via `vercel.json` (`/api/(.*)` -> `/api`). Zero runtime artifacts are committed to Git.
+2. **Backend API**: Node.js Serverless Function bundled on-the-fly during `npm run build` from TypeScript source `src/server/serverless.ts` into `api/index.js` via `esbuild`. The output is ignored by git (`api/*.js` in `.gitignore`), maintaining zero committed runtime artifacts while providing Vercel with a pre-bundled, self-contained serverless entry point routed via `vercel.json` (`/api/(.*)` -> `/api`).
 3. **Database**: Neon Serverless PostgreSQL. In `src/db/index.ts`, connection strings containing `neon.tech` automatically switch to the `@neondatabase/serverless` connectionless HTTP driver (`drizzle-orm/neon-http`), eliminating connection pool exhaustion on serverless lambdas.
 4. **CI/CD Quality Gate**: GitHub Actions (`.github/workflows/ci.yml`) automatically executes static typecheck, unit and integration tests, and production bundle builds on all pull requests and pushes to `main`.
 5. **Continuous Deployment**: Feature branch PRs generate preview deployment URLs for testing; verified PR merges to `main` deploy to production `matchfoundry.gg`.
