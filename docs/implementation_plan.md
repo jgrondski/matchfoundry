@@ -180,11 +180,11 @@ flowchart TD
      * Added automated brand verification test suite in `src/components/__tests__/rebrand.test.tsx`.
 
 * **Track 9D: Gated Branch/PR CI/CD Pipeline & Zero-Artifact Git Hygiene [COMPLETE]**
-  1. **Zero Built Artifacts in Git (Purge `api/index.js`):**
-     * Purged the temporary compiled bundle `api/index.js` and `src/server/serverless.ts` from git tracking.
+  1. **Zero Built Artifacts in Git & Dynamic Serverless Bundler:**
+     * Purged the temporary compiled bundle `api/index.js` from git tracking.
      * Added `api/*.js` to `.gitignore` so runtime build artifacts can never be committed.
-     * Restored `api/index.ts` as pure TypeScript source code using static imports (`createApiMiddleware()`), letting Vercel's native `@vercel/node` compiler transpile on the fly.
-     * Removed `build:api` script and `esbuild` bundling step from `package.json` to keep build scripts clean and standard (`"build": "tsc --noEmit && vite build"`).
+     * Maintained `src/server/serverless.ts` as pure TypeScript source code.
+     * Wired `build:api` into `npm run build` (`"build": "tsc --noEmit && vite build && npm run build:api"`), bundling `src/server/serverless.ts` on-the-fly into `api/index.js` during both CI and Vercel cloud deployments without dirtying Git.
   2. **Trunk-Based PR Workflow:**
      * Dedicated feature branch: `feature/matchfoundry-rebrand-and-cicd` $\rightarrow$ Pull Request to `main`.
      * Automated GitHub Actions CI workflow triggered on PR:
