@@ -230,14 +230,14 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
         embeds: [
           {
             title: `🎮 Webhook Verified: ${org.name}`,
-            description: `This is a test notification from **Tournament Manager** for organization **${org.name}**. Webhooks are correctly configured!`,
+            description: `This is a test notification from **MatchFoundry™** for organization **${org.name}**. Webhooks are correctly configured!`,
             color: parseInt((primaryTheme.primaryColor || '#ffc905').replace('#', ''), 16) || 0xffc905,
             fields: [
               { name: 'Organization Slug', value: `/${org.slug}`, inline: true },
               { name: 'Hosted Tournaments', value: String(orgTournaments.length), inline: true },
               { name: 'Status', value: '🟢 Active & Ready', inline: true },
             ],
-            footer: { text: 'Tournament Manager • Discord Webhook Integration' },
+            footer: { text: 'MatchFoundry™ • Discord Webhook Integration' },
             timestamp: new Date().toISOString(),
           },
         ],

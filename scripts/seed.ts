@@ -31,6 +31,55 @@ export async function runDatabaseSeed(): Promise<void> {
       console.log('   No existing tournaments found. Simulating initial championship tournament...');
       const sample = await simulateSampleTournament();
       console.log(`   ✅ Sample tournament created: "${sample.name}" (${sample.slug}) with ${sample.tiers.length} tiers.`);
+
+      // Seed Golden Journey test fixtures (Omen Open, Omen DAS, Omen AO3)
+      const { createTournament, getFullTournament, saveFullTournament } = await import('../src/api/tournaments');
+      const { listPlayers } = await import('../src/api/players');
+      const { runFullSimulation } = await import('../src/features/tournament/simulation');
+      const dbPlayers = await listPlayers();
+      const profiles = dbPlayers.slice(0, 32).map(p => ({
+        id: p.id,
+        name: p.name,
+        country: p.country || 'US',
+        avatarType: p.avatarType,
+        personalBest: p.personalBest,
+        playstyle: p.playstyle,
+        isDisqualified: false,
+      }));
+
+      const goldenTourneys = [
+        { name: 'Omen Open', slug: 'omen-open' },
+        { name: 'Omen DAS', slug: 'omen-d' },
+        { name: 'Omen AO3', slug: 'omen-ao3' },
+      ];
+
+      for (const def of goldenTourneys) {
+        const { tournament } = await createTournament({
+          name: def.name,
+          slug: def.slug,
+          qualFormat: 'HIGH_SCORE',
+          tiers: [
+            {
+              name: 'Gold Tier',
+              slug: 'gold',
+              bracketType: 'TRADITIONAL',
+              numPlayers: 16,
+              priorityOrder: 1,
+              eliminationType: 'DOUBLE',
+              bracketRouting: 'TRADITIONAL',
+              bestOf: 5,
+              primaryColor: '#ffc905',
+              secondaryColor: '#705b33',
+            },
+          ],
+        });
+        const full = await getFullTournament(tournament.id);
+        if (full) {
+          const simulated = runFullSimulation(full, profiles);
+          await saveFullTournament(simulated);
+          console.log(`   ✅ Seeded journey tournament: "${def.name}" (${def.slug})`);
+        }
+      }
     } else {
       console.log(`   ℹ️ Found ${existingTournaments.length} existing tournament(s). Preserving existing tournament catalog.`);
     }

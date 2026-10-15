@@ -1,12 +1,11 @@
 {
-  "name": "tournament-manager",
+  "name": "matchfoundry",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && npm run build:api",
-    "build:api": "esbuild src/server/serverless.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js",
+    "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",

@@ -347,7 +347,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
               textDecoration: 'none',
               overflow: 'hidden',
             }}
-            title="Tournament Manager Home"
+            title="MatchFoundry™ Home"
           >
             <div
               style={{
@@ -375,7 +375,8 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                   lineHeight: 1.1,
                 }}
               >
-                TOURNAMENT <span style={{ color: 'var(--color-gold-bright)' }}>MGR</span>
+                MATCH<span style={{ color: 'var(--color-gold-bright)' }}>FOUNDRY</span>
+                <sup style={{ fontSize: '0.65em', marginLeft: '1px', color: 'var(--color-gold-bright)' }}>™</sup>
               </span>
             )}
           </Link>
