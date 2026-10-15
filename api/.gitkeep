@@ -1,2 +1,2 @@
-# Keep api directory tracked in git.
-# Build artifacts (api/*.js) are generated during npm run build and ignored by git.
+# Keep api directory tracked in Git.
+# Runtime bundles (api/*.js) are built in CI/CD and ignored by Git.
