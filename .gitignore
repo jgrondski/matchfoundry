@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+# Serverless build artifacts
+api/*.js
+.vercel
+
 
 
 # Environment variables

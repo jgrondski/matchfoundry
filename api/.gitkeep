@@ -1,0 +1,2 @@
+# Keep api directory tracked in Git.
+# Runtime bundles (api/*.js) are built in CI/CD and ignored by Git.
