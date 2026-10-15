@@ -6,9 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
-  test_and_deploy:
-    name: Typecheck, Test, Build & Deploy
+  test:
+    name: Typecheck & Test Suite
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -58,12 +62,14 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy Prebuilt Artifact to Vercel
+        id: deploy
         run: |
           if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
             DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
           else
             DEPLOY_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
           fi
+          echo "deploy_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
           echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
           echo "### 🚀 Vercel Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "Target: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'Production (matchfoundry.gg)' || 'Preview' }}" >> $GITHUB_STEP_SUMMARY
@@ -71,3 +77,17 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Comment Preview URL on Pull Request
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.deploy_url }}';
+            const body = `### 🚀 MatchFoundry Preview Deployed!\n\n**Preview URL:** ${url}\n\n*Verified by automated typecheck and full Vitest regression test suite.*`;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
