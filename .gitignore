@@ -16,6 +16,7 @@ api/*.js
 .vercel
 
 
+
 # Environment variables
 .env
 .env*.local
