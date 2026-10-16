@@ -5,6 +5,7 @@
 - **Root-Cause Lifecycle Diagnosis**: For recurring bugs, hydration issues, or rendering anomalies, trace the complete data and component lifecycle from cold mount to steady state. Strictly avoid band-aids (such as adding more boolean flags or reactive `useEffect` patches).
 - **Consult Before Sweeping Execution**: When addressing systemic or multi-file issues, propose the architectural design first, debate tradeoffs with the user, and gain explicit alignment before touching files.
 - **Strict Git Boundary Mandate (Zero Autonomous Branching, Commits, or Pushing)**:
+  - **Always Start on `main`**: When asked to start making changes, ALWAYS verify that the current branch is `main`. If the repository is NOT on `main`, STOP immediately and ask the user for confirmation before touching any files.
   - NEVER create branches (`git branch`, `git checkout -b`, `git switch -c`). The user chooses all branch names and decides when/if to branch.
   - NEVER commit changes (`git commit`). All changes must remain strictly uncommitted in the working tree for user inspection.
   - NEVER push changes (`git push`). Remote pushing is completely prohibited.

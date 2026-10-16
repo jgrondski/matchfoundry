@@ -243,5 +243,121 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await expect(page).toHaveURL(/\/admin/);
   });
 
+  test('Journey 5: Remote Competitor Online Qualification & Judge Adjudication (Phase 10 Golden Journey 4)', async ({ page, context }) => {
+    await context.clearCookies();
+    const runnerHandle = `Runner_${Math.floor(10000 + Math.random() * 90000)}`;
+
+    // 1. Remote competitor navigates directly to the public competitor portal for omen-ao3
+    await page.goto('/omen-ao3/qualify');
+    await expect(page.getByTestId('competitor-portal')).toBeVisible();
+    await expect(page.getByTestId('twitch-connect-card')).toBeVisible();
+
+    // 2. Authenticate via Mock Twitch login
+    const mockInput = page.getByTestId('mock-handle-input');
+    await expect(mockInput).toBeVisible();
+    await mockInput.fill(runnerHandle);
+    await page.getByTestId('mock-login-button').click();
+
+    // 3. Unmatched alias triggers Identity Disambiguation modal
+    const claimModal = page.getByTestId('identity-claim-modal');
+    await expect(claimModal).toBeVisible();
+    await page.getByTestId('tab-register-new').click();
+
+    // Verify alias is prefilled and register as walk-in competitor
+    const registerNameInput = page.getByTestId('register-name-input');
+    await expect(registerNameInput).toHaveValue(runnerHandle);
+    await page.getByTestId('submit-register-button').click();
+    await expect(claimModal).not.toBeVisible();
+
+    // 4. Authenticated workspace appears with identity badge
+    await expect(page.getByTestId('competitor-identity-bar')).toBeVisible();
+    await expect(page.getByTestId('identity-status-badge')).toContainText('Provisional New');
+
+    // 5. Launch official qualifier pre-flight briefing
+    const launchHero = page.getByTestId('launch-qual-hero');
+    await expect(launchHero).toBeVisible();
+    await page.getByTestId('start-preflight-button').click();
+
+    // Checklist modal appears
+    const preFlightModal = page.getByTestId('pre-flight-modal');
+    await expect(preFlightModal).toBeVisible();
+
+    // Check all checklist items
+    const checkLabels = preFlightModal.locator('label');
+    const labelCount = await checkLabels.count();
+    for (let i = 0; i < labelCount; i++) {
+      await checkLabels.nth(i).click();
+    }
+
+    // Confirm & Begin official run
+    const beginBtn = page.getByTestId('confirm-begin-button');
+    await expect(beginBtn).toBeEnabled();
+    await beginBtn.click();
+    await expect(preFlightModal).not.toBeVisible();
+
+    // 6. Active session HUD displays immutable NES Authword
+    const authwordCard = page.getByTestId('authword-hud-card');
+    await expect(authwordCard).toBeVisible();
+    const authwordText = await page.getByTestId('assigned-authword').textContent();
+    expect(authwordText?.trim()).toMatch(/^[A-Z0-9.\-!♥]{6,8}$/);
+
+    // 7. Fill out scores and paste Twitch broadcast VOD link
+    const scoreInput = page.getByTestId('score-input-0');
+    await expect(scoreInput).toBeVisible();
+    await scoreInput.fill('1124500');
+
+    const vodInput = page.getByTestId('twitch-vod-input');
+    await expect(vodInput).toBeVisible();
+    await vodInput.fill('https://twitch.tv/videos/9876543210?t=00h45m12s');
+
+    // Submit official score
+    const submitBtn = page.getByTestId('submit-qual-button');
+    await expect(submitBtn).toBeEnabled();
+    await submitBtn.click();
+
+    // Confirmed receipt card displays
+    await expect(page.getByTestId('awaiting-verification-card')).toBeVisible();
+    await expect(page.getByText('1,124,500')).toBeVisible();
+
+    // 8. Public Leaderboard reflects provisional standing [⏳ Awaiting Verification]
+    await page.goto('/omen-ao3/leaderboard');
+    const competitorRow = page.locator('tr', { hasText: runnerHandle });
+    await expect(competitorRow).toBeVisible();
+    await expect(competitorRow.getByText('Awaiting Verification')).toBeVisible();
+    await expect(competitorRow.getByTitle('Watch Twitch VOD')).toBeVisible();
+
+    // 9. Staff Admin navigates to Review Queue
+    await page.goto('/omen-ao3/manage/review');
+    await expect(page).toHaveURL(/\/admin\?.*redirect=%2Fomen-ao3%2Fmanage%2Freview/);
+    await page.getByPlaceholder('Enter PIN or Key').fill(SYSTEM_ADMIN_PIN);
+    await page.getByRole('button', { name: /unlock administration/i }).click();
+
+    // Lands on Review Queue view
+    await expect(page).toHaveURL(/\/omen-ao3\/manage\/review/);
+    await expect(page.getByRole('heading', { name: 'Review Queue' })).toBeVisible();
+
+    // Find submission row in ReviewQueueTable
+    const reviewRow = page.locator('tr', { hasText: runnerHandle });
+    await expect(reviewRow).toBeVisible();
+    await reviewRow.getByRole('button', { name: /review/i }).click();
+
+    // 10. Judge Adjudication Dialog opens
+    const adjDialog = page.getByRole('dialog');
+    await expect(adjDialog).toBeVisible();
+    await expect(adjDialog.getByText(new RegExp(`Adjudicate Run: ${runnerHandle}`, 'i'))).toBeVisible();
+    await expect(adjDialog.getByText(authwordText!.trim())).toBeVisible();
+
+    // Judge clicks "Verify Qual"
+    await adjDialog.getByRole('button', { name: /verify qual/i }).click();
+    await expect(adjDialog).not.toBeVisible();
+
+    // 11. Public Leaderboard updates to official "✓ Verified" status
+    await page.goto('/omen-ao3/leaderboard');
+    const verifiedRow = page.locator('tr', { hasText: runnerHandle });
+    await expect(verifiedRow).toBeVisible();
+    await expect(verifiedRow.getByText(/verified/i)).toBeVisible();
+    await expect(verifiedRow.getByText('Awaiting Verification')).not.toBeVisible();
+  });
+
 });
 

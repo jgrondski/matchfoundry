@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   Check,
+  CheckCircle2,
   Building2,
   Search,
   ExternalLink,
@@ -37,6 +38,7 @@ export type SidebarNavView =
   | 'sheet'
   | 'bracket'
   | 'judge'
+  | 'review'
   | 'obs'
   | 'players'
   | 'settings'
@@ -75,6 +77,8 @@ export function getTournamentTargetUrl(targetTourney: Tournament, view?: Sidebar
         return tierSlug ? `/${targetTourney.slug}/manage/bracket/${tierSlug}` : `/${targetTourney.slug}/manage/bracket`;
       case 'judge':
         return tierSlug ? `/${targetTourney.slug}/manage/judge?tier=${tierSlug}` : `/${targetTourney.slug}/manage/judge`;
+      case 'review':
+        return `/${targetTourney.slug}/manage/review`;
       case 'obs':
         return `/${targetTourney.slug}/obs`;
       case 'players':
@@ -238,6 +242,10 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
     return () => document.removeEventListener('click', handleClickOutside);
   }, [isTournamentMenuOpen]);
 
+  const pendingReviewCount = (activeTourney?.qualifierSubmissions || []).filter(
+    s => s.submissionSource === 'ONLINE' && (s.status === 'SUBMITTED' || Boolean(s.timerLog?.resetRequested))
+  ).length;
+
   const navItems = [
     {
       key: 'leaderboard' as const,
@@ -277,6 +285,17 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
       icon: Scale,
       to: slug ? (currentTierSlug ? `/${slug}/manage/judge?tier=${currentTierSlug}` : `/${slug}/manage/judge`) : '/',
       badge: !isAuthorized ? '🔒' : null,
+    },
+    {
+      key: 'review' as const,
+      label: pendingReviewCount > 0 ? `Review Queue (${pendingReviewCount})` : 'Review Queue',
+      icon: CheckCircle2,
+      to: slug ? (isAuthorized ? `/${slug}/manage/review` : `/${slug}/manage/review`) : '/',
+      badge: !isAuthorized
+        ? '🔒'
+        : pendingReviewCount > 0
+        ? String(pendingReviewCount)
+        : null,
     },
     {
       key: 'obs' as const,

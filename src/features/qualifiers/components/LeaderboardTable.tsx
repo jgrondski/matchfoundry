@@ -24,9 +24,14 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerProfile | null>(null);
   const [selectedRankRow, setSelectedRankRow] = useState<LeaderboardRankRow | undefined>(undefined);
+  const [sourceFilter, setSourceFilter] = useState<'ALL' | 'IN_PERSON' | 'ONLINE' | 'AWAITING'>('ALL');
 
   const allRows = deriveLeaderboard(tournament);
   const filteredRows = allRows.filter(r => {
+    if (sourceFilter === 'IN_PERSON' && r.submissionSource !== 'IN_PERSON') return false;
+    if (sourceFilter === 'ONLINE' && r.submissionSource !== 'ONLINE') return false;
+    if (sourceFilter === 'AWAITING' && r.status !== 'awaiting verification') return false;
+
     const q = searchTerm.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -111,6 +116,76 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
         }
         isObsMode={isObsMode}
       />
+
+      {/* Multi-Source Filtering Pills */}
+      {!isObsMode && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setSourceFilter('ALL')}
+            style={{
+              padding: '0.35rem 0.75rem',
+              borderRadius: 'var(--radius-full)',
+              border: sourceFilter === 'ALL' ? '1px solid #ffffff' : '1px solid var(--color-border)',
+              background: sourceFilter === 'ALL' ? 'rgba(255, 255, 255, 0.15)' : 'var(--color-bg-surface)',
+              color: sourceFilter === 'ALL' ? '#ffffff' : 'var(--color-text-secondary)',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            All ({allRows.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSourceFilter('IN_PERSON')}
+            style={{
+              padding: '0.35rem 0.75rem',
+              borderRadius: 'var(--radius-full)',
+              border: sourceFilter === 'IN_PERSON' ? '1px solid #3b82f6' : '1px solid var(--color-border)',
+              background: sourceFilter === 'IN_PERSON' ? 'rgba(59, 130, 246, 0.2)' : 'var(--color-bg-surface)',
+              color: sourceFilter === 'IN_PERSON' ? '#60a5fa' : 'var(--color-text-secondary)',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            🏢 In-Person ({allRows.filter(r => r.submissionSource === 'IN_PERSON').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSourceFilter('ONLINE')}
+            style={{
+              padding: '0.35rem 0.75rem',
+              borderRadius: 'var(--radius-full)',
+              border: sourceFilter === 'ONLINE' ? '1px solid #a855f7' : '1px solid var(--color-border)',
+              background: sourceFilter === 'ONLINE' ? 'rgba(168, 85, 247, 0.2)' : 'var(--color-bg-surface)',
+              color: sourceFilter === 'ONLINE' ? '#c084fc' : 'var(--color-text-secondary)',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            🌐 Online ({allRows.filter(r => r.submissionSource === 'ONLINE').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setSourceFilter('AWAITING')}
+            style={{
+              padding: '0.35rem 0.75rem',
+              borderRadius: 'var(--radius-full)',
+              border: sourceFilter === 'AWAITING' ? '1px solid var(--color-gold-bright)' : '1px solid var(--color-border)',
+              background: sourceFilter === 'AWAITING' ? 'rgba(245, 158, 11, 0.2)' : 'var(--color-bg-surface)',
+              color: sourceFilter === 'AWAITING' ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
+              fontSize: '0.78rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            ⏳ Pending Review ({allRows.filter(r => r.status === 'awaiting verification').length})
+          </button>
+        </div>
+      )}
 
       {/* Main Leaderboard Table */}
       <div style={{ background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', overflow: 'hidden' }}>
@@ -230,7 +305,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                             <PlaystyleChip style={row.player.playstyle} />
                           )}
 
-                          {/* Qualifier State Badge */}
+                          {/* Qualifier State Badges */}
                           {row.status === 'verified' && (
                             <span
                               style={{
@@ -248,6 +323,57 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                               title="Qualifier verified"
                             >
                               <Check size={10} /> Verified
+                            </span>
+                          )}
+                          {row.status === 'awaiting verification' && (
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                padding: '0.12rem 0.45rem',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(245, 158, 11, 0.15)',
+                                color: 'var(--color-gold-bright)',
+                                border: '1px solid rgba(245, 158, 11, 0.3)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.2rem',
+                              }}
+                              title="Awaiting verification by judge"
+                            >
+                              ⏳ Awaiting Verification
+                            </span>
+                          )}
+                          {row.status === 'dnq' && (
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                padding: '0.12rem 0.45rem',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                color: '#f87171',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                              }}
+                              title="Did not qualify"
+                            >
+                              DNQ
+                            </span>
+                          )}
+                          {row.status === 'dq' && (
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                padding: '0.12rem 0.45rem',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(239, 68, 68, 0.25)',
+                                color: '#ef4444',
+                                border: '1px solid rgba(239, 68, 68, 0.5)',
+                              }}
+                              title="Disqualified"
+                            >
+                              DQ
                             </span>
                           )}
                           {row.status === 'in progress' && (
@@ -281,6 +407,62 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                             >
                               Not Started
                             </span>
+                          )}
+
+                          {/* Source Indicator Pill */}
+                          {row.submissionSource === 'ONLINE' && (
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 600,
+                                padding: '0.12rem 0.4rem',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(168, 85, 247, 0.15)',
+                                color: '#c084fc',
+                                border: '1px solid rgba(168, 85, 247, 0.3)',
+                              }}
+                            >
+                              🌐 Online
+                            </span>
+                          )}
+                          {row.submissionSource === 'IN_PERSON' && (
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 600,
+                                padding: '0.12rem 0.4rem',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(59, 130, 246, 0.15)',
+                                color: '#60a5fa',
+                                border: '1px solid rgba(59, 130, 246, 0.3)',
+                              }}
+                            >
+                              🏢 In-Person
+                            </span>
+                          )}
+
+                          {/* Twitch VOD Link */}
+                          {row.twitchVodUrl && (
+                            <a
+                              href={row.twitchVodUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              title="Watch Twitch VOD"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.2rem',
+                                fontSize: '0.7rem',
+                                color: '#a78bfa',
+                                textDecoration: 'none',
+                                padding: '0.1rem 0.35rem',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(167, 139, 250, 0.1)',
+                              }}
+                            >
+                              VOD ↗
+                            </a>
                           )}
                         </div>
                       </td>

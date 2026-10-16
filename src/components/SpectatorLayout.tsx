@@ -13,10 +13,11 @@ import {
   ArrowLeft,
   Settings,
   KeyRound,
+  Gamepad2,
 } from 'lucide-react';
 import { ErrorBoundary } from './ErrorBoundary';
 
-export type SpectatorNavView = 'leaderboard' | 'standings' | 'bracket';
+export type SpectatorNavView = 'leaderboard' | 'standings' | 'bracket' | 'qualify';
 
 interface SpectatorLayoutProps {
   tournament: Tournament;
@@ -66,6 +67,16 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
       icon: Trophy,
       to: `/${tournament.slug}/standings`,
     },
+    ...(tournament.qualMode !== 'IN_PERSON'
+      ? [
+          {
+            id: 'qualify' as const,
+            label: 'Qualify',
+            icon: Gamepad2,
+            to: `/${tournament.slug}/qualify`,
+          },
+        ]
+      : []),
   ];
 
   return (

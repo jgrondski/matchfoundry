@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "test:brackets": "vitest run src/features/bracket",
     "test:api": "vitest run src/api src/server",
-    "test:ui": "vitest run src/components src/features/tournament src/features/qualifiers src/features/players src/features/organizations",
+    "test:ui": "vitest run src/components src/features/tournament src/features/qualifiers src/features/players src/features/organizations src/features/online-quals",
     "test:e2e": "playwright test",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
