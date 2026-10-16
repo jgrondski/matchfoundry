@@ -8,6 +8,7 @@ import type {
   TournamentMetadata,
   TierMetadata,
   MatchMetadata,
+  QualTimerLog,
 } from '../features/tournament/types';
 
 export const players = pgTable(
@@ -18,6 +19,7 @@ export const players = pgTable(
     displayName: text('display_name'),
     nickname: text('nickname'),
     twitchUsername: text('twitch_username'),
+    twitchId: text('twitch_id'),
     country: text('country'),
     avatarType: text('avatar_type', { enum: ['flag', 'custom'] }).notNull().default('flag'),
     avatarUrl: text('avatar_url'),
@@ -30,6 +32,7 @@ export const players = pgTable(
   },
   (table) => [
     uniqueIndex('players_name_lower_idx').on(sql`lower(trim(${table.name}))`),
+    uniqueIndex('players_twitch_id_idx').on(table.twitchId),
   ]
 );
 
@@ -64,6 +67,9 @@ export const tournaments = pgTable('tournaments', {
   qualFormat: text('qual_format', { enum: ['HIGH_SCORE', 'AVERAGE_OF_X', 'POINTS'] }).notNull(),
   qualAverageCount: integer('qual_average_count'),
   pointsConfig: jsonb('points_config').$type<Array<{ minScore: number; points: number }>>(),
+  qualMode: text('qual_mode', { enum: ['IN_PERSON', 'ONLINE', 'HYBRID'] }).notNull().default('HYBRID'),
+  qualWindowMinutes: integer('qual_window_minutes').notNull().default(90),
+  customAuthWords: jsonb('custom_auth_words').$type<string[]>(),
   qualsClosed: boolean('quals_closed').notNull().default(false),
   isVerified: boolean('is_verified').notNull().default(false),
   adminPinEncrypted: text('admin_pin_encrypted'),
@@ -101,6 +107,21 @@ export const qualifierSubmissions = pgTable('qualifier_submissions', {
   tournamentId: uuid('tournament_id').references(() => tournaments.id, { onDelete: 'cascade' }).notNull(),
   playerId: uuid('player_id').references(() => players.id, { onDelete: 'restrict' }).notNull(),
   score: integer('score').notNull(),
+  submissionSource: text('submission_source', { enum: ['IN_PERSON', 'ONLINE'] }).notNull().default('IN_PERSON'),
+  authWord: text('auth_word'),
+  twitchVodUrl: text('twitch_vod_url'),
+  submittedTwitchId: text('submitted_twitch_id'),
+  submittedTwitchUsername: text('submitted_twitch_username'),
+  identityStatus: text('identity_status', {
+    enum: ['VERIFIED_MATCH', 'CLAIMED_PENDING_REVIEW', 'PROVISIONAL_NEW'],
+  }),
+  status: text('status', {
+    enum: ['NOT_STARTED', 'IN_PROGRESS', 'SUBMITTED', 'VERIFIED', 'DNQ', 'DQ'],
+  }).notNull().default('VERIFIED'),
+  timerLog: jsonb('timer_log').$type<QualTimerLog>(),
+  judgeNotes: text('judge_notes'),
+  verifiedBy: text('verified_by'),
+  verifiedAt: timestamp('verified_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

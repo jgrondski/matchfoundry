@@ -21,6 +21,8 @@ import { Database, AlertTriangle } from 'lucide-react';
 import { AuthProvider } from './features/auth/AuthContext';
 import { RequireTournamentAdmin, RequireMasterAdmin } from './features/auth/RouteGuards';
 import { AdminLoginPage } from './routes/AdminLoginPage';
+import { PublicQualifyPage } from './routes/PublicQualifyPage';
+import { ManageReviewPage } from './routes/ManageReviewPage';
 
 export const App: React.FC = () => {
   const [configError] = useState<string | null>(null);
@@ -124,6 +126,7 @@ export const App: React.FC = () => {
                 <Route path="/:slug/leaderboard" element={<PublicLeaderboardPage />} />
                 <Route path="/:slug/quals" element={<Navigate to="../leaderboard" relative="path" replace />} />
                 <Route path="/:slug/standings" element={<FinalStandingsPage />} />
+                <Route path="/:slug/qualify" element={<PublicQualifyPage />} />
 
                 {/* OBS Broadcast Studio Hub */}
                 <Route path="/:slug/obs" element={<OBSHubPage />} />
@@ -173,6 +176,14 @@ export const App: React.FC = () => {
                   element={
                     <RequireTournamentAdmin>
                       <ManageJudgePage />
+                    </RequireTournamentAdmin>
+                  }
+                />
+                <Route
+                  path="/:slug/manage/review"
+                  element={
+                    <RequireTournamentAdmin>
+                      <ManageReviewPage />
                     </RequireTournamentAdmin>
                   }
                 />

@@ -202,25 +202,117 @@ flowchart TD
 ---
 
 ### Phase 10: Live & Online Qualifiers Engine [UPCOMING]
-* **Goal:** Deliver the full online self-service competitor qualification portal per Master Spec Section 10, running directly against the deployed production HTTPS environment.
-1. **Competitor Self-Service Portal (`/:slug/qualify`):**
-   * Public onboarding view for remote competitors.
-   * Twitch OAuth 2.0 integration (using production HTTPS callback URL) retrieving Twitch handle, avatar, and channel link.
-2. **NES-Compatible Authword Engine (Spec Sec 10.2):**
-   * Curated dictionary of ~1,000 family-friendly English words ($\ge 6$ letters).
-   * Strict NES character set enforcement (`A–Z`, `0–9`, `.`, `-`, `!`, `♥`; no spaces).
-   * Support for custom approved words in Tournament Settings.
-3. **Countdown Timer & Telemetry Logging (Spec Sec 10.3):**
-   * Non-blocking countdown timer inheriting `qualWindowMinutes`.
-   * Captures `QualTimerLog` telemetry (`startedAt`, `submittedAt`, `elapsedSeconds`, `pauses`).
-4. **Online Judge Review Queue & Verification Drawer (Spec Sec 10.4):**
-   * Dedicated judge review drawer (`/:slug/manage/judge`) for incoming submissions.
-   * Embedded Twitch VOD player, 10k topout authword check, timer telemetry log inspection.
-   * Actions: "Verify Qual", "Edit Score", "Mark DNQ", "Disqualify (DQ)".
-5. **Discord Webhooks Integration:**
-   * Automated dispatches on qual start and qual submit with Twitch stream link and score.
-6. **Tournament Mode Toggle:**
-   * Support `IN_PERSON`, `ONLINE`, and `HYBRID` modes.
+* **Goal:** Deliver the full online self-service competitor qualification portal per Master Spec Section 10, running directly against the deployed production HTTPS environment (`matchfoundry.gg` on Vercel + Neon PostgreSQL), complete with robust identity resolution, Twitch OAuth 2.0, NES Authwords, and mixed-mode adjudication.
+
+* **Track 10A: Relational Database Schema & Data Models (`src/db/schema.ts`, `src/features/tournament/types.ts`)**
+  1. **Player Identity Extensions (`players` table):**
+     * `twitch_id`: `text` (unique index, nullable) — Permanent, immutable Twitch account ID.
+  2. **Qualifier Submissions Overhaul (`qualifier_submissions` table):**
+     * `submission_source`: `text` enum (`'IN_PERSON'`, `'ONLINE'`, default `'IN_PERSON'`).
+     * `auth_word`: `text` (nullable) — Assigned 6–8 character NES verification word.
+     * `twitch_vod_url`: `text` (nullable) — Deep-link to competitor's stream broadcast.
+     * `submitted_twitch_id`: `text` (nullable) — Immutable audit record of the authenticated Twitch account.
+     * `submitted_twitch_username`: `text` (nullable) — Snapshot of Twitch handle at submission time.
+     * `identity_status`: `text` enum (`'VERIFIED_MATCH'`, `'CLAIMED_PENDING_REVIEW'`, `'PROVISIONAL_NEW'`).
+     * `status`: `text` enum (`'NOT_STARTED'`, `'IN_PROGRESS'`, `'SUBMITTED'`, `'VERIFIED'`, `'DNQ'`, `'DQ'`).
+     * `timer_log`: `jsonb` (`QualTimerLog`: `startedAt`, `submittedAt`, `elapsedSeconds`, `pauses`).
+     * `judge_notes`: `text` (nullable) — Adjudicator audit comments and timestamps.
+     * `verified_by`: `text` (nullable) — Judge user identifier.
+     * `verified_at`: `timestamp` (nullable).
+  3. **Tournament Mixed-Mode Config (`tournaments` table):**
+     * `qual_mode`: `text` enum (`'IN_PERSON'`, `'ONLINE'`, `'HYBRID'`, default `'HYBRID'`).
+     * `qual_window_minutes`: `integer` (default 90).
+     * `custom_auth_words`: `jsonb` (`string[]`).
+
+* **Track 10B: Twitch OAuth 2.0 Integration & Identity Resolution Engine**
+  1. **OAuth 2.0 Production Handshake:**
+     * Dedicated endpoints: `/api/auth/twitch/authorize` and `/api/auth/twitch/callback` with PKCE / state CSRF validation.
+     * Local dev fallback mock authentication for isolated Vitest/development without live Twitch credentials.
+  2. **3-Tier Identity Resolution Protocol:**
+     * **Tier 1 (Verified Repeat Competitor):** `players.twitch_id = session.twitch_id` $\rightarrow$ 100% confidence, auto-linked as `VERIFIED_MATCH`.
+     * **Tier 2 (Roster Claim):** Unlinked competitor claims an existing tournament roster profile $\rightarrow$ `CLAIMED_PENDING_REVIEW` (unblocks competitor run immediately, requires judge ratification).
+     * **Tier 3 (Provisional New Player):** Walk-in competitor registers new competitive alias, country, and playstyle $\rightarrow$ `PROVISIONAL_NEW`.
+
+* **Track 10C: NES Authword Generator & Telemetry Engine (Spec Sec 10.2, 10.3)**
+  1. **NES Character Set Enforcer:**
+     * Strict validation against NES Tetris high-score charset: `A–Z`, `0–9`, `.`, `-`, `!`, `♥` (length: 6–8 chars; spaces strictly forbidden).
+  2. **Curated Dictionary Engine:**
+     * Curated dictionary of ~1,000 family-friendly English words ($\ge 6$ letters).
+     * Seamlessly merges tournament-specific `custom_auth_words`.
+  3. **Non-Blocking Telemetry Countdown Timer:**
+     * React countdown timer inheriting `qualWindowMinutes`.
+     * Non-blocking architecture: expiry logs over-time telemetry without disabling submit button.
+     * Captures `QualTimerLog` telemetry (`startedAt`, `submittedAt`, `elapsedSeconds`, `pauses`).
+
+* **Track 10D: Competitor Self-Service Portal (`/:slug/qualify`)**
+  1. **3-Tier Component Architecture:**
+     * Tier 1: Route Gate (`src/routes/PublicQualifyPage.tsx`).
+     * Tier 2: Keyed Feature View (`src/features/online-quals/components/CompetitorPortalView.tsx`).
+     * Tier 3: Pre-flight briefing modal, active session HUD, Authword display, submission form.
+  2. **Session Lifecycle:**
+     * Pre-flight checklist confirming live broadcast and Twitch past broadcast storage.
+     * Session launch, active Authword HUD, game score entry, VOD URL paste.
+     * "I'm Done" confirmation card with instant provisional leaderboard placement (`[⏳ Awaiting Verification]`).
+  3. **Technical Exception Handling:**
+     * "Report Stream Crash / Request Reset" action allowing competitors to request an authorized session void/restart from judges.
+
+* **Track 10E: Mixed-Mode Adjudication & Identity Resolution Queue (`/:slug/manage/review`)**
+  1. **Dedicated Review Queue Interface:**
+     * Accessible via `/:slug/manage/review` with pending submission counter badge in navigation sidebar.
+  2. **Identity Resolution & Override Actions:**
+     * **"Confirm Identity Binding":** Permanently writes `twitch_id` to the claimed player's global profile.
+     * **"Reassign / Link to Different Player":** Roster and global catalog search to correct mistaken claims.
+     * **"Promote to Global Player":** Instantly creates a canonical row in `players`, imports to tournament roster, and verifies qualification.
+  3. **Submission Adjudication:**
+     * Embedded Twitch VOD player with timestamp scrub for 10k topout Authword verification.
+     * Timer log elapsed time validation.
+     * Action buttons: "Verify Qual", "Edit Score & Verify", "Mark DNQ", "Disqualify (DQ)".
+
+* **Track 10F: Discord Webhook Dispatches & Mixed-Mode Leaderboard Polish**
+  1. **Automated Discord Webhooks:**
+     * Qual Start: `"🎮 [Player] started an official qual for [Tournament]! Watch live: [Twitch URL]"`
+     * Qual Submit: `"🏆 [Player] submitted qual: [Score] avg. VOD: [Twitch VOD URL]"`
+     * Qual Verified: `"✓ [Player]'s qualification has been verified by judge: [Score]"`
+  2. **Unified Leaderboard Enhancements (`LeaderboardTable.tsx`):**
+     * Multi-source pills: `[All]`, `[🏢 In-Person]`, `[🌐 Online]`, `[⏳ Pending Review]`.
+     * Source indicator badges and clickable VOD icons for remote runs.
+
+* **Track 10G: Automated TDD Regression Suite & User Journey Assertions**
+  * **TDD Invariant & Definition of Done:** Development follows strict Acceptance-Test-Driven Development (ATDD). High-level journey assertions are codified in automated tests before component implementation; a track is complete only when its corresponding journey tests pass with zero regressions.
+  
+  1. **Journey 1 Assertions: The Online Competitor Portal (`src/features/online-quals/__tests__/competitorJourney.test.tsx`):**
+     * *Assertion 1.1 (OAuth Gate):* Unauthenticated navigation to `/:slug/qualify` displays the Twitch Connect action; valid OAuth session resolves handle, avatar, and channel link.
+     * *Assertion 1.2 (Identity Disambiguation):* Unmatched Twitch accounts present the dual choice modal (claim pre-registered tournament profile vs. register new alias); selecting either does not block starting the run.
+     * *Assertion 1.3 (Authword Generation & Charset):* Initiating run generates an immutable 6–8 char Authword matching regex `/^[A-Z0-9.\-!♥]{6,8}$/` (no spaces).
+     * *Assertion 1.4 (Timer Telemetry):* Non-blocking countdown initiates at `qualWindowMinutes`; expiring timer keeps submit active while recording over-time telemetry.
+     * *Assertion 1.5 (Persistence):* Page reloads or tab closures during an active run cleanly recover active Authword and remaining elapsed time without resetting session.
+     * *Assertion 1.6 (Submission Lockout & Provisional Impact):* Submitting valid scores + Twitch VOD link locks inputs to read-only, generates a confirmed receipt card, and immediately places the competitor on `/:slug/leaderboard` with status `[⏳ Awaiting Verification]`.
+
+  2. **Journey 2 Assertions: Mixed-Mode Adjudication & Ingestion (`src/features/online-quals/__tests__/mixedModeAdjudication.test.tsx`):**
+     * *Assertion 2.1 (Ingestion Source Separation):* Scores recorded via `QualifierEntryModal` save with `submission_source = 'IN_PERSON'`, `is_verified = true`, `status = 'VERIFIED'`; portal scores save with `submission_source = 'ONLINE'`, `is_verified = false`, `status = 'SUBMITTED'`.
+     * *Assertion 2.2 (Review Queue Badge):* Tournament sidebar dynamically reflects the exact count of pending online submissions (`Review Queue (N)`).
+     * *Assertion 2.3 (Adjudication Actions):*
+       * Clicking *"Verify Qual"* flips status to `VERIFIED`, decrements queue badge, and changes leaderboard status to `✓ Verified`.
+       * Clicking *"Edit Score & Verify"* mutates the recorded score, writes an audit log to `judge_notes`, and verifies.
+       * Clicking *"Mark DNQ"* marks `status = 'DNQ'`, retains audit record, and excludes player from bracket seed calculation.
+       * Clicking *"Disqualify (DQ)"* sets `is_disqualified = true` on the player profile.
+
+  3. **Journey 3 Assertions: Identity Binding & Overrides (`src/features/online-quals/__tests__/identityResolution.test.tsx`):**
+     * *Assertion 3.1 (Confirm Binding):* Confirming a `CLAIMED_PENDING_REVIEW` submission permanently writes `players.twitch_id = session.twitch_id`. Subsequent logins with that Twitch ID auto-resolve as `VERIFIED_MATCH`.
+     * *Assertion 3.2 (Judge Reassign):* Reassigning a submission from Player A to Player B updates `qualifier_submissions.player_id` and shifts leaderboard scores accordingly.
+     * *Assertion 3.3 (Promote Provisional New Player):* Confirming a `PROVISIONAL_NEW` competitor inserts a permanent row into `players`, creates `tournament_players` registration, and attaches the submission.
+
+  4. **Journey 4 Assertions: Technical Crash & Session Reset (`src/features/online-quals/__tests__/sessionReset.test.tsx`):**
+     * *Assertion 4.1 (Reset Request):* Competitor experiencing a crash during `IN_PROGRESS` can dispatch a reset request with explanation notes.
+     * *Assertion 4.2 (Judge Void Action):* Adjudicator clicking *"Void & Issue New Authword"* clears active session timer log and generates a clean Authword, allowing the competitor to restart without duplicate submissions.
+
+  5. **Journey 5 Assertions: Qualifiers Cutoff & Bracket Locking (`src/features/tournament/__tests__/qualsCutoffLifecycle.test.tsx`):**
+     * *Assertion 5.1 (Gated Closure):* Attempting to close qualifiers while unverified submissions remain triggers a blocking confirmation alert.
+     * *Assertion 5.2 (Locked Public Portal):* Setting `quals_closed = true` disables run initiation on `/:slug/qualify` and shows a "Qualifying Closed" announcement.
+     * *Assertion 5.3 (Draft Bracket Seeding Integrity):* Auto-seeded bracket draft includes all verified players and strictly excludes players marked `DNQ` or `AWAITING_VERIFICATION`.
+
+  6. **Golden Journey 4 (Playwright E2E — `e2e/golden-journeys.spec.ts`):**
+     * End-to-end browser walkthrough: Remote competitor lands on `/omen-das/qualify` $\rightarrow$ authenticates via mock Twitch OAuth $\rightarrow$ receives Authword $\rightarrow$ submits scores + VOD link $\rightarrow$ verifies provisional leaderboard appearance $\rightarrow$ logs in as Tournament Admin $\rightarrow$ opens Review Queue $\rightarrow$ clicks "Verify Qual" $\rightarrow$ confirms public leaderboard updates to official verified standing.
 
 ---
 

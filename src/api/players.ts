@@ -8,6 +8,7 @@ export interface PlayerRecord {
   displayName: string | null;
   nickname: string | null;
   twitchUsername: string | null;
+  twitchId: string | null;
   country: string | null;
   avatarType: 'flag' | 'custom';
   avatarUrl: string | null;
@@ -24,6 +25,7 @@ export async function createPlayer(data: {
   displayName?: string;
   nickname?: string;
   twitchUsername?: string;
+  twitchId?: string;
   country?: string;
   avatarType?: 'flag' | 'custom';
   avatarUrl?: string;
@@ -47,6 +49,7 @@ export async function createPlayer(data: {
   }
 
   const cleanTwitch = data.twitchUsername ? data.twitchUsername.trim().replace(/^@/, '') : null;
+  const cleanTwitchId = data.twitchId ? data.twitchId.trim() : null;
 
   const [created] = await db
     .insert(players)
@@ -55,6 +58,7 @@ export async function createPlayer(data: {
       displayName: data.displayName?.trim() || null,
       nickname: data.nickname?.trim() || null,
       twitchUsername: cleanTwitch || null,
+      twitchId: cleanTwitchId || null,
       country: data.country || null,
       avatarType: data.avatarType || 'flag',
       avatarUrl: data.avatarUrl || null,
@@ -72,6 +76,7 @@ export async function createPlayersBatch(records: Array<{
   displayName?: string;
   nickname?: string;
   twitchUsername?: string;
+  twitchId?: string;
   country?: string;
   avatarType?: 'flag' | 'custom';
   avatarUrl?: string;
@@ -89,6 +94,7 @@ export async function createPlayersBatch(records: Array<{
       displayName: r.displayName?.trim() || null,
       nickname: r.nickname?.trim() || null,
       twitchUsername: r.twitchUsername ? r.twitchUsername.trim().replace(/^@/, '') : null,
+      twitchId: r.twitchId ? r.twitchId.trim() : null,
       country: r.country || null,
       avatarType: r.avatarType || 'flag',
       avatarUrl: r.avatarUrl || null,
@@ -113,6 +119,14 @@ export async function getPlayer(id: string): Promise<PlayerRecord | null> {
   return (res[0] as PlayerRecord) || null;
 }
 
+export async function getPlayerByTwitchId(twitchId: string): Promise<PlayerRecord | null> {
+  const trimmed = twitchId.trim();
+  if (!trimmed) return null;
+  const db = getDb();
+  const res = await db.select().from(players).where(eq(players.twitchId, trimmed)).limit(1);
+  return (res[0] as PlayerRecord) || null;
+}
+
 export async function updatePlayer(
   id: string,
   updates: Partial<Omit<PlayerRecord, 'id' | 'createdAt'>>
@@ -121,6 +135,9 @@ export async function updatePlayer(
   const sanitized = { ...updates };
   if (typeof sanitized.twitchUsername === 'string') {
     sanitized.twitchUsername = sanitized.twitchUsername.trim().replace(/^@/, '') || null;
+  }
+  if (typeof sanitized.twitchId === 'string') {
+    sanitized.twitchId = sanitized.twitchId.trim() || null;
   }
   const [updated] = await db
     .update(players)

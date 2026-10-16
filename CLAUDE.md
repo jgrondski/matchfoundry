@@ -1,5 +1,12 @@
 # CLAUDE.md: Tournament Manager Operational Handbook
 
+## 0. Git Branching & Operational Safety (Main Branch Precondition)
+- **Always Start on `main`**: When asked to start making changes, ALWAYS verify that the current branch is `main`. If the repository is NOT on `main`, STOP immediately and ask the user for confirmation before touching any files.
+- **Strict Git Boundaries (Zero Autonomous Branching, Commits, or Pushing)**:
+  - NEVER create branches (`git branch`, `git checkout -b`, `git switch -c`). The user chooses all branch names and decides when/if to branch.
+  - NEVER commit changes (`git commit`). All changes must remain strictly uncommitted in the working tree for user inspection.
+  - NEVER push changes (`git push`). Remote pushing is completely prohibited.
+
 ## 1. Operating Environment & Cross-Platform Compatibility
 - **Cross-Platform Parity**: Code and scripts MUST run identically on Windows (PowerShell) and macOS/Linux (Bash/Zsh).
 - **Paths**: Never compare `import.meta.url === file://${process.argv[1]}` directly (fails on Windows slashes). Always normalize paths with `.replace(/\\/g, '/')`.

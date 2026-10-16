@@ -260,6 +260,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     displayName: row.player.displayName || undefined,
     nickname: row.player.nickname || undefined,
     twitchUsername: row.player.twitchUsername || undefined,
+    twitchId: row.player.twitchId || undefined,
     country: row.player.country || undefined,
     avatarType: (row.player.avatarType as any) || 'flag',
     avatarUrl: row.player.avatarUrl || undefined,
@@ -287,6 +288,17 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     playerId: s.playerId,
     score: s.score,
     submittedAt: s.createdAt.getTime(),
+    submissionSource: s.submissionSource || 'IN_PERSON',
+    authWord: s.authWord || undefined,
+    twitchVodUrl: s.twitchVodUrl || undefined,
+    submittedTwitchId: s.submittedTwitchId || undefined,
+    submittedTwitchUsername: s.submittedTwitchUsername || undefined,
+    identityStatus: s.identityStatus || undefined,
+    status: s.status || 'VERIFIED',
+    timerLog: s.timerLog || undefined,
+    judgeNotes: s.judgeNotes || undefined,
+    verifiedBy: s.verifiedBy || undefined,
+    verifiedAt: s.verifiedAt ? new Date(s.verifiedAt).getTime() : undefined,
   }));
 
   const compositeTiers: TournamentTier[] = (tiersList as any[]).map((tier: any) => {
@@ -365,7 +377,11 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     qualFormat: t.qualFormat as any,
     qualAverageCount: t.qualAverageCount || undefined,
     pointsConfig: (t.pointsConfig as any) || undefined,
-    isLocked: Boolean(t.qualsClosed || meta.isLocked),
+    qualMode: (t.qualMode as any) || meta.qualMode || 'HYBRID',
+    qualWindowMinutes: t.qualWindowMinutes ?? meta.qualWindowMinutes ?? 90,
+    customAuthWords: (t.customAuthWords as string[]) || meta.customAuthWords || undefined,
+    qualsClosed: Boolean(t.qualsClosed),
+    isLocked: Boolean(meta.isLocked),
     tiers: compositeTiers,
     matchScores: {
       ...(meta.matchScores || {}),
@@ -377,7 +393,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     useOrgBranding: meta.useOrgBranding ?? true,
     logoUrl: meta.logoUrl || undefined,
     bannerUrl: meta.bannerUrl || undefined,
-    discordWebhookUrl: meta.discordWebhookUrl || undefined,
+    discordWebhookUrl: t.discordWebhookUrl || meta.discordWebhookUrl || undefined,
     themeColors: meta.themeColors || undefined,
     adminPinEncrypted: t.adminPinEncrypted || undefined,
   };
@@ -419,12 +435,19 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
     existing = await db.select().from(tournaments).where(eq(tournaments.slug, slug)).limit(1);
   }
 
+  const qualMode = tourney.qualMode || 'HYBRID';
+  const qualWindowMinutes = tourney.qualWindowMinutes ?? 90;
+  const customAuthWords = tourney.customAuthWords || null;
+
   const metadata = {
     organizationId: orgId,
     date: tourney.date || '',
     location: tourney.location || '',
     seedingMethod: tourney.seedingMethod || 'QUALIFIERS',
     manualSeeds: tourney.manualSeeds || [],
+    qualMode,
+    qualWindowMinutes,
+    customAuthWords: customAuthWords || undefined,
     isLocked: Boolean(tourney.isLocked),
     useOrgBranding: tourney.useOrgBranding ?? true,
     logoUrl: tourney.logoUrl || null,
@@ -445,7 +468,10 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
       qualFormat: tourney.qualFormat,
       qualAverageCount: tourney.qualAverageCount || null,
       pointsConfig: tourney.pointsConfig || null,
-      qualsClosed: Boolean(tourney.isLocked),
+      qualMode,
+      qualWindowMinutes,
+      customAuthWords,
+      qualsClosed: Boolean(tourney.qualsClosed || tourney.isLocked),
       metadata,
     };
     if (tourney.adminPinEncrypted !== undefined) {
@@ -466,7 +492,10 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
         qualFormat: tourney.qualFormat,
         qualAverageCount: tourney.qualAverageCount || null,
         pointsConfig: tourney.pointsConfig || null,
-        qualsClosed: Boolean(tourney.isLocked),
+        qualMode,
+        qualWindowMinutes,
+        customAuthWords,
+        qualsClosed: Boolean(tourney.qualsClosed || tourney.isLocked),
         isVerified: false,
         adminPinEncrypted: tourney.adminPinEncrypted || null,
         metadata,
@@ -717,6 +746,17 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
               tournamentId: savedTourneyId,
               playerId: s.playerId,
               score: s.score,
+              submissionSource: s.submissionSource || 'IN_PERSON',
+              authWord: s.authWord || null,
+              twitchVodUrl: s.twitchVodUrl || null,
+              submittedTwitchId: s.submittedTwitchId || null,
+              submittedTwitchUsername: s.submittedTwitchUsername || null,
+              identityStatus: s.identityStatus || null,
+              status: s.status || 'VERIFIED',
+              timerLog: s.timerLog || null,
+              judgeNotes: s.judgeNotes || null,
+              verifiedBy: s.verifiedBy || null,
+              verifiedAt: s.verifiedAt ? new Date(s.verifiedAt) : null,
               createdAt: new Date(s.submittedAt || Date.now()),
             };
           })
