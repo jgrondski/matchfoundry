@@ -18,10 +18,10 @@ This playbook provides a complete, step-by-step operational guide for connecting
         +----------------------------------+                  +----------------------------------+
         |        GitHub Actions CI         |                  |        Vercel Production         |
         |  1. npm run typecheck            |                  |  • Vite SPA (Static Edge CDN)    |
-        |  2. npm test (Vitest 480+ tests) |                  |  • /api/* (Serverless Functions) |
+        |  2. npm test (Vitest 540+ tests) |                  |  • /api/* (Serverless Functions) |
         |  3. npm run build (Bundle Check) |                  |  • Auto-Detects Neon Cloud DB    |
-        +----------------------------------+                  +-----------------+----------------+
-                                                                                |
+        |  4. npm run db:push:ci (Schema)  |                  +-----------------+----------------+
+        +----------------------------------+                                    |
                                                                                 v
                                                               +----------------------------------+
                                                               |      Neon Cloud PostgreSQL       |
@@ -34,7 +34,7 @@ This playbook provides a complete, step-by-step operational guide for connecting
 1. **Frontend**: Vite Single-Page Application (SPA) compiled to `dist/`, served via Vercel Edge Network at `https://www.matchfoundry.gg`.
 2. **Backend API**: Node.js Serverless Function bundled on-the-fly in GitHub Actions CI/CD (`npm run build`) from TypeScript source `src/server/serverless.ts` into `api/index.js`, and deployed directly to Vercel via `vercel deploy --prebuilt`. Zero runtime artifacts are committed to Git (`api/*.js` in `.gitignore`), routed via `vercel.json` (`/api/(.*)` -> `/api`).
 3. **Database**: Neon Serverless PostgreSQL. In `src/db/index.ts`, connection strings containing `neon.tech` automatically switch to the `@neondatabase/serverless` connectionless HTTP driver (`drizzle-orm/neon-http`), eliminating connection pool exhaustion on serverless lambdas.
-4. **CI/CD Quality Gate**: GitHub Actions (`.github/workflows/ci.yml`) automatically executes static typecheck, unit and integration tests, and production bundle builds on all pull requests and pushes to `main`.
+4. **CI/CD Quality Gate & Schema Migration**: GitHub Actions (`.github/workflows/ci.yml`) automatically executes static typecheck, unit and integration tests, production bundle builds, and non-interactive database schema synchronization (`npm run db:push:ci`) against the pulled Vercel/Neon environment before deploying on all pull requests and pushes to `main`.
 5. **Continuous Deployment**: Feature branch PRs generate preview deployment URLs for testing; verified PR merges to `main` deploy to production `matchfoundry.gg`.
 
 ---
