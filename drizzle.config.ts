@@ -1,24 +1,56 @@
+import fs from 'fs';
+import path from 'path';
 import { defineConfig } from 'drizzle-kit';
 
-if (typeof process.loadEnvFile === 'function' && !process.env.DATABASE_URL) {
-  for (const envPath of ['.env', '.vercel/.env.production.local', '.vercel/.env.preview.local']) {
+function loadDatabaseUrl(): string | undefined {
+  if (process.env.DATABASE_URL?.trim()) {
+    return process.env.DATABASE_URL.trim().replace(/^["']|["']$/g, '');
+  }
+
+  for (const relPath of ['.env', '.vercel/.env.production.local', '.vercel/.env.preview.local']) {
+    const fullPath = path.resolve(process.cwd(), relPath);
+    if (!fs.existsSync(fullPath)) continue;
     try {
-      process.loadEnvFile(envPath);
-      if (process.env.DATABASE_URL) break;
+      const content = fs.readFileSync(fullPath, 'utf-8');
+      for (const rawLine of content.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (!line || line.startsWith('#')) continue;
+        const match = line.match(/^(?:export\s+)?DATABASE_URL\s*=\s*(.+)$/);
+        if (match) {
+          const val = match[1].trim().replace(/^["']|["']$/g, '');
+          if (val) {
+            process.env.DATABASE_URL = val;
+            return val;
+          }
+        }
+      }
     } catch {}
   }
+  return undefined;
 }
 
-const resolvedDatabaseUrl = (
-  process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/tournament_manager'
-)
-  .trim()
-  .replace(/^["']|["']$/g, '');
+const envUrl = loadDatabaseUrl();
+
+if (process.env.CI && !envUrl) {
+  console.error(
+    '::error::DATABASE_URL not found in CI environment or .vercel/.env.*.local files.'
+  );
+  process.exit(1);
+}
+
+const resolvedDatabaseUrl =
+  envUrl || 'postgresql://postgres:postgres@localhost:5432/tournament_manager';
+
+try {
+  const parsed = new URL(resolvedDatabaseUrl);
+  console.log(`[drizzle.config] Target DB host: ${parsed.host}`);
+} catch {}
 
 export default defineConfig({
   schema: './src/db/schema.ts',
   out: './drizzle',
   dialect: 'postgresql',
+  verbose: true,
   dbCredentials: {
     url: resolvedDatabaseUrl,
   },

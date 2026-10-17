@@ -18,7 +18,7 @@
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:push": "drizzle-kit push",
-    "db:push:ci": "drizzle-kit push --force",
+    "db:push:ci": "drizzle-kit push --force --verbose",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
     "db:import-players": "tsx scripts/importPlayers.ts",
