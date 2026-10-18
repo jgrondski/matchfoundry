@@ -1,5 +1,5 @@
-import { getDb, tournaments, systemSettings } from '../db';
-import { sql, eq, or } from 'drizzle-orm';
+import { getDb, tournaments, systemSettings, tournamentPlayers, qualifierSubmissions } from '../db';
+import { sql, eq, or, and } from 'drizzle-orm';
 import type { IncomingMessage, ServerResponse } from 'http';
 import {
   encryptPin,
@@ -813,8 +813,10 @@ export function createApiMiddleware() {
         if (subAction === 'qualify/start' && method === 'POST') {
           const session = await startOnlineQualSession(tourneyId, {
             playerId: body?.playerId,
+            playerName: body?.playerName,
+            twitchUsername: body?.twitchUsername || body?.submittedTwitchUsername,
             submittedTwitchId: body?.submittedTwitchId,
-            submittedTwitchUsername: body?.submittedTwitchUsername,
+            submittedTwitchUsername: body?.submittedTwitchUsername || body?.twitchUsername,
             identityStatus: body?.identityStatus,
             nowMs: body?.nowMs,
           });
@@ -824,7 +826,10 @@ export function createApiMiddleware() {
             twitchUsername: session.submittedTwitchUsername || undefined,
             authWord: session.authWord,
           });
-          return sendJson(res, 200, session);
+          return sendJson(res, 200, {
+            ...session,
+            player: p || undefined,
+          });
         }
 
         // POST /api/tournaments/:id/qualify/submit
@@ -838,6 +843,11 @@ export function createApiMiddleware() {
             identityStatus: body?.identityStatus,
             nowMs: body?.nowMs,
           });
+          const t = await getFullTournament(tourneyId);
+          if (t && !t.isLocked) {
+            t.tiers = generateDraftBracketsForTournament(t);
+            await saveFullTournament(t);
+          }
           const p = await getPlayer(session.playerId);
           const topScore = session.scores.length > 0 ? Math.max(...session.scores) : undefined;
           void dispatchDiscordWebhook(tourneyId, 'SUBMIT', {
@@ -867,6 +877,11 @@ export function createApiMiddleware() {
             judgeNote: body?.judgeNote,
             nowMs: body?.nowMs,
           });
+          const t = await getFullTournament(tourneyId);
+          if (t && !t.isLocked) {
+            t.tiers = generateDraftBracketsForTournament(t);
+            await saveFullTournament(t);
+          }
           return sendJson(res, 200, session);
         }
 
@@ -880,6 +895,7 @@ export function createApiMiddleware() {
             judgeNotes: body?.judgeNotes,
             verifiedBy: body?.verifiedBy,
             targetPlayerId: body?.targetPlayerId,
+            newPlayer: body?.newPlayer,
           });
           const t = await getFullTournament(tourneyId);
           if (t && !t.isLocked) {
@@ -908,6 +924,15 @@ export function createApiMiddleware() {
           t.qualifierSubmissions = [];
           t.qualifiers = [];
           t.manualSeeds = [];
+          if (t.tournamentPlayers) {
+            for (const pid of Object.keys(t.tournamentPlayers)) {
+              t.tournamentPlayers[pid] = {
+                ...t.tournamentPlayers[pid],
+                qualsCompleted: false,
+                isVerified: false,
+              };
+            }
+          }
           if (!t.isLocked) {
             t.tiers = generateDraftBracketsForTournament(t);
           }
@@ -938,6 +963,8 @@ export function createApiMiddleware() {
 
           await clearTournamentMatches(t.id);
           await clearTournamentQualifiers(t.id);
+          const db = getDb();
+          await db.delete(tournamentPlayers).where(eq(tournamentPlayers.tournamentId, t.id));
           t.playersPool = [];
           t.qualifierSubmissions = [];
           t.qualifiers = [];
@@ -1016,11 +1043,89 @@ export function createApiMiddleware() {
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');
 
-          t.qualifierSubmissions = (t.qualifierSubmissions || []).filter(s => s.id !== subId);
-          if (!t.isLocked) {
-            t.tiers = generateDraftBracketsForTournament(t);
+          if (isUuid(subId)) {
+            const db = getDb();
+            await db
+              .delete(qualifierSubmissions)
+              .where(
+                and(
+                  eq(qualifierSubmissions.id, subId),
+                  eq(qualifierSubmissions.tournamentId, t.id)
+                )
+              );
           }
-          const saved = await saveFullTournament(t);
+
+          const fresh = await getFullTournament(t.id);
+          if (!fresh) return sendError(res, 404, 'Tournament not found');
+
+          if (!fresh.isLocked) {
+            fresh.tiers = generateDraftBracketsForTournament(fresh);
+            const saved = await saveFullTournament(fresh);
+            return sendJson(res, 200, saved);
+          }
+          return sendJson(res, 200, fresh);
+        }
+
+        // DELETE /api/tournaments/:id/players/:playerId
+        const playerDelMatch = subAction.match(/^players\/([^/]+)$/);
+        if (playerDelMatch && method === 'DELETE') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const playerId = playerDelMatch[1];
+          const t = await getFullTournament(tourneyId);
+          if (!t) return sendError(res, 404, 'Tournament not found');
+
+          const hasRecordedMatches = Object.values(t.matchScores || {}).some(
+            m =>
+              (m.winnerPlayerId === playerId || m.loserPlayerId === playerId) ||
+              (m.isComplete && (m.games || []).length > 0)
+          );
+          if (hasRecordedMatches) {
+            return sendError(
+              res,
+              400,
+              'Cannot remove competitor who has recorded matches. Clear match scores first.'
+            );
+          }
+
+          if (isUuid(playerId)) {
+            const db = getDb();
+            await db
+              .delete(qualifierSubmissions)
+              .where(
+                and(
+                  eq(qualifierSubmissions.tournamentId, t.id),
+                  eq(qualifierSubmissions.playerId, playerId)
+                )
+              );
+            await db
+              .delete(tournamentPlayers)
+              .where(
+                and(
+                  eq(tournamentPlayers.tournamentId, t.id),
+                  eq(tournamentPlayers.playerId, playerId)
+                )
+              );
+          }
+
+          const fresh = await getFullTournament(t.id);
+          if (!fresh) return sendError(res, 404, 'Tournament not found');
+
+          fresh.manualSeeds = (fresh.manualSeeds || []).filter(id => id !== playerId);
+          if (fresh.tournamentPlayers) {
+            fresh.manualSeeds.forEach((id, idx) => {
+              if (fresh.tournamentPlayers[id]) {
+                fresh.tournamentPlayers[id] = {
+                  ...fresh.tournamentPlayers[id],
+                  seed: idx + 1,
+                };
+              }
+            });
+          }
+
+          if (!fresh.isLocked) {
+            fresh.tiers = generateDraftBracketsForTournament(fresh);
+          }
+          const saved = await saveFullTournament(fresh);
           return sendJson(res, 200, saved);
         }
 

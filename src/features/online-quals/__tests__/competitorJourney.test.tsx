@@ -110,24 +110,24 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       );
 
       expect(html).toContain('Omen DAS Championship 2026');
-      expect(html).toContain('Connect with Twitch to Begin');
+      expect(html).toContain('Competitor Qualification Check-In');
       expect(html).toContain('Window: 90 min');
       expect(html).toContain('HYBRID Qualifiers');
     });
   });
 
-  describe('2. Unauthenticated State & Twitch Connect', () => {
-    it('renders Twitch connect card with OAuth button and testing mode', () => {
+  describe('2. Streamlined Competitor Intake Check-In (No OAuth Required)', () => {
+    it('renders competitor check-in form with Player Name and Twitch Handle inputs', () => {
       const html = renderToStaticMarkup(
         <MemoryRouter>
           <CompetitorPortalView tournament={sampleTournament} />
         </MemoryRouter>
       );
 
-      expect(html).toContain('Connect with Twitch to Begin');
-      expect(html).toContain('Connect with Twitch');
-      expect(html).toContain('Testing / Development Mode');
-      expect(html).toContain('Mock Connect');
+      expect(html).toContain('Competitor Qualification Check-In');
+      expect(html).toContain('Player Name / Alias *');
+      expect(html).toContain('Twitch Channel / Handle *');
+      expect(html).toContain('Review Rules &amp; Checklist');
     });
   });
 

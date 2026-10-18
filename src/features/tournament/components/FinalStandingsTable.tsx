@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Flame,
 } from 'lucide-react';
+import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
 
 interface FinalStandingsTableProps {
   tournament: Tournament;
@@ -214,6 +215,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
   if (!tournament.isLocked) {
     return (
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', width: '100%' }}>
+        <TournamentQualTimerHud tournament={tournament} isObsMode={isObsMode} />
         <h2 style={{ color: 'var(--color-text-primary)', fontSize: '1.4rem' }}>Brackets Not Finalized</h2>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
           Qualifiers are currently running and tournament brackets have not been locked into match play. Final standings will become available once qualifiers conclude and brackets are finalized.

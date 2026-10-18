@@ -8,6 +8,7 @@ import { Plus, Sparkles, ChevronRight, Check } from 'lucide-react';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../players/components/PlaystyleChip';
 import { getContrastingTextColor, getAlternateShade } from '../../bracket/colorUtils';
+import { TournamentQualTimerHud } from './TournamentQualTimerHud';
 
 interface LeaderboardTableProps {
   tournament: Tournament;
@@ -97,22 +98,29 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
         onSearchChange={setSearchTerm}
         searchPlaceholder="Search competitor, country, style..."
         action={
-          canManage ? (
-            <button
-              onClick={() => setIsEntryModalOpen(true)}
-              className="btn btn-primary"
-              style={{
-                fontSize: '0.85rem',
-                padding: '0.52rem 0.95rem',
-                gap: '0.45rem',
-                whiteSpace: 'nowrap',
-                fontWeight: 600,
-              }}
-            >
-              <Plus size={16} />
-              <span>Record Qual Score</span>
-            </button>
-          ) : undefined
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <TournamentQualTimerHud
+              tournament={tournament}
+              isObsMode={isObsMode}
+              compact={!isObsMode}
+            />
+            {canManage && (
+              <button
+                onClick={() => setIsEntryModalOpen(true)}
+                className="btn btn-primary"
+                style={{
+                  fontSize: '0.85rem',
+                  padding: '0.52rem 0.95rem',
+                  gap: '0.45rem',
+                  whiteSpace: 'nowrap',
+                  fontWeight: 600,
+                }}
+              >
+                <Plus size={16} />
+                <span>Record Qual Score</span>
+              </button>
+            )}
+          </div>
         }
         isObsMode={isObsMode}
       />

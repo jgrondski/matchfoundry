@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { setupTestDb } from '../../db/testDb';
 import { setDb } from '../../db';
 import { matches, games, tournaments, bracketTiers, players, qualifierSubmissions, tournamentPlayers } from '../../db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, and } from 'drizzle-orm';
 import {
   createTournament,
   getFullTournament,
@@ -10,7 +10,7 @@ import {
   deleteTournament,
 } from '../tournaments';
 import { runFullSimulation } from '../../features/tournament/simulation';
-import { generateDraftBracketsForTournament } from '../../features/qualifiers/scoring';
+import { generateDraftBracketsForTournament, deriveLeaderboard } from '../../features/qualifiers/scoring';
 import { createApiMiddleware } from '../../server/api';
 import { createSessionToken } from '../../server/pinCrypto';
 import type { PlayerProfile } from '../../features/tournament/types';
@@ -967,4 +967,470 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
       }
     });
   });
+
+  describe('7. Online Qualifier Submission & Non-Destructive Update Regression', () => {
+    it('preserves online qualifier registration and scores in PostgreSQL when admin saves settings or toggles timer via saveFullTournament / PUT', async () => {
+      // 1. Create a tournament
+      const [comp1] = await createCompetitors(1);
+      const created = await createTournament({
+        name: 'Omen DAS Test Tourney',
+        slug: 'omen-das-test',
+        qualMode: 'HYBRID',
+        qualFormat: 'AVERAGE_OF_X',
+        qualAverageCount: 2,
+        tiers: [
+          {
+            name: 'Gold',
+            bracketType: 'TRADITIONAL',
+            numPlayers: 8,
+            priorityOrder: 1,
+            eliminationType: 'SINGLE',
+          },
+        ],
+      });
+      const tournament = created.tournament;
+
+      // 2. An online competitor "Omenvoir" registers and submits scores
+      const [omenvoir] = await createCompetitors(1);
+      const submitRes = await makeHttpRequest(`/api/tournaments/${tournament.id}/qualify/submit`, 'POST', {
+        playerId: omenvoir.id,
+        scores: [950000, 920000],
+        twitchVodUrl: 'https://twitch.tv/videos/12345678',
+        submittedTwitchUsername: 'Omenvoir',
+      });
+      expect(submitRes.status).toBe(200);
+
+      // Verify that Omenvoir is now recorded in tournament_players and qualifier_submissions
+      const tPlayersAfterSubmit = await db
+        .select()
+        .from(tournamentPlayers)
+        .where(eq(tournamentPlayers.tournamentId, tournament.id));
+      expect(tPlayersAfterSubmit.some((tp: any) => tp.playerId === omenvoir.id)).toBe(true);
+
+      const subsAfterSubmit = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.tournamentId, tournament.id));
+      expect(subsAfterSubmit.length).toBe(2);
+      expect(subsAfterSubmit.every((s: any) => s.playerId === omenvoir.id)).toBe(true);
+
+      // 3. Simulate an admin who loaded the page earlier (before Omenvoir registered)
+      // and now saves tournament settings or toggles the qual timer via PUT /api/tournaments/:id
+      // The admin's payload has an empty or pre-existing playersPool, and empty qualifierSubmissions!
+      const updateRes = await makeHttpRequest(`/api/tournaments/${tournament.id}`, 'PUT', {
+        name: 'Omen DAS Test Tourney Updated',
+        slug: 'omen-das-test',
+        qualMode: 'HYBRID',
+        qualTimer: {
+          durationMinutes: 90,
+          isRunning: false,
+          elapsedSeconds: 120,
+          lastResumedAt: null,
+        },
+        playersPool: [comp1], // Notice omenvoir is NOT in the admin's playersPool!
+        qualifierSubmissions: [], // Notice omenvoir's scores are NOT in the admin's submissions payload!
+      });
+      expect(updateRes.status).toBe(200);
+
+      // 4. VERIFY: Omenvoir MUST STILL BE in tournament_players and qualifier_submissions in PostgreSQL!
+      const tPlayersAfterPut = await db
+        .select()
+        .from(tournamentPlayers)
+        .where(eq(tournamentPlayers.tournamentId, tournament.id));
+      expect(tPlayersAfterPut.some((tp: any) => tp.playerId === omenvoir.id)).toBe(true);
+
+      const subsAfterPut = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.tournamentId, tournament.id));
+      expect(subsAfterPut.length).toBe(2);
+      expect(subsAfterPut.every((s: any) => s.playerId === omenvoir.id)).toBe(true);
+
+      // 5. Verify getFullTournament returns Omenvoir in playersPool, qualifierSubmissions, and leaderboard
+      const reloaded = await getFullTournament(tournament.id);
+      expect(reloaded).not.toBeNull();
+      expect(reloaded?.playersPool?.some(p => p.id === omenvoir.id)).toBe(true);
+      expect(reloaded?.qualifierSubmissions?.length).toBe(2);
+
+      const leaderboard = deriveLeaderboard(reloaded!);
+      const omenRow = leaderboard.find(r => r.player.id === omenvoir.id);
+      expect(omenRow).toBeDefined();
+      expect(omenRow?.finalScore).toBe(935000); // (950000 + 920000) / 2
+    });
+
+    it('permanently deletes an individual qualifier submission via DELETE /api/tournaments/:id/qualifiers/:subId', async () => {
+      const created = await createTournament({
+        name: 'Delete Qual Test',
+        slug: 'delete-qual-test',
+        qualFormat: 'HIGH_SCORE',
+        tiers: [
+          {
+            name: 'Gold',
+            bracketType: 'TRADITIONAL',
+            numPlayers: 8,
+            priorityOrder: 1,
+            eliminationType: 'SINGLE',
+          },
+        ],
+      });
+      const tourney = created.tournament;
+
+      const [comp] = await createCompetitors(1);
+      const submitRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
+        playerId: comp.id,
+        scores: [888000],
+        twitchVodUrl: 'https://twitch.tv/videos/12345678',
+        submittedTwitchUsername: 'DeleteRunner',
+      });
+      expect(submitRes.status).toBe(200);
+
+      const subsBefore = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.tournamentId, tourney.id));
+      expect(subsBefore.length).toBe(1);
+      const subIdToDelete = subsBefore[0].id;
+
+      // Delete the individual submission
+      const delRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/qualifiers/${subIdToDelete}`, 'DELETE');
+      expect(delRes.status).toBe(200);
+
+      // Verify row is permanently deleted from PostgreSQL
+      const subsAfter = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.id, subIdToDelete));
+      expect(subsAfter.length).toBe(0);
+
+      // Verify reloaded tournament reflects deletion
+      const fresh = await getFullTournament(tourney.id);
+      expect(fresh?.qualifierSubmissions?.length).toBe(0);
+    });
+
+    it('permanently removes a competitor and their submissions via DELETE /api/tournaments/:id/players/:playerId', async () => {
+      const created = await createTournament({
+        name: 'Delete Player Test',
+        slug: 'delete-player-test',
+        qualFormat: 'HIGH_SCORE',
+        tiers: [
+          {
+            name: 'Gold',
+            bracketType: 'TRADITIONAL',
+            numPlayers: 8,
+            priorityOrder: 1,
+            eliminationType: 'SINGLE',
+          },
+        ],
+      });
+      const tourney = created.tournament;
+
+      const [comp] = await createCompetitors(1);
+      await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
+        playerId: comp.id,
+        scores: [777000],
+        twitchVodUrl: 'https://twitch.tv/videos/12345678',
+        submittedTwitchUsername: 'RemoveMe',
+      });
+
+      // Verify player and submission exist
+      expect((await db.select().from(tournamentPlayers).where(eq(tournamentPlayers.tournamentId, tourney.id))).length).toBe(1);
+      expect((await db.select().from(qualifierSubmissions).where(eq(qualifierSubmissions.tournamentId, tourney.id))).length).toBe(1);
+
+      // Remove player
+      const delRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/players/${comp.id}`, 'DELETE');
+      expect(delRes.status).toBe(200);
+
+      // Verify competitor is deleted from tournament_players and qualifier_submissions
+      const tPlayersAfter = await db
+        .select()
+        .from(tournamentPlayers)
+        .where(and(eq(tournamentPlayers.tournamentId, tourney.id), eq(tournamentPlayers.playerId, comp.id)));
+      expect(tPlayersAfter.length).toBe(0);
+
+      const subsAfter = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(and(eq(qualifierSubmissions.tournamentId, tourney.id), eq(qualifierSubmissions.playerId, comp.id)));
+      expect(subsAfter.length).toBe(0);
+
+      // Verify getFullTournament reflects removal
+      const fresh = await getFullTournament(tourney.id);
+      expect(fresh?.playersPool?.some(p => p.id === comp.id)).toBe(false);
+    });
+
+    it('prevents stale IN_PROGRESS payload in PUT from downgrading a SUBMITTED online qualifier in PostgreSQL', async () => {
+      const created = await createTournament({
+        name: 'Stale Downgrade Test',
+        slug: 'stale-downgrade-test',
+        qualFormat: 'HIGH_SCORE',
+        tiers: [
+          {
+            name: 'Gold',
+            bracketType: 'TRADITIONAL',
+            numPlayers: 8,
+            priorityOrder: 1,
+            eliminationType: 'SINGLE',
+          },
+        ],
+      });
+      const tourney = created.tournament;
+
+      const [comp] = await createCompetitors(1);
+      await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
+        playerId: comp.id,
+        scores: [990000],
+        twitchVodUrl: 'https://twitch.tv/videos/12345678',
+        submittedTwitchUsername: 'ProRunner',
+      });
+
+      const [dbSub] = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.tournamentId, tourney.id));
+      expect(dbSub.status).toBe('SUBMITTED');
+      expect(dbSub.score).toBe(990000);
+
+      // Admin sends stale PUT with the submission row as IN_PROGRESS and score 0
+      const putRes = await makeHttpRequest(`/api/tournaments/${tourney.id}`, 'PUT', {
+        name: 'Stale Downgrade Test Renamed',
+        slug: 'stale-downgrade-test',
+        qualifierSubmissions: [
+          {
+            id: dbSub.id,
+            tournamentId: tourney.id,
+            playerId: comp.id,
+            score: 0,
+            status: 'IN_PROGRESS',
+            submissionSource: 'ONLINE',
+          },
+        ],
+      });
+      expect(putRes.status).toBe(200);
+
+      // Verify DB row was NOT downgraded back to IN_PROGRESS or 0
+      const [reloadedDbSub] = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.id, dbSub.id));
+      expect(reloadedDbSub.status).toBe('SUBMITTED');
+      expect(reloadedDbSub.score).toBe(990000);
+    });
+
+    it('does not resurrect replaced IN_PROGRESS placeholder row when stale admin sends old submissions', async () => {
+      const created = await createTournament({
+        name: 'Resurrection Protection Test',
+        slug: 'resurrection-test',
+        qualFormat: 'HIGH_SCORE',
+        tiers: [
+          {
+            name: 'Gold',
+            bracketType: 'TRADITIONAL',
+            numPlayers: 8,
+            priorityOrder: 1,
+            eliminationType: 'SINGLE',
+          },
+        ],
+      });
+      const tourney = created.tournament;
+      const [comp] = await createCompetitors(1);
+
+      // 1. Competitor starts run -> creates placeholder IN_PROGRESS row
+      const startRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/start`, 'POST', {
+        playerId: comp.id,
+        playerName: comp.name,
+        twitchUsername: 'SpeedyRunner',
+      });
+      expect(startRes.status).toBe(200);
+      const startData = startRes.body;
+      const placeholderId = startData.submissionIds?.[0];
+      expect(placeholderId).toBeDefined();
+
+      // Verify placeholder exists in DB
+      const subsDuringRun = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.tournamentId, tourney.id));
+      expect(subsDuringRun.length).toBe(1);
+      expect(subsDuringRun[0].id).toBe(placeholderId);
+      expect(subsDuringRun[0].status).toBe('IN_PROGRESS');
+
+      // 2. Competitor submits official scores -> placeholder is deleted and replaced by SUBMITTED row(s)
+      const submitRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
+        playerId: comp.id,
+        scores: [975000],
+        twitchVodUrl: 'https://twitch.tv/videos/9999999',
+        submittedTwitchUsername: 'SpeedyRunner',
+      });
+      expect(submitRes.status).toBe(200);
+
+      // In DB, placeholderId is now deleted, and a new row with score 975000 exists
+      const subsAfterSubmit = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.tournamentId, tourney.id));
+      expect(subsAfterSubmit.length).toBe(1);
+      expect(subsAfterSubmit[0].id).not.toBe(placeholderId);
+      expect(subsAfterSubmit[0].score).toBe(975000);
+
+      // 3. Stale admin tab (which captured placeholderId before submit) sends PUT /api/tournaments/:id
+      const putRes = await makeHttpRequest(`/api/tournaments/${tourney.id}`, 'PUT', {
+        name: 'Resurrection Protection Test Renamed',
+        slug: 'resurrection-test',
+        qualifierSubmissions: [
+          {
+            id: placeholderId,
+            tournamentId: tourney.id,
+            playerId: comp.id,
+            score: 0,
+            status: 'IN_PROGRESS',
+            submissionSource: 'ONLINE',
+          },
+        ],
+      });
+      expect(putRes.status).toBe(200);
+
+      // 4. VERIFY: The deleted placeholder was NOT resurrected! DB should strictly still have 1 submission
+      const subsAfterStalePut = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.tournamentId, tourney.id));
+      expect(subsAfterStalePut.length).toBe(1);
+      expect(subsAfterStalePut[0].status).toBe('SUBMITTED');
+      expect(subsAfterStalePut[0].score).toBe(975000);
+    });
+
+    it('prevents stale SUBMITTED snapshot in PUT from downgrading a judge-adjudicated VERIFIED run and preserves qualsCompleted', async () => {
+      const created = await createTournament({
+        name: 'Judge Adjudication Guard Test',
+        slug: 'judge-guard-test',
+        qualFormat: 'HIGH_SCORE',
+        tiers: [
+          {
+            name: 'Gold',
+            bracketType: 'TRADITIONAL',
+            numPlayers: 8,
+            priorityOrder: 1,
+            eliminationType: 'SINGLE',
+          },
+        ],
+      });
+      const tourney = created.tournament;
+      const [comp] = await createCompetitors(1);
+
+      // 1. Submit online score
+      await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
+        playerId: comp.id,
+        scores: [890000],
+        twitchVodUrl: 'https://twitch.tv/videos/1111111',
+        submittedTwitchUsername: 'VerifiedTarget',
+      });
+
+      // 2. Judge verifies run via POST /qualify/adjudicate
+      const adjRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/adjudicate`, 'POST', {
+        playerId: comp.id,
+        action: 'VERIFY',
+        verifiedBy: 'SeniorJudge',
+      });
+      expect(adjRes.status).toBe(200);
+
+      // Verify in DB that submission is VERIFIED and tournamentPlayers.qualsCompleted is true
+      const [dbSub] = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.tournamentId, tourney.id));
+      expect(dbSub.status).toBe('VERIFIED');
+      expect(dbSub.verifiedBy).toBe('SeniorJudge');
+
+      const [dbTp] = await db
+        .select()
+        .from(tournamentPlayers)
+        .where(eq(tournamentPlayers.tournamentId, tourney.id));
+      expect(dbTp.qualsCompleted).toBe(true);
+
+      // 3. Stale admin tab sends PUT with pre-adjudication snapshot (status SUBMITTED, no verifiedAt/verifiedBy, qualsCompleted false)
+      const putRes = await makeHttpRequest(`/api/tournaments/${tourney.id}`, 'PUT', {
+        name: 'Judge Adjudication Guard Test Renamed',
+        slug: 'judge-guard-test',
+        tournamentPlayers: {
+          [comp.id]: {
+            playerId: comp.id,
+            tournamentId: tourney.id,
+            qualsCompleted: false,
+          },
+        },
+        qualifierSubmissions: [
+          {
+            id: dbSub.id,
+            tournamentId: tourney.id,
+            playerId: comp.id,
+            score: 890000,
+            status: 'SUBMITTED',
+            submissionSource: 'ONLINE',
+          },
+        ],
+      });
+      expect(putRes.status).toBe(200);
+
+      // 4. VERIFY: Status remains VERIFIED and qualsCompleted remains true
+      const [reloadedSub] = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.id, dbSub.id));
+      expect(reloadedSub.status).toBe('VERIFIED');
+      expect(reloadedSub.verifiedBy).toBe('SeniorJudge');
+
+      const [reloadedTp] = await db
+        .select()
+        .from(tournamentPlayers)
+        .where(eq(tournamentPlayers.tournamentId, tourney.id));
+      expect(reloadedTp.qualsCompleted).toBe(true);
+    });
+
+    it('enforces tournament tenant isolation when deleting an individual qualifier submission', async () => {
+      // Create Tournament A
+      const tourneyA = (await createTournament({
+        name: 'Tourney A Isolation',
+        slug: 'tourney-a-iso',
+        qualFormat: 'HIGH_SCORE',
+        tiers: [{ name: 'T1', bracketType: 'TRADITIONAL', numPlayers: 4, priorityOrder: 1, eliminationType: 'SINGLE' }],
+      })).tournament;
+
+      // Create Tournament B
+      const tourneyB = (await createTournament({
+        name: 'Tourney B Isolation',
+        slug: 'tourney-b-iso',
+        qualFormat: 'HIGH_SCORE',
+        tiers: [{ name: 'T1', bracketType: 'TRADITIONAL', numPlayers: 4, priorityOrder: 1, eliminationType: 'SINGLE' }],
+      })).tournament;
+
+      const [comp] = await createCompetitors(1);
+
+      // Submit score to Tournament A
+      await makeHttpRequest(`/api/tournaments/${tourneyA.id}/qualify/submit`, 'POST', {
+        playerId: comp.id,
+        scores: [650000],
+        twitchVodUrl: 'https://twitch.tv/videos/iso-test',
+        submittedTwitchUsername: 'IsoPlayer',
+      });
+
+      const [subA] = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.tournamentId, tourneyA.id));
+      expect(subA).toBeDefined();
+
+      // Attempt to delete subA by targeting Tournament B's endpoint: DELETE /api/tournaments/:tourneyB.id/qualifiers/:subA.id
+      const crossDelRes = await makeHttpRequest(`/api/tournaments/${tourneyB.id}/qualifiers/${subA.id}`, 'DELETE');
+      expect(crossDelRes.status).toBe(200);
+
+      // VERIFY: subA still exists in Tournament A because the deletion was scoped to Tourney B!
+      const [subAAfter] = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.id, subA.id));
+      expect(subAAfter).toBeDefined();
+      expect(subAAfter.id).toBe(subA.id);
+    });
+  });
 });
+

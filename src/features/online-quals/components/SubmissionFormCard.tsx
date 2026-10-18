@@ -27,11 +27,18 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
   errorMessage,
   disabled = false,
 }) => {
-  const isAverage = qualFormat === 'AVERAGE_OF_X';
+  const isAverage = qualFormat === 'AVERAGE_OF_X' || (qualFormat as any) === 'AVERAGE';
   const expectedCount = isAverage ? Math.max(1, qualAverageCount) : Math.max(1, scores.length);
 
-  // Ensure initial array has right length
-  const currentScores = scores.length === 0 ? (isAverage ? new Array(expectedCount).fill(0) : [0]) : scores;
+  // For average format, ensure exactly expectedCount score slots
+  let currentScores: number[];
+  if (isAverage) {
+    currentScores = new Array(expectedCount)
+      .fill(0)
+      .map((_, i) => (scores[i] !== undefined ? scores[i] : 0));
+  } else {
+    currentScores = scores.length === 0 ? [0] : scores;
+  }
 
   const handleScoreChange = (index: number, valStr: string) => {
     const rawNumber = parseInt(valStr.replace(/[^0-9]/g, ''), 10);

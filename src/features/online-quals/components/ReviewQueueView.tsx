@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Clock,
   AlertTriangle,
@@ -6,7 +6,7 @@ import {
   Unlock,
   X,
 } from 'lucide-react';
-import type { Tournament } from '../../tournament/types';
+import type { Tournament, PlayerProfile } from '../../tournament/types';
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { useTournament } from '../../tournament/store';
 import { getAuthHeaders } from '../../auth/AuthContext';
@@ -73,7 +73,27 @@ function deriveSessionsFromTournament(tournament: Tournament): ReviewQueueSessio
 }
 
 export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) => {
-  const { updateTournament } = useTournament();
+  const { updateTournament, refreshTournament, globalPlayers } = useTournament();
+  const [deletedProvisionalIds, setDeletedProvisionalIds] = useState<Set<string>>(() => new Set());
+
+  const reconcilePlayersPool = useMemo(() => {
+    const map = new Map<string, PlayerProfile>();
+    if (Array.isArray(globalPlayers)) {
+      for (const p of globalPlayers) {
+        if (!deletedProvisionalIds.has(p.id)) {
+          map.set(p.id, p);
+        }
+      }
+    }
+    if (Array.isArray(tournament.playersPool)) {
+      for (const p of tournament.playersPool) {
+        if (!deletedProvisionalIds.has(p.id)) {
+          map.set(p.id, p);
+        }
+      }
+    }
+    return Array.from(map.values());
+  }, [globalPlayers, tournament.playersPool, deletedProvisionalIds]);
 
   const [sessions, setSessions] = useState<ReviewQueueSessionSummary[]>(() =>
     deriveSessionsFromTournament(tournament)
@@ -158,6 +178,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       );
       setSelectedAdjudication(null);
       await fetchSessions();
+      await refreshTournament?.(tournament.id);
     } catch (e: any) {
       setStatusMessage(`Error: ${e.message}`);
     } finally {
@@ -189,6 +210,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       setStatusMessage(`Session voided and fresh Authword issued for ${selectedAdjudication.playerName}`);
       setSelectedAdjudication(null);
       await fetchSessions();
+      await refreshTournament?.(tournament.id);
     } catch (e: any) {
       setStatusMessage(`Error: ${e.message}`);
     } finally {
@@ -197,8 +219,11 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
   };
 
   const handleResolveIdentity = async (
-    action: 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL',
-    options?: { targetPlayerId?: string }
+    action: 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL' | 'CREATE_NEW_PLAYER',
+    options?: {
+      targetPlayerId?: string;
+      newPlayer?: { name: string; country?: string; playstyle?: string };
+    }
   ) => {
     if (!selectedIdentity) return;
     setIsSubmitting(true);
@@ -213,6 +238,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           playerId: selectedIdentity.playerId,
           action,
           targetPlayerId: options?.targetPlayerId,
+          newPlayer: options?.newPlayer,
         }),
       });
 
@@ -221,9 +247,22 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         throw new Error(err.error || 'Failed to resolve identity');
       }
 
+      if (
+        selectedIdentity.identityStatus === 'PROVISIONAL_NEW' &&
+        (action === 'REASSIGN_PLAYER' || action === 'CREATE_NEW_PLAYER')
+      ) {
+        const oldId = selectedIdentity.playerId;
+        setDeletedProvisionalIds(prev => {
+          const next = new Set(prev);
+          next.add(oldId);
+          return next;
+        });
+      }
+
       setStatusMessage(`Identity resolved for ${selectedIdentity.playerName}`);
       setSelectedIdentity(null);
       await fetchSessions();
+      await refreshTournament?.(tournament.id);
     } catch (e: any) {
       setStatusMessage(`Error: ${e.message}`);
     } finally {
@@ -376,24 +415,34 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       />
 
       {/* Adjudication Modal */}
-      <AdjudicationModal
-        isOpen={Boolean(selectedAdjudication)}
-        session={selectedAdjudication}
-        onClose={() => setSelectedAdjudication(null)}
-        onAdjudicate={handleAdjudicate}
-        onVoidReset={handleVoidReset}
-        isSubmitting={isSubmitting}
-      />
+      {selectedAdjudication && (
+        <AdjudicationModal
+          key={selectedAdjudication.playerId}
+          isOpen={true}
+          session={selectedAdjudication}
+          onClose={() => setSelectedAdjudication(null)}
+          onAdjudicate={handleAdjudicate}
+          onVoidReset={handleVoidReset}
+          onOpenIdentity={(s) => {
+            setSelectedAdjudication(null);
+            setSelectedIdentity(s);
+          }}
+          isSubmitting={isSubmitting}
+        />
+      )}
 
       {/* Identity Resolution Modal */}
-      <IdentityResolutionModal
-        isOpen={Boolean(selectedIdentity)}
-        session={selectedIdentity}
-        playersPool={tournament.playersPool || []}
-        onClose={() => setSelectedIdentity(null)}
-        onResolve={handleResolveIdentity}
-        isSubmitting={isSubmitting}
-      />
+      {selectedIdentity && (
+        <IdentityResolutionModal
+          key={selectedIdentity.playerId}
+          isOpen={true}
+          session={selectedIdentity}
+          playersPool={reconcilePlayersPool}
+          onClose={() => setSelectedIdentity(null)}
+          onResolve={handleResolveIdentity}
+          isSubmitting={isSubmitting}
+        />
+      )}
 
       {/* Cutoff Confirmation Modal (Assertion 5.1) */}
       {showCutoffWarning && (

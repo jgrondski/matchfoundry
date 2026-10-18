@@ -31,6 +31,14 @@ export interface QualTimerLog {
   resetRequestedAt?: number;
 }
 
+export interface TournamentQualTimer {
+  durationMinutes: number;
+  elapsedSeconds: number;
+  isRunning: boolean;
+  lastResumedAt: number | null;
+  startedAt?: number | null;
+}
+
 export interface PointsThreshold {
   minScore: number;
   points: number;
@@ -87,6 +95,7 @@ export interface TournamentMetadata {
   manualSeeds?: string[];
   qualMode?: QualMode;
   qualWindowMinutes?: number;
+  qualTimer?: TournamentQualTimer;
   customAuthWords?: string[];
   [key: string]: unknown;
 }
@@ -267,6 +276,7 @@ export interface Tournament {
   pointsConfig?: PointsThreshold[]; // array of { minScore, points } for POINTS
   qualMode?: QualMode; // default 'HYBRID'
   qualWindowMinutes?: number; // default 90
+  qualTimer?: TournamentQualTimer;
   customAuthWords?: string[]; // custom organizer dictionary words
   qualsClosed?: boolean; // true = Qualifiers closed
   isLocked: boolean; // false = Qualifiers Mode (Draft Preview), true = Match Play Mode (Locked)

@@ -3,8 +3,10 @@ import {
   tournaments,
   players,
   tournamentPlayers,
+  matches,
+  bracketTiers,
 } from '../db/schema';
-import { eq, and, desc, sql } from 'drizzle-orm';
+import { eq, and, or, desc, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import type {
   SubmissionSource,
@@ -48,6 +50,7 @@ export interface LeaderboardEntry {
 export interface OnlineQualSessionSummary {
   tournamentId: string;
   playerId: string;
+  playerName?: string;
   status: SubmissionStatus;
   authWord: string;
   twitchVodUrl: string | null;
@@ -193,6 +196,10 @@ export async function clearTournamentQualifiers(tournamentId: string): Promise<b
     .delete(qualifierSubmissions)
     .where(eq(qualifierSubmissions.tournamentId, resolvedTourneyId))
     .returning();
+  await db
+    .update(tournamentPlayers)
+    .set({ qualsCompleted: false })
+    .where(eq(tournamentPlayers.tournamentId, resolvedTourneyId));
   return res.length > 0;
 }
 
@@ -434,9 +441,16 @@ export async function getOnlineQualSession(
     s => s.status !== 'IN_PROGRESS' && s.status !== 'NOT_STARTED'
   );
 
+  const [player] = await db
+    .select({ name: players.name })
+    .from(players)
+    .where(eq(players.id, first.playerId))
+    .limit(1);
+
   return {
     tournamentId: tourney.id,
     playerId: first.playerId,
+    playerName: player?.name,
     status: first.status,
     authWord: first.authWord || 'ROCKET',
     twitchVodUrl: first.twitchVodUrl || null,
@@ -584,7 +598,9 @@ export async function dispatchDiscordWebhook(
 export async function startOnlineQualSession(
   tournamentIdOrSlug: string,
   input: {
-    playerId: string;
+    playerId?: string;
+    playerName?: string;
+    twitchUsername?: string;
     submittedTwitchId?: string;
     submittedTwitchUsername?: string;
     identityStatus?: IdentityStatus;
@@ -599,14 +615,99 @@ export async function startOnlineQualSession(
     throw new Error('Qualifiers are closed for this tournament');
   }
 
-  await ensureTournamentPlayerRegistration(tourney.id, input.playerId);
+  let targetPlayerId = input.playerId;
+  let targetPlayerName = input.playerName;
+  let wasCreatedAsWalkIn = false;
+  let matchedPlayerRow: typeof players.$inferSelect | null = null;
+
+  if (!targetPlayerId) {
+    const rawName = (input.playerName || input.submittedTwitchUsername || input.twitchUsername || '').trim();
+    if (!rawName) {
+      throw new Error('Player name or ID is required to start qualification');
+    }
+    const cleanTwitch = (input.twitchUsername || input.submittedTwitchUsername || '')
+      .trim()
+      .replace(/^@/, '')
+      .replace(/^https?:\/\/(www\.)?twitch\.tv\//i, '');
+    const lowerName = rawName.toLowerCase();
+
+    const [existingByName] = await db
+      .select()
+      .from(players)
+      .where(sql`lower(trim(${players.name})) = ${lowerName}`)
+      .limit(1);
+
+    let playerRow = existingByName;
+    if (!playerRow && cleanTwitch) {
+      const [byTwitch] = await db
+        .select()
+        .from(players)
+        .where(sql`lower(trim(${players.twitchUsername})) = ${cleanTwitch.toLowerCase()}`)
+        .limit(1);
+      if (byTwitch) playerRow = byTwitch;
+    }
+
+    if (!playerRow) {
+      const [created] = await db
+        .insert(players)
+        .values({
+          name: rawName,
+          twitchUsername: cleanTwitch || null,
+          country: 'US',
+          playstyle: 'DAS',
+          avatarType: 'flag',
+          personalBest: 0,
+        })
+        .returning();
+      playerRow = created;
+      wasCreatedAsWalkIn = true;
+    }
+
+    matchedPlayerRow = playerRow;
+    targetPlayerId = playerRow.id;
+    targetPlayerName = playerRow.name;
+  } else {
+    const [existingPlayer] = await db
+      .select()
+      .from(players)
+      .where(eq(players.id, targetPlayerId))
+      .limit(1);
+    matchedPlayerRow = existingPlayer || null;
+    if (!targetPlayerName && matchedPlayerRow) {
+      targetPlayerName = matchedPlayerRow.name;
+    }
+  }
+
+  if (!targetPlayerId) {
+    throw new Error('Failed to resolve competitor profile');
+  }
+
+  let resolvedIdentityStatus: IdentityStatus = 'CLAIMED_PENDING_REVIEW';
+  if (input.identityStatus) {
+    resolvedIdentityStatus = input.identityStatus;
+  } else if (wasCreatedAsWalkIn) {
+    resolvedIdentityStatus = 'PROVISIONAL_NEW';
+  } else if (
+    input.submittedTwitchId &&
+    matchedPlayerRow?.twitchId &&
+    input.submittedTwitchId === matchedPlayerRow.twitchId
+  ) {
+    resolvedIdentityStatus = 'VERIFIED_MATCH';
+  } else {
+    resolvedIdentityStatus = 'CLAIMED_PENDING_REVIEW';
+  }
+
+  await ensureTournamentPlayerRegistration(tourney.id, targetPlayerId);
 
   // Check if session already exists (idempotent recovery for page reloads - Assertion 1.5)
   const existingSession = await getOnlineQualSession(tourney.id, {
-    playerId: input.playerId,
+    playerId: targetPlayerId,
   });
   if (existingSession) {
-    return existingSession;
+    return {
+      ...existingSession,
+      playerName: targetPlayerName || existingSession.playerName,
+    };
   }
 
   // Gather already-used auth words in this tournament to avoid collisions
@@ -625,31 +726,37 @@ export async function startOnlineQualSession(
   const authWord = generateNesAuthword(customWords, usedWords);
   const timerLog = createInitialTimerLog(input.nowMs ?? Date.now());
 
+  const cleanTwitchUser = (input.submittedTwitchUsername || input.twitchUsername || '')
+    .trim()
+    .replace(/^@/, '')
+    .replace(/^https?:\/\/(www\.)?twitch\.tv\//i, '') || null;
+
   const [inserted] = await db
     .insert(qualifierSubmissions)
     .values({
       tournamentId: tourney.id,
-      playerId: input.playerId,
+      playerId: targetPlayerId,
       score: 0,
       submissionSource: 'ONLINE',
       status: 'IN_PROGRESS',
       authWord,
       submittedTwitchId: input.submittedTwitchId || null,
-      submittedTwitchUsername: input.submittedTwitchUsername || null,
-      identityStatus: input.identityStatus || 'VERIFIED_MATCH',
+      submittedTwitchUsername: cleanTwitchUser,
+      identityStatus: resolvedIdentityStatus,
       timerLog,
     })
     .returning();
 
   return {
     tournamentId: tourney.id,
-    playerId: input.playerId,
+    playerId: targetPlayerId,
+    playerName: targetPlayerName,
     status: 'IN_PROGRESS',
     authWord,
     twitchVodUrl: null,
     submittedTwitchId: input.submittedTwitchId || null,
-    submittedTwitchUsername: input.submittedTwitchUsername || null,
-    identityStatus: input.identityStatus || 'VERIFIED_MATCH',
+    submittedTwitchUsername: cleanTwitchUser,
+    identityStatus: resolvedIdentityStatus,
     timerLog,
     scores: [],
     judgeNotes: null,
@@ -712,7 +819,7 @@ export async function submitOnlineQualScores(
   const submittedTwitchId = input.submittedTwitchId ?? existing?.submittedTwitchId ?? null;
   const submittedTwitchUsername =
     input.submittedTwitchUsername ?? existing?.submittedTwitchUsername ?? null;
-  const identityStatus = input.identityStatus ?? existing?.identityStatus ?? 'VERIFIED_MATCH';
+  const identityStatus = input.identityStatus ?? existing?.identityStatus ?? 'CLAIMED_PENDING_REVIEW';
 
   // Remove the IN_PROGRESS placeholder row(s) for this player's online run
   if (existing && existing.submissionIds.length > 0) {
@@ -881,6 +988,99 @@ export async function voidAndResetOnlineQualSession(
 }
 
 /**
+ * Cleans up old player records from tournament_players (and orphaned provisional player rows)
+ * when a qualifier run is reassigned or split to a new player.
+ */
+async function cleanupSourcePlayerAfterReassign(
+  tournamentId: string,
+  oldPlayerId: string,
+  newPlayerId: string,
+  wasProvisionalWalkIn: boolean
+) {
+  if (oldPlayerId === newPlayerId) return;
+  const db = getDb();
+
+  const remainingSubs = await db
+    .select()
+    .from(qualifierSubmissions)
+    .where(
+      and(
+        eq(qualifierSubmissions.tournamentId, tournamentId),
+        eq(qualifierSubmissions.playerId, oldPlayerId)
+      )
+    )
+    .limit(1);
+
+  const tourneyMatches = await db
+    .select({ id: matches.id })
+    .from(matches)
+    .innerJoin(bracketTiers, eq(matches.tierId, bracketTiers.id))
+    .where(
+      and(
+        eq(bracketTiers.tournamentId, tournamentId),
+        or(
+          eq(matches.player1Id, oldPlayerId),
+          eq(matches.player2Id, oldPlayerId),
+          eq(matches.winnerId, oldPlayerId)
+        )
+      )
+    )
+    .limit(1);
+
+  if (remainingSubs.length === 0 && tourneyMatches.length === 0) {
+    await db
+      .delete(tournamentPlayers)
+      .where(
+        and(
+          eq(tournamentPlayers.tournamentId, tournamentId),
+          eq(tournamentPlayers.playerId, oldPlayerId)
+        )
+      );
+
+    if (wasProvisionalWalkIn) {
+      const anySubs = await db
+        .select()
+        .from(qualifierSubmissions)
+        .where(eq(qualifierSubmissions.playerId, oldPlayerId))
+        .limit(1);
+      const anyTourneyPlayers = await db
+        .select()
+        .from(tournamentPlayers)
+        .where(eq(tournamentPlayers.playerId, oldPlayerId))
+        .limit(1);
+      const anyMatches = await db
+        .select()
+        .from(matches)
+        .where(
+          or(
+            eq(matches.player1Id, oldPlayerId),
+            eq(matches.player2Id, oldPlayerId),
+            eq(matches.winnerId, oldPlayerId)
+          )
+        )
+        .limit(1);
+
+      if (anySubs.length === 0 && anyTourneyPlayers.length === 0 && anyMatches.length === 0) {
+        await db.delete(players).where(eq(players.id, oldPlayerId));
+      }
+    }
+  } else {
+    const hasRemainingVerified = (remainingSubs as QualifierSubmissionRecord[]).some(
+      s => s.status === 'VERIFIED'
+    );
+    await db
+      .update(tournamentPlayers)
+      .set({ qualsCompleted: hasRemainingVerified })
+      .where(
+        and(
+          eq(tournamentPlayers.tournamentId, tournamentId),
+          eq(tournamentPlayers.playerId, oldPlayerId)
+        )
+      );
+  }
+}
+
+/**
  * Track 10E: Judge Review Queue adjudication & identity resolution mutations.
  */
 export async function adjudicateOnlineSubmission(
@@ -894,11 +1094,17 @@ export async function adjudicateOnlineSubmission(
       | 'DQ'
       | 'CONFIRM_IDENTITY'
       | 'REASSIGN_PLAYER'
-      | 'PROMOTE_PROVISIONAL';
+      | 'PROMOTE_PROVISIONAL'
+      | 'CREATE_NEW_PLAYER';
     scores?: number[];
     judgeNotes?: string;
     verifiedBy?: string;
     targetPlayerId?: string;
+    newPlayer?: {
+      name: string;
+      country?: string;
+      playstyle?: string;
+    };
   }
 ) {
   const db = getDb();
@@ -918,11 +1124,23 @@ export async function adjudicateOnlineSubmission(
         .update(qualifierSubmissions)
         .set({
           status: 'VERIFIED',
+          identityStatus: 'VERIFIED_MATCH',
           judgeNotes: note,
           verifiedBy: judgeBy,
           verifiedAt: now,
         })
         .where(eq(qualifierSubmissions.id, subId));
+    }
+    if (existing.submittedTwitchId || existing.submittedTwitchUsername) {
+      await db
+        .update(players)
+        .set({
+          ...(existing.submittedTwitchId ? { twitchId: existing.submittedTwitchId } : {}),
+          ...(existing.submittedTwitchUsername
+            ? { twitchUsername: existing.submittedTwitchUsername }
+            : {}),
+        })
+        .where(eq(players.id, input.playerId));
     }
     await db
       .update(tournamentPlayers)
@@ -965,7 +1183,7 @@ export async function adjudicateOnlineSubmission(
         twitchVodUrl: existing.twitchVodUrl,
         submittedTwitchId: existing.submittedTwitchId,
         submittedTwitchUsername: existing.submittedTwitchUsername,
-        identityStatus: existing.identityStatus || 'VERIFIED_MATCH',
+        identityStatus: 'VERIFIED_MATCH' as const,
         timerLog: existing.timerLog,
         judgeNotes: combinedNotes,
         verifiedBy: judgeBy,
@@ -973,6 +1191,18 @@ export async function adjudicateOnlineSubmission(
         createdAt: new Date(now.getTime() + idx),
       }))
     );
+
+    if (existing.submittedTwitchId || existing.submittedTwitchUsername) {
+      await db
+        .update(players)
+        .set({
+          ...(existing.submittedTwitchId ? { twitchId: existing.submittedTwitchId } : {}),
+          ...(existing.submittedTwitchUsername
+            ? { twitchUsername: existing.submittedTwitchUsername }
+            : {}),
+        })
+        .where(eq(players.id, input.playerId));
+    }
 
     await db
       .update(tournamentPlayers)
@@ -1043,11 +1273,11 @@ export async function adjudicateOnlineSubmission(
   }
 
   if (input.action === 'CONFIRM_IDENTITY' || input.action === 'PROMOTE_PROVISIONAL') {
-    if (existing.submittedTwitchId) {
+    if (existing.submittedTwitchId || existing.submittedTwitchUsername) {
       await db
         .update(players)
         .set({
-          twitchId: existing.submittedTwitchId,
+          ...(existing.submittedTwitchId ? { twitchId: existing.submittedTwitchId } : {}),
           ...(existing.submittedTwitchUsername
             ? { twitchUsername: existing.submittedTwitchUsername }
             : {}),
@@ -1080,13 +1310,28 @@ export async function adjudicateOnlineSubmission(
       throw new Error('Target player not found');
     }
 
+    const wasProvisional = existing.identityStatus === 'PROVISIONAL_NEW';
+    const wasVerified = existing.status === 'VERIFIED';
+
     await ensureTournamentPlayerRegistration(tourney.id, targetPlayer.id);
 
-    if (existing.submittedTwitchId) {
+    if (wasVerified) {
+      await db
+        .update(tournamentPlayers)
+        .set({ qualsCompleted: true })
+        .where(
+          and(
+            eq(tournamentPlayers.tournamentId, tourney.id),
+            eq(tournamentPlayers.playerId, targetPlayer.id)
+          )
+        );
+    }
+
+    if (existing.submittedTwitchId || existing.submittedTwitchUsername) {
       await db
         .update(players)
         .set({
-          twitchId: existing.submittedTwitchId,
+          ...(existing.submittedTwitchId ? { twitchId: existing.submittedTwitchId } : {}),
           ...(existing.submittedTwitchUsername
             ? { twitchUsername: existing.submittedTwitchUsername }
             : {}),
@@ -1103,7 +1348,89 @@ export async function adjudicateOnlineSubmission(
         })
         .where(eq(qualifierSubmissions.id, subId));
     }
+
+    await cleanupSourcePlayerAfterReassign(
+      tourney.id,
+      input.playerId,
+      targetPlayer.id,
+      wasProvisional
+    );
+
     return getOnlineQualSession(tourney.id, { playerId: targetPlayer.id });
+  }
+
+  if (input.action === 'CREATE_NEW_PLAYER') {
+    const rawName = (input.newPlayer?.name || '').trim();
+    if (!rawName) {
+      throw new Error('Player name is required when creating a new player');
+    }
+
+    let finalName = rawName;
+    const lowerName = rawName.toLowerCase();
+    const [existingByName] = await db
+      .select()
+      .from(players)
+      .where(sql`lower(trim(${players.name})) = ${lowerName}`)
+      .limit(1);
+
+    if (existingByName) {
+      const candidate = `${rawName} (${existing.submittedTwitchUsername || 'New'})`;
+      const [collisionCheck] = await db
+        .select()
+        .from(players)
+        .where(sql`lower(trim(${players.name})) = ${candidate.toLowerCase()}`)
+        .limit(1);
+      finalName = collisionCheck ? `${candidate} #2` : candidate;
+    }
+
+    const [createdPlayer] = await db
+      .insert(players)
+      .values({
+        name: finalName,
+        country: (input.newPlayer?.country || 'US').toUpperCase(),
+        playstyle: input.newPlayer?.playstyle || 'DAS',
+        twitchUsername: existing.submittedTwitchUsername || null,
+        twitchId: existing.submittedTwitchId || null,
+        avatarType: 'flag',
+        personalBest: 0,
+      })
+      .returning();
+
+    const wasProvisional = existing.identityStatus === 'PROVISIONAL_NEW';
+    const wasVerified = existing.status === 'VERIFIED';
+
+    await ensureTournamentPlayerRegistration(tourney.id, createdPlayer.id);
+
+    if (wasVerified) {
+      await db
+        .update(tournamentPlayers)
+        .set({ qualsCompleted: true })
+        .where(
+          and(
+            eq(tournamentPlayers.tournamentId, tourney.id),
+            eq(tournamentPlayers.playerId, createdPlayer.id)
+          )
+        );
+    }
+
+    for (const subId of existing.submissionIds) {
+      await db
+        .update(qualifierSubmissions)
+        .set({
+          playerId: createdPlayer.id,
+          identityStatus: 'VERIFIED_MATCH',
+        })
+        .where(eq(qualifierSubmissions.id, subId));
+    }
+
+    await cleanupSourcePlayerAfterReassign(
+      tourney.id,
+      input.playerId,
+      createdPlayer.id,
+      wasProvisional
+    );
+
+    return getOnlineQualSession(tourney.id, { playerId: createdPlayer.id });
   }
 
   return existing;

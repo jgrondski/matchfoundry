@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Tournament, TournamentTier, QualFormat, PointsThreshold, DEFAULT_POINTS_THRESHOLDS, SeedingMethod } from '../types';
+import { Tournament, TournamentTier, QualFormat, QualMode, PointsThreshold, DEFAULT_POINTS_THRESHOLDS, SeedingMethod } from '../types';
 import { useTournament } from '../store';
 import { createDefaultTier } from '../defaults';
 import {
@@ -83,6 +83,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       ? tournament.pointsConfig
       : DEFAULT_POINTS_THRESHOLDS
   );
+  const [qualMode, setQualMode] = useState<QualMode>(tournament.qualMode || 'HYBRID');
+  const [qualWindowMinutes, setQualWindowMinutes] = useState<number>(tournament.qualWindowMinutes || 90);
   const [isPointsDrawerOpen, setIsPointsDrawerOpen] = useState(false);
   const [isSettingsVerifyModalOpen, setIsSettingsVerifyModalOpen] = useState(false);
   const [settingsUnlockError, setSettingsUnlockError] = useState<string | null>(null);
@@ -177,6 +179,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     if (seedingMethod !== (tournament.seedingMethod || 'QUALIFIERS')) return true;
     if (qualFormat !== tournament.qualFormat) return true;
     if (qualAverageCount !== (tournament.qualAverageCount || 2)) return true;
+    if (qualMode !== (tournament.qualMode || 'HYBRID')) return true;
+    if (qualWindowMinutes !== (tournament.qualWindowMinutes || 90)) return true;
 
     // Points config
     if (qualFormat === 'POINTS') {
@@ -239,6 +243,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     discordWebhookUrl,
     logoUrl,
     bannerUrl,
+    qualMode,
+    qualWindowMinutes,
   ]);
 
   // Notify parent of dirty state changes
@@ -273,6 +279,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       setSeedingMethod(tournament.seedingMethod || 'QUALIFIERS');
       setQualFormat(tournament.qualFormat || 'AVERAGE_OF_X');
       setQualAverageCount(tournament.qualAverageCount || 2);
+      setQualMode(tournament.qualMode || 'HYBRID');
+      setQualWindowMinutes(tournament.qualWindowMinutes || 90);
       setAvgCountError(null);
       setPointsConfig(
         tournament.pointsConfig && tournament.pointsConfig.length > 0
@@ -296,6 +304,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     setSeedingMethod(tournament.seedingMethod || 'QUALIFIERS');
     setQualFormat(tournament.qualFormat || 'AVERAGE_OF_X');
     setQualAverageCount(tournament.qualAverageCount || 2);
+    setQualMode(tournament.qualMode || 'HYBRID');
+    setQualWindowMinutes(tournament.qualWindowMinutes || 90);
     setAvgCountError(null);
     setPointsConfig(
       tournament.pointsConfig && tournament.pointsConfig.length > 0
@@ -506,6 +516,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         qualFormat,
         qualAverageCount: parsedAvg,
         pointsConfig,
+        qualMode,
+        qualWindowMinutes,
         tiers: updatedTiers,
       });
 
@@ -523,6 +535,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         setSeedingMethod(saved.seedingMethod || 'QUALIFIERS');
         setQualFormat(saved.qualFormat || 'AVERAGE_OF_X');
         setQualAverageCount(saved.qualAverageCount || 2);
+        setQualMode(saved.qualMode || 'HYBRID');
+        setQualWindowMinutes(saved.qualWindowMinutes || 90);
         setAvgCountError(null);
         setPointsConfig(
           saved.pointsConfig && saved.pointsConfig.length > 0
@@ -704,6 +718,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         qualAverageCount={qualAverageCount}
         avgCountError={avgCountError}
         pointsConfig={pointsConfig}
+        qualMode={qualMode}
+        qualWindowMinutes={qualWindowMinutes}
         isLocked={tournament.isLocked}
         onNameChange={handleNameChange}
         onSlugChange={setSlug}
@@ -714,6 +730,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         onQualAverageCountChange={setQualAverageCount}
         onAvgCountErrorChange={setAvgCountError}
         onPointsConfigChange={setPointsConfig}
+        onQualModeChange={setQualMode}
+        onQualWindowMinutesChange={setQualWindowMinutes}
         onOpenPointsDrawer={() => setIsPointsDrawerOpen(true)}
       />
 

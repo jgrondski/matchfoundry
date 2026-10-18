@@ -180,6 +180,24 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
   const submissions = tournament.qualifierSubmissions || [];
   const tournamentPlayers = tournament.tournamentPlayers || {};
 
+  // Guarantee that every competitor with a submission is included in the pool
+  const poolPlayerIds = new Set(pool.map(p => p.id));
+  const effectivePool = [...pool];
+  for (const sub of submissions) {
+    if (!poolPlayerIds.has(sub.playerId)) {
+      poolPlayerIds.add(sub.playerId);
+      effectivePool.push({
+        id: sub.playerId,
+        name: sub.submittedTwitchUsername || 'Online Competitor',
+        country: 'US',
+        avatarType: 'flag',
+        playstyle: 'DAS',
+        personalBest: 0,
+        isDisqualified: false,
+      });
+    }
+  }
+
   // Group submissions by player
   const submissionsByPlayer = new Map<string, QualifierSubmission[]>();
   for (const sub of submissions) {
@@ -189,7 +207,7 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
   }
 
   // Calculate score per player
-  const rawRows = pool.map(player => {
+  const rawRows = effectivePool.map(player => {
     const allPlayerSubs = (submissionsByPlayer.get(player.id) || []).sort(
       (a, b) => a.submittedAt - b.submittedAt
     );

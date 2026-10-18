@@ -481,21 +481,19 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                     {/* Actions */}
                     <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
-                        {session.identityStatus && session.identityStatus !== 'VERIFIED_MATCH' && (
-                          <button
-                            type="button"
-                            onClick={() => onOpenIdentityModal(session)}
-                            className="btn btn-secondary"
-                            style={{
-                              fontSize: '0.75rem',
-                              padding: '0.25rem 0.5rem',
-                              color: 'var(--color-gold-bright)',
-                              borderColor: 'rgba(245, 158, 11, 0.3)',
-                            }}
-                          >
-                            Identity
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => onOpenIdentityModal(session)}
+                          className="btn btn-secondary"
+                          style={{
+                            fontSize: '0.75rem',
+                            padding: '0.25rem 0.5rem',
+                            color: 'var(--color-gold-bright)',
+                            borderColor: 'rgba(245, 158, 11, 0.3)',
+                          }}
+                        >
+                          Identity
+                        </button>
                         <button
                           type="button"
                           onClick={() => onOpenAdjudicate(session)}

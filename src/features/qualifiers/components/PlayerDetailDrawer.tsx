@@ -47,6 +47,17 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 }) => {
   const { submitQualifierScore, deleteQualifierScore, togglePlayerQualifierVerified } = useTournament();
   const [scoreInput, setScoreInput] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleToggleVerified = async () => {
+    if (isVerifying || !player) return;
+    setIsVerifying(true);
+    try {
+      await togglePlayerQualifierVerified(tournament.id, player.id);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   // Keyboard escape listener to close drawer smoothly
   useEffect(() => {
@@ -820,7 +831,8 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => togglePlayerQualifierVerified(tournament.id, player.id)}
+                  onClick={handleToggleVerified}
+                  disabled={isVerifying}
                   style={{
                     padding: '0.45rem 0.9rem',
                     fontSize: '0.78rem',
@@ -829,7 +841,8 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     background: isVerified ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.15)',
                     border: isVerified ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(34, 197, 94, 0.5)',
                     color: isVerified ? '#f87171' : '#4ade80',
-                    cursor: 'pointer',
+                    cursor: isVerifying ? 'wait' : 'pointer',
+                    opacity: isVerifying ? 0.7 : 1,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.35rem',
@@ -838,7 +851,9 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   }}
                   title={isVerified ? 'Click to unverify qualifier' : "Click to officially verify this competitor's qualification"}
                 >
-                  {isVerified ? (
+                  {isVerifying ? (
+                    'Saving...'
+                  ) : isVerified ? (
                     <>
                       <X size={13} strokeWidth={2.5} /> Unverify Qual
                     </>

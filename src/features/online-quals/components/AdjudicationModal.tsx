@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, AlertTriangle, ExternalLink, ShieldAlert, RotateCcw, X, Edit3, Film } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ExternalLink, ShieldAlert, RotateCcw, X, Edit3, Film, UserCheck } from 'lucide-react';
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 
@@ -12,6 +12,7 @@ export interface AdjudicationModalProps {
     options?: { scores?: number[]; judgeNotes?: string }
   ) => Promise<void>;
   onVoidReset?: (judgeNote?: string) => Promise<void>;
+  onOpenIdentity?: (session: ReviewQueueSessionSummary) => void;
   isSubmitting?: boolean;
 }
 
@@ -21,15 +22,16 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
   onClose,
   onAdjudicate,
   onVoidReset,
+  onOpenIdentity,
   isSubmitting = false,
 }) => {
-  if (!isOpen || !session) return null;
-
   const [scores, setScores] = useState<number[]>(
-    session.scores && session.scores.length > 0 ? [...session.scores] : [0]
+    session?.scores && session.scores.length > 0 ? [...session.scores] : [0]
   );
-  const [judgeNotes, setJudgeNotes] = useState<string>(session.judgeNotes || '');
+  const [judgeNotes, setJudgeNotes] = useState<string>(session?.judgeNotes || '');
   const [confirmDQ, setConfirmDQ] = useState(false);
+
+  if (!isOpen || !session) return null;
 
   const scoresChanged =
     scores.length !== session.scores.length ||
@@ -149,6 +151,26 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 >
                   Status: {session.status}
                 </span>
+                {onOpenIdentity && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenIdentity(session)}
+                    className="btn btn-secondary"
+                    style={{
+                      fontSize: '0.72rem',
+                      padding: '0.15rem 0.5rem',
+                      color: 'var(--color-gold-bright)',
+                      borderColor: 'rgba(245, 158, 11, 0.4)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      marginLeft: '0.35rem',
+                    }}
+                  >
+                    <UserCheck size={13} />
+                    Reconcile / Change Player
+                  </button>
+                )}
               </div>
             </div>
           </div>

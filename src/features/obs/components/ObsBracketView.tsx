@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Tournament, TournamentTier } from '../../tournament/types';
 import { BracketVisualizer } from '../../bracket/components/BracketVisualizer';
 import { BracketViewMode } from '../../bracket/bracketLayout';
+import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
 
 export interface ObsBracketViewProps {
   tournament: Tournament;
@@ -50,6 +51,9 @@ export const ObsBracketView: React.FC<ObsBracketViewProps> = ({
         flexDirection: 'column',
       }}
     >
+      <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 100 }}>
+        <TournamentQualTimerHud tournament={tournament} isObsMode={true} />
+      </div>
       <BracketVisualizer
         tournament={tournament}
         tier={tier}

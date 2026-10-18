@@ -10,8 +10,11 @@ export interface IdentityResolutionModalProps {
   playersPool: PlayerProfile[];
   onClose: () => void;
   onResolve: (
-    action: 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL',
-    options?: { targetPlayerId?: string }
+    action: 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL' | 'CREATE_NEW_PLAYER',
+    options?: {
+      targetPlayerId?: string;
+      newPlayer?: { name: string; country?: string; playstyle?: string };
+    }
   ) => Promise<void>;
   isSubmitting?: boolean;
 }
@@ -24,22 +27,42 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
   onResolve,
   isSubmitting = false,
 }) => {
-  if (!isOpen || !session) return null;
-
-  const [activeTab, setActiveTab] = useState<'confirm' | 'reassign' | 'promote'>(
-    session.identityStatus === 'PROVISIONAL_NEW' ? 'promote' : 'confirm'
+  const [activeTab, setActiveTab] = useState<'confirm' | 'reassign' | 'promote' | 'create_new'>(
+    session?.identityStatus === 'PROVISIONAL_NEW'
+      ? 'promote'
+      : session?.identityStatus === 'CLAIMED_PENDING_REVIEW'
+      ? 'confirm'
+      : 'reassign'
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
 
-  const filteredPlayers = playersPool.filter(p => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase().trim();
-    return (
-      p.name.toLowerCase().includes(q) ||
-      (p.twitchUsername && p.twitchUsername.toLowerCase().includes(q))
-    );
-  });
+  const defaultNewName = session
+    ? session.submittedTwitchUsername
+      ? session.playerName.toLowerCase() === session.submittedTwitchUsername.toLowerCase()
+        ? `${session.playerName} (New)`
+        : `${session.playerName} (${session.submittedTwitchUsername})`
+      : `${session.playerName} (New)`
+    : '';
+  const [newName, setNewName] = useState(
+    session?.identityStatus === 'PROVISIONAL_NEW' ? session.playerName : defaultNewName
+  );
+  const [newCountry, setNewCountry] = useState(session?.country || 'US');
+  const [newPlaystyle, setNewPlaystyle] = useState('DAS');
+
+  if (!isOpen || !session) return null;
+
+  const filteredPlayers = playersPool
+    .filter(p => p.id !== session.playerId)
+    .filter(p => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.twitchUsername && p.twitchUsername.toLowerCase().includes(q))
+      );
+    })
+    .slice(0, 50);
 
   return (
     <div
@@ -180,6 +203,23 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
             }}
           >
             Reassign Competitor
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('create_new')}
+            style={{
+              flex: 1,
+              padding: '0.75rem',
+              background: activeTab === 'create_new' ? 'var(--color-bg-surface)' : 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'create_new' ? '2px solid var(--color-gold-bright)' : '2px solid transparent',
+              color: activeTab === 'create_new' ? '#ffffff' : 'var(--color-text-muted)',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+            }}
+          >
+            Create Separate Player
           </button>
         </div>
 
@@ -353,6 +393,86 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
               </div>
             </div>
           )}
+
+          {activeTab === 'create_new' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+                If this competitor is a distinct person rather than the matched global player, create a separate profile to transfer this run.
+              </p>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>
+                  Competitor Name / Alias
+                </label>
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  placeholder="e.g. Omenvoir (New)"
+                  style={{
+                    width: '100%',
+                    padding: '0.55rem 0.75rem',
+                    background: 'var(--color-bg-surface-elevated)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    color: '#ffffff',
+                    fontSize: '0.85rem',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>
+                    Country Code (ISO 2-letter)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={2}
+                    value={newCountry}
+                    onChange={e => setNewCountry(e.target.value.toUpperCase())}
+                    placeholder="US"
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      background: 'var(--color-bg-surface-elevated)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      color: '#ffffff',
+                      fontSize: '0.85rem',
+                      boxSizing: 'border-box',
+                      textTransform: 'uppercase',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>
+                    Playstyle
+                  </label>
+                  <select
+                    value={newPlaystyle}
+                    onChange={e => setNewPlaystyle(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      background: 'var(--color-bg-surface-elevated)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      color: '#ffffff',
+                      fontSize: '0.85rem',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <option value="DAS">DAS</option>
+                    <option value="Rolling">Rolling</option>
+                    <option value="Hypertap">Hypertap</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -431,6 +551,35 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
               }}
             >
               <UserX size={15} /> Reassign Run
+            </button>
+          )}
+
+          {activeTab === 'create_new' && (
+            <button
+              type="button"
+              onClick={() => {
+                if (newName.trim()) {
+                  onResolve('CREATE_NEW_PLAYER', {
+                    newPlayer: {
+                      name: newName.trim(),
+                      country: newCountry.trim().toUpperCase() || 'US',
+                      playstyle: newPlaystyle,
+                    },
+                  });
+                }
+              }}
+              disabled={isSubmitting || !newName.trim()}
+              className="btn btn-primary"
+              style={{
+                fontSize: '0.85rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                background: '#10b981',
+                borderColor: '#059669',
+              }}
+            >
+              <UserPlus size={15} /> Create &amp; Reassign Run
             </button>
           )}
         </div>
