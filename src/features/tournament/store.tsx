@@ -97,8 +97,8 @@ interface TournamentContextType {
   deleteTournament: (tournamentId: string) => Promise<boolean>;
   addGlobalPlayer: (player: Omit<PlayerProfile, 'id'>) => PlayerProfile;
   updateGlobalPlayer: (playerId: string, updates: Partial<PlayerProfile>) => void;
-  deleteGlobalPlayer: (playerId: string) => void;
-  clearAllGlobalPlayers: () => void;
+  deleteGlobalPlayer: (playerId: string) => Promise<{ success: boolean; error?: string }>;
+  clearAllGlobalPlayers: () => Promise<void>;
   generateFakeGlobalPlayers: (count: number) => PlayerProfile[];
   importPlayersToTournament: (tournamentId: string, players: PlayerProfile[]) => void;
   removePlayerFromTournament: (
@@ -1305,18 +1305,28 @@ export const TournamentProvider: React.FC<{
       });
   };
 
-  const deleteGlobalPlayer = (playerId: string) => {
-    apiCall(`/api/players/${playerId}`, { method: 'DELETE' })
-      .then(() => {
-        setGlobalPlayers(prev => prev.filter(p => p.id !== playerId));
-      })
-      .catch(err => {
-        setApiError(`Failed to delete global player: ${err.message}`);
-      });
+  const deleteGlobalPlayer = async (playerId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await apiCall(`/api/players/${playerId}`, { method: 'DELETE' });
+      setGlobalPlayers(prev => prev.filter(p => p.id !== playerId));
+      return { success: true };
+    } catch (err: any) {
+      const msg = err.message || 'Failed to delete global player';
+      setApiError(`Failed to delete global player: ${msg}`);
+      return { success: false, error: msg };
+    }
   };
 
-  const clearAllGlobalPlayers = () => {
-    setGlobalPlayers([]);
+  const clearAllGlobalPlayers = async (): Promise<void> => {
+    try {
+      const res = await apiCall('/api/players', { method: 'DELETE' });
+      if (res && Array.isArray(res.deletedIds)) {
+        const deletedSet = new Set(res.deletedIds);
+        setGlobalPlayers(prev => prev.filter(p => !deletedSet.has(p.id)));
+      }
+    } catch (err: any) {
+      setApiError(`Failed to clear global players: ${err.message}`);
+    }
   };
 
   const generateFakeGlobalPlayers = (count: number): PlayerProfile[] => {
@@ -1412,6 +1422,23 @@ export const TournamentProvider: React.FC<{
       return {
         success: false,
         error: 'Cannot remove competitor who has recorded matches. Clear match scores first.',
+      };
+    }
+
+    if (tournament.isLocked) {
+      return {
+        success: false,
+        error: 'Cannot remove competitor while brackets are locked. Unlock brackets first.',
+      };
+    }
+
+    const hasQualScores = (tournament.qualifierSubmissions || []).some(
+      s => s.playerId === playerId
+    );
+    if (hasQualScores) {
+      return {
+        success: false,
+        error: 'Cannot remove competitor while they have recorded qualifier scores. Delete their qualifier scores first.',
       };
     }
 

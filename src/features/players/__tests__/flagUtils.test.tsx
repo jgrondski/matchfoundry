@@ -49,6 +49,15 @@ describe('flagUtils and CountryFlag vector SVG rendering (Windows compatibility)
       expect(getCountryName('south korea')).toBe('South Korea');
     });
 
+    it('resolves and caches 2-letter ISO country codes via DisplayNames', () => {
+      // Unlisted in initial COUNTRIES or standard ISO codes
+      const name1 = getCountryName('EG'); // Egypt
+      expect(name1).toBe('Egypt');
+      // Second call must resolve consistently from cache
+      const name2 = getCountryName('eg');
+      expect(name2).toBe('Egypt');
+    });
+
     it('returns empty string for empty input', () => {
       expect(getCountryName('')).toBe('');
       expect(getCountryName(undefined)).toBe('');

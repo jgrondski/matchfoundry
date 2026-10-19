@@ -17,6 +17,7 @@ import {
   getPlayer,
   updatePlayer,
   deletePlayer,
+  deleteAllUnattachedPlayers,
 } from '../api/players';
 import {
   listFullTournaments,
@@ -551,6 +552,13 @@ export function createApiMiddleware() {
         return sendJson(res, 201, created);
       }
 
+      // DELETE /api/players (Bulk clean unattached players)
+      if (pathname === '/api/players' && method === 'DELETE') {
+        if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
+        const result = await deleteAllUnattachedPlayers();
+        return sendJson(res, 200, result);
+      }
+
       // /api/players/:id
       const playerMatch = pathname.match(/^\/api\/players\/([^/]+)$/);
       if (playerMatch) {
@@ -568,8 +576,12 @@ export function createApiMiddleware() {
         }
         if (method === 'DELETE') {
           if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
-          const deleted = await deletePlayer(playerId);
-          return sendJson(res, 200, { success: deleted });
+          const result = await deletePlayer(playerId);
+          if (!result.success) {
+            const statusCode = result.error === 'Player not found' ? 404 : 400;
+            return sendError(res, statusCode, result.error || 'Cannot delete player');
+          }
+          return sendJson(res, 200, { success: true });
         }
       }
 
@@ -748,6 +760,11 @@ export function createApiMiddleware() {
         // POST /api/tournaments/:id/qualifiers
         if (subAction === 'qualifiers' && method === 'POST') {
           if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const tourneyCheck = await getFullTournament(tourneyId);
+          if (!tourneyCheck) return sendError(res, 404, 'Tournament not found');
+          if (tourneyCheck.isLocked) {
+            return sendError(res, 400, 'Cannot modify qualifier scores while brackets are locked. Unlock brackets first.');
+          }
           await submitQualifierScore(tourneyId, body.playerId, body.score);
           const t = await getFullTournament(tourneyId);
           if (t && !t.isLocked) {
@@ -761,6 +778,11 @@ export function createApiMiddleware() {
         // POST /api/tournaments/:id/qualifiers/batch
         if (subAction === 'qualifiers/batch' && method === 'POST') {
           if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const tourneyCheck = await getFullTournament(tourneyId);
+          if (!tourneyCheck) return sendError(res, 404, 'Tournament not found');
+          if (tourneyCheck.isLocked) {
+            return sendError(res, 400, 'Cannot modify qualifier scores while brackets are locked. Unlock brackets first.');
+          }
           await submitQualifiersBatch(tourneyId, body.submissions || body);
           const t = await getFullTournament(tourneyId);
           if (t && !t.isLocked) {
@@ -920,6 +942,25 @@ export function createApiMiddleware() {
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');
 
+          const hasRecordedScores = Object.values(t.matchScores || {}).some(
+            record =>
+              record.isComplete ||
+              record.games.some(
+                g => g.player1Points !== null || g.player2Points !== null || g.winnerPlayerId !== null
+              ) ||
+              record.player1Wins > 0 ||
+              record.player2Wins > 0 ||
+              Boolean(record.winnerPlayerId)
+          );
+
+          if (t.isLocked || hasRecordedScores) {
+            return sendError(
+              res,
+              400,
+              'Cannot clear qualifiers while bracket is locked or match scores exist. Clear matches first.'
+            );
+          }
+
           await clearTournamentQualifiers(t.id);
           t.qualifierSubmissions = [];
           t.qualifiers = [];
@@ -1043,6 +1084,14 @@ export function createApiMiddleware() {
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');
 
+          if (t.isLocked) {
+            return sendError(
+              res,
+              400,
+              'Cannot modify qualifier scores while brackets are locked. Unlock brackets first.'
+            );
+          }
+
           if (isUuid(subId)) {
             const db = getDb();
             await db
@@ -1087,16 +1136,25 @@ export function createApiMiddleware() {
             );
           }
 
+          if (t.isLocked) {
+            return sendError(
+              res,
+              400,
+              'Cannot remove competitor while brackets are locked. Unlock brackets first.'
+            );
+          }
+
+          const qualSubs = (t.qualifierSubmissions || []).filter(s => s.playerId === playerId);
+          if (qualSubs.length > 0) {
+            return sendError(
+              res,
+              400,
+              `Cannot remove competitor from roster while they have recorded qualifier scores (${qualSubs.length} submission(s)). Delete their qualifier scores first.`
+            );
+          }
+
           if (isUuid(playerId)) {
             const db = getDb();
-            await db
-              .delete(qualifierSubmissions)
-              .where(
-                and(
-                  eq(qualifierSubmissions.tournamentId, t.id),
-                  eq(qualifierSubmissions.playerId, playerId)
-                )
-              );
             await db
               .delete(tournamentPlayers)
               .where(
@@ -1168,7 +1226,6 @@ export function createApiMiddleware() {
 
           t.isLocked = false;
           t.tiers = t.tiers.map(tr => ({ ...tr, isLocked: false }));
-          t.tiers = generateDraftBracketsForTournament(t);
           const saved = await saveFullTournament(t);
           return sendJson(res, 200, saved);
         }

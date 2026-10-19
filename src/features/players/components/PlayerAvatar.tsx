@@ -3,7 +3,7 @@ import { PlayerProfile } from '../../tournament/types';
 import { CountryFlag } from '../flagUtils';
 
 export interface PlayerAvatarProps {
-  player?: Pick<PlayerProfile, 'avatarType' | 'avatarUrl' | 'country' | 'name'> | null;
+  player?: Pick<PlayerProfile, 'avatarType' | 'avatarUrl' | 'avatarThumbnailUrl' | 'country' | 'name'> | null;
   country?: string;
   size?: number | string;
   showName?: boolean;
@@ -11,7 +11,7 @@ export interface PlayerAvatarProps {
   style?: React.CSSProperties;
 }
 
-export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
+export const PlayerAvatar: React.FC<PlayerAvatarProps> = React.memo(({
   player,
   country,
   size = 20,
@@ -21,8 +21,9 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
 }) => {
   const finalCountry = player?.country ?? country;
   const isCustom = player?.avatarType === 'custom' && Boolean(player?.avatarUrl);
+  const customSrc = player?.avatarThumbnailUrl || player?.avatarUrl;
 
-  if (isCustom && player?.avatarUrl) {
+  if (isCustom && customSrc) {
     const dim = typeof size === 'number' ? `${size}px` : size;
     return (
       <span
@@ -30,7 +31,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
         style={{ display: 'inline-flex', alignItems: 'center' }}
       >
         <img
-          src={player.avatarUrl}
+          src={customSrc}
           alt={player.name || 'Player'}
           style={{
             width: dim,
@@ -57,4 +58,4 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = ({
       style={style}
     />
   );
-};
+});

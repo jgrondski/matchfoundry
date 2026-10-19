@@ -1107,7 +1107,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
       expect(fresh?.qualifierSubmissions?.length).toBe(0);
     });
 
-    it('permanently removes a competitor and their submissions via DELETE /api/tournaments/:id/players/:playerId', async () => {
+    it('blocks removing competitor with qualifier submissions via DELETE /api/tournaments/:id/players/:playerId until scores are cleared', async () => {
       const created = await createTournament({
         name: 'Delete Player Test',
         slug: 'delete-player-test',
@@ -1134,9 +1134,19 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
 
       // Verify player and submission exist
       expect((await db.select().from(tournamentPlayers).where(eq(tournamentPlayers.tournamentId, tourney.id))).length).toBe(1);
-      expect((await db.select().from(qualifierSubmissions).where(eq(qualifierSubmissions.tournamentId, tourney.id))).length).toBe(1);
+      const subs = await db.select().from(qualifierSubmissions).where(eq(qualifierSubmissions.tournamentId, tourney.id));
+      expect(subs.length).toBe(1);
 
-      // Remove player
+      // Attempting to remove competitor while qualifier submission exists must be blocked with HTTP 400 (Stage 3 blocks Stage 2)
+      const blockedRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/players/${comp.id}`, 'DELETE');
+      expect(blockedRes.status).toBe(400);
+      expect(blockedRes.body.error).toMatch(/qualifier score/i);
+
+      // Delete the qualifier submission first
+      const delQualRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/qualifiers/${subs[0].id}`, 'DELETE');
+      expect(delQualRes.status).toBe(200);
+
+      // Now removing competitor succeeds
       const delRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/players/${comp.id}`, 'DELETE');
       expect(delRes.status).toBe(200);
 

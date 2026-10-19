@@ -57,10 +57,22 @@ export const COUNTRIES: CountryItem[] = [
 ];
 
 const countryMap = new Map<string, string>();
+const countryNameMap = new Map<string, string>();
 COUNTRIES.forEach((c) => {
   countryMap.set(c.code.toUpperCase(), c.code);
   countryMap.set(c.name.toUpperCase(), c.code);
+  countryNameMap.set(c.code.toUpperCase(), c.name);
+  countryNameMap.set(c.name.toUpperCase(), c.name);
 });
+
+let cachedDisplayNames: Intl.DisplayNames | null = null;
+try {
+  if (typeof Intl !== 'undefined' && Intl.DisplayNames) {
+    cachedDisplayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+  }
+} catch {
+  // Ignore fallback
+}
 
 /**
  * Resolves a 2-letter ISO country code from a code or name.
@@ -102,16 +114,18 @@ export function getCountryFlag(country?: string): string {
 export function getCountryName(country?: string): string {
   if (!country) return '';
   const trimmed = country.trim().toUpperCase();
-  const found = COUNTRIES.find(
-    (c) => c.code.toUpperCase() === trimmed || c.name.toUpperCase() === trimmed
-  );
-  if (found) return found.name;
+  if (!trimmed) return '';
 
-  if (trimmed.length === 2) {
+  const cached = countryNameMap.get(trimmed);
+  if (cached) return cached;
+
+  if (trimmed.length === 2 && cachedDisplayNames) {
     try {
-      const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
-      const resolved = regionNames.of(trimmed);
-      if (resolved) return resolved;
+      const resolved = cachedDisplayNames.of(trimmed);
+      if (resolved) {
+        countryNameMap.set(trimmed, resolved);
+        return resolved;
+      }
     } catch {
       // Ignore and fallback
     }
@@ -139,7 +153,7 @@ const flagComponentMap = Flags as unknown as Record<
   }>
 >;
 
-export const CountryFlag: React.FC<CountryFlagProps> = ({
+export const CountryFlag: React.FC<CountryFlagProps> = React.memo(({
   country,
   showName = false,
   className,
@@ -189,4 +203,4 @@ export const CountryFlag: React.FC<CountryFlagProps> = ({
     flagNode,
     showName ? React.createElement('span', null, name) : null
   );
-};
+});
