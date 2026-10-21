@@ -7,6 +7,7 @@ import { TournamentPageHeader } from '../../../components/TournamentPageHeader';
 import { Plus, Sparkles, ChevronRight, Check } from 'lucide-react';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../players/components/PlaystyleChip';
+import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { getContrastingTextColor, getAlternateShade } from '../../bracket/colorUtils';
 import { TournamentQualTimerHud } from './TournamentQualTimerHud';
 
@@ -36,6 +37,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
     const q = searchTerm.trim().toLowerCase();
     if (!q) return true;
     return (
+      getEffectivePlayerName(r.player).toLowerCase().includes(q) ||
       r.player.name.toLowerCase().includes(q) ||
       (r.player.country && r.player.country.toLowerCase().includes(q)) ||
       (r.player.playstyle && r.player.playstyle.toLowerCase().includes(q))
@@ -58,7 +60,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
   const hasBrackets = tournament.tiers.length > 0;
   const format = tournament.qualFormat;
   const targetX = tournament.qualAverageCount || 2;
-  const tableColSpan = hasBrackets ? 5 : 4;
+  const tableColSpan = hasBrackets ? 6 : 5;
 
   return (
     <div
@@ -99,11 +101,14 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
         searchPlaceholder="Search competitor, country, style..."
         action={
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <TournamentQualTimerHud
-              tournament={tournament}
-              isObsMode={isObsMode}
-              compact={!isObsMode}
-            />
+            {(!canManage || isObsMode) && (
+              <TournamentQualTimerHud
+                tournament={tournament}
+                isObsMode={isObsMode}
+                compact={!isObsMode}
+                readOnly={true}
+              />
+            )}
             {canManage && (
               <button
                 onClick={() => setIsEntryModalOpen(true)}
@@ -201,32 +206,33 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
           <thead>
             <tr style={{ background: 'var(--color-bg-surface-elevated)', borderBottom: '1px solid var(--color-border)' }}>
               <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Rank</th>
-              <th style={{ ...thStyle, minWidth: '220px' }}>Competitor</th>
+              <th style={{ ...thStyle, minWidth: '200px' }}>Competitor</th>
+              <th style={{ ...thStyle, width: '130px', textAlign: 'center' }}>Verified</th>
 
               {/* Format-Dense Columns */}
               {format === 'HIGH_SCORE' && (
                 <>
-                  <th style={{ ...thStyle, width: '160px', textAlign: 'center' }}># of Maxes</th>
-                  <th style={{ ...thStyle, width: '150px', textAlign: 'right' }}>Kicker</th>
+                  <th style={{ ...thStyle, width: '140px', textAlign: 'center' }}># of Maxes</th>
+                  <th style={{ ...thStyle, width: '140px', textAlign: 'center' }}>Kicker</th>
                 </>
               )}
 
               {format === 'AVERAGE_OF_X' && (
                 <>
-                  <th style={{ ...thStyle, minWidth: '240px', textAlign: 'center' }}>Top Scores (Ao{targetX})</th>
-                  <th style={{ ...thStyle, width: '160px', textAlign: 'right' }}>Average Score</th>
+                  <th style={{ ...thStyle, minWidth: '180px', textAlign: 'center' }}>Top Scores (Ao{targetX})</th>
+                  <th style={{ ...thStyle, width: '140px', textAlign: 'center' }}>Average Score</th>
                 </>
               )}
 
               {format === 'POINTS' && (
                 <>
-                  <th style={{ ...thStyle, minWidth: '220px', textAlign: 'center' }}>Points Breakdown</th>
-                  <th style={{ ...thStyle, width: '140px', textAlign: 'right' }}>Total Points</th>
+                  <th style={{ ...thStyle, minWidth: '180px', textAlign: 'center' }}>Points Breakdown</th>
+                  <th style={{ ...thStyle, width: '140px', textAlign: 'center' }}>Total Points</th>
                 </>
               )}
 
               {hasBrackets && (
-                <th style={{ ...thStyle, width: '150px', textAlign: 'center' }}>Bracket Seed</th>
+                <th style={{ ...thStyle, width: '140px', textAlign: 'center' }}>Bracket Seed</th>
               )}
             </tr>
           </thead>
@@ -307,179 +313,120 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                           <PlayerAvatar player={row.player} />
                           <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                            {row.player.name}
+                            {getEffectivePlayerName(row.player)}
                           </span>
                           {row.player.playstyle && (
                             <PlaystyleChip style={row.player.playstyle} />
                           )}
-
-                          {/* Qualifier State Badges */}
-                          {row.status === 'verified' && (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 700,
-                                padding: '0.12rem 0.45rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(34, 197, 94, 0.15)',
-                                color: '#4ade80',
-                                border: '1px solid rgba(34, 197, 94, 0.3)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.2rem',
-                              }}
-                              title="Qualifier verified"
-                            >
-                              <Check size={10} /> Verified
-                            </span>
-                          )}
-                          {row.status === 'awaiting verification' && (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 700,
-                                padding: '0.12rem 0.45rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(245, 158, 11, 0.15)',
-                                color: 'var(--color-gold-bright)',
-                                border: '1px solid rgba(245, 158, 11, 0.3)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.2rem',
-                              }}
-                              title="Awaiting verification by judge"
-                            >
-                              ⏳ Awaiting Verification
-                            </span>
-                          )}
-                          {row.status === 'dnq' && (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 700,
-                                padding: '0.12rem 0.45rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(239, 68, 68, 0.15)',
-                                color: '#f87171',
-                                border: '1px solid rgba(239, 68, 68, 0.3)',
-                              }}
-                              title="Did not qualify"
-                            >
-                              DNQ
-                            </span>
-                          )}
-                          {row.status === 'dq' && (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 700,
-                                padding: '0.12rem 0.45rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(239, 68, 68, 0.25)',
-                                color: '#ef4444',
-                                border: '1px solid rgba(239, 68, 68, 0.5)',
-                              }}
-                              title="Disqualified"
-                            >
-                              DQ
-                            </span>
-                          )}
-                          {row.status === 'in progress' && (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 600,
-                                padding: '0.12rem 0.45rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(245, 158, 11, 0.15)',
-                                color: 'var(--color-gold-bright)',
-                                border: '1px solid rgba(245, 158, 11, 0.3)',
-                              }}
-                              title="Qualifier in progress"
-                            >
-                              In Progress
-                            </span>
-                          )}
-                          {row.status === 'not started' && (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 500,
-                                padding: '0.12rem 0.45rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                color: 'var(--color-text-muted)',
-                                border: '1px solid var(--color-border-subtle)',
-                              }}
-                              title="Not started"
-                            >
-                              Not Started
-                            </span>
-                          )}
-
-                          {/* Source Indicator Pill */}
-                          {row.submissionSource === 'ONLINE' && (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 600,
-                                padding: '0.12rem 0.4rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(168, 85, 247, 0.15)',
-                                color: '#c084fc',
-                                border: '1px solid rgba(168, 85, 247, 0.3)',
-                              }}
-                            >
-                              🌐 Online
-                            </span>
-                          )}
-                          {row.submissionSource === 'IN_PERSON' && (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 600,
-                                padding: '0.12rem 0.4rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(59, 130, 246, 0.15)',
-                                color: '#60a5fa',
-                                border: '1px solid rgba(59, 130, 246, 0.3)',
-                              }}
-                            >
-                              🏢 In-Person
-                            </span>
-                          )}
-
-                          {/* Twitch VOD Link */}
-                          {row.twitchVodUrl && (
-                            <a
-                              href={row.twitchVodUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={e => e.stopPropagation()}
-                              title="Watch Twitch VOD"
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.2rem',
-                                fontSize: '0.7rem',
-                                color: '#a78bfa',
-                                textDecoration: 'none',
-                                padding: '0.1rem 0.35rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(167, 139, 250, 0.1)',
-                              }}
-                            >
-                              VOD ↗
-                            </a>
-                          )}
                         </div>
+                      </td>
+
+                      {/* Verified Column */}
+                      <td style={{ ...tdStyle, width: '130px', textAlign: 'center' }}>
+                        {row.status === 'verified' && (
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'rgba(34, 197, 94, 0.15)',
+                              color: '#4ade80',
+                              border: '1px solid rgba(34, 197, 94, 0.3)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                            title="Qualifier verified"
+                          >
+                            <Check size={11} /> Verified
+                          </span>
+                        )}
+                        {row.status === 'awaiting verification' && (
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              padding: '0.15rem 0.5rem',
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'rgba(245, 158, 11, 0.15)',
+                              color: 'var(--color-gold-bright)',
+                              border: '1px solid rgba(245, 158, 11, 0.3)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                            title="Awaiting verification by judge"
+                          >
+                            ⏳ Awaiting Verification
+                          </span>
+                        )}
+                        {row.status === 'dnq' && (
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              color: '#f87171',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                            }}
+                            title="Did not qualify"
+                          >
+                            DNQ
+                          </span>
+                        )}
+                        {row.status === 'dq' && (
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 700,
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'rgba(239, 68, 68, 0.25)',
+                              color: '#ef4444',
+                              border: '1px solid rgba(239, 68, 68, 0.5)',
+                            }}
+                            title="Disqualified"
+                          >
+                            DQ
+                          </span>
+                        )}
+                        {row.status === 'in progress' && (
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 600,
+                              padding: '0.15rem 0.45rem',
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'rgba(245, 158, 11, 0.15)',
+                              color: 'var(--color-gold-bright)',
+                              border: '1px solid rgba(245, 158, 11, 0.3)',
+                            }}
+                            title="Qualifier in progress"
+                          >
+                            In Progress
+                          </span>
+                        )}
+                        {row.status === 'not started' && (
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              color: 'var(--color-text-muted)',
+                            }}
+                            title="Not started"
+                          >
+                            —
+                          </span>
+                        )}
                       </td>
 
                       {/* Format-Dense Column Layout */}
                       {format === 'HIGH_SCORE' && (
                         <>
                           {/* # of Maxes Column */}
-                          <td style={{ ...tdStyle, textAlign: 'center' }}>
+                          <td style={{ ...tdStyle, width: '140px', textAlign: 'center' }}>
                             {row.maxoutCount && row.maxoutCount > 0 ? (
                               <span
                                 style={{
@@ -506,7 +453,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                           </td>
 
                           {/* Kicker Column */}
-                          <td className="tabular-nums" style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, fontSize: '0.95rem' }}>
+                          <td className="tabular-nums" style={{ ...tdStyle, width: '140px', textAlign: 'center', fontWeight: 700, fontSize: '0.95rem' }}>
                             {row.kickerScore && row.kickerScore > 0 ? (
                               <span style={{ color: isTierQualified ? tierColor : '#ffffff' }}>
                                 {row.kickerScore.toLocaleString()}
@@ -531,7 +478,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                       {format === 'AVERAGE_OF_X' && (
                         <>
                           {/* Attempts Breakdown Chips */}
-                          <td style={{ ...tdStyle, textAlign: 'center' }}>
+                          <td style={{ ...tdStyle, minWidth: '180px', textAlign: 'center' }}>
                             <div style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}>
                               {Array.from({ length: targetX }).map((_, slotIdx) => {
                                 const score = row.attempts[slotIdx];
@@ -558,8 +505,8 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                           </td>
 
                           {/* Average Score Column */}
-                          <td style={{ ...tdStyle, textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <td style={{ ...tdStyle, width: '140px', textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
                               <span className="tabular-nums" style={{ fontWeight: 700, fontSize: '0.95rem', color: isTierQualified ? tierColor : 'var(--color-gold-bright)' }}>
                                 {row.finalScore > 0 ? row.finalScore.toLocaleString() : '—'}
                               </span>
@@ -574,7 +521,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                       {format === 'POINTS' && (
                         <>
                           {/* Points Breakdown Column */}
-                          <td style={{ ...tdStyle, textAlign: 'center' }}>
+                          <td style={{ ...tdStyle, minWidth: '180px', textAlign: 'center' }}>
                             {(() => {
                               const submissionsForPlayer = (tournament.qualifierSubmissions || [])
                                 .filter(s => s.playerId === row.player.id)
@@ -621,7 +568,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                           </td>
 
                           {/* Total Points Column */}
-                          <td className="tabular-nums" style={{ ...tdStyle, textAlign: 'right', fontWeight: 800, fontSize: '0.98rem', color: isTierQualified ? tierColor : 'var(--color-gold-bright)' }}>
+                          <td className="tabular-nums" style={{ ...tdStyle, width: '140px', textAlign: 'center', fontWeight: 800, fontSize: '0.98rem', color: isTierQualified ? tierColor : 'var(--color-gold-bright)' }}>
                             {row.finalScore} pts
                           </td>
                         </>
@@ -629,8 +576,8 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
 
                       {/* Tier Cutoff & Seed Column (Only when brackets exist) */}
                       {hasBrackets && (
-                        <td style={{ ...tdStyle, textAlign: 'center' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <td style={{ ...tdStyle, width: '140px', textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
                             {isTierQualified && row.tierSeed !== undefined ? (
                               <span
                                 style={{

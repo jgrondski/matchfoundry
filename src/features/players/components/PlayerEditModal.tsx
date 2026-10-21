@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PlayerProfile, Playstyle, AvatarType } from '../../tournament/types';
 import { User, Check, X, AlertTriangle, Upload } from 'lucide-react';
-import { COUNTRIES } from '../flagUtils';
 import { PlayerAvatar } from './PlayerAvatar';
 import { PlaystyleChip } from './PlaystyleChip';
+import { CountrySelect } from './CountrySelect';
 import { processAvatarImage } from '../../../utils/image';
-import { generatePresignedAvatarUrls } from '../../../api/uploads';
 
 interface PlayerEditModalProps {
   isOpen: boolean;
@@ -219,7 +218,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
-                  Competitor Name *
+                  Player Name *
                 </label>
                 <input
                   type="text"
@@ -243,43 +242,18 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
               </div>
 
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
-                  <span>Country</span>
-                  <PlayerAvatar player={{ name, country, avatarType, avatarUrl }} country={country} />
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
+                  Country
                 </label>
-                <input
-                  type="text"
-                  list="country-options"
-                  placeholder="US, JP, IS, etc."
-                  value={country}
-                  onChange={e => setCountry(e.target.value.toUpperCase())}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--color-border)',
-                    background: 'var(--color-bg-base)',
-                    color: 'var(--color-text-primary)',
-                    fontSize: '0.9rem',
-                    textAlign: 'center',
-                    fontWeight: 700,
-                  }}
-                />
-                <datalist id="country-options">
-                  {COUNTRIES.map(c => (
-                    <option key={c.code} value={c.code}>
-                      {c.name}
-                    </option>
-                  ))}
-                </datalist>
+                <CountrySelect value={country} onChange={setCountry} />
               </div>
             </div>
 
-            {/* Display Name & Nickname */}
+            {/* Preferred Name & Nickname */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
-                  Display Name / Alias (Optional)
+                  Preferred Name (Optional)
                 </label>
                 <input
                   type="text"
@@ -297,13 +271,13 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                   }}
                 />
                 <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.2rem' }}>
-                  Alternative alias used on match cards &amp; streams
+                  Displayed on brackets, cards &amp; streams (defaults to Player Name)
                 </div>
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
-                  Nickname / Moniker (Optional)
+                  Nickname (Optional)
                 </label>
                 <input
                   type="text"
@@ -321,7 +295,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                   }}
                 />
                 <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.2rem' }}>
-                  Personal moniker rendered in quotes (e.g. Justin &quot;The Prodigy&quot;)
+                  Moniker displayed in quotes in Master Catalog
                 </div>
               </div>
             </div>
@@ -402,15 +376,8 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                     if (!file) return;
                     try {
                       const res = await processAvatarImage(file);
-                      const urls = generatePresignedAvatarUrls(initialPlayer?.id || crypto.randomUUID());
-                      try {
-                        await fetch(urls.avatarUploadUrl, { method: 'PUT', body: res.avatarBlob });
-                        await fetch(urls.thumbnailUploadUrl, { method: 'PUT', body: res.thumbnailBlob });
-                      } catch {
-                        // ignore local dev network upload error
-                      }
-                      setAvatarUrl(urls.avatarPublicUrl);
-                      setAvatarThumbnailUrl(urls.thumbnailPublicUrl);
+                      setAvatarUrl(res.avatarDataUrl);
+                      setAvatarThumbnailUrl(res.thumbnailDataUrl);
                       setAvatarType('custom');
                     } catch {
                       setError('Failed to process avatar image');

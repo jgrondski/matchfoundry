@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { Copy, Check, AlertTriangle, ShieldCheck } from 'lucide-react';
+import React from 'react';
+import { AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export interface AuthwordHudCardProps {
-  authWord: string;
+  authWord: string | null;
   onReportCrash?: () => void;
 }
 
@@ -10,19 +10,6 @@ export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({
   authWord,
   onReportCrash,
 }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(authWord);
-      }
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback
-    }
-  };
 
   return (
     <div
@@ -103,28 +90,6 @@ export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({
             {authWord}
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={handleCopy}
-          style={{
-            background: copied ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.08)',
-            border: `1px solid ${copied ? 'rgba(34, 197, 94, 0.4)' : 'var(--color-border, #263342)'}`,
-            borderRadius: '8px',
-            padding: '0.6rem 1rem',
-            color: copied ? '#4ade80' : '#ffffff',
-            fontWeight: 700,
-            fontSize: '0.88rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}
-          data-testid="copy-authword-button"
-        >
-          {copied ? <Check size={16} /> : <Copy size={16} />}
-          {copied ? 'Copied!' : 'Copy Authword'}
-        </button>
       </div>
 
       {/* Rule Notice */}

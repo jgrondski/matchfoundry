@@ -5,6 +5,7 @@ import { BracketMatch, isMatchPlayable } from '../../types';
 import { SheetSizeTokens, getMatchStatus } from '../../sheetUtils';
 import { colorWithAlpha, getAlternateShade } from '../../colorUtils';
 import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
+import { getEffectivePlayerName } from '../../../players/playerNameUtils';
 
 interface SheetMatchRowProps {
   match: BracketMatch;
@@ -74,8 +75,8 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
 
   const p1 = match.player1.player;
   const p2 = match.player2.player;
-  const p1Name = p1?.name || (match.player1.sourceMatchId ? `Winner of #${tier.bracket.matchesById[match.player1.sourceMatchId]?.matchNumber || '?'}` : 'TBD');
-  const p2Name = p2?.name || (match.player2.sourceMatchId ? `Winner of #${tier.bracket.matchesById[match.player2.sourceMatchId]?.matchNumber || '?'}` : 'TBD');
+  const p1Name = getEffectivePlayerName(p1) || (match.player1.sourceMatchId ? `Winner of #${tier.bracket.matchesById[match.player1.sourceMatchId]?.matchNumber || '?'}` : 'TBD');
+  const p2Name = getEffectivePlayerName(p2) || (match.player2.sourceMatchId ? `Winner of #${tier.bracket.matchesById[match.player2.sourceMatchId]?.matchNumber || '?'}` : 'TBD');
 
   const p1Wins = record?.player1Wins || 0;
   const p2Wins = record?.player2Wins || 0;

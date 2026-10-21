@@ -9,6 +9,8 @@ export interface SeededPlayer {
   seed: number; // 1-indexed seed number
   country?: string;
   playstyle?: string;
+  displayName?: string;
+  nickname?: string;
 }
 
 export interface MatchParticipant {

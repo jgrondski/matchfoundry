@@ -27,27 +27,13 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
   onResolve,
   isSubmitting = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'confirm' | 'reassign' | 'promote' | 'create_new'>(
-    session?.identityStatus === 'PROVISIONAL_NEW'
-      ? 'promote'
-      : session?.identityStatus === 'CLAIMED_PENDING_REVIEW'
-      ? 'confirm'
-      : 'reassign'
-  );
+  // Always default to 'reassign' as the first tab
+  const [activeTab, setActiveTab] = useState<'reassign' | 'add_global' | 'confirm'>('reassign');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
 
-  const defaultNewName = session
-    ? session.submittedTwitchUsername
-      ? session.playerName.toLowerCase() === session.submittedTwitchUsername.toLowerCase()
-        ? `${session.playerName} (New)`
-        : `${session.playerName} (${session.submittedTwitchUsername})`
-      : `${session.playerName} (New)`
-    : '';
-  const [newName, setNewName] = useState(
-    session?.identityStatus === 'PROVISIONAL_NEW' ? session.playerName : defaultNewName
-  );
-  const [newCountry, setNewCountry] = useState(session?.country || 'US');
+  const [newName, setNewName] = useState(session?.playerName || '');
+  const [newCountry, setNewCountry] = useState(session?.country || '');
   const [newPlaystyle, setNewPlaystyle] = useState('DAS');
 
   if (!isOpen || !session) return null;
@@ -118,7 +104,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                   margin: 0,
                 }}
               >
-                Resolve Competitor Identity
+                Resolve Competitor Identity: {session.playerName}
               </h2>
               <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
                 Twitch: @{session.submittedTwitchUsername || 'N/A'} (ID: {session.submittedTwitchId || 'N/A'})
@@ -141,7 +127,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
           </button>
         </div>
 
-        {/* Tab Controls */}
+        {/* Tab Controls: Tab 1 = Reassign Competitor (Default), Tab 2 = Add Global Player */}
         <div
           style={{
             display: 'flex',
@@ -149,46 +135,9 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
             background: 'rgba(0, 0, 0, 0.25)',
           }}
         >
-          {session.identityStatus === 'CLAIMED_PENDING_REVIEW' && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('confirm')}
-              style={{
-                flex: 1,
-                padding: '0.75rem',
-                background: activeTab === 'confirm' ? 'var(--color-bg-surface)' : 'transparent',
-                border: 'none',
-                borderBottom: activeTab === 'confirm' ? '2px solid var(--color-gold-bright)' : '2px solid transparent',
-                color: activeTab === 'confirm' ? '#ffffff' : 'var(--color-text-muted)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-              }}
-            >
-              Confirm Binding
-            </button>
-          )}
-          {session.identityStatus === 'PROVISIONAL_NEW' && (
-            <button
-              type="button"
-              onClick={() => setActiveTab('promote')}
-              style={{
-                flex: 1,
-                padding: '0.75rem',
-                background: activeTab === 'promote' ? 'var(--color-bg-surface)' : 'transparent',
-                border: 'none',
-                borderBottom: activeTab === 'promote' ? '2px solid var(--color-gold-bright)' : '2px solid transparent',
-                color: activeTab === 'promote' ? '#ffffff' : 'var(--color-text-muted)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-              }}
-            >
-              Promote to Global
-            </button>
-          )}
           <button
             type="button"
+            data-testid="tab-reassign"
             onClick={() => setActiveTab('reassign')}
             style={{
               flex: 1,
@@ -206,102 +155,51 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab('create_new')}
+            data-testid="tab-add-global"
+            onClick={() => setActiveTab('add_global')}
             style={{
               flex: 1,
               padding: '0.75rem',
-              background: activeTab === 'create_new' ? 'var(--color-bg-surface)' : 'transparent',
+              background: activeTab === 'add_global' ? 'var(--color-bg-surface)' : 'transparent',
               border: 'none',
-              borderBottom: activeTab === 'create_new' ? '2px solid var(--color-gold-bright)' : '2px solid transparent',
-              color: activeTab === 'create_new' ? '#ffffff' : 'var(--color-text-muted)',
+              borderBottom: activeTab === 'add_global' ? '2px solid var(--color-gold-bright)' : '2px solid transparent',
+              color: activeTab === 'add_global' ? '#ffffff' : 'var(--color-text-muted)',
               fontWeight: 700,
               fontSize: '0.85rem',
               cursor: 'pointer',
             }}
           >
-            Create Separate Player
+            Add Global Player
           </button>
+          {session.identityStatus === 'CLAIMED_PENDING_REVIEW' && (
+            <button
+              type="button"
+              data-testid="tab-confirm"
+              onClick={() => setActiveTab('confirm')}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                background: activeTab === 'confirm' ? 'var(--color-bg-surface)' : 'transparent',
+                border: 'none',
+                borderBottom: activeTab === 'confirm' ? '2px solid var(--color-gold-bright)' : '2px solid transparent',
+                color: activeTab === 'confirm' ? '#ffffff' : 'var(--color-text-muted)',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+              }}
+            >
+              Confirm Binding
+            </button>
+          )}
         </div>
 
         {/* Tab Body */}
         <div style={{ padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {activeTab === 'confirm' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-                This competitor claimed the profile <strong>{session.playerName}</strong> during Twitch login.
-                Confirming identity will permanently bind Twitch ID <code>{session.submittedTwitchId}</code> to their profile.
-                Future logins with this Twitch account will automatically resolve without judge review.
-              </p>
-              <div
-                style={{
-                  background: 'var(--color-bg-surface-elevated)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                }}
-              >
-                <PlayerAvatar
-                  player={{
-                    name: session.playerName,
-                    country: session.country,
-                    avatarUrl: session.avatarUrl,
-                    avatarType: (session.avatarType as any) || 'flag',
-                  }}
-                  size={42}
-                />
-                <div>
-                  <div style={{ fontWeight: 800, color: '#ffffff' }}>{session.playerName}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#a78bfa' }}>
-                    Twitch: @{session.submittedTwitchUsername || 'N/A'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'promote' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-                This competitor registered as a provisional walk-in: <strong>{session.playerName}</strong>.
-                Promoting will create a permanent profile in the global database and register them for future tournaments.
-              </p>
-              <div
-                style={{
-                  background: 'var(--color-bg-surface-elevated)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                }}
-              >
-                <PlayerAvatar
-                  player={{
-                    name: session.playerName,
-                    country: session.country,
-                    avatarUrl: session.avatarUrl,
-                    avatarType: (session.avatarType as any) || 'flag',
-                  }}
-                  size={42}
-                />
-                <div>
-                  <div style={{ fontWeight: 800, color: '#ffffff' }}>{session.playerName}</div>
-                  <div style={{ fontSize: '0.8rem', color: '#38bdf8' }}>
-                    Walk-in Competitor • Country: {session.country || 'US'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
+          {/* TAB 1: Reassign Competitor */}
           {activeTab === 'reassign' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-                If the competitor claimed the wrong person or has an existing account under a different name,
+                If the competitor has an existing account under another name or claimed the wrong person,
                 select the correct competitor below to transfer this run.
               </p>
 
@@ -394,11 +292,42 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
             </div>
           )}
 
-          {activeTab === 'create_new' && (
+          {/* TAB 2: Add Global Player (Consolidated) */}
+          {activeTab === 'add_global' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0 }}>
-                If this competitor is a distinct person rather than the matched global player, create a separate profile to transfer this run.
+                Register this competitor as an official player in the global directory with confirmed name, country, and playstyle.
               </p>
+
+              {/* Profile Card Preview */}
+              <div
+                style={{
+                  background: 'var(--color-bg-surface-elevated)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.85rem 1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                }}
+              >
+                <PlayerAvatar
+                  player={{
+                    name: newName || session.playerName,
+                    country: newCountry || undefined,
+                    avatarUrl: session.avatarUrl,
+                    avatarType: (session.avatarType as any) || 'flag',
+                  }}
+                  size={42}
+                />
+                <div>
+                  <div style={{ fontWeight: 800, color: '#ffffff' }}>{newName || session.playerName}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                    {session.submittedTwitchUsername ? `@${session.submittedTwitchUsername} • ` : ''}
+                    Country: {newCountry || 'Unassigned'} • Style: {newPlaystyle}
+                  </div>
+                </div>
+              </div>
 
               <div>
                 <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>
@@ -406,9 +335,10 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                 </label>
                 <input
                   type="text"
+                  data-testid="new-player-name-input"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
-                  placeholder="e.g. Omenvoir (New)"
+                  placeholder="e.g. Sharky DAS"
                   style={{
                     width: '100%',
                     padding: '0.55rem 0.75rem',
@@ -429,10 +359,11 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                   </label>
                   <input
                     type="text"
+                    data-testid="new-player-country-input"
                     maxLength={2}
                     value={newCountry}
                     onChange={e => setNewCountry(e.target.value.toUpperCase())}
-                    placeholder="US"
+                    placeholder="e.g. US"
                     style={{
                       width: '100%',
                       padding: '0.55rem 0.75rem',
@@ -452,6 +383,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                     Playstyle
                   </label>
                   <select
+                    data-testid="new-player-playstyle-select"
                     value={newPlaystyle}
                     onChange={e => setNewPlaystyle(e.target.value)}
                     style={{
@@ -469,6 +401,44 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                     <option value="Rolling">Rolling</option>
                     <option value="Hypertap">Hypertap</option>
                   </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: Confirm Binding (Twitch Claims) */}
+          {activeTab === 'confirm' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+                This competitor claimed the profile <strong>{session.playerName}</strong> during Twitch login.
+                Confirming identity will permanently bind Twitch ID <code>{session.submittedTwitchId}</code> to their profile.
+                Future logins with this Twitch account will automatically resolve without judge review.
+              </p>
+              <div
+                style={{
+                  background: 'var(--color-bg-surface-elevated)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                }}
+              >
+                <PlayerAvatar
+                  player={{
+                    name: session.playerName,
+                    country: session.country,
+                    avatarUrl: session.avatarUrl,
+                    avatarType: (session.avatarType as any) || 'flag',
+                  }}
+                  size={42}
+                />
+                <div>
+                  <div style={{ fontWeight: 800, color: '#ffffff' }}>{session.playerName}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#a78bfa' }}>
+                    Twitch: @{session.submittedTwitchUsername || 'N/A'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -497,43 +467,10 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
             Cancel
           </button>
 
-          {activeTab === 'confirm' && (
-            <button
-              type="button"
-              onClick={() => onResolve('CONFIRM_IDENTITY')}
-              disabled={isSubmitting}
-              className="btn btn-primary"
-              style={{
-                fontSize: '0.85rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
-            >
-              <UserCheck size={15} /> Confirm Binding
-            </button>
-          )}
-
-          {activeTab === 'promote' && (
-            <button
-              type="button"
-              onClick={() => onResolve('PROMOTE_PROVISIONAL')}
-              disabled={isSubmitting}
-              className="btn btn-primary"
-              style={{
-                fontSize: '0.85rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
-            >
-              <UserPlus size={15} /> Promote to Global Player
-            </button>
-          )}
-
           {activeTab === 'reassign' && (
             <button
               type="button"
+              data-testid="submit-reassign-button"
               onClick={() => {
                 if (selectedTargetId) {
                   onResolve('REASSIGN_PLAYER', { targetPlayerId: selectedTargetId });
@@ -554,15 +491,19 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
             </button>
           )}
 
-          {activeTab === 'create_new' && (
+          {activeTab === 'add_global' && (
             <button
               type="button"
+              data-testid="submit-add-global-button"
               onClick={() => {
                 if (newName.trim()) {
-                  onResolve('CREATE_NEW_PLAYER', {
+                  const action = session.identityStatus === 'PROVISIONAL_NEW'
+                    ? 'PROMOTE_PROVISIONAL'
+                    : 'CREATE_NEW_PLAYER';
+                  onResolve(action, {
                     newPlayer: {
                       name: newName.trim(),
-                      country: newCountry.trim().toUpperCase() || 'US',
+                      country: newCountry.trim().toUpperCase() || undefined,
                       playstyle: newPlaystyle,
                     },
                   });
@@ -579,7 +520,25 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                 borderColor: '#059669',
               }}
             >
-              <UserPlus size={15} /> Create &amp; Reassign Run
+              <UserPlus size={15} /> Add Global Player
+            </button>
+          )}
+
+          {activeTab === 'confirm' && (
+            <button
+              type="button"
+              data-testid="submit-confirm-button"
+              onClick={() => onResolve('CONFIRM_IDENTITY')}
+              disabled={isSubmitting}
+              className="btn btn-primary"
+              style={{
+                fontSize: '0.85rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              <UserCheck size={15} /> Confirm Binding
             </button>
           )}
         </div>

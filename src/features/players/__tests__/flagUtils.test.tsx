@@ -124,7 +124,8 @@ describe('flagUtils and CountryFlag vector SVG rendering (Windows compatibility)
       COUNTRIES.forEach((c) => {
         const html = renderToStaticMarkup(<CountryFlag country={c.code} />);
         expect(html).toContain('<svg');
-        expect(html).toContain(`title="${c.name}"`);
+        const escapedName = c.name.replace(/&/g, '&amp;');
+        expect(html).toContain(`title="${escapedName}"`);
       });
     });
   });

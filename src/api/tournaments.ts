@@ -829,7 +829,7 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
           ? (existingSub as any).score
           : s.score;
 
-        const resolvedStatus = (s.status as any) || (existingSub as any).status || 'VERIFIED';
+        const resolvedStatus = (s.status as any) || (existingSub as any).status || 'SUBMITTED';
 
         // Update existing record
         await db
@@ -875,7 +875,7 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
           submittedTwitchId: s.submittedTwitchId || null,
           submittedTwitchUsername: s.submittedTwitchUsername || null,
           identityStatus: (s.identityStatus as any) || null,
-          status: (s.status as any) || 'VERIFIED',
+          status: (s.status as any) || 'SUBMITTED',
           timerLog: s.timerLog || null,
           judgeNotes: s.judgeNotes || null,
           verifiedBy: s.verifiedBy || null,

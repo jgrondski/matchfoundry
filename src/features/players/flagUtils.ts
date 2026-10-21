@@ -1,6 +1,6 @@
 import React from 'react';
 import * as Flags from 'country-flag-icons/react/3x2';
-import { hasFlag } from 'country-flag-icons';
+import { hasFlag, countries } from 'country-flag-icons';
 
 /**
  * Standard list of countries with 2-letter ISO codes and names.
@@ -10,60 +10,18 @@ export interface CountryItem {
   name: string;
 }
 
-export const COUNTRIES: CountryItem[] = [
-  { code: 'US', name: 'United States' },
-  { code: 'JP', name: 'Japan' },
-  { code: 'CA', name: 'Canada' },
-  { code: 'IS', name: 'Iceland' },
-  { code: 'GB', name: 'United Kingdom' },
-  { code: 'DE', name: 'Germany' },
-  { code: 'FR', name: 'France' },
-  { code: 'AU', name: 'Australia' },
-  { code: 'BR', name: 'Brazil' },
-  { code: 'MX', name: 'Mexico' },
-  { code: 'KR', name: 'South Korea' },
-  { code: 'ES', name: 'Spain' },
-  { code: 'IT', name: 'Italy' },
-  { code: 'NL', name: 'Netherlands' },
-  { code: 'SE', name: 'Sweden' },
-  { code: 'NO', name: 'Norway' },
-  { code: 'FI', name: 'Finland' },
-  { code: 'DK', name: 'Denmark' },
-  { code: 'PL', name: 'Poland' },
-  { code: 'AT', name: 'Austria' },
-  { code: 'CH', name: 'Switzerland' },
-  { code: 'BE', name: 'Belgium' },
-  { code: 'IE', name: 'Ireland' },
-  { code: 'NZ', name: 'New Zealand' },
-  { code: 'AR', name: 'Argentina' },
-  { code: 'CL', name: 'Chile' },
-  { code: 'CO', name: 'Colombia' },
-  { code: 'PH', name: 'Philippines' },
-  { code: 'SG', name: 'Singapore' },
-  { code: 'ID', name: 'Indonesia' },
-  { code: 'MY', name: 'Malaysia' },
-  { code: 'TH', name: 'Thailand' },
-  { code: 'VN', name: 'Vietnam' },
-  { code: 'IN', name: 'India' },
-  { code: 'ZA', name: 'South Africa' },
-  { code: 'PT', name: 'Portugal' },
-  { code: 'CZ', name: 'Czech Republic' },
-  { code: 'HU', name: 'Hungary' },
-  { code: 'GR', name: 'Greece' },
-  { code: 'TR', name: 'Turkey' },
-  { code: 'IL', name: 'Israel' },
-  { code: 'TW', name: 'Taiwan' },
-  { code: 'HK', name: 'Hong Kong' },
-];
-
-const countryMap = new Map<string, string>();
-const countryNameMap = new Map<string, string>();
-COUNTRIES.forEach((c) => {
-  countryMap.set(c.code.toUpperCase(), c.code);
-  countryMap.set(c.name.toUpperCase(), c.code);
-  countryNameMap.set(c.code.toUpperCase(), c.name);
-  countryNameMap.set(c.name.toUpperCase(), c.name);
-});
+const customRegionNames: Record<string, string> = {
+  'BQ-BO': 'Bonaire',
+  'BQ-SA': 'Saba',
+  'BQ-SE': 'Sint Eustatius',
+  'ES-CT': 'Catalonia',
+  'GB-ENG': 'England',
+  'GB-NIR': 'Northern Ireland',
+  'GB-SCT': 'Scotland',
+  'GB-WLS': 'Wales',
+  'XC': 'Ceuta',
+  'XO': 'Melilla',
+};
 
 let cachedDisplayNames: Intl.DisplayNames | null = null;
 try {
@@ -74,6 +32,31 @@ try {
   // Ignore fallback
 }
 
+export const ALL_COUNTRIES: CountryItem[] = (countries as string[])
+  .map((code) => {
+    let name = customRegionNames[code];
+    if (!name && cachedDisplayNames) {
+      try {
+        name = cachedDisplayNames.of(code) || code;
+      } catch {
+        name = code;
+      }
+    }
+    return { code, name: name || code };
+  })
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+export const COUNTRIES: CountryItem[] = ALL_COUNTRIES;
+
+const countryMap = new Map<string, string>();
+const countryNameMap = new Map<string, string>();
+ALL_COUNTRIES.forEach((c) => {
+  countryMap.set(c.code.toUpperCase(), c.code);
+  countryMap.set(c.name.toUpperCase(), c.code);
+  countryNameMap.set(c.code.toUpperCase(), c.name);
+  countryNameMap.set(c.name.toUpperCase(), c.name);
+});
+
 /**
  * Resolves a 2-letter ISO country code from a code or name.
  */
@@ -82,7 +65,7 @@ export function getCountryCode(country?: string): string {
   const trimmed = country.trim().toUpperCase();
   if (!trimmed) return '';
 
-  if (trimmed.length === 2 && hasFlag(trimmed)) {
+  if (hasFlag(trimmed)) {
     return trimmed;
   }
 
@@ -164,7 +147,8 @@ export const CountryFlag: React.FC<CountryFlagProps> = React.memo(({
 
   if (!code && !country) return null;
 
-  const FlagComponent = code && hasFlag(code) ? flagComponentMap[code] : null;
+  const flagKey = code ? (flagComponentMap[code] ? code : code.replace(/-/g, '_')) : '';
+  const FlagComponent = code && hasFlag(code) ? flagComponentMap[flagKey] : null;
 
   const flagNode = FlagComponent ? (
     React.createElement(FlagComponent, {

@@ -38,6 +38,7 @@ import {
   requestOnlineQualReset,
   voidAndResetOnlineQualSession,
   adjudicateOnlineSubmission,
+  verifyAllQualifierSubmissions,
   listOnlineQualSessions,
   dispatchDiscordWebhook,
 } from '../api/qualifiers';
@@ -846,7 +847,7 @@ export function createApiMiddleware() {
           void dispatchDiscordWebhook(tourneyId, 'START', {
             playerName: p?.name || session.submittedTwitchUsername || 'Player',
             twitchUsername: session.submittedTwitchUsername || undefined,
-            authWord: session.authWord,
+            authWord: session.authWord || undefined,
           });
           return sendJson(res, 200, {
             ...session,
@@ -934,6 +935,18 @@ export function createApiMiddleware() {
             });
           }
           return sendJson(res, 200, session);
+        }
+
+        // POST /api/tournaments/:id/qualify/verify-all (Judge / Tournament Admin only)
+        if (subAction === 'qualify/verify-all' && method === 'POST') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const result = await verifyAllQualifierSubmissions(tourneyId, body?.verifiedBy || 'Judge');
+          const t = await getFullTournament(tourneyId);
+          if (t && !t.isLocked) {
+            t.tiers = generateDraftBracketsForTournament(t);
+            await saveFullTournament(t);
+          }
+          return sendJson(res, 200, result);
         }
 
         // DELETE /api/tournaments/:id/qualifiers (Destructive clear - Master Admin only!)

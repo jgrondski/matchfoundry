@@ -12,8 +12,10 @@ import {
   startOnlineQualSession,
   submitOnlineQualScores,
   getOnlineQualSession,
+  listOnlineQualSessions,
   adjudicateOnlineSubmission,
 } from '../../../api/qualifiers';
+import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { IdentityResolutionModal } from '../components/IdentityResolutionModal';
 import { AdjudicationModal } from '../components/AdjudicationModal';
 import { ReviewQueueTable } from '../components/ReviewQueueTable';
@@ -220,7 +222,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
       expect(html).toContain('@jonas');
     });
 
-    it('renders IdentityResolutionModal with promote tab for provisional players', () => {
+    it('renders IdentityResolutionModal with reassign as default tab, and add global player tab', () => {
       const mockSession = {
         tournamentId: tourney.id,
         playerId: 'prov-1',
@@ -248,12 +250,12 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         />
       );
 
-      expect(html).toContain('Promote to Global');
-      expect(html).toContain('WalkInGamer');
-      expect(html).toContain('Create Separate Player');
+      expect(html).toContain('Reassign Competitor');
+      expect(html).toContain('Add Global Player');
+      expect(html).toContain('Search registered competitors...');
     });
 
-    it('renders IdentityResolutionModal with create_new tab for already verified players', () => {
+    it('renders IdentityResolutionModal with add global player tab for already verified players', () => {
       const mockSession = {
         tournamentId: tourney.id,
         playerId: p1Id,
@@ -282,7 +284,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
       );
 
       expect(html).toContain('Reassign Competitor');
-      expect(html).toContain('Create Separate Player');
+      expect(html).toContain('Add Global Player');
     });
   });
 
@@ -304,6 +306,31 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
       expect(walkInSession.playerId).not.toBe(p1Id);
       expect(walkInSession.playerId).not.toBe(p2Id);
       expect(walkInSession.identityStatus).toBe('PROVISIONAL_NEW');
+
+      // Verify walk-in player is NOT assigned a country
+      const dbWalkIn = await getPlayer(walkInSession.playerId);
+      expect(dbWalkIn?.country).toBeNull();
+
+      // Verify session list does not assign country
+      const sessions = await listOnlineQualSessions(tourney.id);
+      const walkInSummary = sessions.find(s => s.playerId === walkInSession.playerId);
+      expect(walkInSummary?.country).toBeUndefined();
+
+      // Verify PlayerAvatar renders the initial of their Player Name ('B') in place of country flag
+      const avatarHtml = renderToStaticMarkup(
+        <PlayerAvatar
+          player={{
+            name: walkInSummary!.playerName,
+            country: walkInSummary!.country,
+            avatarUrl: walkInSummary!.avatarUrl,
+            avatarType: walkInSummary!.avatarType as any,
+          }}
+          size={32}
+        />
+      );
+      expect(avatarHtml).toContain('data-testid="player-initial-avatar"');
+      expect(avatarHtml).toContain('>B<');
+      expect(avatarHtml).not.toContain('<svg');
     });
   });
 

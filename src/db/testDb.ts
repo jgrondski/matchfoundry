@@ -120,7 +120,7 @@ export function setupTestDb() {
       submitted_twitch_id TEXT,
       submitted_twitch_username TEXT,
       identity_status TEXT,
-      status TEXT NOT NULL DEFAULT 'VERIFIED',
+      status TEXT NOT NULL DEFAULT 'SUBMITTED',
       timer_log JSONB,
       judge_notes TEXT,
       verified_by TEXT,

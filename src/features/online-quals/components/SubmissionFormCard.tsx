@@ -30,6 +30,9 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
   const isAverage = qualFormat === 'AVERAGE_OF_X' || (qualFormat as any) === 'AVERAGE';
   const expectedCount = isAverage ? Math.max(1, qualAverageCount) : Math.max(1, scores.length);
 
+  const newlyAddedIndexRef = React.useRef<number | null>(null);
+  const inputRefs = React.useRef<(HTMLInputElement | null)[]>([]);
+
   // For average format, ensure exactly expectedCount score slots
   let currentScores: number[];
   if (isAverage) {
@@ -40,6 +43,14 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
     currentScores = scores.length === 0 ? [0] : scores;
   }
 
+  React.useEffect(() => {
+    if (newlyAddedIndexRef.current !== null) {
+      const idx = newlyAddedIndexRef.current;
+      newlyAddedIndexRef.current = null;
+      inputRefs.current[idx]?.focus();
+    }
+  }, [currentScores.length]);
+
   const handleScoreChange = (index: number, valStr: string) => {
     const rawNumber = parseInt(valStr.replace(/[^0-9]/g, ''), 10);
     const parsed = Number.isNaN(rawNumber) ? 0 : rawNumber;
@@ -49,6 +60,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
   };
 
   const handleAddAttempt = () => {
+    newlyAddedIndexRef.current = currentScores.length;
     onScoresChange([...currentScores, 0]);
   };
 
@@ -131,6 +143,13 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
                   Game {idx + 1}:
                 </span>
                 <input
+                  ref={el => {
+                    inputRefs.current[idx] = el;
+                    if (newlyAddedIndexRef.current === idx && el) {
+                      el.focus();
+                      newlyAddedIndexRef.current = null;
+                    }
+                  }}
                   type="text"
                   value={scoreVal === 0 ? '' : scoreVal.toLocaleString()}
                   onChange={e => handleScoreChange(idx, e.target.value)}

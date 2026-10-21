@@ -52,7 +52,7 @@ export const ObsBracketView: React.FC<ObsBracketViewProps> = ({
       }}
     >
       <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 100 }}>
-        <TournamentQualTimerHud tournament={tournament} isObsMode={true} />
+        <TournamentQualTimerHud tournament={tournament} isObsMode={true} readOnly={true} />
       </div>
       <BracketVisualizer
         tournament={tournament}

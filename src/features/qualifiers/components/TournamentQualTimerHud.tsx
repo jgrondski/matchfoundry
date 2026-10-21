@@ -9,28 +9,176 @@ export interface TournamentQualTimerHudProps {
   isObsMode?: boolean;
   chroma?: string | null;
   compact?: boolean;
+  readOnly?: boolean;
+  sidebar?: boolean;
+  isCollapsed?: boolean;
 }
 
 export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
   tournament,
   isObsMode = false,
   compact = false,
+  readOnly = false,
+  sidebar = false,
+  isCollapsed = false,
 }) => {
   const { canManage } = usePinAuth();
   const { formattedTime, isRunning, isExpired, toggleRunning, resetTimer } =
     useTournamentQualTimer(tournament);
 
-  // Hidden if not in qual mode or if quals bypassed / online-only
+  // Hidden if not in qual mode or if quals bypassed
   const isQualMode = !tournament.isLocked && !tournament.qualsClosed;
-  const isQualEvent =
-    (tournament.seedingMethod || 'QUALIFIERS') === 'QUALIFIERS' &&
-    (tournament.qualMode || 'HYBRID') !== 'ONLINE';
+  const isQualEvent = (tournament.seedingMethod || 'QUALIFIERS') === 'QUALIFIERS';
 
   if (!isQualMode || !isQualEvent) {
     return null;
   }
 
   const userCanManage = canManage(tournament.id) || canManage(tournament.slug);
+
+  if (sidebar) {
+    if (isCollapsed) {
+      return (
+        <div
+          data-testid="sidebar-qual-timer-hud"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0.35rem 0.2rem',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: `1px solid ${isExpired ? 'rgba(239, 68, 68, 0.5)' : isRunning ? 'rgba(34, 197, 94, 0.35)' : 'var(--color-border-subtle)'}`,
+            cursor: userCanManage && !readOnly ? 'pointer' : 'default',
+          }}
+          onClick={userCanManage && !readOnly ? toggleRunning : undefined}
+          title={`Qual Timer: ${formattedTime} (${isExpired ? 'Expired' : isRunning ? 'Running - Click to Pause' : 'Paused - Click to Start'})`}
+        >
+          <Clock
+            size={14}
+            color={isExpired ? '#ef4444' : isRunning ? '#22c55e' : 'var(--color-gold-bright, #f59e0b)'}
+          />
+          <span
+            className="tabular-nums"
+            style={{
+              fontSize: '0.62rem',
+              fontWeight: 800,
+              color: isExpired ? '#ef4444' : '#ffffff',
+              marginTop: '0.15rem',
+              lineHeight: 1,
+            }}
+          >
+            {formattedTime.split(':').slice(0, 2).join(':')}
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        data-testid="sidebar-qual-timer-hud"
+        style={{
+          width: '100%',
+          padding: '0.45rem 0.55rem',
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: `1px solid ${isExpired ? 'rgba(239, 68, 68, 0.5)' : isRunning ? 'rgba(34, 197, 94, 0.35)' : 'var(--color-border-subtle)'}`,
+          borderRadius: 'var(--radius-sm)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.35rem',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Clock
+              size={13}
+              color={isExpired ? '#ef4444' : isRunning ? '#22c55e' : 'var(--color-gold-bright, #f59e0b)'}
+            />
+            <span
+              style={{
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: isExpired ? '#fca5a5' : isRunning ? '#86efac' : 'var(--color-text-muted, #94a3b8)',
+              }}
+            >
+              {isExpired ? 'Quals Expired' : isRunning ? 'Qual Time' : 'Quals Paused'}
+            </span>
+          </div>
+          <span
+            className="tabular-nums"
+            style={{
+              fontSize: '0.92rem',
+              fontWeight: 900,
+              color: isExpired ? '#ef4444' : '#ffffff',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {formattedTime}
+          </span>
+        </div>
+
+        {userCanManage && !readOnly && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', width: '100%' }}>
+            <button
+              type="button"
+              onClick={toggleRunning}
+              title={isRunning ? 'Pause Qual Timer' : 'Start Qual Timer'}
+              style={{
+                flex: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.25rem',
+                padding: '0.22rem 0.4rem',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: isRunning ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(34, 197, 94, 0.4)',
+                background: isRunning ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)',
+                color: isRunning ? '#f87171' : '#4ade80',
+              }}
+            >
+              {isRunning ? (
+                <>
+                  <Pause size={10} />
+                  <span>Pause</span>
+                </>
+              ) : (
+                <>
+                  <Play size={10} fill="#4ade80" />
+                  <span>Start</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={resetTimer}
+              title="Reset timer to default starting duration"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0.22rem 0.35rem',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.68rem',
+                cursor: 'pointer',
+                border: '1px solid var(--color-border-subtle)',
+                background: 'rgba(255, 255, 255, 0.04)',
+                color: 'var(--color-text-secondary, #94a3b8)',
+              }}
+            >
+              <RotateCcw size={10} />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (isObsMode) {
     return (
@@ -130,7 +278,7 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
         </div>
       </div>
 
-      {userCanManage && (
+      {userCanManage && !readOnly && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: '0.25rem' }}>
           <button
             type="button"

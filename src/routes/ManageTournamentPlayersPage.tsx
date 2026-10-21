@@ -8,6 +8,7 @@ import { PlayerEditModal } from '../features/players/components/PlayerEditModal'
 import { PlayerDetailDrawer } from '../features/qualifiers/components/PlayerDetailDrawer';
 import { PlayerAvatar } from '../features/players/components/PlayerAvatar';
 import { PlaystyleChip } from '../features/players/components/PlaystyleChip';
+import { getEffectivePlayerName } from '../features/players/playerNameUtils';
 import {
   Users,
   UserPlus,
@@ -49,6 +50,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
     if (!playersPool) return [];
     const term = searchTerm.toLowerCase();
     return playersPool.filter(p =>
+      getEffectivePlayerName(p).toLowerCase().includes(term) ||
       p.name.toLowerCase().includes(term) ||
       (p.country && p.country.toLowerCase().includes(term)) ||
       (p.playstyle && p.playstyle.toLowerCase().includes(term))
@@ -411,7 +413,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                               }}
                               title="Click to view detailed competitor profile, audit log, and match stats"
                             >
-                              {player.name}
+                              {getEffectivePlayerName(player)}
                             </button>
                           </div>
                         </td>

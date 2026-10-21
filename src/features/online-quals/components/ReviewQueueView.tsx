@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Clock,
-  AlertTriangle,
-  Lock,
-  Unlock,
   X,
+  CheckCheck,
+  AlertTriangle,
 } from 'lucide-react';
 import type { Tournament, PlayerProfile } from '../../tournament/types';
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
+import { deriveSessionsFromTournament } from '../sessionDerivation';
 import { useTournament } from '../../tournament/store';
 import { getAuthHeaders } from '../../auth/AuthContext';
 import { ReviewQueueTable } from './ReviewQueueTable';
@@ -18,62 +18,9 @@ export interface ReviewQueueViewProps {
   tournament: Tournament;
 }
 
-/**
- * Derives initial session summaries from tournament.qualifierSubmissions if offline/testing.
- */
-function deriveSessionsFromTournament(tournament: Tournament): ReviewQueueSessionSummary[] {
-  const onlineSubs = (tournament.qualifierSubmissions || []).filter(
-    s => s.submissionSource === 'ONLINE'
-  );
-  if (onlineSubs.length === 0) return [];
-
-  const groups = new Map<string, typeof onlineSubs>();
-  for (const s of onlineSubs) {
-    const list = groups.get(s.playerId) || [];
-    list.push(s);
-    groups.set(s.playerId, list);
-  }
-
-  const playerMap = new Map((tournament.playersPool || []).map(p => [p.id, p]));
-  const result: ReviewQueueSessionSummary[] = [];
-
-  for (const [playerId, subs] of groups.entries()) {
-    const first = subs[0];
-    const scoredRows = subs.filter(
-      s => s.status !== 'IN_PROGRESS' && s.status !== 'NOT_STARTED'
-    );
-    const p = playerMap.get(playerId);
-
-    result.push({
-      tournamentId: tournament.id,
-      playerId,
-      playerName: p?.name || first.submittedTwitchUsername || 'Unknown Player',
-      country: p?.country || 'US',
-      avatarUrl: p?.avatarUrl || undefined,
-      avatarType: (p?.avatarType as any) || 'flag',
-      status: first.status || 'SUBMITTED',
-      authWord: first.authWord || 'ROCKET',
-      twitchVodUrl: first.twitchVodUrl || null,
-      submittedTwitchId: first.submittedTwitchId || null,
-      submittedTwitchUsername: first.submittedTwitchUsername || null,
-      identityStatus: first.identityStatus || null,
-      timerLog:
-        first.timerLog || {
-          startedAt: first.submittedAt,
-          elapsedSeconds: 0,
-          pauses: [],
-        },
-      scores: scoredRows.map(s => s.score),
-      judgeNotes: first.judgeNotes || null,
-      submissionIds: subs.map(s => s.id),
-    });
-  }
-
-  return result;
-}
 
 export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) => {
-  const { updateTournament, refreshTournament, globalPlayers } = useTournament();
+  const { refreshTournament, globalPlayers } = useTournament();
   const [deletedProvisionalIds, setDeletedProvisionalIds] = useState<Set<string>>(() => new Set());
 
   const reconcilePlayersPool = useMemo(() => {
@@ -102,7 +49,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
     useState<ReviewQueueSessionSummary | null>(null);
   const [selectedIdentity, setSelectedIdentity] =
     useState<ReviewQueueSessionSummary | null>(null);
-  const [showCutoffWarning, setShowCutoffWarning] = useState(false);
+  const [isVerifyAllModalOpen, setIsVerifyAllModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -177,6 +124,36 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           : `Disqualified ${selectedAdjudication.playerName}`
       );
       setSelectedAdjudication(null);
+      await fetchSessions();
+      await refreshTournament?.(tournament.id);
+    } catch (e: any) {
+      setStatusMessage(`Error: ${e.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyAll = async () => {
+    setIsSubmitting(true);
+    setStatusMessage(null);
+    try {
+      const res = await fetch(`/api/tournaments/${tournament.id}/qualify/verify-all`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ verifiedBy: 'Judge' }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to verify all qualifier submissions');
+      }
+
+      const data = await res.json().catch(() => ({ verifiedCount: pendingUnverifiedCount }));
+      setStatusMessage(`Successfully verified all ${data.verifiedCount || pendingUnverifiedCount} pending qualifier runs.`);
+      setIsVerifyAllModalOpen(false);
       await fetchSessions();
       await refreshTournament?.(tournament.id);
     } catch (e: any) {
@@ -270,33 +247,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
     }
   };
 
-  const handleToggleQualsClosed = async () => {
-    const isCurrentlyClosed = Boolean(tournament.qualsClosed);
-    if (!isCurrentlyClosed && pendingUnverifiedCount > 0) {
-      setShowCutoffWarning(true);
-      return;
-    }
-    await executeToggleCutoff(!isCurrentlyClosed);
-  };
-
-  const executeToggleCutoff = async (nextState: boolean) => {
-    setShowCutoffWarning(false);
-    setIsSubmitting(true);
-    try {
-      await updateTournament(tournament.id, { qualsClosed: nextState });
-      setStatusMessage(
-        nextState
-          ? 'Online qualifiers are now officially closed.'
-          : 'Online qualifiers have been reopened.'
-      );
-    } catch (e: any) {
-      setStatusMessage(`Error: ${e.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const qualsClosed = Boolean(tournament.qualsClosed);
+  const isQualsClosed = Boolean(tournament.isLocked);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
@@ -331,7 +282,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           <Clock size={32} color={pendingUnverifiedCount > 0 ? 'var(--color-gold-bright)' : 'var(--color-text-muted)'} />
         </div>
 
-        {/* Qualifiers Status Metric & Action */}
+        {/* Qualifiers Status Metric */}
         <div
           style={{
             background: 'var(--color-bg-surface)',
@@ -347,33 +298,58 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
               Qualifiers Portal Status
             </div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: qualsClosed ? '#ef4444' : '#4ade80', marginTop: '0.2rem' }}>
-              {qualsClosed ? 'Closed' : 'Open / Receiving'}
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: isQualsClosed ? '#ef4444' : '#4ade80', marginTop: '0.2rem' }}>
+              {isQualsClosed ? 'Closed (Brackets Locked)' : 'Open / Receiving'}
+            </div>
+          </div>
+        </div>
+
+        {/* Batch Actions: Verify All */}
+        <div
+          style={{
+            background: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '1.15rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+              Batch Adjudication
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.3rem' }}>
+              {pendingUnverifiedCount > 0
+                ? `${pendingUnverifiedCount} run${pendingUnverifiedCount === 1 ? '' : 's'} awaiting review`
+                : 'All runs verified'}
             </div>
           </div>
           <button
             type="button"
-            onClick={handleToggleQualsClosed}
-            disabled={isSubmitting}
-            className="btn btn-secondary"
+            data-testid="verify-all-button"
+            disabled={pendingUnverifiedCount === 0 || isSubmitting}
+            onClick={() => setIsVerifyAllModalOpen(true)}
             style={{
-              fontSize: '0.8rem',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.35rem',
-              color: qualsClosed ? '#4ade80' : '#f87171',
-              borderColor: qualsClosed ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)',
+              gap: '0.45rem',
+              padding: '0.55rem 0.95rem',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              borderRadius: 'var(--radius-md)',
+              background: pendingUnverifiedCount > 0 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${pendingUnverifiedCount > 0 ? 'rgba(234, 179, 8, 0.45)' : 'var(--color-border)'}`,
+              color: pendingUnverifiedCount > 0 ? 'var(--color-gold-bright)' : 'var(--color-text-muted)',
+              cursor: pendingUnverifiedCount > 0 && !isSubmitting ? 'pointer' : 'not-allowed',
+              transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
             }}
           >
-            {qualsClosed ? (
-              <>
-                <Unlock size={14} /> Reopen Quals
-              </>
-            ) : (
-              <>
-                <Lock size={14} /> Close Online Quals
-              </>
-            )}
+            <CheckCheck size={16} />
+            Verify All
           </button>
         </div>
       </div>
@@ -412,6 +388,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         sessions={sessions}
         onOpenAdjudicate={handleOpenAdjudicate}
         onOpenIdentityModal={handleOpenIdentity}
+        qualWindowMinutes={tournament.qualWindowMinutes || 90}
       />
 
       {/* Adjudication Modal */}
@@ -444,71 +421,141 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         />
       )}
 
-      {/* Cutoff Confirmation Modal (Assertion 5.1) */}
-      {showCutoffWarning && (
+      {/* Verify All Speedbump Modal */}
+      {isVerifyAllModalOpen && (
         <div
-          role="alertdialog"
-          aria-modal="true"
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 9999,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1.5rem',
+            zIndex: 9999,
+            padding: '1rem',
           }}
         >
           <div
+            data-testid="verify-all-modal"
             style={{
-              background: 'var(--color-bg-surface)',
-              border: '1px solid rgba(239, 68, 68, 0.5)',
-              borderRadius: 'var(--radius-lg)',
-              maxWidth: '520px',
+              background: 'var(--color-bg-surface, #181b20)',
+              borderRadius: 'var(--radius-lg, 12px)',
+              border: '1px solid rgba(234, 179, 8, 0.5)',
+              maxWidth: '480px',
               width: '100%',
-              padding: '1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-              boxShadow: '0 24px 48px rgba(0, 0, 0, 0.6)',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6)',
+              overflow: 'hidden',
+              animation: 'fadeIn 0.2s ease-out',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: '#ef4444' }}>
-              <AlertTriangle size={24} />
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>
-                Unverified Submissions Pending!
-              </h3>
-            </div>
-            <p style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
-              There are still <strong>{pendingUnverifiedCount}</strong> online qualifier run(s) awaiting judge review or reset resolution.
-              Closing qualifiers now will lock the portal and prevent unverified scores from being seeded into draft brackets.
-            </p>
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 }}>
-              Are you sure you want to close qualifiers immediately?
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid var(--color-border, #2d3139)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <AlertTriangle size={22} color="var(--color-gold-bright, #f59e0b)" />
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+                  Verify All Qualifiers?
+                </h3>
+              </div>
               <button
                 type="button"
-                onClick={() => setShowCutoffWarning(false)}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem' }}
+                onClick={() => setIsVerifyAllModalOpen(false)}
+                disabled={isSubmitting}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--color-text-muted, #94a3b8)',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  padding: '0.25rem',
+                  display: 'flex',
+                }}
               >
-                Keep Open &amp; Review
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div
+                style={{
+                  padding: '0.85rem 1rem',
+                  borderRadius: 'var(--radius-md, 8px)',
+                  background: 'rgba(234, 179, 8, 0.12)',
+                  border: '1px solid rgba(234, 179, 8, 0.35)',
+                  color: 'var(--color-gold-bright, #f59e0b)',
+                  fontSize: '0.85rem',
+                  lineHeight: 1.45,
+                  fontWeight: 600,
+                }}
+              >
+                ⚠️ Are you sure you want to verify all {pendingUnverifiedCount} pending qualifier run{pendingUnverifiedCount === 1 ? '' : 's'}?
+              </div>
+              <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--color-text-secondary, #cbd5e1)', lineHeight: 1.5 }}>
+                This will immediately mark all currently pending qualifier submissions as <strong>VERIFIED</strong>, lock in official scores on the public leaderboard, and update tournament seeding drafts.
+              </p>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-text-muted, #94a3b8)', lineHeight: 1.4 }}>
+                This action is intended for organizers verifying all outstanding runs in bulk.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid var(--color-border, #2d3139)',
+                background: 'var(--color-bg-base, #111317)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '0.75rem',
+              }}
+            >
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setIsVerifyAllModalOpen(false)}
+                className="btn btn-secondary"
+                style={{
+                  padding: '0.55rem 1.15rem',
+                  fontSize: '0.85rem',
+                  background: 'transparent',
+                  border: '1px solid var(--color-border, #3f3f46)',
+                  color: 'var(--color-text-main, #ffffff)',
+                  borderRadius: 'var(--radius-md, 6px)',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Cancel
               </button>
               <button
                 type="button"
-                onClick={() => executeToggleCutoff(true)}
-                className="btn"
+                data-testid="confirm-verify-all-button"
+                disabled={isSubmitting || pendingUnverifiedCount === 0}
+                onClick={handleVerifyAll}
+                className="btn btn-primary"
                 style={{
-                  background: '#ef4444',
-                  color: '#ffffff',
+                  padding: '0.55rem 1.15rem',
                   fontSize: '0.85rem',
-                  fontWeight: 700,
+                  background: 'var(--color-gold-bright, #f59e0b)',
+                  color: '#000000',
+                  fontWeight: 800,
+                  border: 'none',
+                  borderRadius: 'var(--radius-md, 6px)',
+                  cursor: isSubmitting || pendingUnverifiedCount === 0 ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
                 }}
               >
-                Close Qualifiers
+                {isSubmitting ? 'Verifying...' : `Yes, Verify All (${pendingUnverifiedCount})`}
               </button>
             </div>
           </div>

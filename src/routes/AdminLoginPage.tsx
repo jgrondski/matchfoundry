@@ -348,34 +348,7 @@ export const AdminLoginPage: React.FC = () => {
                 {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            <p
-              style={{
-                margin: '0.45rem 0 0 0',
-                fontSize: '0.74rem',
-                color: 'var(--color-text-muted, #8b949e)',
-                lineHeight: 1.4,
-              }}
-            >
-              Tournament Admins enter the tournament PIN. System Admins enter the System Admin Key.
-            </p>
           </div>
-
-          {/* Dev Mode Guidance */}
-          {Boolean((import.meta as any).env?.DEV) && (
-            <div
-              style={{
-                padding: '0.6rem 0.8rem',
-                background: 'rgba(56, 189, 248, 0.08)',
-                border: '1px solid rgba(56, 189, 248, 0.25)',
-                borderRadius: '6px',
-                fontSize: '0.74rem',
-                color: '#38bdf8',
-                lineHeight: 1.4,
-              }}
-            >
-              💡 <strong>Dev Mode Hint:</strong> Set <code>SYSTEM_ADMIN_RECOVERY_PIN</code> in your <code>.env</code> file, or use default dev key <code>0000</code> to unlock System Admin.
-            </div>
-          )}
 
           {/* Submit */}
           <button

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   Tournament,
   TournamentTier,
@@ -311,7 +311,7 @@ export const TournamentProvider: React.FC<{
     }
   };
 
-  const refreshTournament = async (tournamentIdOrSlug: string): Promise<Tournament | null> => {
+  const refreshTournament = useCallback(async (tournamentIdOrSlug: string): Promise<Tournament | null> => {
     if (typeof fetch === 'undefined') return null;
     try {
       const fresh = await apiCall(`/api/tournaments/${tournamentIdOrSlug}`);
@@ -347,7 +347,7 @@ export const TournamentProvider: React.FC<{
       console.warn(`[Store] Failed to refresh tournament "${tournamentIdOrSlug}":`, err);
       return null;
     }
-  };
+  }, []);
 
   const syncTournamentToApi = async (tourney: Tournament): Promise<Tournament | null> => {
     try {

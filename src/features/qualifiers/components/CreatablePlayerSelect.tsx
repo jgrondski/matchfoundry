@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PlayerProfile } from '../../tournament/types';
+import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { User, Plus, Search, Check, X } from 'lucide-react';
 
 interface CreatablePlayerSelectProps {
@@ -19,13 +20,13 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
   onCreatePlayer,
   onSelectGlobalPlayer,
 }) => {
-  const [query, setQuery] = useState(selectedPlayer?.name || '');
+  const [query, setQuery] = useState(selectedPlayer ? getEffectivePlayerName(selectedPlayer) : '');
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (selectedPlayer) {
-      setQuery(selectedPlayer.name);
+      setQuery(getEffectivePlayerName(selectedPlayer));
     } else {
       setQuery('');
     }
@@ -45,7 +46,8 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
   const queryTrimmed = query.trim().toLowerCase();
 
   const filteredInTournament = playersPool.filter(p =>
-    p.name.toLowerCase().includes(queryTrimmed)
+    p.name.toLowerCase().includes(queryTrimmed) ||
+    getEffectivePlayerName(p).toLowerCase().includes(queryTrimmed)
   );
 
   const existingInTournamentNames = new Set(playersPool.map(p => p.name.toLowerCase()));
@@ -54,20 +56,20 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
   const filteredGlobal = globalPlayers.filter(p =>
     !existingInTournamentIds.has(p.id) &&
     !existingInTournamentNames.has(p.name.toLowerCase()) &&
-    p.name.toLowerCase().includes(queryTrimmed)
+    (p.name.toLowerCase().includes(queryTrimmed) || getEffectivePlayerName(p).toLowerCase().includes(queryTrimmed))
   );
 
   const exactMatchInTournament = playersPool.find(
-    p => p.name.toLowerCase() === queryTrimmed
+    p => p.name.toLowerCase() === queryTrimmed || getEffectivePlayerName(p).toLowerCase() === queryTrimmed
   );
   const exactMatchInGlobal = globalPlayers.find(
-    p => p.name.toLowerCase() === queryTrimmed
+    p => p.name.toLowerCase() === queryTrimmed || getEffectivePlayerName(p).toLowerCase() === queryTrimmed
   );
   const exactMatch = exactMatchInTournament || exactMatchInGlobal;
 
   const handleSelect = (p: PlayerProfile) => {
     onSelectPlayer(p);
-    setQuery(p.name);
+    setQuery(getEffectivePlayerName(p));
     setIsOpen(false);
   };
 
@@ -77,7 +79,7 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
     } else {
       onSelectPlayer(p);
     }
-    setQuery(p.name);
+    setQuery(getEffectivePlayerName(p));
     setIsOpen(false);
   };
 
@@ -184,8 +186,13 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <User size={15} color="var(--color-text-muted)" />
                   <span style={{ fontWeight: isSelected ? 700 : 500, color: 'var(--color-text-primary)' }}>
-                    {p.name}
+                    {getEffectivePlayerName(p)}
                   </span>
+                  {p.displayName && p.displayName !== p.name && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      ({p.name})
+                    </span>
+                  )}
                   {p.country && (
                     <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-surface-highlight)', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
                       {p.country}
@@ -237,8 +244,13 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <User size={15} color="var(--color-gold-bright)" />
                     <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                      {p.name}
+                      {getEffectivePlayerName(p)}
                     </span>
+                    {p.displayName && p.displayName !== p.name && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                        ({p.name})
+                      </span>
+                    )}
                     {p.country && (
                       <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-surface-highlight)', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
                         {p.country}

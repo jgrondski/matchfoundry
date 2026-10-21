@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { PublicQualifyPage } from '../../../routes/PublicQualifyPage';
@@ -111,8 +111,8 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
 
       expect(html).toContain('Omen DAS Championship 2026');
       expect(html).toContain('Competitor Qualification Check-In');
-      expect(html).toContain('Window: 90 min');
-      expect(html).toContain('HYBRID Qualifiers');
+      expect(html).not.toContain('Window: 90 min');
+      expect(html).toContain('Average of 2 (Ao2) Qualifier');
     });
   });
 
@@ -126,7 +126,9 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
 
       expect(html).toContain('Competitor Qualification Check-In');
       expect(html).toContain('Player Name / Alias *');
+      expect(html).toContain('placeholder="e.g. Sharky"');
       expect(html).toContain('Twitch Channel / Handle *');
+      expect(html).toContain('placeholder="e.g. ITZsharky1"');
       expect(html).toContain('Review Rules &amp; Checklist');
     });
   });
@@ -205,7 +207,7 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
 
       expect(html).toContain('Official Verification Authword');
       expect(html).toContain('ROCKET');
-      expect(html).toContain('Copy Authword');
+      expect(html).not.toContain('Copy Authword');
       expect(html).toContain('Report Stream Crash / Reset');
       expect(html).toContain('NES Authword Proof Rule');
     });
@@ -288,16 +290,226 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
     it('renders locked status with provisional placement pill and leaderboard link', () => {
       const html = renderToStaticMarkup(
         <MemoryRouter>
-          <AwaitingVerificationCard session={mockCompletedSession} tournamentSlug="omen-das" />
+          <AwaitingVerificationCard session={mockCompletedSession} tournamentSlug="omen-das" playerName="Sharky DAS" />
         </MemoryRouter>
       );
 
-      expect(html).toContain('Official Qual Submitted!');
+      expect(html).toContain('Sharky DAS: Official Qual Submitted');
       expect(html).toContain('Provisional Placement:');
       expect(html).toContain('⏳ Awaiting Verification');
       expect(html).toContain('ROCKET');
       expect(html).toContain('684,200, 721,450');
       expect(html).toContain('https://twitch.tv/videos/2481093821?t=00h14m20s');
+      expect(html).toContain('View Live Leaderboard');
+    });
+
+    it('falls back to session.playerName or generic title if playerName prop is omitted', () => {
+      const htmlWithSessionName = renderToStaticMarkup(
+        <MemoryRouter>
+          <AwaitingVerificationCard session={{ ...mockCompletedSession, playerName: 'Scuti' }} tournamentSlug="omen-das" />
+        </MemoryRouter>
+      );
+      expect(htmlWithSessionName).toContain('Scuti: Official Qual Submitted');
+
+      const htmlWithoutName = renderToStaticMarkup(
+        <MemoryRouter>
+          <AwaitingVerificationCard session={mockCompletedSession} tournamentSlug="omen-das" />
+        </MemoryRouter>
+      );
+      expect(htmlWithoutName).toContain('Official Qual Submitted');
+    });
+  });
+
+  describe('8. Session Persistence & Switch Competitor Speedbump', () => {
+    const mockStorageMap = new Map<string, string>();
+    const fakeStorage = {
+      getItem: (k: string) => mockStorageMap.get(k) || null,
+      setItem: (k: string, v: string) => { mockStorageMap.set(k, v); },
+      removeItem: (k: string) => { mockStorageMap.delete(k); },
+      clear: () => { mockStorageMap.clear(); },
+    };
+
+    beforeEach(() => {
+      mockStorageMap.clear();
+      (globalThis as any).localStorage = fakeStorage;
+    });
+
+    afterEach(() => {
+      mockStorageMap.clear();
+      delete (globalThis as any).localStorage;
+    });
+
+    it('restores active IN_PROGRESS session and draft scores from storage on cold mount (surviving refresh)', () => {
+      const persistedData = {
+        playerId: 'p-1',
+        playerName: 'Sharky DAS',
+        twitchHandle: 'sharky_das',
+        activeSession: {
+          tournamentId: 'omen-das-tourney',
+          playerId: 'p-1',
+          playerName: 'Sharky DAS',
+          status: 'IN_PROGRESS' as const,
+          authWord: 'ROCKET',
+          twitchVodUrl: 'https://twitch.tv/videos/12345',
+          submittedTwitchId: null,
+          submittedTwitchUsername: 'sharky_das',
+          identityStatus: null,
+          timerLog: {
+            startedAt: Date.now() - 60000,
+            elapsedSeconds: 60,
+            pauses: [],
+          },
+          scores: [950000],
+          judgeNotes: null,
+          submissionIds: ['sub-1'],
+        },
+        scores: [950000],
+        twitchVodUrl: 'https://twitch.tv/videos/12345',
+      };
+
+      fakeStorage.setItem('tm_qual_portal_omen-das-tourney', JSON.stringify(persistedData));
+
+      const html = renderToStaticMarkup(
+        <MemoryRouter>
+          <CompetitorPortalView tournament={sampleTournament} />
+        </MemoryRouter>
+      );
+
+      // Verify restored active run HUD
+      expect(html).toContain('Sharky DAS');
+      expect(html).toContain('Active Run');
+      expect(html).toContain('ROCKET');
+      expect(html).toContain('950,000');
+      expect(html).toContain('Switch Competitor');
+      expect(html).toContain('data-testid="switch-competitor-button"');
+      // Must NOT show initial intake check-in form
+      expect(html).not.toContain('Competitor Qualification Check-In');
+    });
+
+    it('clears persisted session and resets to fresh check-in if qual run is already completed/submitted', () => {
+      const persistedData = {
+        playerId: 'p-1',
+        playerName: 'Sharky DAS',
+        twitchHandle: 'sharky_das',
+        activeSession: {
+          tournamentId: 'omen-das-tourney',
+          playerId: 'p-1',
+          playerName: 'Sharky DAS',
+          status: 'IN_PROGRESS' as const,
+          authWord: 'ROCKET',
+          twitchVodUrl: '',
+          submittedTwitchId: null,
+          submittedTwitchUsername: 'sharky_das',
+          identityStatus: null,
+          timerLog: { startedAt: 1000, elapsedSeconds: 60, pauses: [] },
+          scores: [950000],
+          judgeNotes: null,
+          submissionIds: ['sub-1'],
+        },
+        scores: [950000],
+        twitchVodUrl: '',
+      };
+
+      fakeStorage.setItem('tm_qual_portal_omen-das-tourney', JSON.stringify(persistedData));
+
+      const tourneyWithSubmitted: Tournament = {
+        ...sampleTournament,
+        qualifierSubmissions: [
+          {
+            id: 'sub-1',
+            tournamentId: 'omen-das-tourney',
+            playerId: 'p-1',
+            score: 950000,
+            submittedAt: Date.now(),
+            submissionSource: 'ONLINE',
+            status: 'SUBMITTED',
+            authWord: 'ROCKET',
+            twitchVodUrl: 'https://twitch.tv/videos/reconciled',
+          },
+        ],
+      };
+
+      const html = renderToStaticMarkup(
+        <MemoryRouter>
+          <CompetitorPortalView tournament={tourneyWithSubmitted} />
+        </MemoryRouter>
+      );
+
+      // Qual is over! Refresh-resilience must NOT hold onto the completed session.
+      // Must present clean intake check-in form and purge the stale storage.
+      expect(html).toContain('Competitor Qualification Check-In');
+      expect(html).not.toContain('Active Run');
+      expect(html).not.toContain('Sharky DAS: Official Qual Submitted');
+      expect(fakeStorage.getItem('tm_qual_portal_omen-das-tourney')).toBeNull();
+    });
+
+    it('does not restore session from storage if activeSession was already SUBMITTED', () => {
+      const submittedSessionData = {
+        playerId: 'p-1',
+        playerName: 'Sharky DAS',
+        twitchHandle: 'sharky_das',
+        activeSession: {
+          tournamentId: 'omen-das-tourney',
+          playerId: 'p-1',
+          playerName: 'Sharky DAS',
+          status: 'SUBMITTED' as const,
+          authWord: 'ROCKET',
+          twitchVodUrl: 'https://twitch.tv/videos/123',
+          submittedTwitchId: null,
+          submittedTwitchUsername: 'sharky_das',
+          identityStatus: null,
+          timerLog: { startedAt: 1000, submittedAt: 2000, elapsedSeconds: 60, pauses: [] },
+          scores: [950000],
+          judgeNotes: null,
+          submissionIds: ['sub-1'],
+        },
+        scores: [950000],
+        twitchVodUrl: 'https://twitch.tv/videos/123',
+      };
+
+      fakeStorage.setItem('tm_qual_portal_omen-das-tourney', JSON.stringify(submittedSessionData));
+
+      const html = renderToStaticMarkup(
+        <MemoryRouter>
+          <CompetitorPortalView tournament={sampleTournament} />
+        </MemoryRouter>
+      );
+
+      expect(html).toContain('Competitor Qualification Check-In');
+      expect(html).not.toContain('Awaiting Verification');
+      expect(fakeStorage.getItem('tm_qual_portal_omen-das-tourney')).toBeNull();
+    });
+
+    it('renders Done / Qualify Another Player button in AwaitingVerificationCard when onDone is provided', () => {
+      const mockSession = {
+        tournamentId: 'omen-das-tourney',
+        playerId: 'p-1',
+        playerName: 'Sharky DAS',
+        status: 'SUBMITTED' as const,
+        authWord: 'ROCKET',
+        twitchVodUrl: 'https://twitch.tv/videos/123',
+        submittedTwitchId: null,
+        submittedTwitchUsername: 'sharky_das',
+        identityStatus: null,
+        timerLog: { startedAt: 1000, submittedAt: 2000, elapsedSeconds: 60, pauses: [] },
+        scores: [950000],
+        judgeNotes: null,
+        submissionIds: ['sub-1'],
+      };
+
+      const html = renderToStaticMarkup(
+        <MemoryRouter>
+          <AwaitingVerificationCard
+            session={mockSession}
+            tournamentSlug="omen-das"
+            playerName="Sharky DAS"
+            onDone={vi.fn()}
+          />
+        </MemoryRouter>
+      );
+
+      expect(html).toContain('Done / Qualify Another Player');
+      expect(html).toContain('data-testid="qual-done-button"');
       expect(html).toContain('View Live Leaderboard');
     });
   });

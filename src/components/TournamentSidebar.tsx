@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Tournament, TournamentTier } from '../features/tournament/types';
 import { useTournament } from '../features/tournament/store';
 import { useOrganization } from '../features/organizations/store';
 import { getStoredTierSlug } from '../features/tournament/tierStorage';
 import { VerifyBracketModal } from '../features/tournament/components/VerifyBracketModal';
+import { countPendingReviewSessions } from '../features/online-quals/sessionDerivation';
+import { TournamentQualTimerHud } from '../features/qualifiers/components/TournamentQualTimerHud';
 import {
   Layers,
   ChevronDown,
@@ -242,9 +244,10 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
     return () => document.removeEventListener('click', handleClickOutside);
   }, [isTournamentMenuOpen]);
 
-  const pendingReviewCount = (activeTourney?.qualifierSubmissions || []).filter(
-    s => s.submissionSource === 'ONLINE' && (s.status === 'SUBMITTED' || Boolean(s.timerLog?.resetRequested))
-  ).length;
+  const pendingReviewCount = useMemo(
+    () => countPendingReviewSessions(activeTourney),
+    [activeTourney]
+  );
 
   const navItems = [
     {
@@ -288,7 +291,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
     },
     {
       key: 'review' as const,
-      label: pendingReviewCount > 0 ? `Review Queue (${pendingReviewCount})` : 'Review Queue',
+      label: pendingReviewCount > 0 ? `Qual Review (${pendingReviewCount})` : 'Qual Review',
       icon: CheckCircle2,
       to: slug ? (isAuthorized ? `/${slug}/manage/review` : `/${slug}/manage/review`) : '/',
       badge: !isAuthorized
@@ -914,6 +917,15 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                   <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>↗</span>
                 )}
               </Link>
+            </div>
+
+            {/* Consolidated Admin Qual Timer HUD */}
+            <div style={{ marginTop: '0.45rem' }}>
+              <TournamentQualTimerHud
+                tournament={activeTourney}
+                sidebar={true}
+                isCollapsed={isCollapsed}
+              />
             </div>
           </div>
         )}

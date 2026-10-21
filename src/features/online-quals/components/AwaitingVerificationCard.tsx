@@ -6,12 +6,21 @@ import type { OnlineQualSessionSummary } from '../../../api/qualifiers';
 export interface AwaitingVerificationCardProps {
   session: OnlineQualSessionSummary;
   tournamentSlug: string;
+  playerName?: string;
+  onDone?: () => void;
 }
 
 export const AwaitingVerificationCard: React.FC<AwaitingVerificationCardProps> = ({
   session,
   tournamentSlug,
+  playerName,
+  onDone,
 }) => {
+  const displayName = playerName || session.playerName;
+  const headerTitle = displayName
+    ? `${displayName}: Official Qual Submitted`
+    : 'Official Qual Submitted';
+
   return (
     <div
       style={{
@@ -46,7 +55,7 @@ export const AwaitingVerificationCard: React.FC<AwaitingVerificationCardProps> =
         </div>
         <div>
           <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: '#ffffff' }}>
-            Official Qual Submitted!
+            {headerTitle}
           </h3>
           <p style={{ margin: '0.2rem 0 0', fontSize: '0.88rem', color: 'var(--color-text-secondary, #94a3b8)' }}>
             Your submission has been securely recorded and locked against further edits.
@@ -162,7 +171,27 @@ export const AwaitingVerificationCard: React.FC<AwaitingVerificationCardProps> =
       </div>
 
       {/* Action Links */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '0.5rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+        {onDone && (
+          <button
+            type="button"
+            onClick={onDone}
+            className="btn btn-secondary"
+            style={{
+              padding: '0.75rem 1.25rem',
+              borderRadius: '8px',
+              fontSize: '0.92rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+            data-testid="qual-done-button"
+          >
+            Done / Qualify Another Player
+          </button>
+        )}
         <Link
           to={`/${tournamentSlug}/leaderboard`}
           style={{

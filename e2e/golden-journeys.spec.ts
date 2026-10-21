@@ -1,9 +1,45 @@
 import { test, expect } from '@playwright/test';
+import { getDb } from '../src/db';
+import { tournaments } from '../src/db/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 const SYSTEM_ADMIN_PIN = process.env.SYSTEM_ADMIN_RECOVERY_PIN || '!Te67Omentris69420!';
 const generateTestPin = () => String(Math.floor(100000 + Math.random() * 900000));
 
 test.describe('Golden User Journeys: Security & Access Control', () => {
+  const originalPins: Record<string, string | null> = {};
+
+  test.beforeAll(async () => {
+    try {
+      process.loadEnvFile?.();
+    } catch {}
+    try {
+      const db = getDb();
+      const rows = await db
+        .select({ slug: tournaments.slug, adminPinEncrypted: tournaments.adminPinEncrypted })
+        .from(tournaments)
+        .where(inArray(tournaments.slug, ['omen-open', 'omen-d']));
+      for (const r of rows) {
+        originalPins[r.slug] = r.adminPinEncrypted;
+      }
+    } catch (err) {
+      console.warn('[E2E Setup] Failed to snapshot original tournament PINs:', err);
+    }
+  });
+
+  test.afterAll(async () => {
+    try {
+      const db = getDb();
+      for (const [slug, pin] of Object.entries(originalPins)) {
+        await db
+          .update(tournaments)
+          .set({ adminPinEncrypted: pin })
+          .where(eq(tournaments.slug, slug));
+      }
+    } catch (err) {
+      console.warn('[E2E Teardown] Failed to restore original tournament PINs:', err);
+    }
+  });
 
   test('Journey 1: Public Spectator Friction-Zero Journey', async ({ page, context }) => {
     // Ensure clean spectator session
@@ -47,6 +83,8 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
 
   test('Journey 2: Route Gating & System Admin Emergency Recovery PIN', async ({ page, context }) => {
     await context.clearCookies();
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
 
     // 1. Unauthenticated spectator attempts to access protected settings directly
     await page.goto('/omen-open/manage/settings');
@@ -250,32 +288,13 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     // 1. Remote competitor navigates directly to the public competitor portal for omen-ao3
     await page.goto('/omen-ao3/qualify');
     await expect(page.getByTestId('competitor-portal')).toBeVisible();
-    await expect(page.getByTestId('twitch-connect-card')).toBeVisible();
+    await expect(page.getByTestId('competitor-checkin-card')).toBeVisible();
 
-    // 2. Authenticate via Mock Twitch login
-    const mockInput = page.getByTestId('mock-handle-input');
-    await expect(mockInput).toBeVisible();
-    await mockInput.fill(runnerHandle);
-    await page.getByTestId('mock-login-button').click();
+    // 2. Competitor enters player name and twitch handle
+    await page.getByTestId('player-name-input').fill(runnerHandle);
+    await page.getByTestId('twitch-handle-input').fill(runnerHandle);
 
-    // 3. Unmatched alias triggers Identity Disambiguation modal
-    const claimModal = page.getByTestId('identity-claim-modal');
-    await expect(claimModal).toBeVisible();
-    await page.getByTestId('tab-register-new').click();
-
-    // Verify alias is prefilled and register as walk-in competitor
-    const registerNameInput = page.getByTestId('register-name-input');
-    await expect(registerNameInput).toHaveValue(runnerHandle);
-    await page.getByTestId('submit-register-button').click();
-    await expect(claimModal).not.toBeVisible();
-
-    // 4. Authenticated workspace appears with identity badge
-    await expect(page.getByTestId('competitor-identity-bar')).toBeVisible();
-    await expect(page.getByTestId('identity-status-badge')).toContainText('Provisional New');
-
-    // 5. Launch official qualifier pre-flight briefing
-    const launchHero = page.getByTestId('launch-qual-hero');
-    await expect(launchHero).toBeVisible();
+    // 3. Launch official qualifier pre-flight briefing
     await page.getByTestId('start-preflight-button').click();
 
     // Checklist modal appears
@@ -315,8 +334,10 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await expect(submitBtn).toBeEnabled();
     await submitBtn.click();
 
-    // Confirmed receipt card displays
+    // Confirmed receipt card displays with player name in heading; competitor-identity-bar is removed
     await expect(page.getByTestId('awaiting-verification-card')).toBeVisible();
+    await expect(page.getByText(`${runnerHandle}: Official Qual Submitted`)).toBeVisible();
+    await expect(page.getByTestId('competitor-identity-bar')).not.toBeVisible();
     await expect(page.getByText('1,124,500')).toBeVisible();
 
     // 8. Public Leaderboard reflects provisional standing [⏳ Awaiting Verification]
@@ -324,17 +345,16 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     const competitorRow = page.locator('tr', { hasText: runnerHandle });
     await expect(competitorRow).toBeVisible();
     await expect(competitorRow.getByText('Awaiting Verification')).toBeVisible();
-    await expect(competitorRow.getByTitle('Watch Twitch VOD')).toBeVisible();
 
-    // 9. Staff Admin navigates to Review Queue
+    // 9. Staff Admin navigates to Qual Review
     await page.goto('/omen-ao3/manage/review');
     await expect(page).toHaveURL(/\/admin\?.*redirect=%2Fomen-ao3%2Fmanage%2Freview/);
     await page.getByPlaceholder('Enter PIN or Key').fill(SYSTEM_ADMIN_PIN);
     await page.getByRole('button', { name: /unlock administration/i }).click();
 
-    // Lands on Review Queue view
+    // Lands on Qual Review view
     await expect(page).toHaveURL(/\/omen-ao3\/manage\/review/);
-    await expect(page.getByRole('heading', { name: 'Review Queue' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Qual Review' })).toBeVisible();
 
     // Find submission row in ReviewQueueTable
     const reviewRow = page.locator('tr', { hasText: runnerHandle });

@@ -117,7 +117,7 @@ export const qualifierSubmissions = pgTable('qualifier_submissions', {
   }),
   status: text('status', {
     enum: ['NOT_STARTED', 'IN_PROGRESS', 'SUBMITTED', 'VERIFIED', 'DNQ', 'DQ'],
-  }).notNull().default('VERIFIED'),
+  }).notNull().default('SUBMITTED'),
   timerLog: jsonb('timer_log').$type<QualTimerLog>(),
   judgeNotes: text('judge_notes'),
   verifiedBy: text('verified_by'),

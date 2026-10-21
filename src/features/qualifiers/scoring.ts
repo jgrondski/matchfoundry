@@ -485,6 +485,8 @@ export function generateDraftBracketsForTournament(tournament: Tournament): Tour
           seed: idx + 1,
           country: p?.country,
           playstyle: p?.playstyle,
+          displayName: p?.displayName,
+          nickname: p?.nickname,
         };
       });
 
@@ -516,6 +518,8 @@ export function generateDraftBracketsForTournament(tournament: Tournament): Tour
       seed: idx + 1,
       country: row.player.country,
       playstyle: row.player.playstyle,
+      displayName: row.player.displayName,
+      nickname: row.player.nickname,
     }));
 
     return {

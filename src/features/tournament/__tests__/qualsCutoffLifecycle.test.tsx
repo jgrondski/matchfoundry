@@ -77,8 +77,8 @@ describe('Journey 5: Qualifiers Cutoff & Bracket Locking (ATDD)', () => {
         </AuthProvider>
       );
 
-      // Verify Close Online Quals button is rendered
-      expect(html).toContain('Close Online Quals');
+      // Verify manual Close Online Quals button is removed (follows global tournament lock)
+      expect(html).not.toContain('Close Online Quals');
       expect(html).toContain('Open / Receiving');
       expect(html).toContain('Pending Review');
     });
@@ -99,7 +99,7 @@ describe('Journey 5: Qualifiers Cutoff & Bracket Locking (ATDD)', () => {
         </MemoryRouter>
       );
       expect(html).toContain('Qualifiers Closed');
-      expect(html).toContain('Official qualifying for this tournament has completed');
+      expect(html).toContain('Qualifying is closed or brackets have locked');
 
       // 2. Calling startOnlineQualSession throws/rejects
       await expect(

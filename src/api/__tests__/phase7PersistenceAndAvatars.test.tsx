@@ -257,6 +257,19 @@ describe('Phase 7: Relational Persistence & Avatar System', () => {
       expect(html).toContain('<svg');
       expect(html).not.toContain('<img');
     });
+
+    it('renders initial letter badge when player has no assigned country and no custom avatar (walk-in)', () => {
+      const walkIn = {
+        name: 'sharky',
+        avatarType: 'flag' as const,
+      };
+
+      const html = renderToStaticMarkup(<PlayerAvatar player={walkIn} size={32} />);
+      expect(html).toContain('data-testid="player-initial-avatar"');
+      expect(html).toContain('>S<');
+      expect(html).not.toContain('<svg');
+      expect(html).not.toContain('<img');
+    });
   });
 
   describe('6. Qualifier Leaderboard Aggregation across formats', () => {

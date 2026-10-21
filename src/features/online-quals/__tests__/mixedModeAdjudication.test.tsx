@@ -14,11 +14,13 @@ import {
   getOnlineQualSession,
   listOnlineQualSessions,
   adjudicateOnlineSubmission,
+  verifyAllQualifierSubmissions,
 } from '../../../api/qualifiers';
 import { deriveLeaderboard, generateDraftBracketsForTournament } from '../../qualifiers/scoring';
 import { TournamentSidebar } from '../../../components/TournamentSidebar';
 import { AdjudicationModal } from '../components/AdjudicationModal';
 import { ReviewQueueTable } from '../components/ReviewQueueTable';
+import { ReviewQueueView } from '../components/ReviewQueueView';
 import { AuthProvider } from '../../auth/AuthContext';
 import { TournamentProvider } from '../../tournament/store';
 import { OrganizationProvider } from '../../organizations/store';
@@ -50,14 +52,14 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
     tourney = await saveFullTournament(baseTourney);
   });
 
-  describe('Assertion 2.1: Ingestion Source Separation', () => {
-    it('saves in-person scores as VERIFIED and online submissions as SUBMITTED (awaiting verification)', async () => {
-      // 1. Submit in-person score
+  describe('Assertion 2.1: Ingestion Source Separation & Review Queue Ingestion', () => {
+    it('saves both in-person and online submissions as SUBMITTED (pending review), allowing in-person verification via Review Queue', async () => {
+      // 1. Submit in-person score (defaults to SUBMITTED / pending review)
       const inPersonSub = await submitQualifierScore(tourney.id, pInPersonId, 1150000, {
         submissionSource: 'IN_PERSON',
       });
       expect(inPersonSub.submissionSource).toBe('IN_PERSON');
-      expect(inPersonSub.status).toBe('VERIFIED');
+      expect(inPersonSub.status).toBe('SUBMITTED');
 
       // 2. Submit online run
       await startOnlineQualSession(tourney.id, {
@@ -72,8 +74,18 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
       });
       expect(onlineSub.status).toBe('SUBMITTED');
 
-      // Verify in tournament leaderboard
-      const updatedTourney: Tournament = {
+      // 3. Verify both land in listOnlineQualSessions as pending runs
+      const queueSessions = await listOnlineQualSessions(tourney.id);
+      expect(queueSessions.length).toBe(2);
+      const inPersonQueue = queueSessions.find(s => s.playerId === pInPersonId);
+      const onlineQueue = queueSessions.find(s => s.playerId === pOnlineId);
+      expect(inPersonQueue?.submissionSource).toBe('IN_PERSON');
+      expect(inPersonQueue?.authWord).toBeNull();
+      expect(inPersonQueue?.twitchVodUrl).toBeNull();
+      expect(onlineQueue?.submissionSource).toBe('ONLINE');
+
+      // 4. Verify in tournament leaderboard before verification: both are awaiting verification
+      const unverifiedTourney: Tournament = {
         ...tourney,
         qualifierSubmissions: [
           {
@@ -83,7 +95,7 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
             score: inPersonSub.score,
             submittedAt: Date.now() - 5000,
             submissionSource: 'IN_PERSON',
-            status: 'VERIFIED',
+            status: 'SUBMITTED',
           },
           {
             id: onlineSub.submissionIds[0],
@@ -98,15 +110,16 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
         ],
       };
 
-      const lb = deriveLeaderboard(updatedTourney);
-      const inPersonRow = lb.find(r => r.player.id === pInPersonId);
-      const onlineRow = lb.find(r => r.player.id === pOnlineId);
+      const lbBefore = deriveLeaderboard(unverifiedTourney);
+      expect(lbBefore.find(r => r.player.id === pInPersonId)?.status).toBe('awaiting verification');
+      expect(lbBefore.find(r => r.player.id === pOnlineId)?.status).toBe('awaiting verification');
 
-      expect(inPersonRow?.status).toBe('verified');
-      expect(inPersonRow?.submissionSource).toBe('IN_PERSON');
-
-      expect(onlineRow?.status).toBe('awaiting verification');
-      expect(onlineRow?.submissionSource).toBe('ONLINE');
+      // 5. Adjudicate in-person run through Review Queue VERIFY action
+      const verifiedSession = await adjudicateOnlineSubmission(tourney.id, {
+        playerId: pInPersonId,
+        action: 'VERIFY',
+      });
+      expect(verifiedSession?.status).toBe('VERIFIED');
     });
   });
 
@@ -128,7 +141,7 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
           </OrganizationProvider>
         </AuthProvider>
       );
-      expect(htmlZero).toContain('Review Queue');
+      expect(htmlZero).toContain('Qual Review');
 
       // Add 2 online pending submissions
       const tourneyTwo: Tournament = {
@@ -165,7 +178,71 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
           </OrganizationProvider>
         </AuthProvider>
       );
-      expect(htmlTwo).toContain('Review Queue (2)');
+      expect(htmlTwo).toContain('Qual Review (2)');
+    });
+
+    it('collapses multiple submitted scores from a single competitor into 1 review session in sidebar badge', () => {
+      // 1 player submits 3 maxout scores
+      const tourneyMultiSub: Tournament = {
+        ...tourney,
+        qualifierSubmissions: [
+          {
+            id: 'sub-1',
+            tournamentId: tourney.id,
+            playerId: pOnlineId,
+            score: 1200000,
+            submittedAt: Date.now(),
+            submissionSource: 'ONLINE',
+            status: 'SUBMITTED',
+          },
+          {
+            id: 'sub-2',
+            tournamentId: tourney.id,
+            playerId: pOnlineId,
+            score: 1180000,
+            submittedAt: Date.now(),
+            submissionSource: 'ONLINE',
+            status: 'SUBMITTED',
+          },
+          {
+            id: 'sub-3',
+            tournamentId: tourney.id,
+            playerId: pOnlineId,
+            score: 1150000,
+            submittedAt: Date.now(),
+            submissionSource: 'ONLINE',
+            status: 'SUBMITTED',
+          },
+        ],
+      };
+
+      const html = renderToStaticMarkup(
+        <AuthProvider>
+          <OrganizationProvider initialHydrated={true}>
+            <TournamentProvider initialTournaments={[tourneyMultiSub]} initialHydrated={true}>
+              <MemoryRouter>
+                <TournamentSidebar tournament={tourneyMultiSub} activeView="review" />
+              </MemoryRouter>
+            </TournamentProvider>
+          </OrganizationProvider>
+        </AuthProvider>
+      );
+      // Badge must count unique competitors left to review (1), NOT raw scores/submissions (3)
+      expect(html).toContain('Qual Review (1)');
+      expect(html).not.toContain('Qual Review (3)');
+    });
+
+    it('renders "Qual Total Time" as the column header instead of "Timer / Telemetry"', () => {
+      const html = renderToStaticMarkup(
+        <ReviewQueueTable
+          sessions={[]}
+          onOpenAdjudicate={() => {}}
+          onOpenIdentityModal={() => {}}
+        />
+      );
+      expect(html).toContain('Qual Total Time');
+      expect(html).not.toContain('Timer / Telemetry');
+      expect(html).not.toContain('Timer/Telemetry');
     });
   });
 
@@ -334,11 +411,99 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
       );
 
       expect(html).toContain('Pending Review');
-      expect(html).toContain('Verified');
-      expect(html).toContain('DNQ / DQ');
+      expect(html).toContain('Online');
+      expect(html).toContain('In-Person');
+      expect(html).not.toContain('Verified (');
+      expect(html).not.toContain('DNQ / DQ (');
       expect(html).toContain('PixelAndy');
       expect(html).toContain('ROCKET');
       expect(html).toContain('Review');
+    });
+
+    it('renders in-person qualifier sessions with "-" authword, tournament qual window time, and "In Person" vod link', () => {
+      const mockInPersonSessions = [
+        {
+          tournamentId: tourney.id,
+          playerId: pInPersonId,
+          playerName: 'Fractal',
+          country: 'US',
+          submissionSource: 'IN_PERSON' as const,
+          status: 'SUBMITTED' as const,
+          authWord: null,
+          twitchVodUrl: null,
+          submittedTwitchId: null,
+          submittedTwitchUsername: null,
+          identityStatus: null,
+          timerLog: {
+            startedAt: Date.now() - 1000 * 60 * 90,
+            elapsedSeconds: 5400,
+            pauses: [],
+          },
+          scores: [1100000],
+          judgeNotes: null,
+          submissionIds: ['sub-ip-1'],
+        },
+      ];
+
+      const html = renderToStaticMarkup(
+        <ReviewQueueTable
+          sessions={mockInPersonSessions}
+          onOpenAdjudicate={() => {}}
+          onOpenIdentityModal={() => {}}
+          qualWindowMinutes={90}
+        />
+      );
+
+      expect(html).toContain('Fractal');
+      expect(html).toContain('-'); // Null NES Authword displayed as "-"
+      expect(html).toContain('90m'); // Length of tournament's specified qual time
+      expect(html).toContain('In Person'); // VOD link displays "In Person"
+      expect(html).toContain('Review');
+    });
+
+    it('verifies all unverified runs via verifyAllQualifierSubmissions in bulk', async () => {
+      // 1. Submit in-person run
+      await submitQualifierScore(tourney.id, pInPersonId, 950000);
+
+      // 2. Submit online run
+      await startOnlineQualSession(tourney.id, {
+        playerId: pOnlineId,
+        twitchUsername: 'pixelandy',
+      });
+      await submitOnlineQualScores(tourney.id, {
+        playerId: pOnlineId,
+        scores: [1150000],
+        twitchVodUrl: 'https://twitch.tv/videos/999999999',
+      });
+
+      // Verify both are currently SUBMITTED
+      const beforeList = await listOnlineQualSessions(tourney.id);
+      const pendingBefore = beforeList.filter(s => s.status === 'SUBMITTED');
+      expect(pendingBefore.length).toBe(2);
+
+      // Execute Verify All
+      const result = await verifyAllQualifierSubmissions(tourney.id, 'HeadJudge');
+      expect(result.verifiedCount).toBe(2);
+
+      // Verify all runs are now VERIFIED
+      const afterList = await listOnlineQualSessions(tourney.id);
+      expect(afterList.every(s => s.status === 'VERIFIED')).toBe(true);
+    });
+
+    it('renders the "Verify All" button and speedbump modal in ReviewQueueView', () => {
+      const html = renderToStaticMarkup(
+        <MemoryRouter>
+          <AuthProvider>
+            <TournamentProvider initialTournaments={[tourney]}>
+              <ReviewQueueView tournament={tourney} />
+            </TournamentProvider>
+          </AuthProvider>
+        </MemoryRouter>
+      );
+
+      // Verify All button exists in Batch Adjudication section
+      expect(html).toContain('Batch Adjudication');
+      expect(html).toContain('Verify All');
     });
   });
 });

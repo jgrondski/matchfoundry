@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CheckCircle2, AlertTriangle, ExternalLink, ShieldAlert, RotateCcw, X, Edit3, Film, UserCheck } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { CheckCircle2, AlertTriangle, ExternalLink, ShieldAlert, RotateCcw, X, Edit3, Film, UserCheck, MapPin } from 'lucide-react';
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 
@@ -37,6 +37,17 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
     scores.length !== session.scores.length ||
     scores.some((s, idx) => s !== session.scores[idx]);
 
+  const newlyAddedIndexRef = useRef<number | null>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    if (newlyAddedIndexRef.current !== null) {
+      const idx = newlyAddedIndexRef.current;
+      newlyAddedIndexRef.current = null;
+      inputRefs.current[idx]?.focus();
+    }
+  }, [scores.length]);
+
   const handleScoreChange = (idx: number, val: string) => {
     const num = parseInt(val.replace(/[^0-9]/g, ''), 10) || 0;
     const next = [...scores];
@@ -45,6 +56,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
   };
 
   const handleAddGame = () => {
+    newlyAddedIndexRef.current = scores.length;
     setScores(prev => [...prev, 0]);
   };
 
@@ -129,28 +141,26 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                     Twitch: @{session.submittedTwitchUsername}
                   </span>
                 )}
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    padding: '0.1rem 0.45rem',
-                    borderRadius: 'var(--radius-sm)',
-                    background:
-                      session.status === 'VERIFIED'
-                        ? 'rgba(34, 197, 94, 0.2)'
-                        : session.status === 'DNQ' || session.status === 'DQ'
-                        ? 'rgba(239, 68, 68, 0.2)'
-                        : 'rgba(245, 158, 11, 0.2)',
-                    color:
-                      session.status === 'VERIFIED'
-                        ? '#4ade80'
-                        : session.status === 'DNQ' || session.status === 'DQ'
-                        ? '#f87171'
-                        : 'var(--color-gold-bright)',
-                  }}
-                >
-                  Status: {session.status}
-                </span>
+                {session.status !== 'SUBMITTED' && (
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      padding: '0.1rem 0.45rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background:
+                        session.status === 'VERIFIED'
+                          ? 'rgba(34, 197, 94, 0.2)'
+                          : 'rgba(239, 68, 68, 0.2)',
+                      color:
+                        session.status === 'VERIFIED'
+                          ? '#4ade80'
+                          : '#f87171',
+                    }}
+                  >
+                    Status: {session.status}
+                  </span>
+                )}
                 {onOpenIdentity && (
                   <button
                     type="button"
@@ -273,10 +283,12 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                   color: 'var(--color-gold-bright)',
                 }}
               >
-                {session.authWord}
+                {session.authWord || '-'}
               </div>
               <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
-                Verify this word appears on the NES 10,000 pts topout high-score screen in the VOD.
+                {session.submissionSource === 'IN_PERSON'
+                  ? 'In-person qualification at venue.'
+                  : 'Verify this word appears on the NES 10,000 pts topout high-score screen in the VOD.'}
               </span>
             </div>
 
@@ -293,7 +305,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
               }}
             >
               <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 700 }}>
-                Run Elapsed Timer
+                {session.submissionSource === 'IN_PERSON' ? 'Qual Window Time' : 'Run Elapsed Timer'}
               </span>
               <div
                 style={{
@@ -306,16 +318,18 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 {elapsedMinutes}m {elapsedRemSec}s
               </div>
               <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
-                Started: {new Date(session.timerLog?.startedAt || Date.now()).toLocaleTimeString()}
+                {session.submissionSource === 'IN_PERSON'
+                  ? 'In-person tournament window duration.'
+                  : `Started: ${new Date(session.timerLog?.startedAt || Date.now()).toLocaleTimeString()}`}
               </span>
             </div>
           </div>
 
-          {/* Twitch VOD Link */}
+          {/* Twitch VOD Link or In-Person Marker */}
           <div
             style={{
-              background: 'rgba(167, 139, 250, 0.08)',
-              border: '1px solid rgba(167, 139, 250, 0.3)',
+              background: session.submissionSource === 'IN_PERSON' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(167, 139, 250, 0.08)',
+              border: session.submissionSource === 'IN_PERSON' ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(167, 139, 250, 0.3)',
               borderRadius: 'var(--radius-md)',
               padding: '0.85rem 1rem',
               display: 'flex',
@@ -323,35 +337,66 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
               justifyContent: 'space-between',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <Film size={20} color="#a78bfa" />
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
-                  Twitch Broadcast VOD
+            {session.submissionSource === 'IN_PERSON' ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <MapPin size={20} color="#60a5fa" />
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
+                      In-Person Qualification Event
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      Scores recorded in person at venue
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                  {session.twitchVodUrl || 'No VOD URL provided'}
+                <span
+                  style={{
+                    fontSize: '0.78rem',
+                    padding: '0.25rem 0.65rem',
+                    borderRadius: 'var(--radius-sm)',
+                    background: 'rgba(59, 130, 246, 0.15)',
+                    color: '#60a5fa',
+                    fontWeight: 700,
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                  }}
+                >
+                  In Person
+                </span>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <Film size={20} color="#a78bfa" />
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
+                      Twitch Broadcast VOD
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      {session.twitchVodUrl || 'No VOD URL provided'}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            {session.twitchVodUrl && (
-              <a
-                href={session.twitchVodUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-secondary"
-                style={{
-                  fontSize: '0.8rem',
-                  padding: '0.35rem 0.75rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  color: '#a78bfa',
-                  borderColor: 'rgba(167, 139, 250, 0.4)',
-                }}
-              >
-                Open VOD <ExternalLink size={14} />
-              </a>
+                {session.twitchVodUrl && (
+                  <a
+                    href={session.twitchVodUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-secondary"
+                    style={{
+                      fontSize: '0.8rem',
+                      padding: '0.35rem 0.75rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      color: '#a78bfa',
+                      borderColor: 'rgba(167, 139, 250, 0.4)',
+                    }}
+                  >
+                    Open VOD <ExternalLink size={14} />
+                  </a>
+                )}
+              </>
             )}
           </div>
 
@@ -406,6 +451,13 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                     )}
                   </div>
                   <input
+                    ref={el => {
+                      inputRefs.current[idx] = el;
+                      if (newlyAddedIndexRef.current === idx && el) {
+                        el.focus();
+                        newlyAddedIndexRef.current = null;
+                      }
+                    }}
                     type="text"
                     value={score > 0 ? score.toLocaleString() : ''}
                     placeholder="e.g. 1,024,500"

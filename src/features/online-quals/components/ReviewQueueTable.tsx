@@ -12,14 +12,16 @@ export interface ReviewQueueTableProps {
   sessions: ReviewQueueSessionSummary[];
   onOpenAdjudicate: (session: ReviewQueueSessionSummary) => void;
   onOpenIdentityModal: (session: ReviewQueueSessionSummary) => void;
+  qualWindowMinutes?: number;
 }
 
-export type ReviewFilter = 'ALL' | 'PENDING' | 'RESETS' | 'VERIFIED' | 'REJECTED';
+export type ReviewFilter = 'ALL' | 'PENDING' | 'RESETS' | 'ONLINE' | 'IN_PERSON';
 
 export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
   sessions,
   onOpenAdjudicate,
   onOpenIdentityModal,
+  qualWindowMinutes = 90,
 }) => {
   const [filter, setFilter] = useState<ReviewFilter>('PENDING');
   const [search, setSearch] = useState('');
@@ -28,8 +30,8 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
     s => s.status === 'SUBMITTED' || Boolean(s.timerLog?.resetRequested)
   ).length;
   const resetCount = sessions.filter(s => Boolean(s.timerLog?.resetRequested)).length;
-  const verifiedCount = sessions.filter(s => s.status === 'VERIFIED').length;
-  const rejectedCount = sessions.filter(s => s.status === 'DNQ' || s.status === 'DQ').length;
+  const onlineCount = sessions.filter(s => s.submissionSource === 'ONLINE').length;
+  const inPersonCount = sessions.filter(s => s.submissionSource === 'IN_PERSON').length;
 
   const filteredSessions = sessions.filter(s => {
     // Tab filter
@@ -37,10 +39,10 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
       if (s.status !== 'SUBMITTED' && !s.timerLog?.resetRequested) return false;
     } else if (filter === 'RESETS') {
       if (!s.timerLog?.resetRequested) return false;
-    } else if (filter === 'VERIFIED') {
-      if (s.status !== 'VERIFIED') return false;
-    } else if (filter === 'REJECTED') {
-      if (s.status !== 'DNQ' && s.status !== 'DQ') return false;
+    } else if (filter === 'ONLINE') {
+      if (s.submissionSource !== 'ONLINE') return false;
+    } else if (filter === 'IN_PERSON') {
+      if (s.submissionSource !== 'IN_PERSON') return false;
     }
 
     // Search query
@@ -137,6 +139,46 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
 
           <button
             type="button"
+            onClick={() => setFilter('ONLINE')}
+            style={{
+              padding: '0.4rem 0.75rem',
+              borderRadius: 'var(--radius-full)',
+              border: filter === 'ONLINE' ? '1px solid #a855f7' : '1px solid var(--color-border)',
+              background: filter === 'ONLINE' ? 'rgba(168, 85, 247, 0.2)' : 'var(--color-bg-surface)',
+              color: filter === 'ONLINE' ? '#c084fc' : 'var(--color-text-secondary)',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+            }}
+          >
+            Online ({onlineCount})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilter('IN_PERSON')}
+            style={{
+              padding: '0.4rem 0.75rem',
+              borderRadius: 'var(--radius-full)',
+              border: filter === 'IN_PERSON' ? '1px solid #3b82f6' : '1px solid var(--color-border)',
+              background: filter === 'IN_PERSON' ? 'rgba(59, 130, 246, 0.2)' : 'var(--color-bg-surface)',
+              color: filter === 'IN_PERSON' ? '#60a5fa' : 'var(--color-text-secondary)',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+            }}
+          >
+            In-Person ({inPersonCount})
+          </button>
+
+          <button
+            type="button"
             onClick={() => setFilter('ALL')}
             style={{
               padding: '0.4rem 0.75rem',
@@ -150,40 +192,6 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
             }}
           >
             All Runs ({sessions.length})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setFilter('VERIFIED')}
-            style={{
-              padding: '0.4rem 0.75rem',
-              borderRadius: 'var(--radius-full)',
-              border: filter === 'VERIFIED' ? '1px solid #22c55e' : '1px solid var(--color-border)',
-              background: filter === 'VERIFIED' ? 'rgba(34, 197, 94, 0.2)' : 'var(--color-bg-surface)',
-              color: filter === 'VERIFIED' ? '#4ade80' : 'var(--color-text-secondary)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            Verified ({verifiedCount})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setFilter('REJECTED')}
-            style={{
-              padding: '0.4rem 0.75rem',
-              borderRadius: 'var(--radius-full)',
-              border: filter === 'REJECTED' ? '1px solid #ef4444' : '1px solid var(--color-border)',
-              background: filter === 'REJECTED' ? 'rgba(239, 68, 68, 0.2)' : 'var(--color-bg-surface)',
-              color: filter === 'REJECTED' ? '#f87171' : 'var(--color-text-secondary)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            DNQ / DQ ({rejectedCount})
           </button>
         </div>
 
@@ -237,7 +245,7 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                 NES Authword
               </th>
               <th style={{ padding: '0.85rem 1rem', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'center' }}>
-                Timer / Telemetry
+                Qual Total Time
               </th>
               <th style={{ padding: '0.85rem 1rem', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'right' }}>
                 Submitted Scores
@@ -347,58 +355,70 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
 
                     {/* NES Authword */}
                     <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
-                      <span
-                        style={{
-                          fontFamily: 'monospace',
-                          fontSize: '0.95rem',
-                          fontWeight: 800,
-                          letterSpacing: '0.1em',
-                          color: 'var(--color-gold-bright)',
-                          background: 'rgba(245, 158, 11, 0.12)',
-                          border: '1px solid rgba(245, 158, 11, 0.3)',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '0.2rem 0.5rem',
-                        }}
-                      >
-                        {session.authWord}
-                      </span>
+                      {session.authWord ? (
+                        <span
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: '0.95rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.1em',
+                            color: 'var(--color-gold-bright)',
+                            background: 'rgba(245, 158, 11, 0.12)',
+                            border: '1px solid rgba(245, 158, 11, 0.3)',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '0.2rem 0.5rem',
+                          }}
+                        >
+                          {session.authWord}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', fontWeight: 600 }}>
+                          -
+                        </span>
+                      )}
                     </td>
 
-                    {/* Timer / Telemetry */}
+                    {/* Qual Total Time */}
                     <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: isOvertime ? '#ef4444' : '#ffffff' }}>
-                          {elapsedMin}m {elapsedSec}s
+                      {session.submissionSource === 'IN_PERSON' ? (
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#ffffff' }}>
+                          {qualWindowMinutes}m
                         </span>
-                        {isOvertime && (
-                          <span
-                            style={{
-                              fontSize: '0.68rem',
-                              fontWeight: 700,
-                              color: '#ef4444',
-                              background: 'rgba(239, 68, 68, 0.15)',
-                              padding: '0.05rem 0.35rem',
-                              borderRadius: 'var(--radius-sm)',
-                            }}
-                          >
-                            ⚠️ Overtime
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: isOvertime ? '#ef4444' : '#ffffff' }}>
+                            {elapsedMin}m {elapsedSec}s
                           </span>
-                        )}
-                        {hasReset && (
-                          <span
-                            style={{
-                              fontSize: '0.68rem',
-                              fontWeight: 700,
-                              color: '#c084fc',
-                              background: 'rgba(168, 85, 247, 0.15)',
-                              padding: '0.05rem 0.35rem',
-                              borderRadius: 'var(--radius-sm)',
-                            }}
-                          >
-                            ⚡ Reset Req
-                          </span>
-                        )}
-                      </div>
+                          {isOvertime && (
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                color: '#ef4444',
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                padding: '0.05rem 0.35rem',
+                                borderRadius: 'var(--radius-sm)',
+                              }}
+                            >
+                              ⚠️ Overtime
+                            </span>
+                          )}
+                          {hasReset && (
+                            <span
+                              style={{
+                                fontSize: '0.68rem',
+                                fontWeight: 700,
+                                color: '#c084fc',
+                                background: 'rgba(168, 85, 247, 0.15)',
+                                padding: '0.05rem 0.35rem',
+                                borderRadius: 'var(--radius-sm)',
+                              }}
+                            >
+                              ⚡ Reset Req
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
 
                     {/* Scores */}
@@ -422,7 +442,11 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
 
                     {/* VOD Link */}
                     <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
-                      {session.twitchVodUrl ? (
+                      {session.submissionSource === 'IN_PERSON' ? (
+                        <span style={{ color: '#60a5fa', fontSize: '0.78rem', fontWeight: 600 }}>
+                          In Person
+                        </span>
+                      ) : session.twitchVodUrl ? (
                         <a
                           href={session.twitchVodUrl}
                           target="_blank"

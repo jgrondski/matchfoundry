@@ -8,7 +8,6 @@ import { OrganizerSheetMatrix } from '../features/bracket/components/OrganizerSh
 import { getContrastingTextColor } from '../features/bracket/colorUtils';
 import { GitBranch } from 'lucide-react';
 import { LoadingScreen } from '../components/LoadingScreen';
-import { TournamentQualTimerHud } from '../features/qualifiers/components/TournamentQualTimerHud';
 
 /**
  * Tier 1: Route Gate (Hydration & Data Boundary)
@@ -164,7 +163,6 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <TournamentQualTimerHud tournament={tournament} compact />
           <Link
             to={`/${tournament.slug}/manage/bracket/${tier.slug}`}
             className="btn btn-secondary"

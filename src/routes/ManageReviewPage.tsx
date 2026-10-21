@@ -59,7 +59,7 @@ export const ManageReviewPage: React.FC = () => {
                 letterSpacing: '0.08em',
               }}
             >
-              Adjudication &amp; Verification Desk
+              Qual Review
             </span>
           </div>
           <h1
@@ -75,7 +75,7 @@ export const ManageReviewPage: React.FC = () => {
             }}
           >
             <CheckCircle2 color="var(--color-gold-bright)" size={28} />
-            Review Queue
+            Qual Review
           </h1>
           <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', marginTop: '0.35rem', marginBottom: 0 }}>
             Audit incoming NES Authwords against Twitch VOD recordings, verify competitor scores, and resolve claims.
