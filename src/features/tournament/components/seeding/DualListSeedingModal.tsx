@@ -16,6 +16,7 @@ import { Tournament, PlayerProfile } from '../../types';
 import { useTournament } from '../../store';
 import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../../players/components/PlaystyleChip';
+import { getEffectivePlayerName } from '../../../players/playerNameUtils';
 
 interface DualListSeedingModalProps {
   isOpen: boolean;
@@ -98,6 +99,7 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
     const term = availableSearch.toLowerCase();
     return list.filter(
       p =>
+        getEffectivePlayerName(p).toLowerCase().includes(term) ||
         p.name.toLowerCase().includes(term) ||
         (p.country && p.country.toLowerCase().includes(term)) ||
         (p.playstyle && p.playstyle.toLowerCase().includes(term))
@@ -113,7 +115,8 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
         return {
           id,
           seedNumber: index + 1,
-          name: player?.name || 'Unknown Player',
+          name: getEffectivePlayerName(player) || player?.name || 'Unknown Player',
+          rawName: player?.name || '',
           country: player?.country,
           playstyle: player?.playstyle,
         };
@@ -122,6 +125,7 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
         if (!term) return true;
         return (
           item.name.toLowerCase().includes(term) ||
+          item.rawName.toLowerCase().includes(term) ||
           (item.country && item.country.toLowerCase().includes(term)) ||
           `#${item.seedNumber}`.includes(term)
         );
@@ -566,7 +570,7 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
                           )}
 
                           <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {player.name}
+                            {getEffectivePlayerName(player)}
                           </span>
                         </div>
 

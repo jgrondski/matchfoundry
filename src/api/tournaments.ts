@@ -1,5 +1,5 @@
 import { tournaments, bracketTiers, organizations } from '../db/schema';
-import { eq, or } from 'drizzle-orm';
+import { eq, or, and } from 'drizzle-orm';
 import { getDb } from '../db';
 import type { BracketType, BracketRouting, EliminationType } from '../features/bracket/types';
 import type { TournamentMetadata, TierMetadata } from '../features/tournament/types';
@@ -27,6 +27,9 @@ export interface TournamentInput {
   qualFormat: 'HIGH_SCORE' | 'AVERAGE_OF_X' | 'POINTS';
   qualAverageCount?: number;
   pointsConfig?: Array<{ minScore: number; points: number }>;
+  qualMode?: 'IN_PERSON' | 'ONLINE' | 'HYBRID';
+  qualWindowMinutes?: number;
+  customAuthWords?: string[];
   isVerified?: boolean;
   metadata?: TournamentMetadata;
   tiers?: TierInput[];
@@ -40,6 +43,9 @@ export interface TournamentRecord {
   qualFormat: 'HIGH_SCORE' | 'AVERAGE_OF_X' | 'POINTS';
   qualAverageCount: number | null;
   pointsConfig: Array<{ minScore: number; points: number }> | null;
+  qualMode?: 'IN_PERSON' | 'ONLINE' | 'HYBRID';
+  qualWindowMinutes?: number;
+  customAuthWords?: string[] | null;
   qualsClosed: boolean;
   isVerified: boolean;
   createdAt: Date;
@@ -75,6 +81,9 @@ export async function createTournament(input: TournamentInput): Promise<{
       qualFormat: input.qualFormat,
       qualAverageCount: input.qualAverageCount || null,
       pointsConfig: input.pointsConfig || null,
+      qualMode: input.qualMode || 'HYBRID',
+      qualWindowMinutes: input.qualWindowMinutes ?? 90,
+      customAuthWords: input.customAuthWords || null,
       isVerified: input.isVerified || false,
       metadata: input.metadata,
     })
@@ -260,6 +269,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     displayName: row.player.displayName || undefined,
     nickname: row.player.nickname || undefined,
     twitchUsername: row.player.twitchUsername || undefined,
+    twitchId: row.player.twitchId || undefined,
     country: row.player.country || undefined,
     avatarType: (row.player.avatarType as any) || 'flag',
     avatarUrl: row.player.avatarUrl || undefined,
@@ -287,6 +297,17 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     playerId: s.playerId,
     score: s.score,
     submittedAt: s.createdAt.getTime(),
+    submissionSource: s.submissionSource || 'IN_PERSON',
+    authWord: s.authWord || undefined,
+    twitchVodUrl: s.twitchVodUrl || undefined,
+    submittedTwitchId: s.submittedTwitchId || undefined,
+    submittedTwitchUsername: s.submittedTwitchUsername || undefined,
+    identityStatus: s.identityStatus || undefined,
+    status: s.status || 'VERIFIED',
+    timerLog: s.timerLog || undefined,
+    judgeNotes: s.judgeNotes || undefined,
+    verifiedBy: s.verifiedBy || undefined,
+    verifiedAt: s.verifiedAt ? new Date(s.verifiedAt).getTime() : undefined,
   }));
 
   const compositeTiers: TournamentTier[] = (tiersList as any[]).map((tier: any) => {
@@ -365,7 +386,12 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     qualFormat: t.qualFormat as any,
     qualAverageCount: t.qualAverageCount || undefined,
     pointsConfig: (t.pointsConfig as any) || undefined,
-    isLocked: Boolean(t.qualsClosed || meta.isLocked),
+    qualMode: (t.qualMode as any) || meta.qualMode || 'HYBRID',
+    qualWindowMinutes: t.qualWindowMinutes ?? meta.qualWindowMinutes ?? 90,
+    qualTimer: (meta.qualTimer as any) || undefined,
+    customAuthWords: (t.customAuthWords as string[]) || meta.customAuthWords || undefined,
+    qualsClosed: Boolean(t.qualsClosed),
+    isLocked: Boolean(meta.isLocked),
     tiers: compositeTiers,
     matchScores: {
       ...(meta.matchScores || {}),
@@ -377,7 +403,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     useOrgBranding: meta.useOrgBranding ?? true,
     logoUrl: meta.logoUrl || undefined,
     bannerUrl: meta.bannerUrl || undefined,
-    discordWebhookUrl: meta.discordWebhookUrl || undefined,
+    discordWebhookUrl: t.discordWebhookUrl || meta.discordWebhookUrl || undefined,
     themeColors: meta.themeColors || undefined,
     adminPinEncrypted: t.adminPinEncrypted || undefined,
   };
@@ -419,12 +445,20 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
     existing = await db.select().from(tournaments).where(eq(tournaments.slug, slug)).limit(1);
   }
 
+  const qualMode = tourney.qualMode || 'HYBRID';
+  const qualWindowMinutes = tourney.qualWindowMinutes ?? 90;
+  const customAuthWords = tourney.customAuthWords || null;
+
   const metadata = {
     organizationId: orgId,
     date: tourney.date || '',
     location: tourney.location || '',
     seedingMethod: tourney.seedingMethod || 'QUALIFIERS',
     manualSeeds: tourney.manualSeeds || [],
+    qualMode,
+    qualWindowMinutes,
+    qualTimer: tourney.qualTimer || undefined,
+    customAuthWords: customAuthWords || undefined,
     isLocked: Boolean(tourney.isLocked),
     useOrgBranding: tourney.useOrgBranding ?? true,
     logoUrl: tourney.logoUrl || null,
@@ -445,7 +479,10 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
       qualFormat: tourney.qualFormat,
       qualAverageCount: tourney.qualAverageCount || null,
       pointsConfig: tourney.pointsConfig || null,
-      qualsClosed: Boolean(tourney.isLocked),
+      qualMode,
+      qualWindowMinutes,
+      customAuthWords,
+      qualsClosed: Boolean(tourney.qualsClosed || tourney.isLocked),
       metadata,
     };
     if (tourney.adminPinEncrypted !== undefined) {
@@ -466,7 +503,10 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
         qualFormat: tourney.qualFormat,
         qualAverageCount: tourney.qualAverageCount || null,
         pointsConfig: tourney.pointsConfig || null,
-        qualsClosed: Boolean(tourney.isLocked),
+        qualMode,
+        qualWindowMinutes,
+        customAuthWords,
+        qualsClosed: Boolean(tourney.qualsClosed || tourney.isLocked),
         isVerified: false,
         adminPinEncrypted: tourney.adminPinEncrypted || null,
         metadata,
@@ -674,17 +714,21 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
     }
   }
 
-  // Sync tournament players
+  // Sync tournament players (non-destructive upsert merge)
   if (Array.isArray(tourney.playersPool)) {
-    // Delete existing tournament players for this tournament
-    await db.delete(tournamentPlayers).where(eq(tournamentPlayers.tournamentId, savedTourneyId));
-    // Filter to valid UUID players
+    const existingDbPlayers = await db
+      .select()
+      .from(tournamentPlayers)
+      .where(eq(tournamentPlayers.tournamentId, savedTourneyId));
+    const existingDbPlayerIds = new Set((existingDbPlayers as any[]).map((tp: any) => tp.playerId));
+
     const validPlayers = tourney.playersPool.filter(p => isUuid(p.id));
-    if (validPlayers.length > 0) {
-      // Chunk insert if large
+    const playersToInsert = validPlayers.filter(p => !existingDbPlayerIds.has(p.id));
+
+    if (playersToInsert.length > 0) {
       const CHUNK = 50;
-      for (let i = 0; i < validPlayers.length; i += CHUNK) {
-        const chunk = validPlayers.slice(i, i + CHUNK);
+      for (let i = 0; i < playersToInsert.length; i += CHUNK) {
+        const chunk = playersToInsert.slice(i, i + CHUNK);
         await db.insert(tournamentPlayers).values(
           chunk.map(p => {
             const tp = tourney.tournamentPlayers?.[p.id];
@@ -699,28 +743,152 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
         );
       }
     }
+
+    // Fetch existing qualifier submissions early so we can cross-reference verified online runs
+    const existingDbSubs = await db
+      .select()
+      .from(qualifierSubmissions)
+      .where(eq(qualifierSubmissions.tournamentId, savedTourneyId));
+
+    // Update existing players' seeds or qualsCompleted if provided
+    for (const p of validPlayers) {
+      if (existingDbPlayerIds.has(p.id)) {
+        const tp = tourney.tournamentPlayers?.[p.id];
+        if (tp) {
+          const existingPlayerRecord = (existingDbPlayers as any[]).find((r: any) => r.playerId === p.id);
+          // Check if competitor has an active VERIFIED online submission in PostgreSQL
+          const hasVerifiedDbOnlineSub = existingDbSubs.some(
+            (s: any) => s.playerId === p.id && s.submissionSource === 'ONLINE' && s.status === 'VERIFIED'
+          );
+          const isDbCompleted = Boolean(existingPlayerRecord?.qualsCompleted || hasVerifiedDbOnlineSub);
+
+          let isCompleted = Boolean(tp.qualsCompleted || tp.isVerified);
+          // If the player is already verified in PostgreSQL by judge adjudication, do not let a stale
+          // admin tab's qualsCompleted: false downgrade their status in DB.
+          if (!isCompleted && isDbCompleted && hasVerifiedDbOnlineSub) {
+            isCompleted = true;
+          }
+
+          await db
+            .update(tournamentPlayers)
+            .set({
+              seed: tp.seed || null,
+              qualsCompleted: isCompleted,
+            })
+            .where(
+              and(
+                eq(tournamentPlayers.tournamentId, savedTourneyId),
+                eq(tournamentPlayers.playerId, p.id)
+              )
+            );
+        }
+      }
+    }
   }
 
-  // Sync qualifier submissions
+  // Sync qualifier submissions (non-destructive upsert merge)
   if (Array.isArray(tourney.qualifierSubmissions)) {
-    await db.delete(qualifierSubmissions).where(eq(qualifierSubmissions.tournamentId, savedTourneyId));
+    const existingDbSubs = await db
+      .select()
+      .from(qualifierSubmissions)
+      .where(eq(qualifierSubmissions.tournamentId, savedTourneyId));
+    const existingDbSubMap = new Map((existingDbSubs as any[]).map(s => [s.id, s]));
+
     const validSubs = tourney.qualifierSubmissions.filter(s => isUuid(s.playerId));
-    if (validSubs.length > 0) {
-      const CHUNK = 50;
-      for (let i = 0; i < validSubs.length; i += CHUNK) {
-        const chunk = validSubs.slice(i, i + CHUNK);
-        await db.insert(qualifierSubmissions).values(
-          chunk.map(s => {
-            const isOurUuid = isUuid(s.id) && s.tournamentId === savedTourneyId;
-            return {
-              id: isOurUuid ? s.id : crypto.randomUUID(),
-              tournamentId: savedTourneyId,
-              playerId: s.playerId,
-              score: s.score,
-              createdAt: new Date(s.submittedAt || Date.now()),
-            };
+    const toInsert: Array<typeof qualifierSubmissions.$inferInsert> = [];
+
+    for (const s of validSubs) {
+      const isOurUuid = isUuid(s.id) && s.tournamentId === savedTourneyId;
+      if (isOurUuid && existingDbSubMap.has(s.id)) {
+        const existingSub = existingDbSubMap.get(s.id)!;
+        const isOnline = (existingSub as any).submissionSource === 'ONLINE';
+
+        if (isOnline) {
+          const dbStatus = (existingSub as any).status;
+          const isDbFinished = dbStatus !== 'IN_PROGRESS' && dbStatus !== 'NOT_STARTED';
+          const isIncomingStaleStatus = s.status === 'IN_PROGRESS' || s.status === 'NOT_STARTED';
+
+          // 1. Protect finished online submissions from stale IN_PROGRESS/NOT_STARTED overwrites
+          if (isDbFinished && isIncomingStaleStatus) {
+            continue;
+          }
+
+          // 2. Protect terminal judge rulings (DNQ / DQ) from stale overwrites
+          if ((dbStatus === 'DNQ' || dbStatus === 'DQ') && (s.status === 'IN_PROGRESS' || s.status === 'NOT_STARTED' || s.status === 'SUBMITTED')) {
+            continue;
+          }
+
+          // 3. Protect judge VERIFIED runs from stale unadjudicated SUBMITTED snapshots:
+          // A stale snapshot has status === 'SUBMITTED' with no verifiedAt/verifiedBy, while the DB was already verified by a judge.
+          if (dbStatus === 'VERIFIED' && s.status === 'SUBMITTED' && !s.verifiedBy && !s.verifiedAt && (existingSub as any).verifiedAt) {
+            continue;
+          }
+        }
+
+        const resolvedScore = (isOnline && (existingSub as any).score > 0 && (!s.score || s.score === 0))
+          ? (existingSub as any).score
+          : s.score;
+
+        const resolvedStatus = (s.status as any) || (existingSub as any).status || 'SUBMITTED';
+
+        // Update existing record
+        await db
+          .update(qualifierSubmissions)
+          .set({
+            score: resolvedScore,
+            status: resolvedStatus,
+            submissionSource: (existingSub as any).submissionSource || (s.submissionSource as any) || 'IN_PERSON',
+            authWord: (existingSub as any).authWord || s.authWord || null,
+            twitchVodUrl: (existingSub as any).twitchVodUrl || s.twitchVodUrl || null,
+            submittedTwitchId: (existingSub as any).submittedTwitchId || s.submittedTwitchId || null,
+            submittedTwitchUsername: (existingSub as any).submittedTwitchUsername || s.submittedTwitchUsername || null,
+            identityStatus: (existingSub as any).identityStatus || (s.identityStatus as any) || null,
+            timerLog: (existingSub as any).timerLog || s.timerLog || null,
+            judgeNotes: s.judgeNotes || (existingSub as any).judgeNotes || null,
+            verifiedBy: s.verifiedBy || (existingSub as any).verifiedBy || null,
+            verifiedAt: s.verifiedAt ? new Date(s.verifiedAt) : ((existingSub as any).verifiedAt || null),
           })
-        );
+          .where(eq(qualifierSubmissions.id, s.id));
+      } else {
+        // Issue 1: If s.submissionSource === 'ONLINE', NEVER insert it via saveFullTournament!
+        // Online submissions are created and replaced exclusively by the dedicated /qualify/* endpoints.
+        // Inserting here resurrects deleted placeholder rows (e.g. replaced IN_PROGRESS or voided rows)
+        // when a stale admin client sends an outdated qualifierSubmissions array in PUT.
+        if (s.submissionSource === 'ONLINE') {
+          continue;
+        }
+
+        // Also, if isOurUuid is true but existingDbSubMap does NOT have it, this was a previously persisted
+        // submission in this tournament that was deleted via DELETE /qualifiers/:subId or clear. Do not resurrect!
+        if (isOurUuid && existingDbSubs.length > 0) {
+          continue;
+        }
+
+        toInsert.push({
+          id: isOurUuid ? s.id : crypto.randomUUID(),
+          tournamentId: savedTourneyId,
+          playerId: s.playerId,
+          score: s.score,
+          submissionSource: (s.submissionSource as any) || 'IN_PERSON',
+          authWord: s.authWord || null,
+          twitchVodUrl: s.twitchVodUrl || null,
+          submittedTwitchId: s.submittedTwitchId || null,
+          submittedTwitchUsername: s.submittedTwitchUsername || null,
+          identityStatus: (s.identityStatus as any) || null,
+          status: (s.status as any) || 'SUBMITTED',
+          timerLog: s.timerLog || null,
+          judgeNotes: s.judgeNotes || null,
+          verifiedBy: s.verifiedBy || null,
+          verifiedAt: s.verifiedAt ? new Date(s.verifiedAt) : null,
+          createdAt: new Date(s.submittedAt || Date.now()),
+        });
+      }
+    }
+
+    if (toInsert.length > 0) {
+      const CHUNK = 50;
+      for (let i = 0; i < toInsert.length; i += CHUNK) {
+        await db.insert(qualifierSubmissions).values(toInsert.slice(i, i + CHUNK));
       }
     }
   }

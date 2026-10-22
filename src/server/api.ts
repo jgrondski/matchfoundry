@@ -1,5 +1,5 @@
-import { getDb, tournaments, systemSettings } from '../db';
-import { sql, eq, or } from 'drizzle-orm';
+import { getDb, tournaments, systemSettings, tournamentPlayers, qualifierSubmissions } from '../db';
+import { sql, eq, or, and } from 'drizzle-orm';
 import type { IncomingMessage, ServerResponse } from 'http';
 import {
   encryptPin,
@@ -17,6 +17,7 @@ import {
   getPlayer,
   updatePlayer,
   deletePlayer,
+  deleteAllUnattachedPlayers,
 } from '../api/players';
 import {
   listFullTournaments,
@@ -29,6 +30,17 @@ import {
   submitQualifierScore,
   submitQualifiersBatch,
   clearTournamentQualifiers,
+  resolveTwitchIdentity,
+  claimOrRegisterOnlineCompetitor,
+  getOnlineQualSession,
+  startOnlineQualSession,
+  submitOnlineQualScores,
+  requestOnlineQualReset,
+  voidAndResetOnlineQualSession,
+  adjudicateOnlineSubmission,
+  verifyAllQualifierSubmissions,
+  listOnlineQualSessions,
+  dispatchDiscordWebhook,
 } from '../api/qualifiers';
 import { clearTournamentMatches } from '../api/brackets';
 import {
@@ -358,6 +370,152 @@ export function createApiMiddleware() {
         return sendJson(res, 200, { success: true });
       }
 
+      // --- TWITCH OAUTH 2.0 ENDPOINTS ---
+      // GET /api/auth/twitch/authorize (and POST)
+      if (pathname === '/api/auth/twitch/authorize' && (method === 'GET' || method === 'POST')) {
+        const redirectUri =
+          url.searchParams.get('redirect_uri') ||
+          url.searchParams.get('redirectUri') ||
+          body?.redirectUri ||
+          body?.redirect_uri ||
+          '';
+        const state =
+          url.searchParams.get('state') ||
+          body?.state ||
+          '';
+        const mockParam = url.searchParams.get('mock');
+        const isMock =
+          mockParam === 'true' ||
+          body?.mock === true ||
+          !process.env.TWITCH_CLIENT_ID;
+        const mockUsername =
+          url.searchParams.get('mock_username') ||
+          url.searchParams.get('mockUsername') ||
+          body?.mockUsername ||
+          'MockCompetitor';
+
+        if (isMock) {
+          const mockCode = `mock_code_${encodeURIComponent(mockUsername)}`;
+          const mockRedirectUrl = redirectUri
+            ? `${redirectUri}${redirectUri.includes('?') ? '&' : '?'}code=${mockCode}&state=${encodeURIComponent(state)}`
+            : `/mock-auth-callback?code=${mockCode}&state=${encodeURIComponent(state)}`;
+
+          if (
+            url.searchParams.get('format') === 'json' ||
+            (req.headers.accept && req.headers.accept.includes('application/json')) ||
+            method === 'POST'
+          ) {
+            return sendJson(res, 200, {
+              url: mockRedirectUrl,
+              mock: true,
+              code: mockCode,
+            });
+          }
+          res.writeHead(302, { Location: mockRedirectUrl });
+          res.end();
+          return;
+        }
+
+        const twitchClientId = process.env.TWITCH_CLIENT_ID;
+        const twitchAuthUrl = `https://id.twitch.tv/oauth2/authorize?client_id=${twitchClientId}&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&response_type=code&scope=user:read:email&state=${encodeURIComponent(state)}`;
+
+        if (
+          url.searchParams.get('format') === 'json' ||
+          (req.headers.accept && req.headers.accept.includes('application/json')) ||
+          method === 'POST'
+        ) {
+          return sendJson(res, 200, { url: twitchAuthUrl, mock: false });
+        }
+        res.writeHead(302, { Location: twitchAuthUrl });
+        res.end();
+        return;
+      }
+
+      // POST /api/auth/twitch/callback (and GET)
+      if (pathname === '/api/auth/twitch/callback' && (method === 'POST' || method === 'GET')) {
+        const code =
+          url.searchParams.get('code') ||
+          body?.code ||
+          '';
+        const redirectUri =
+          url.searchParams.get('redirect_uri') ||
+          url.searchParams.get('redirectUri') ||
+          body?.redirectUri ||
+          body?.redirect_uri ||
+          '';
+
+        if (!code) {
+          return sendError(res, 400, 'Authorization code is required');
+        }
+
+        // Mock Mode Fallback
+        if (
+          code.startsWith('mock_code_') ||
+          code === 'mock' ||
+          !process.env.TWITCH_CLIENT_SECRET
+        ) {
+          const rawUser = code.startsWith('mock_code_')
+            ? decodeURIComponent(code.slice('mock_code_'.length))
+            : (body?.mockUsername || body?.username || 'MockCompetitor');
+          const cleanUsername = rawUser.trim().replace(/^@/, '') || 'MockCompetitor';
+          const cleanId = `tw_${cleanUsername.toLowerCase()}`;
+          return sendJson(res, 200, {
+            success: true,
+            twitchUser: {
+              id: cleanId,
+              login: cleanUsername.toLowerCase(),
+              displayName: cleanUsername,
+              profileImageUrl: `https://avatar.vercel.sh/${cleanUsername.toLowerCase()}.png`,
+            },
+          });
+        }
+
+        // Real Twitch OAuth 2.0 Token Exchange
+        try {
+          const tokenRes = await fetch('https://id.twitch.tv/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: process.env.TWITCH_CLIENT_ID!,
+              client_secret: process.env.TWITCH_CLIENT_SECRET!,
+              code,
+              grant_type: 'authorization_code',
+              redirect_uri: redirectUri,
+            }),
+          });
+          const tokenData: any = await tokenRes.json();
+          if (!tokenRes.ok || !tokenData.access_token) {
+            return sendError(res, 400, tokenData.message || 'Twitch token exchange failed');
+          }
+
+          const userRes = await fetch('https://api.twitch.tv/helix/users', {
+            headers: {
+              'Client-ID': process.env.TWITCH_CLIENT_ID!,
+              Authorization: `Bearer ${tokenData.access_token}`,
+            },
+          });
+          const userData: any = await userRes.json();
+          const u = userData?.data?.[0];
+          if (!u) {
+            return sendError(res, 400, 'Failed to fetch Twitch user profile');
+          }
+
+          return sendJson(res, 200, {
+            success: true,
+            twitchUser: {
+              id: u.id,
+              login: u.login,
+              displayName: u.display_name,
+              profileImageUrl: u.profile_image_url,
+            },
+          });
+        } catch (err: any) {
+          return sendError(res, 500, err.message || 'Twitch OAuth callback error');
+        }
+      }
+
       // --- PLAYERS ENDPOINTS ---
       // GET /api/players
       if (pathname === '/api/players' && method === 'GET') {
@@ -390,9 +548,16 @@ export function createApiMiddleware() {
 
       // POST /api/players
       if (pathname === '/api/players' && method === 'POST') {
-        if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
+        if (!checkAuth(req, res, 'TOURNAMENT_ADMIN')) return;
         const created = await createPlayer(body);
         return sendJson(res, 201, created);
+      }
+
+      // DELETE /api/players (Bulk clean unattached players)
+      if (pathname === '/api/players' && method === 'DELETE') {
+        if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
+        const result = await deleteAllUnattachedPlayers();
+        return sendJson(res, 200, result);
       }
 
       // /api/players/:id
@@ -405,15 +570,19 @@ export function createApiMiddleware() {
           return sendJson(res, 200, p);
         }
         if (method === 'PUT') {
-          if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN')) return;
           const updated = await updatePlayer(playerId, body);
           if (!updated) return sendError(res, 404, 'Player not found');
           return sendJson(res, 200, updated);
         }
         if (method === 'DELETE') {
           if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
-          const deleted = await deletePlayer(playerId);
-          return sendJson(res, 200, { success: deleted });
+          const result = await deletePlayer(playerId);
+          if (!result.success) {
+            const statusCode = result.error === 'Player not found' ? 404 : 400;
+            return sendError(res, statusCode, result.error || 'Cannot delete player');
+          }
+          return sendJson(res, 200, { success: true });
         }
       }
 
@@ -592,6 +761,11 @@ export function createApiMiddleware() {
         // POST /api/tournaments/:id/qualifiers
         if (subAction === 'qualifiers' && method === 'POST') {
           if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const tourneyCheck = await getFullTournament(tourneyId);
+          if (!tourneyCheck) return sendError(res, 404, 'Tournament not found');
+          if (tourneyCheck.isLocked) {
+            return sendError(res, 400, 'Cannot modify qualifier scores while brackets are locked. Unlock brackets first.');
+          }
           await submitQualifierScore(tourneyId, body.playerId, body.score);
           const t = await getFullTournament(tourneyId);
           if (t && !t.isLocked) {
@@ -605,6 +779,11 @@ export function createApiMiddleware() {
         // POST /api/tournaments/:id/qualifiers/batch
         if (subAction === 'qualifiers/batch' && method === 'POST') {
           if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const tourneyCheck = await getFullTournament(tourneyId);
+          if (!tourneyCheck) return sendError(res, 404, 'Tournament not found');
+          if (tourneyCheck.isLocked) {
+            return sendError(res, 400, 'Cannot modify qualifier scores while brackets are locked. Unlock brackets first.');
+          }
           await submitQualifiersBatch(tourneyId, body.submissions || body);
           const t = await getFullTournament(tourneyId);
           if (t && !t.isLocked) {
@@ -615,16 +794,199 @@ export function createApiMiddleware() {
           return sendJson(res, 201, t);
         }
 
+        // --- ONLINE QUALIFIERS (PHASE 10) ---
+        // POST /api/tournaments/:id/qualify/resolve-identity
+        if (subAction === 'qualify/resolve-identity' && method === 'POST') {
+          const result = await resolveTwitchIdentity(tourneyId, {
+            twitchId: body?.twitchId,
+            twitchUsername: body?.twitchUsername,
+          });
+          return sendJson(res, 200, result);
+        }
+
+        // POST /api/tournaments/:id/qualify/claim-identity
+        if (subAction === 'qualify/claim-identity' && method === 'POST') {
+          const result = await claimOrRegisterOnlineCompetitor(tourneyId, {
+            twitchId: body?.twitchId,
+            twitchUsername: body?.twitchUsername,
+            avatarUrl: body?.avatarUrl,
+            mode: body?.mode || body?.action,
+            playerId: body?.playerId || body?.targetPlayerId,
+            newPlayer: body?.newPlayer,
+          });
+          return sendJson(res, 200, result);
+        }
+
+        // GET /api/tournaments/:id/qualify/session
+        if (subAction === 'qualify/session' && method === 'GET') {
+          const playerId = url.searchParams.get('playerId') || undefined;
+          const twitchId = url.searchParams.get('twitchId') || undefined;
+          const session = await getOnlineQualSession(tourneyId, { playerId, twitchId });
+          return sendJson(res, 200, session);
+        }
+
+        // GET /api/tournaments/:id/qualify/sessions (Review Queue - Tournament Admin only)
+        if (subAction === 'qualify/sessions' && method === 'GET') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const sessions = await listOnlineQualSessions(tourneyId);
+          return sendJson(res, 200, sessions);
+        }
+
+        // POST /api/tournaments/:id/qualify/start
+        if (subAction === 'qualify/start' && method === 'POST') {
+          const session = await startOnlineQualSession(tourneyId, {
+            playerId: body?.playerId,
+            playerName: body?.playerName,
+            twitchUsername: body?.twitchUsername || body?.submittedTwitchUsername,
+            submittedTwitchId: body?.submittedTwitchId,
+            submittedTwitchUsername: body?.submittedTwitchUsername || body?.twitchUsername,
+            identityStatus: body?.identityStatus,
+            nowMs: body?.nowMs,
+          });
+          const p = await getPlayer(session.playerId);
+          void dispatchDiscordWebhook(tourneyId, 'START', {
+            playerName: p?.name || session.submittedTwitchUsername || 'Player',
+            twitchUsername: session.submittedTwitchUsername || undefined,
+            authWord: session.authWord || undefined,
+          });
+          return sendJson(res, 200, {
+            ...session,
+            player: p || undefined,
+          });
+        }
+
+        // POST /api/tournaments/:id/qualify/submit
+        if (subAction === 'qualify/submit' && method === 'POST') {
+          const session = await submitOnlineQualScores(tourneyId, {
+            playerId: body?.playerId,
+            scores: body?.scores,
+            twitchVodUrl: body?.twitchVodUrl,
+            submittedTwitchId: body?.submittedTwitchId,
+            submittedTwitchUsername: body?.submittedTwitchUsername,
+            identityStatus: body?.identityStatus,
+            nowMs: body?.nowMs,
+          });
+          const t = await getFullTournament(tourneyId);
+          if (t && !t.isLocked) {
+            t.tiers = generateDraftBracketsForTournament(t);
+            await saveFullTournament(t);
+          }
+          const p = await getPlayer(session.playerId);
+          const topScore = session.scores.length > 0 ? Math.max(...session.scores) : undefined;
+          void dispatchDiscordWebhook(tourneyId, 'SUBMIT', {
+            playerName: p?.name || session.submittedTwitchUsername || 'Player',
+            twitchUsername: session.submittedTwitchUsername || undefined,
+            twitchVodUrl: session.twitchVodUrl || undefined,
+            score: topScore,
+          });
+          return sendJson(res, 200, session);
+        }
+
+        // POST /api/tournaments/:id/qualify/reset-request
+        if (subAction === 'qualify/reset-request' && method === 'POST') {
+          const session = await requestOnlineQualReset(tourneyId, {
+            playerId: body?.playerId,
+            reason: body?.reason,
+            nowMs: body?.nowMs,
+          });
+          return sendJson(res, 200, session);
+        }
+
+        // POST /api/tournaments/:id/qualify/void-reset (Judge / Tournament Admin only)
+        if (subAction === 'qualify/void-reset' && method === 'POST') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const session = await voidAndResetOnlineQualSession(tourneyId, {
+            playerId: body?.playerId,
+            judgeNote: body?.judgeNote,
+            nowMs: body?.nowMs,
+          });
+          const t = await getFullTournament(tourneyId);
+          if (t && !t.isLocked) {
+            t.tiers = generateDraftBracketsForTournament(t);
+            await saveFullTournament(t);
+          }
+          return sendJson(res, 200, session);
+        }
+
+        // POST /api/tournaments/:id/qualify/adjudicate (Judge / Tournament Admin only)
+        if (subAction === 'qualify/adjudicate' && method === 'POST') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const session = await adjudicateOnlineSubmission(tourneyId, {
+            playerId: body?.playerId,
+            action: body?.action,
+            scores: body?.scores,
+            judgeNotes: body?.judgeNotes,
+            verifiedBy: body?.verifiedBy,
+            targetPlayerId: body?.targetPlayerId,
+            newPlayer: body?.newPlayer,
+          });
+          const t = await getFullTournament(tourneyId);
+          if (t && !t.isLocked) {
+            t.tiers = generateDraftBracketsForTournament(t);
+            await saveFullTournament(t);
+          }
+          if (session && (body?.action === 'VERIFY' || body?.action === 'EDIT_AND_VERIFY')) {
+            const p = await getPlayer(session.playerId);
+            const topScore = session.scores.length > 0 ? Math.max(...session.scores) : undefined;
+            void dispatchDiscordWebhook(tourneyId, 'VERIFIED', {
+              playerName: p?.name || session.submittedTwitchUsername || 'Player',
+              score: topScore,
+              judgeName: body?.verifiedBy || 'Judge',
+            });
+          }
+          return sendJson(res, 200, session);
+        }
+
+        // POST /api/tournaments/:id/qualify/verify-all (Judge / Tournament Admin only)
+        if (subAction === 'qualify/verify-all' && method === 'POST') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const result = await verifyAllQualifierSubmissions(tourneyId, body?.verifiedBy || 'Judge');
+          const t = await getFullTournament(tourneyId);
+          if (t && !t.isLocked) {
+            t.tiers = generateDraftBracketsForTournament(t);
+            await saveFullTournament(t);
+          }
+          return sendJson(res, 200, result);
+        }
+
         // DELETE /api/tournaments/:id/qualifiers (Destructive clear - Master Admin only!)
         if (subAction === 'qualifiers' && method === 'DELETE') {
           if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');
 
+          const hasRecordedScores = Object.values(t.matchScores || {}).some(
+            record =>
+              record.isComplete ||
+              record.games.some(
+                g => g.player1Points !== null || g.player2Points !== null || g.winnerPlayerId !== null
+              ) ||
+              record.player1Wins > 0 ||
+              record.player2Wins > 0 ||
+              Boolean(record.winnerPlayerId)
+          );
+
+          if (t.isLocked || hasRecordedScores) {
+            return sendError(
+              res,
+              400,
+              'Cannot clear qualifiers while bracket is locked or match scores exist. Clear matches first.'
+            );
+          }
+
           await clearTournamentQualifiers(t.id);
           t.qualifierSubmissions = [];
           t.qualifiers = [];
           t.manualSeeds = [];
+          if (t.tournamentPlayers) {
+            for (const pid of Object.keys(t.tournamentPlayers)) {
+              t.tournamentPlayers[pid] = {
+                ...t.tournamentPlayers[pid],
+                qualsCompleted: false,
+                isVerified: false,
+              };
+            }
+          }
           if (!t.isLocked) {
             t.tiers = generateDraftBracketsForTournament(t);
           }
@@ -655,6 +1017,8 @@ export function createApiMiddleware() {
 
           await clearTournamentMatches(t.id);
           await clearTournamentQualifiers(t.id);
+          const db = getDb();
+          await db.delete(tournamentPlayers).where(eq(tournamentPlayers.tournamentId, t.id));
           t.playersPool = [];
           t.qualifierSubmissions = [];
           t.qualifiers = [];
@@ -662,6 +1026,7 @@ export function createApiMiddleware() {
           t.matchScores = {};
           t.tournamentPlayers = {};
           t.isLocked = false;
+          t.qualsClosed = false;
           t.tiers = t.tiers.map(tier => ({
             ...tier,
             isLocked: false,
@@ -732,11 +1097,106 @@ export function createApiMiddleware() {
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');
 
-          t.qualifierSubmissions = (t.qualifierSubmissions || []).filter(s => s.id !== subId);
-          if (!t.isLocked) {
-            t.tiers = generateDraftBracketsForTournament(t);
+          if (t.isLocked) {
+            return sendError(
+              res,
+              400,
+              'Cannot modify qualifier scores while brackets are locked. Unlock brackets first.'
+            );
           }
-          const saved = await saveFullTournament(t);
+
+          if (isUuid(subId)) {
+            const db = getDb();
+            await db
+              .delete(qualifierSubmissions)
+              .where(
+                and(
+                  eq(qualifierSubmissions.id, subId),
+                  eq(qualifierSubmissions.tournamentId, t.id)
+                )
+              );
+          }
+
+          const fresh = await getFullTournament(t.id);
+          if (!fresh) return sendError(res, 404, 'Tournament not found');
+
+          if (!fresh.isLocked) {
+            fresh.tiers = generateDraftBracketsForTournament(fresh);
+            const saved = await saveFullTournament(fresh);
+            return sendJson(res, 200, saved);
+          }
+          return sendJson(res, 200, fresh);
+        }
+
+        // DELETE /api/tournaments/:id/players/:playerId
+        const playerDelMatch = subAction.match(/^players\/([^/]+)$/);
+        if (playerDelMatch && method === 'DELETE') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const playerId = playerDelMatch[1];
+          const t = await getFullTournament(tourneyId);
+          if (!t) return sendError(res, 404, 'Tournament not found');
+
+          const hasRecordedMatches = Object.values(t.matchScores || {}).some(
+            m =>
+              (m.winnerPlayerId === playerId || m.loserPlayerId === playerId) ||
+              (m.isComplete && (m.games || []).length > 0)
+          );
+          if (hasRecordedMatches) {
+            return sendError(
+              res,
+              400,
+              'Cannot remove competitor who has recorded matches. Clear match scores first.'
+            );
+          }
+
+          if (t.isLocked) {
+            return sendError(
+              res,
+              400,
+              'Cannot remove competitor while brackets are locked. Unlock brackets first.'
+            );
+          }
+
+          const qualSubs = (t.qualifierSubmissions || []).filter(s => s.playerId === playerId);
+          if (qualSubs.length > 0) {
+            return sendError(
+              res,
+              400,
+              `Cannot remove competitor from roster while they have recorded qualifier scores (${qualSubs.length} submission(s)). Delete their qualifier scores first.`
+            );
+          }
+
+          if (isUuid(playerId)) {
+            const db = getDb();
+            await db
+              .delete(tournamentPlayers)
+              .where(
+                and(
+                  eq(tournamentPlayers.tournamentId, t.id),
+                  eq(tournamentPlayers.playerId, playerId)
+                )
+              );
+          }
+
+          const fresh = await getFullTournament(t.id);
+          if (!fresh) return sendError(res, 404, 'Tournament not found');
+
+          fresh.manualSeeds = (fresh.manualSeeds || []).filter(id => id !== playerId);
+          if (fresh.tournamentPlayers) {
+            fresh.manualSeeds.forEach((id, idx) => {
+              if (fresh.tournamentPlayers[id]) {
+                fresh.tournamentPlayers[id] = {
+                  ...fresh.tournamentPlayers[id],
+                  seed: idx + 1,
+                };
+              }
+            });
+          }
+
+          if (!fresh.isLocked) {
+            fresh.tiers = generateDraftBracketsForTournament(fresh);
+          }
+          const saved = await saveFullTournament(fresh);
           return sendJson(res, 200, saved);
         }
 
@@ -779,7 +1239,6 @@ export function createApiMiddleware() {
 
           t.isLocked = false;
           t.tiers = t.tiers.map(tr => ({ ...tr, isLocked: false }));
-          t.tiers = generateDraftBracketsForTournament(t);
           const saved = await saveFullTournament(t);
           return sendJson(res, 200, saved);
         }

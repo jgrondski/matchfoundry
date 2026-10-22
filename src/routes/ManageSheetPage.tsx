@@ -162,22 +162,24 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
           })}
         </div>
 
-        <Link
-          to={`/${tournament.slug}/manage/bracket/${tier.slug}`}
-          className="btn btn-secondary"
-          style={{
-            padding: '0.35rem 0.75rem',
-            fontSize: '0.75rem',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            color: 'var(--color-text-secondary)',
-          }}
-          title="Open Visual Bracket for this Tier"
-        >
-          <GitBranch size={13} />
-          <span>View Bracket</span>
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <Link
+            to={`/${tournament.slug}/manage/bracket/${tier.slug}`}
+            className="btn btn-secondary"
+            style={{
+              padding: '0.35rem 0.75rem',
+              fontSize: '0.75rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              color: 'var(--color-text-secondary)',
+            }}
+            title="Open Visual Bracket for this Tier"
+          >
+            <GitBranch size={13} />
+            <span>View Bracket</span>
+          </Link>
+        </div>
       </div>
 
       <main style={{ flex: 1, padding: '1.25rem 2rem', maxWidth: '100%', width: '100%', margin: '0 auto', overflowX: 'auto' }}>

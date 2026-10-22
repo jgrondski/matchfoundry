@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Tournament, TournamentTier } from '../features/tournament/types';
 import { useTournament } from '../features/tournament/store';
 import { useOrganization } from '../features/organizations/store';
 import { getStoredTierSlug } from '../features/tournament/tierStorage';
 import { VerifyBracketModal } from '../features/tournament/components/VerifyBracketModal';
+import { countPendingReviewSessions } from '../features/online-quals/sessionDerivation';
+import { TournamentQualTimerHud } from '../features/qualifiers/components/TournamentQualTimerHud';
 import {
   Layers,
   ChevronDown,
@@ -22,6 +24,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   Check,
+  CheckCircle2,
   Building2,
   Search,
   ExternalLink,
@@ -37,6 +40,7 @@ export type SidebarNavView =
   | 'sheet'
   | 'bracket'
   | 'judge'
+  | 'review'
   | 'obs'
   | 'players'
   | 'settings'
@@ -75,6 +79,8 @@ export function getTournamentTargetUrl(targetTourney: Tournament, view?: Sidebar
         return tierSlug ? `/${targetTourney.slug}/manage/bracket/${tierSlug}` : `/${targetTourney.slug}/manage/bracket`;
       case 'judge':
         return tierSlug ? `/${targetTourney.slug}/manage/judge?tier=${tierSlug}` : `/${targetTourney.slug}/manage/judge`;
+      case 'review':
+        return `/${targetTourney.slug}/manage/review`;
       case 'obs':
         return `/${targetTourney.slug}/obs`;
       case 'players':
@@ -238,6 +244,11 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
     return () => document.removeEventListener('click', handleClickOutside);
   }, [isTournamentMenuOpen]);
 
+  const pendingReviewCount = useMemo(
+    () => countPendingReviewSessions(activeTourney),
+    [activeTourney]
+  );
+
   const navItems = [
     {
       key: 'leaderboard' as const,
@@ -277,6 +288,17 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
       icon: Scale,
       to: slug ? (currentTierSlug ? `/${slug}/manage/judge?tier=${currentTierSlug}` : `/${slug}/manage/judge`) : '/',
       badge: !isAuthorized ? '🔒' : null,
+    },
+    {
+      key: 'review' as const,
+      label: pendingReviewCount > 0 ? `Qual Review (${pendingReviewCount})` : 'Qual Review',
+      icon: CheckCircle2,
+      to: slug ? (isAuthorized ? `/${slug}/manage/review` : `/${slug}/manage/review`) : '/',
+      badge: !isAuthorized
+        ? '🔒'
+        : pendingReviewCount > 0
+        ? String(pendingReviewCount)
+        : null,
     },
     {
       key: 'obs' as const,
@@ -895,6 +917,15 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                   <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>↗</span>
                 )}
               </Link>
+            </div>
+
+            {/* Consolidated Admin Qual Timer HUD */}
+            <div style={{ marginTop: '0.45rem' }}>
+              <TournamentQualTimerHud
+                tournament={activeTourney}
+                sidebar={true}
+                isCollapsed={isCollapsed}
+              />
             </div>
           </div>
         )}

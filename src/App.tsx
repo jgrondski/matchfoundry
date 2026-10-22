@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { TournamentProvider } from './features/tournament/store';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { TournamentProvider, useTournament } from './features/tournament/store';
 import { OrganizationProvider } from './features/organizations/store';
 import { TournamentSwitcherPage } from './routes/TournamentSwitcherPage';
 import { OrganizationDirectoryPage } from './routes/OrganizationDirectoryPage';
@@ -21,6 +21,52 @@ import { Database, AlertTriangle } from 'lucide-react';
 import { AuthProvider } from './features/auth/AuthContext';
 import { RequireTournamentAdmin, RequireMasterAdmin } from './features/auth/RouteGuards';
 import { AdminLoginPage } from './routes/AdminLoginPage';
+import { PublicQualifyPage } from './routes/PublicQualifyPage';
+import { ManageReviewPage } from './routes/ManageReviewPage';
+
+/**
+ * LiveRouteSync: Automatically revalidates live tournament data from the PostgreSQL API
+ * on every route change and whenever the browser window regains focus.
+ */
+const LiveRouteSync: React.FC = () => {
+  const location = useLocation();
+  const { refreshTournament } = useTournament();
+
+  useEffect(() => {
+    if (typeof fetch === 'undefined') return;
+
+    const segments = location.pathname.split('/').filter(Boolean);
+    const nonTournamentPrefixes = new Set(['admin', 'login', 'organizations', 'org', 'players']);
+
+    if (segments.length > 0 && !nonTournamentPrefixes.has(segments[0])) {
+      const slug = segments[0] === 'obs' && segments[1] === 'overlay' ? segments[2] : segments[0];
+      if (slug) {
+        void refreshTournament(slug);
+      }
+    }
+  }, [location.pathname, refreshTournament]);
+
+  // Window Focus Sync (spectator or admin returns from Twitch tab)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleFocus = () => {
+      const segments = location.pathname.split('/').filter(Boolean);
+      const nonTournamentPrefixes = new Set(['admin', 'login', 'organizations', 'org', 'players']);
+      if (segments.length > 0 && !nonTournamentPrefixes.has(segments[0])) {
+        const slug = segments[0] === 'obs' && segments[1] === 'overlay' ? segments[2] : segments[0];
+        if (slug) {
+          void refreshTournament(slug);
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [location.pathname, refreshTournament]);
+
+  return null;
+};
 
 export const App: React.FC = () => {
   const [configError] = useState<string | null>(null);
@@ -89,6 +135,7 @@ export const App: React.FC = () => {
       <OrganizationProvider>
         <TournamentProvider>
           <BrowserRouter>
+            <LiveRouteSync />
             <ErrorBoundary>
               <Routes>
                 {/* Home: Tournaments Switcher */}
@@ -124,6 +171,7 @@ export const App: React.FC = () => {
                 <Route path="/:slug/leaderboard" element={<PublicLeaderboardPage />} />
                 <Route path="/:slug/quals" element={<Navigate to="../leaderboard" relative="path" replace />} />
                 <Route path="/:slug/standings" element={<FinalStandingsPage />} />
+                <Route path="/:slug/qualify" element={<PublicQualifyPage />} />
 
                 {/* OBS Broadcast Studio Hub */}
                 <Route path="/:slug/obs" element={<OBSHubPage />} />
@@ -173,6 +221,14 @@ export const App: React.FC = () => {
                   element={
                     <RequireTournamentAdmin>
                       <ManageJudgePage />
+                    </RequireTournamentAdmin>
+                  }
+                />
+                <Route
+                  path="/:slug/manage/review"
+                  element={
+                    <RequireTournamentAdmin>
+                      <ManageReviewPage />
                     </RequireTournamentAdmin>
                   }
                 />

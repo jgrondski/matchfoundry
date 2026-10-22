@@ -6,6 +6,7 @@ import { colorWithAlpha, getContrastingTextColor, getAlternateShade } from '../.
 import { PlayerDetailDrawer } from '../../qualifiers/components/PlayerDetailDrawer';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../players/components/PlaystyleChip';
+import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { TournamentPageHeader } from '../../../components/TournamentPageHeader';
 import {
   Trophy,
@@ -16,6 +17,7 @@ import {
   AlertTriangle,
   Flame,
 } from 'lucide-react';
+import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
 
 interface FinalStandingsTableProps {
   tournament: Tournament;
@@ -78,7 +80,9 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
       // Search match
       const query = searchTerm.trim().toLowerCase();
       if (query) {
-        const nameMatch = row.player.name.toLowerCase().includes(query);
+        const effectiveName = getEffectivePlayerName(row.player).toLowerCase();
+        const originalName = row.player.name.toLowerCase();
+        const nameMatch = effectiveName.includes(query) || originalName.includes(query);
         const countryMatch = row.player.country?.toLowerCase().includes(query);
         const playstyleMatch = row.player.playstyle?.toLowerCase().includes(query);
         const tierMatch = row.tier?.name.toLowerCase().includes(query);
@@ -214,6 +218,9 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
   if (!tournament.isLocked) {
     return (
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', width: '100%' }}>
+        {(!isManage || isObsMode) && (
+          <TournamentQualTimerHud tournament={tournament} isObsMode={isObsMode} readOnly={true} />
+        )}
         <h2 style={{ color: 'var(--color-text-primary)', fontSize: '1.4rem' }}>Brackets Not Finalized</h2>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
           Qualifiers are currently running and tournament brackets have not been locked into match play. Final standings will become available once qualifiers conclude and brackets are finalized.
@@ -579,7 +586,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
                             <PlayerAvatar player={row.player} style={{ fontSize: '1.25rem', lineHeight: 1 }} />
                             <button
                               type="button"
-                              onClick={() => handlePlayerClick(row.player.id, row.player.name, row.player.country, row.player.playstyle)}
+                              onClick={() => handlePlayerClick(row.player.id, getEffectivePlayerName(row.player), row.player.country, row.player.playstyle)}
                               style={{
                                 background: 'none',
                                 border: 'none',
@@ -604,7 +611,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
                               }}
                               title="View player tournament profile"
                             >
-                              {row.player.name}
+                              {getEffectivePlayerName(row.player)}
                             </button>
 
                             {row.player.playstyle && (

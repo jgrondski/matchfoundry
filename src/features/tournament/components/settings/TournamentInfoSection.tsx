@@ -1,6 +1,6 @@
 import React from 'react';
 import { Shield, AlertTriangle, ShieldCheck, Sliders } from 'lucide-react';
-import { QualFormat, PointsThreshold, DEFAULT_POINTS_THRESHOLDS, SeedingMethod } from '../../types';
+import { QualFormat, QualMode, PointsThreshold, DEFAULT_POINTS_THRESHOLDS, SeedingMethod } from '../../types';
 import { ClearableNumberInput } from '../../../../components/ClearableNumberInput';
 import { labelStyle, inputStyle } from './types';
 
@@ -14,6 +14,8 @@ interface TournamentInfoSectionProps {
   qualAverageCount?: number;
   avgCountError: string | null;
   pointsConfig: PointsThreshold[];
+  qualMode: QualMode;
+  qualWindowMinutes: number;
   isLocked: boolean;
   onNameChange: (name: string) => void;
   onSlugChange: (slug: string) => void;
@@ -24,6 +26,8 @@ interface TournamentInfoSectionProps {
   onQualAverageCountChange: (count: number | undefined) => void;
   onAvgCountErrorChange: (err: string | null) => void;
   onPointsConfigChange: (config: PointsThreshold[]) => void;
+  onQualModeChange: (mode: QualMode) => void;
+  onQualWindowMinutesChange: (minutes: number) => void;
   onOpenPointsDrawer: () => void;
 }
 
@@ -37,6 +41,8 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
   qualAverageCount,
   avgCountError,
   pointsConfig,
+  qualMode,
+  qualWindowMinutes,
   isLocked,
   onNameChange,
   onSlugChange,
@@ -47,6 +53,8 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
   onQualAverageCountChange,
   onAvgCountErrorChange,
   onPointsConfigChange,
+  onQualModeChange,
+  onQualWindowMinutesChange,
   onOpenPointsDrawer,
 }) => {
   return (
@@ -178,7 +186,71 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
 
       {/* Qualifying Format Controls (Only active in Qualifiers Mode) */}
       {seedingMethod === 'QUALIFIERS' ? (
-        <div style={{ borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.85rem' }}>
+        <div style={{ borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+          {/* Mode & Duration Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
+            <div>
+              <label style={labelStyle}>Qualifying Mode</label>
+              <select
+                value={qualMode}
+                onChange={e => onQualModeChange(e.target.value as QualMode)}
+                style={inputStyle}
+              >
+                <option value="IN_PERSON">In-Person Live Event</option>
+                <option value="HYBRID">Hybrid (In-Person &amp; Online)</option>
+                <option value="ONLINE">100% Online Tournament</option>
+              </select>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                {qualMode === 'IN_PERSON'
+                  ? 'Official attempts played live on venue hardware.'
+                  : qualMode === 'ONLINE'
+                  ? 'Competitors submit runs online via Twitch VOD.'
+                  : 'Allows both venue scorekeeping and online VOD submissions.'}
+              </span>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label style={labelStyle}>Qualifying Duration (Minutes)</label>
+                <div style={{ display: 'flex', gap: '0.3rem' }}>
+                  {[60, 90, 120].map(mins => (
+                    <button
+                      key={mins}
+                      type="button"
+                      onClick={() => onQualWindowMinutesChange(mins)}
+                      style={{
+                        padding: '0.1rem 0.4rem',
+                        fontSize: '0.68rem',
+                        fontWeight: qualWindowMinutes === mins ? 800 : 500,
+                        background: qualWindowMinutes === mins ? 'var(--color-gold)' : 'var(--color-bg-surface-elevated)',
+                        color: qualWindowMinutes === mins ? '#000000' : 'var(--color-text-secondary)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {mins}m
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <input
+                type="number"
+                min={1}
+                max={1440}
+                value={qualWindowMinutes}
+                onChange={e => {
+                  const val = parseInt(e.target.value, 10);
+                  onQualWindowMinutesChange(isNaN(val) || val < 1 ? 1 : val);
+                }}
+                style={inputStyle}
+              />
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                Default start time for the countdown timer. Can be edited at any time.
+              </span>
+            </div>
+          </div>
+
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', width: '100%' }}>
             {/* Format Selection Dropdown */}
             <div style={{ flex: '0 0 240px', minWidth: '200px' }}>

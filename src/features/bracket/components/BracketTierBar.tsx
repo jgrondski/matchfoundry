@@ -14,6 +14,7 @@ import {
   Search,
   X,
 } from 'lucide-react';
+import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
 
 interface BracketTierBarProps {
   tournament: Tournament;
@@ -173,6 +174,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
 
       {/* Right: Player Search, View Mode Toggle & Share Button */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+        {!canManage && <TournamentQualTimerHud tournament={tournament} compact readOnly={true} />}
         {/* Bracket Player Search - Hidden on Mobile Feed */}
         {viewMode !== 'feed' && onPlayerSearchTermChange !== undefined && (
           <div

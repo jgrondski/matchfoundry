@@ -8,6 +8,7 @@ import { PlayerEditModal } from '../features/players/components/PlayerEditModal'
 import { PlayerDetailDrawer } from '../features/qualifiers/components/PlayerDetailDrawer';
 import { PlayerAvatar } from '../features/players/components/PlayerAvatar';
 import { PlaystyleChip } from '../features/players/components/PlaystyleChip';
+import { getEffectivePlayerName } from '../features/players/playerNameUtils';
 import {
   Users,
   UserPlus,
@@ -49,6 +50,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
     if (!playersPool) return [];
     const term = searchTerm.toLowerCase();
     return playersPool.filter(p =>
+      getEffectivePlayerName(p).toLowerCase().includes(term) ||
       p.name.toLowerCase().includes(term) ||
       (p.country && p.country.toLowerCase().includes(term)) ||
       (p.playstyle && p.playstyle.toLowerCase().includes(term))
@@ -69,15 +71,43 @@ export const ManageTournamentPlayersPage: React.FC = () => {
     );
   }, [playersPool, globalPlayers]);
 
-  const playerToRemoveHasMatches = useMemo(() => {
-    if (!playerToRemove || !matchScores) return false;
+  const playerQualCount = useMemo(() => {
+    if (!playerToRemove || !tournament?.qualifierSubmissions) return 0;
+    return tournament.qualifierSubmissions.filter(s => s.playerId === playerToRemove.id).length;
+  }, [playerToRemove, tournament?.qualifierSubmissions]);
+
+  const isRemovalBlocked = useMemo(() => {
+    if (!playerToRemove) return false;
+    if (tournament?.isLocked) return true;
+    if (playerQualCount > 0) return true;
+    if (!matchScores) return false;
     return Object.values(matchScores).some(
       m =>
         m.winnerPlayerId === playerToRemove.id ||
         m.loserPlayerId === playerToRemove.id ||
         (m.isComplete && (m.games || []).length > 0)
     );
-  }, [playerToRemove, matchScores]);
+  }, [playerToRemove, matchScores, tournament?.isLocked, playerQualCount]);
+
+  const removalBlockReason = useMemo(() => {
+    if (!playerToRemove) return null;
+    const hasMatches = matchScores && Object.values(matchScores).some(
+      m =>
+        m.winnerPlayerId === playerToRemove.id ||
+        m.loserPlayerId === playerToRemove.id ||
+        (m.isComplete && (m.games || []).length > 0)
+    );
+    if (hasMatches) {
+      return `${playerToRemove.name} cannot be removed from this tournament because they have recorded bracket matches. To remove this competitor, reset their match scores first in Settings.`;
+    }
+    if (tournament?.isLocked) {
+      return `${playerToRemove.name} cannot be removed while tournament brackets are locked. Unlock brackets in Settings or Bracket view first.`;
+    }
+    if (playerQualCount > 0) {
+      return `${playerToRemove.name} cannot be removed from this tournament's roster because they have ${playerQualCount} recorded qualifier score(s). Delete their qualifier scores first in Qualifiers.`;
+    }
+    return null;
+  }, [playerToRemove, matchScores, tournament?.isLocked, playerQualCount]);
 
   if (isLoading || !isHydrated) {
     return <LoadingScreen message="Loading tournament players..." />;
@@ -112,7 +142,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
   };
 
   const handleConfirmRemove = async () => {
-    if (!playerToRemove || playerToRemoveHasMatches) return;
+    if (!playerToRemove || isRemovalBlocked) return;
     await removePlayerFromTournament(tournament.id, playerToRemove.id);
     setPlayerToRemove(null);
   };
@@ -383,7 +413,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                               }}
                               title="Click to view detailed competitor profile, audit log, and match stats"
                             >
-                              {player.name}
+                              {getEffectivePlayerName(player)}
                             </button>
                           </div>
                         </td>
@@ -468,7 +498,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
             style={{
               background: 'var(--color-bg-surface)',
               borderRadius: 'var(--radius-lg)',
-              border: playerToRemoveHasMatches ? '1px solid var(--color-border)' : '1px solid var(--color-border)',
+              border: isRemovalBlocked ? '1px solid var(--color-border)' : '1px solid var(--color-border)',
               maxWidth: '440px',
               width: '100%',
               padding: '1.5rem',
@@ -479,10 +509,10 @@ export const ManageTournamentPlayersPage: React.FC = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: playerToRemoveHasMatches ? 'var(--color-gold-bright)' : 'var(--color-red)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: isRemovalBlocked ? 'var(--color-gold-bright)' : 'var(--color-red)' }}>
                 <AlertTriangle size={20} />
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>
-                  {playerToRemoveHasMatches ? 'Cannot Remove Competitor' : 'Remove Competitor?'}
+                  {isRemovalBlocked ? 'Cannot Remove Competitor' : 'Remove Competitor?'}
                 </h3>
               </div>
               <button
@@ -493,13 +523,13 @@ export const ManageTournamentPlayersPage: React.FC = () => {
               </button>
             </div>
 
-            {playerToRemoveHasMatches ? (
+            {isRemovalBlocked ? (
               <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                <strong style={{ color: 'var(--color-text-primary)' }}>{playerToRemove.name}</strong> cannot be removed from this tournament because they have recorded bracket matches. To remove this competitor, reset their match scores first in Settings.
+                {removalBlockReason}
               </p>
             ) : (
               <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                Are you sure you want to remove <strong style={{ color: 'var(--color-text-primary)' }}>{playerToRemove.name}</strong> from this tournament's roster? Any qualifier scores will be unlinked. The competitor remains in the global player catalog.
+                Are you sure you want to remove <strong style={{ color: 'var(--color-text-primary)' }}>{playerToRemove.name}</strong> from this tournament's roster? The competitor remains in the global player catalog.
               </p>
             )}
 
@@ -510,9 +540,9 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                 className="btn btn-secondary"
                 style={{ padding: '0.45rem 0.95rem', fontSize: '0.85rem' }}
               >
-                {playerToRemoveHasMatches ? 'Close' : 'Cancel'}
+                {isRemovalBlocked ? 'Close' : 'Cancel'}
               </button>
-              {!playerToRemoveHasMatches && (
+              {!isRemovalBlocked && (
                 <button
                   type="button"
                   onClick={handleConfirmRemove}

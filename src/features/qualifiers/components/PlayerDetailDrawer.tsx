@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Tournament, TournamentTier, PlayerProfile } from '../../tournament/types';
 import { useTournament } from '../../tournament/store';
+import { usePinAuth } from '../../auth/AuthContext';
 import {
   X,
   User,
@@ -12,7 +13,6 @@ import {
   Plus,
   Trash2,
   Check,
-  ShieldCheck,
   AlertTriangle,
 } from 'lucide-react';
 import { LeaderboardRankRow, MAXOUT_THRESHOLD, deriveLeaderboard, getPlayerQualifierStatus } from '../scoring';
@@ -34,6 +34,7 @@ export interface PlayerDetailDrawerProps {
   rankRow?: LeaderboardRankRow;
   tier?: TournamentTier;
   tierId?: string;
+  canManage?: boolean;
 }
 
 export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
@@ -44,8 +45,14 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
   rankRow,
   tier,
   tierId,
+  canManage: canManageProp,
 }) => {
-  const { submitQualifierScore, deleteQualifierScore, togglePlayerQualifierVerified } = useTournament();
+  const { canManage: authCanManage } = usePinAuth();
+  const canManageTournament = typeof canManageProp === 'boolean'
+    ? canManageProp
+    : Boolean(authCanManage(tournament.id) || authCanManage(tournament.slug));
+
+  const { submitQualifierScore, deleteQualifierScore } = useTournament();
   const [scoreInput, setScoreInput] = useState('');
 
   // Keyboard escape listener to close drawer smoothly
@@ -296,6 +303,271 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
     ? Math.round(totalGamePoints / gamesWithPointsCount)
     : 0;
 
+  const renderQualSubmissionsSection = () => (
+    <div
+      style={{
+        background: getAlternateShade(cardColor, 2),
+        border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
+        borderRadius: 'var(--radius-md)',
+        padding: '1.1rem',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+      }}
+      data-testid="qual-submissions-card"
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Trophy size={16} color={primaryColor} />
+          <h3 style={sectionTitleStyle}>Qual Submissions</h3>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span
+            className="tabular-nums"
+            style={{
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              padding: '0.15rem 0.55rem',
+              borderRadius: 'var(--radius-full)',
+              background: colorWithAlpha(primaryColor, 0.12),
+              color: primaryColor,
+              border: `1px solid ${colorWithAlpha(primaryColor, 0.25)}`,
+            }}
+          >
+            {playerSubmissions.length} {playerSubmissions.length === 1 ? 'submission' : 'submissions'}
+          </span>
+          {isVerified && (
+            <span
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                padding: '0.12rem 0.55rem',
+                borderRadius: 'var(--radius-full)',
+                background: 'rgba(34, 197, 94, 0.2)',
+                color: '#4ade80',
+                border: '1px solid rgba(34, 197, 94, 0.4)',
+                boxShadow: '0 0 8px rgba(34, 197, 94, 0.25)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}
+            >
+              <Check size={11} strokeWidth={3} /> Verified
+            </span>
+          )}
+        </div>
+      </div>
+
+      {playerSubmissions.length === 0 ? (
+        <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+          No qual submissions logged yet.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+          {playerSubmissions.map((sub, idx) => {
+            const isMaxout = sub.score >= MAXOUT_THRESHOLD;
+            const isKicker = tournament.qualFormat === 'HIGH_SCORE' && sub.score === effectiveRankRow?.kickerScore && sub.score < MAXOUT_THRESHOLD;
+            const isBest = tournament.qualFormat === 'HIGH_SCORE' && sub.score === effectiveRankRow?.finalScore;
+
+            return (
+              <div
+                key={sub.id}
+                style={{
+                  padding: '0.75rem 0.95rem',
+                  borderRadius: 'var(--radius-sm)',
+                  background: isMaxout
+                    ? `linear-gradient(90deg, ${colorWithAlpha(primaryColor, 0.16)} 0%, ${getAlternateShade(cardColor, 4)} 100%)`
+                    : isKicker
+                    ? `linear-gradient(90deg, rgba(56, 189, 248, 0.12) 0%, ${getAlternateShade(cardColor, 4)} 100%)`
+                    : isBest
+                    ? `linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, ${getAlternateShade(cardColor, 4)} 100%)`
+                    : getAlternateShade(cardColor, 4),
+                  border: isMaxout
+                    ? `1px solid ${colorWithAlpha(primaryColor, 0.45)}`
+                    : isKicker
+                    ? '1px solid rgba(56, 189, 248, 0.35)'
+                    : isBest
+                    ? '1px solid rgba(16, 185, 129, 0.35)'
+                    : `1px solid ${colorWithAlpha(primaryColor, 0.15, 'var(--color-border-subtle)')}`,
+                  boxShadow: isMaxout ? `0 2px 10px ${colorWithAlpha(primaryColor, 0.12)}` : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div
+                    className="tabular-nums"
+                    style={{
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '50%',
+                      background: isMaxout ? colorWithAlpha(primaryColor, 0.25) : colorWithAlpha(primaryColor, 0.1),
+                      border: `1px solid ${isMaxout ? colorWithAlpha(primaryColor, 0.5) : colorWithAlpha(primaryColor, 0.2)}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      color: isMaxout ? primaryColor : textColor,
+                    }}
+                  >
+                    {idx + 1}
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                      <span
+                        className="tabular-nums"
+                        style={{
+                          fontWeight: 800,
+                          fontSize: '1rem',
+                          color: isMaxout ? primaryColor : '#ffffff',
+                          letterSpacing: '-0.01em',
+                        }}
+                      >
+                        {sub.score.toLocaleString()}
+                      </span>
+
+                      {isMaxout && (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            padding: '0.12rem 0.45rem',
+                            borderRadius: 'var(--radius-sm)',
+                            background: colorWithAlpha(primaryColor, 0.25),
+                            color: primaryColor,
+                            border: `1px solid ${colorWithAlpha(primaryColor, 0.5)}`,
+                            boxShadow: `0 0 8px ${colorWithAlpha(primaryColor, 0.25)}`,
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.03em',
+                          }}
+                        >
+                          <Sparkles size={11} /> MAXOUT
+                        </span>
+                      )}
+
+                      {isKicker && (
+                        <span
+                          style={{
+                            padding: '0.12rem 0.45rem',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(56, 189, 248, 0.2)',
+                            color: '#38bdf8',
+                            border: '1px solid rgba(56, 189, 248, 0.4)',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.03em',
+                          }}
+                        >
+                          KICKER
+                        </span>
+                      )}
+
+                      {isBest && !isMaxout && (
+                        <span
+                          style={{
+                            padding: '0.12rem 0.45rem',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'rgba(16, 185, 129, 0.18)',
+                            color: '#34d399',
+                            border: '1px solid rgba(16, 185, 129, 0.35)',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                          }}
+                        >
+                          Best
+                        </span>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        fontSize: '0.72rem',
+                        color: 'var(--color-text-muted)',
+                        marginTop: '0.15rem',
+                      }}
+                    >
+                      <Clock size={11} />
+                      <span>
+                        {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {' • '}
+                        {new Date(sub.submittedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Format Result Contribution & Delete */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  {tournament.qualFormat === 'POINTS' ? (
+                    <span
+                      className="tabular-nums"
+                      style={{
+                        fontWeight: 800,
+                        color: primaryColor,
+                        fontSize: '0.88rem',
+                      }}
+                    >
+                      {(() => {
+                        const sorted = [...(tournament.pointsConfig || [])].sort((a, b) => b.minScore - a.minScore);
+                        const match = sorted.find(t => sub.score >= t.minScore);
+                        return match ? `+${match.points} pts` : '+0 pts';
+                      })()}
+                    </span>
+                  ) : tournament.qualFormat === 'HIGH_SCORE' ? (
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        color: isMaxout ? primaryColor : 'var(--color-text-muted)',
+                      }}
+                    >
+                      {isMaxout ? 'Maxout' : isKicker ? 'Kicker' : 'Attempt'}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      Logged
+                    </span>
+                  )}
+
+                  {!tournament.isLocked && canManageTournament && (
+                    <button
+                      type="button"
+                      onClick={() => deleteQualifierScore(tournament.id, sub.id)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--color-red)',
+                        cursor: 'pointer',
+                        padding: '0.3rem',
+                        borderRadius: 'var(--radius-xs)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        opacity: 0.7,
+                        transition: 'opacity 0.15s ease',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+                      title="Delete attempt"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div
@@ -426,7 +698,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   <PlayerAvatar player={player} country={player.country} />
                 ) : (
                   <span style={{ fontSize: '1rem', fontWeight: 800, color: primaryColor }}>
-                    {player.name.slice(0, 2).toUpperCase()}
+                    {player.name.slice(0, 1).toUpperCase()}
                   </span>
                 )}
               </div>
@@ -486,11 +758,6 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   {player.displayName && player.displayName !== player.name && (
                     <span style={{ fontSize: '0.78rem', color: 'var(--color-gold-bright)', fontWeight: 600 }}>
                       Alias: {player.displayName}
-                    </span>
-                  )}
-                  {player.country && (
-                    <span style={{ fontSize: '0.78rem', color: textColor, fontWeight: 500 }}>
-                      Representing {player.country}
                     </span>
                   )}
                   {player.twitchUsername && (
@@ -647,18 +914,20 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
         >
           {/* Section 0: Quick Qual Submission & Judge Verification (Either/Or) */}
           {!tournament.isLocked && (
-            <div
-              style={{
-                background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.12)} 0%, ${getAlternateShade(cardColor, 3)} 100%)`,
-                border: `1px solid ${colorWithAlpha(primaryColor, 0.4)}`,
-                borderRadius: 'var(--radius-md)',
-                padding: '1.1rem',
-                boxShadow: `0 4px 18px ${colorWithAlpha(primaryColor, 0.1)}`,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.85rem',
-              }}
-            >
+            <>
+              {canManageTournament && (
+                <div
+                  style={{
+                    background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.12)} 0%, ${getAlternateShade(cardColor, 3)} 100%)`,
+                    border: `1px solid ${colorWithAlpha(primaryColor, 0.4)}`,
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1.1rem',
+                    boxShadow: `0 4px 18px ${colorWithAlpha(primaryColor, 0.1)}`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.85rem',
+                  }}
+                >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Trophy size={16} color={primaryColor} />
@@ -719,10 +988,10 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 </div>
               </div>
 
-              {/* Action 1: Score Entry */}
+              {/* Action: Score Entry */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Option A: Record Attempt Score
+                  Record Attempt Score
                 </span>
                 <form
                   onSubmit={(e) => {
@@ -783,74 +1052,13 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   </button>
                 </form>
               </div>
-
-              {/* Action Divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0.1rem 0' }}>
-                <div style={{ flex: 1, height: '1px', background: 'var(--color-border-subtle)' }} />
-                <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  — OR —
-                </span>
-                <div style={{ flex: 1, height: '1px', background: 'var(--color-border-subtle)' }} />
-              </div>
-
-              {/* Action 2: Judge Verification */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.65rem 0.85rem',
-                  borderRadius: 'var(--radius-sm)',
-                  background: isVerified ? 'rgba(34, 197, 94, 0.08)' : getAlternateShade(cardColor, 6),
-                  border: isVerified ? '1px solid rgba(34, 197, 94, 0.35)' : `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-border-subtle)')}`,
-                  gap: '0.75rem',
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: isVerified ? '#4ade80' : '#ffffff', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <ShieldCheck size={14} color={isVerified ? '#4ade80' : primaryColor} />
-                    {isVerified ? 'Qualification Complete & Verified' : 'Verify Entire Qualification'}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.15rem' }}>
-                    {isVerified
-                      ? "Official judge sign-off active. Click to revoke if further attempts are required."
-                      : "Official judge sign-off for this competitor's entire qualification run."}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => togglePlayerQualifierVerified(tournament.id, player.id)}
-                  style={{
-                    padding: '0.45rem 0.9rem',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    borderRadius: 'var(--radius-sm)',
-                    background: isVerified ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.15)',
-                    border: isVerified ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(34, 197, 94, 0.5)',
-                    color: isVerified ? '#f87171' : '#4ade80',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    whiteSpace: 'nowrap',
-                    transition: 'all 0.15s ease',
-                  }}
-                  title={isVerified ? 'Click to unverify qualifier' : "Click to officially verify this competitor's qualification"}
-                >
-                  {isVerified ? (
-                    <>
-                      <X size={13} strokeWidth={2.5} /> Unverify Qual
-                    </>
-                  ) : (
-                    <>
-                      <Check size={13} strokeWidth={3} /> Verify Entire Qual
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
           )}
+
+            {/* During quals, Qual Submissions is directly below Qualifier Stage Actions */}
+            {renderQualSubmissionsSection()}
+          </>
+        )}
 
           {/* Section 1: Player Profile Details */}
           <div
@@ -1217,268 +1425,8 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
             )}
           </div>
 
-          {/* Section 3: Qual Submissions Audit Log */}
-          <div
-            style={{
-              background: getAlternateShade(cardColor, 2),
-              border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
-              borderRadius: 'var(--radius-md)',
-              padding: '1.1rem',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Trophy size={16} color={primaryColor} />
-                <h3 style={sectionTitleStyle}>Qual Submissions</h3>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span
-                  className="tabular-nums"
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    padding: '0.15rem 0.55rem',
-                    borderRadius: 'var(--radius-full)',
-                    background: colorWithAlpha(primaryColor, 0.12),
-                    color: primaryColor,
-                    border: `1px solid ${colorWithAlpha(primaryColor, 0.25)}`,
-                  }}
-                >
-                  {playerSubmissions.length} {playerSubmissions.length === 1 ? 'submission' : 'submissions'}
-                </span>
-                {isVerified && (
-                  <span
-                    style={{
-                      fontSize: '0.72rem',
-                      fontWeight: 800,
-                      padding: '0.12rem 0.55rem',
-                      borderRadius: 'var(--radius-full)',
-                      background: 'rgba(34, 197, 94, 0.2)',
-                      color: '#4ade80',
-                      border: '1px solid rgba(34, 197, 94, 0.4)',
-                      boxShadow: '0 0 8px rgba(34, 197, 94, 0.25)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                    }}
-                  >
-                    <Check size={11} strokeWidth={3} /> Verified
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {playerSubmissions.length === 0 ? (
-              <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                No qual submissions logged yet.
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                {playerSubmissions.map((sub, idx) => {
-                  const isMaxout = sub.score >= MAXOUT_THRESHOLD;
-                  const isKicker = tournament.qualFormat === 'HIGH_SCORE' && sub.score === effectiveRankRow?.kickerScore && sub.score < MAXOUT_THRESHOLD;
-                  const isBest = tournament.qualFormat === 'HIGH_SCORE' && sub.score === effectiveRankRow?.finalScore;
-
-                  return (
-                    <div
-                      key={sub.id}
-                      style={{
-                        padding: '0.75rem 0.95rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: isMaxout
-                          ? `linear-gradient(90deg, ${colorWithAlpha(primaryColor, 0.16)} 0%, ${getAlternateShade(cardColor, 4)} 100%)`
-                          : isKicker
-                          ? `linear-gradient(90deg, rgba(56, 189, 248, 0.12) 0%, ${getAlternateShade(cardColor, 4)} 100%)`
-                          : isBest
-                          ? `linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, ${getAlternateShade(cardColor, 4)} 100%)`
-                          : getAlternateShade(cardColor, 4),
-                        border: isMaxout
-                          ? `1px solid ${colorWithAlpha(primaryColor, 0.45)}`
-                          : isKicker
-                          ? '1px solid rgba(56, 189, 248, 0.35)'
-                          : isBest
-                          ? '1px solid rgba(16, 185, 129, 0.35)'
-                          : `1px solid ${colorWithAlpha(primaryColor, 0.15, 'var(--color-border-subtle)')}`,
-                        boxShadow: isMaxout ? `0 2px 10px ${colorWithAlpha(primaryColor, 0.12)}` : 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div
-                          className="tabular-nums"
-                          style={{
-                            width: '26px',
-                            height: '26px',
-                            borderRadius: '50%',
-                            background: isMaxout ? colorWithAlpha(primaryColor, 0.25) : colorWithAlpha(primaryColor, 0.1),
-                            border: `1px solid ${isMaxout ? colorWithAlpha(primaryColor, 0.5) : colorWithAlpha(primaryColor, 0.2)}`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '0.75rem',
-                            fontWeight: 800,
-                            color: isMaxout ? primaryColor : textColor,
-                          }}
-                        >
-                          {idx + 1}
-                        </div>
-
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                            <span
-                              className="tabular-nums"
-                              style={{
-                                fontWeight: 800,
-                                fontSize: '1rem',
-                                color: isMaxout ? primaryColor : '#ffffff',
-                                letterSpacing: '-0.01em',
-                              }}
-                            >
-                              {sub.score.toLocaleString()}
-                            </span>
-
-                            {isMaxout && (
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.25rem',
-                                  padding: '0.12rem 0.45rem',
-                                  borderRadius: 'var(--radius-sm)',
-                                  background: colorWithAlpha(primaryColor, 0.25),
-                                  color: primaryColor,
-                                  border: `1px solid ${colorWithAlpha(primaryColor, 0.5)}`,
-                                  boxShadow: `0 0 8px ${colorWithAlpha(primaryColor, 0.25)}`,
-                                  fontSize: '0.7rem',
-                                  fontWeight: 800,
-                                  letterSpacing: '0.03em',
-                                }}
-                              >
-                                <Sparkles size={11} /> MAXOUT
-                              </span>
-                            )}
-
-                            {isKicker && (
-                              <span
-                                style={{
-                                  padding: '0.12rem 0.45rem',
-                                  borderRadius: 'var(--radius-sm)',
-                                  background: 'rgba(56, 189, 248, 0.2)',
-                                  color: '#38bdf8',
-                                  border: '1px solid rgba(56, 189, 248, 0.4)',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 800,
-                                  letterSpacing: '0.03em',
-                                }}
-                              >
-                                KICKER
-                              </span>
-                            )}
-
-                            {isBest && !isMaxout && (
-                              <span
-                                style={{
-                                  padding: '0.12rem 0.45rem',
-                                  borderRadius: 'var(--radius-sm)',
-                                  background: 'rgba(16, 185, 129, 0.18)',
-                                  color: '#34d399',
-                                  border: '1px solid rgba(16, 185, 129, 0.35)',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 700,
-                                }}
-                              >
-                                Best
-                              </span>
-                            )}
-                          </div>
-
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              fontSize: '0.72rem',
-                              color: 'var(--color-text-muted)',
-                              marginTop: '0.15rem',
-                            }}
-                          >
-                            <Clock size={11} />
-                            <span>
-                              {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              {' • '}
-                              {new Date(sub.submittedAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Format Result Contribution & Delete */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                        {tournament.qualFormat === 'POINTS' ? (
-                          <span
-                            className="tabular-nums"
-                            style={{
-                              fontWeight: 800,
-                              color: primaryColor,
-                              fontSize: '0.88rem',
-                            }}
-                          >
-                            {(() => {
-                              const sorted = [...(tournament.pointsConfig || [])].sort((a, b) => b.minScore - a.minScore);
-                              const match = sorted.find(t => sub.score >= t.minScore);
-                              return match ? `+${match.points} pts` : '+0 pts';
-                            })()}
-                          </span>
-                        ) : tournament.qualFormat === 'HIGH_SCORE' ? (
-                          <span
-                            style={{
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              color: isMaxout ? primaryColor : 'var(--color-text-muted)',
-                            }}
-                          >
-                            {isMaxout ? 'Maxout' : isKicker ? 'Kicker' : 'Attempt'}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                            Logged
-                          </span>
-                        )}
-
-                        {!tournament.isLocked && (
-                          <button
-                            type="button"
-                            onClick={() => deleteQualifierScore(tournament.id, sub.id)}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: 'var(--color-red)',
-                              cursor: 'pointer',
-                              padding: '0.3rem',
-                              borderRadius: 'var(--radius-xs)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              opacity: 0.7,
-                              transition: 'opacity 0.15s ease',
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                            onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
-                            title="Delete attempt"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          {/* Section 3: Qual Submissions Audit Log (In match phase, positioned below match history) */}
+          {tournament.isLocked && renderQualSubmissionsSection()}
         </div>
 
         {/* Footer with Themed Border & Button */}

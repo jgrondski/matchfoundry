@@ -4,6 +4,40 @@ import { TierThemeColors } from '../bracket/colorUtils';
 export type { EliminationType, BracketStage, BracketRouting, TierThemeColors };
 
 export type QualFormat = 'HIGH_SCORE' | 'AVERAGE_OF_X' | 'POINTS';
+export type QualMode = 'IN_PERSON' | 'ONLINE' | 'HYBRID';
+export type SubmissionSource = 'IN_PERSON' | 'ONLINE';
+export type IdentityStatus = 'VERIFIED_MATCH' | 'CLAIMED_PENDING_REVIEW' | 'PROVISIONAL_NEW';
+export type SubmissionStatus =
+  | 'NOT_STARTED'
+  | 'IN_PROGRESS'
+  | 'SUBMITTED'
+  | 'VERIFIED'
+  | 'DNQ'
+  | 'DQ';
+
+export interface QualTimerPause {
+  pausedAt: number;
+  resumedAt?: number;
+}
+
+export interface QualTimerLog {
+  startedAt: number;
+  submittedAt?: number;
+  elapsedSeconds: number;
+  pauses: QualTimerPause[];
+  overTime?: boolean;
+  resetRequested?: boolean;
+  resetReason?: string;
+  resetRequestedAt?: number;
+}
+
+export interface TournamentQualTimer {
+  durationMinutes: number;
+  elapsedSeconds: number;
+  isRunning: boolean;
+  lastResumedAt: number | null;
+  startedAt?: number | null;
+}
 
 export interface PointsThreshold {
   minScore: number;
@@ -59,6 +93,10 @@ export interface TournamentMetadata {
   themeColors?: TierThemeColors;
   seedingMethod?: SeedingMethod;
   manualSeeds?: string[];
+  qualMode?: QualMode;
+  qualWindowMinutes?: number;
+  qualTimer?: TournamentQualTimer;
+  customAuthWords?: string[];
   [key: string]: unknown;
 }
 
@@ -154,9 +192,26 @@ export interface QualifierSubmission {
   playerId: string;
   score: number;
   submittedAt: number; // timestamp in ms
+  submissionSource?: SubmissionSource;
+  authWord?: string;
+  twitchVodUrl?: string;
+  submittedTwitchId?: string;
+  submittedTwitchUsername?: string;
+  identityStatus?: IdentityStatus;
+  status?: SubmissionStatus;
+  timerLog?: QualTimerLog;
+  judgeNotes?: string;
+  verifiedBy?: string;
+  verifiedAt?: number;
 }
 
-export type QualifierStatus = 'not started' | 'in progress' | 'verified' | 'awaiting verification';
+export type QualifierStatus =
+  | 'not started'
+  | 'in progress'
+  | 'verified'
+  | 'awaiting verification'
+  | 'dnq'
+  | 'dq';
 
 export interface TournamentPlayer {
   playerId: string;
@@ -193,6 +248,7 @@ export interface PlayerProfile {
   displayName?: string;
   nickname?: string;
   twitchUsername?: string;
+  twitchId?: string;
   country?: string;
   avatarType?: AvatarType;
   avatarUrl?: string;
@@ -218,6 +274,11 @@ export interface Tournament {
   qualFormat: QualFormat;
   qualAverageCount?: number; // target count X for AVERAGE_OF_X
   pointsConfig?: PointsThreshold[]; // array of { minScore, points } for POINTS
+  qualMode?: QualMode; // default 'HYBRID'
+  qualWindowMinutes?: number; // default 90
+  qualTimer?: TournamentQualTimer;
+  customAuthWords?: string[]; // custom organizer dictionary words
+  qualsClosed?: boolean; // true = Qualifiers closed
   isLocked: boolean; // false = Qualifiers Mode (Draft Preview), true = Match Play Mode (Locked)
   tiers: TournamentTier[];
   matchScores: Record<string, MatchScoreRecord>; // keyed by matchId

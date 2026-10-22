@@ -573,9 +573,11 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
   }
 
   // Sync search-induced player highlight journey
+  const prevSearchPlayerIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!bracket) return;
     if (highlightedPlayerId) {
+      prevSearchPlayerIdRef.current = highlightedPlayerId;
       const journey = findPlayerJourney(
         highlightedPlayerId,
         null,
@@ -585,7 +587,9 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
         championPlayer?.id
       );
       setHoveredAncestry(journey);
-    } else {
+    } else if (prevSearchPlayerIdRef.current !== null) {
+      // User explicitly cleared the search query
+      prevSearchPlayerIdRef.current = null;
       setHoveredAncestry(null);
     }
   }, [highlightedPlayerId, bracket, tournament.matchScores, championPlayer?.id]);

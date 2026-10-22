@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { Tournament, TournamentTier, PlayerProfile } from '../../tournament/types';
 import { getDefaultTierColors } from '../../bracket/colorUtils';
 import { MAXOUT_THRESHOLD, LeaderboardRankRow } from '../scoring';
+import { PlayerDetailDrawer } from '../components/PlayerDetailDrawer';
+import { AuthProvider } from '../../auth/AuthContext';
+import { TournamentProvider } from '../../tournament/store';
 
 describe('PlayerDetailDrawer Theme and Presentation Logic', () => {
   const mockPlayer: PlayerProfile = {
@@ -178,6 +183,77 @@ describe('PlayerDetailDrawer Theme and Presentation Logic', () => {
       expect(games.length).toBe(4);
       const p1Maxouts = games.filter(g => (g.player1Points ?? 0) >= MAXOUT_THRESHOLD);
       expect(p1Maxouts.length).toBe(3); // 1050000, 1100000, 1020000
+    });
+  });
+
+  describe('Public vs Admin Qualifier Tools Visibility in Qual Mode', () => {
+    const qualTourney: Tournament = {
+      ...mockTournament,
+      isLocked: false,
+    };
+
+    it('hides Qualifier Stage Actions and delete attempt buttons from public spectators', () => {
+      const html = renderToStaticMarkup(
+        React.createElement(
+          AuthProvider as any,
+          null,
+          React.createElement(
+            TournamentProvider as any,
+            { initialTournaments: [qualTourney], initialHydrated: true },
+            React.createElement(PlayerDetailDrawer, {
+              isOpen: true,
+              onClose: () => {},
+              player: mockPlayer,
+              tournament: qualTourney,
+              canManage: false,
+            })
+          )
+        )
+      );
+
+      // Public spectators MUST NOT see admin tools
+      expect(html).not.toContain('Qualifier Stage Actions');
+      expect(html).not.toContain('Record Attempt Score');
+      expect(html).not.toContain('Log Score');
+      expect(html).not.toContain('Verify Entire Qual');
+      expect(html).not.toContain('title="Delete attempt"');
+
+      // Public spectators MUST still see the competitor profile and qual submissions list
+      expect(html).toContain('Competitor Profile');
+      expect(html).toContain('Qual Submissions');
+      expect(html).toContain('1,050,000');
+      expect(html).toContain('1,250,000');
+    });
+
+    it('displays Qualifier Stage Actions and delete attempt buttons to authorized admins', () => {
+      const html = renderToStaticMarkup(
+        React.createElement(
+          AuthProvider as any,
+          null,
+          React.createElement(
+            TournamentProvider as any,
+            { initialTournaments: [qualTourney], initialHydrated: true },
+            React.createElement(PlayerDetailDrawer, {
+              isOpen: true,
+              onClose: () => {},
+              player: mockPlayer,
+              tournament: qualTourney,
+              canManage: true,
+            })
+          )
+        )
+      );
+
+      // Authorized admins MUST see score logging tools but verification is centralized in Review Queue
+      expect(html).toContain('Qualifier Stage Actions');
+      expect(html).toContain('Record Attempt Score');
+      expect(html).toContain('Log Score');
+      expect(html).not.toContain('Unverify Qual');
+      expect(html).not.toContain('Verify Entire Qual');
+      expect(html).toContain('title="Delete attempt"');
+
+      // Submissions list is also visible
+      expect(html).toContain('Qual Submissions');
     });
   });
 });

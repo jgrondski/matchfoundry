@@ -1,24 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useTournament } from '../../tournament/store';
 import { useOrganization } from '../../organizations/store';
 import { PlayerProfile } from '../../tournament/types';
 import { GenerateFakePlayersModal } from './GenerateFakePlayersModal';
 import { PlayerEditModal } from './PlayerEditModal';
-import { PlayerAvatar } from './PlayerAvatar';
-import { PlaystyleChip } from './PlaystyleChip';
+import {
+  PlayerDirectoryStats,
+  PlayerDirectoryFilterBar,
+  PlayerDirectoryTable,
+} from './PlayerDirectorySections';
 import {
   Users,
   Plus,
   Sparkles,
-  Search,
   Trash2,
-  Edit2,
-  Trophy,
   AlertTriangle,
-  X,
-  ArrowUpDown,
-  Filter,
-  Building2,
 } from 'lucide-react';
 
 export const PlayerDirectory: React.FC = () => {
@@ -65,7 +61,7 @@ export const PlayerDirectory: React.FC = () => {
     return ids;
   }, [orgFilter, tournaments]);
 
-  // Filtered & Sorted Players
+  // Filtered & Sorted Players (includes orgPlayerIds in dependencies)
   const filteredPlayers = useMemo(() => {
     return globalPlayers
       .filter(p => {
@@ -111,55 +107,53 @@ export const PlayerDirectory: React.FC = () => {
         }
         return 0;
       });
-  }, [globalPlayers, searchQuery, playstyleFilter, sortBy]);
-
-  // Summary Analytics
-  const stats = useMemo(() => {
-    const total = globalPlayers.length;
-    let rollingCount = 0;
-    let dasCount = 0;
-    let hypertapCount = 0;
-    let maxPb = 0;
-    let maxPbPlayer = '';
-    let pbSum = 0;
-
-    globalPlayers.forEach(p => {
-      if (p.playstyle === 'Rolling') rollingCount++;
-      else if (p.playstyle === 'DAS') dasCount++;
-      else if (p.playstyle === 'Hypertap') hypertapCount++;
-
-      const pb = p.personalBest || 0;
-      pbSum += pb;
-      if (pb > maxPb) {
-        maxPb = pb;
-        maxPbPlayer = p.name;
-      }
-    });
-
-    const avgPb = total > 0 ? Math.round(pbSum / total) : 0;
-
-    return {
-      total,
-      rollingCount,
-      dasCount,
-      hypertapCount,
-      maxPb,
-      maxPbPlayer,
-      avgPb,
-    };
-  }, [globalPlayers]);
+  }, [globalPlayers, searchQuery, playstyleFilter, orgPlayerIds, sortBy]);
 
   const existingNames = useMemo(() => globalPlayers.map(p => p.name), [globalPlayers]);
 
-  const handleOpenAddModal = () => {
+  // Stable callbacks for child memoization
+  const handleOpenAddModal = useCallback(() => {
     setEditingPlayer(null);
     setIsEditModalOpen(true);
-  };
+  }, []);
 
-  const handleOpenEditModal = (player: PlayerProfile) => {
+  const handleOpenEditModal = useCallback((player: PlayerProfile) => {
     setEditingPlayer(player);
     setIsEditModalOpen(true);
-  };
+  }, []);
+
+  const handleCloseEditModal = useCallback(() => {
+    setIsEditModalOpen(false);
+    setEditingPlayer(null);
+  }, []);
+
+  const handleRequestDelete = useCallback((player: PlayerProfile) => {
+    setPlayerToDelete(player);
+  }, []);
+
+  const handleOpenGenerateModal = useCallback(() => {
+    setIsGenerateModalOpen(true);
+  }, []);
+
+  const handleCloseGenerateModal = useCallback(() => {
+    setIsGenerateModalOpen(false);
+  }, []);
+
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
+
+  const handlePlaystyleChange = useCallback((style: string) => {
+    setPlaystyleFilter(style);
+  }, []);
+
+  const handleOrgFilterChange = useCallback((orgId: string) => {
+    setOrgFilter(orgId);
+  }, []);
+
+  const handleSortChange = useCallback((sort: 'NAME_ASC' | 'PB_DESC' | 'PB_ASC' | 'COUNTRY') => {
+    setSortBy(sort);
+  }, []);
 
   const handleSavePlayer = (playerData: Omit<PlayerProfile, 'id'>) => {
     if (editingPlayer) {
@@ -169,15 +163,45 @@ export const PlayerDirectory: React.FC = () => {
     }
   };
 
-  const handleDeleteConfirm = () => {
-    if (playerToDelete) {
-      deleteGlobalPlayer(playerToDelete.id);
-      setPlayerToDelete(null);
+  const enrolledTournamentsForDelete = useMemo(() => {
+    if (!playerToDelete) return [];
+    return tournaments.filter(t =>
+      (t.playersPool || []).some(p => p.id === playerToDelete.id) ||
+      (t.qualifierSubmissions || []).some(s => s.playerId === playerToDelete.id) ||
+      Boolean(t.tournamentPlayers?.[playerToDelete.id])
+    );
+  }, [playerToDelete, tournaments]);
+
+  const handleDeleteConfirm = async () => {
+    if (playerToDelete && enrolledTournamentsForDelete.length === 0) {
+      const res = await deleteGlobalPlayer(playerToDelete.id);
+      if (res && res.success) {
+        setPlayerToDelete(null);
+      }
     }
   };
 
-  const handleClearAllConfirm = () => {
-    clearAllGlobalPlayers();
+  const enrolledPlayerIds = useMemo(() => {
+    const ids = new Set<string>();
+    tournaments.forEach(t => {
+      (t.playersPool || []).forEach(p => ids.add(p.id));
+      (t.qualifierSubmissions || []).forEach(s => ids.add(s.playerId));
+      if (t.tournamentPlayers) {
+        Object.keys(t.tournamentPlayers).forEach(id => ids.add(id));
+      }
+    });
+    return ids;
+  }, [tournaments]);
+
+  const { unattachedCount, enrolledCount } = useMemo(() => {
+    const unattached = globalPlayers.filter(p => !enrolledPlayerIds.has(p.id)).length;
+    const enrolled = globalPlayers.length - unattached;
+    return { unattachedCount: unattached, enrolledCount: enrolled };
+  }, [globalPlayers, enrolledPlayerIds]);
+
+  const handleClearAllConfirm = async () => {
+    if (unattachedCount === 0) return;
+    await clearAllGlobalPlayers();
     setIsClearAllConfirmOpen(false);
   };
 
@@ -222,7 +246,7 @@ export const PlayerDirectory: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button
             type="button"
-            onClick={() => setIsGenerateModalOpen(true)}
+            onClick={handleOpenGenerateModal}
             className="btn btn-secondary"
             style={{ padding: '0.6rem 1.15rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
@@ -264,546 +288,52 @@ export const PlayerDirectory: React.FC = () => {
       </div>
 
       {/* Stats Overview Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-        <div
-          style={{
-            padding: '1.1rem 1.25rem',
-            background: 'var(--color-bg-surface)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.35rem',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-            Total Global Competitors
-          </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
-            {stats.total}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-            Ready for tournament roster import
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: '1.1rem 1.25rem',
-            background: 'var(--color-bg-surface)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.35rem',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-            Playstyle Breakdown
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-            <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', fontWeight: 700 }}>
-              Rolling: {stats.rollingCount}
-            </span>
-            <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--color-gold-bright)', fontWeight: 700 }}>
-              DAS: {stats.dasCount}
-            </span>
-            <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', background: 'rgba(20, 184, 166, 0.15)', color: '#2dd4bf', fontWeight: 700 }}>
-              Hypertap: {stats.hypertapCount}
-            </span>
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.15rem' }}>
-            Diverse competitive mechanical styles
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: '1.1rem 1.25rem',
-            background: 'var(--color-bg-surface)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.35rem',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-            Highest Personal Best
-          </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-gold-bright)', fontFamily: 'monospace' }}>
-            {stats.maxPb > 0 ? stats.maxPb.toLocaleString() : '—'}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-            {stats.maxPbPlayer ? `Held by ${stats.maxPbPlayer}` : 'No personal bests recorded'}
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: '1.1rem 1.25rem',
-            background: 'var(--color-bg-surface)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.35rem',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600, color: 'var(--color-text-muted)' }}>
-            Average Personal Best
-          </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text-primary)', fontFamily: 'monospace' }}>
-            {stats.avgPb > 0 ? stats.avgPb.toLocaleString() : '—'}
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-            Across {stats.total} registered competitors
-          </div>
-        </div>
-      </div>
+      <PlayerDirectoryStats globalPlayers={globalPlayers} />
 
       {/* Filter & Search Bar */}
-      <div
-        style={{
-          background: 'var(--color-bg-surface)',
-          padding: '1rem 1.25rem',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-border)',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        {/* Search */}
-        <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: '400px' }}>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search competitor name, country, notes..."
-            style={{
-              width: '100%',
-              padding: '0.55rem 0.85rem 0.55rem 2.25rem',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--color-border)',
-              background: 'var(--color-bg-base)',
-              color: 'var(--color-text-primary)',
-              fontSize: '0.85rem',
-            }}
-          />
-          <Search
-            size={16}
-            color="var(--color-text-muted)"
-            style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              style={{
-                position: 'absolute',
-                right: '8px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '2px',
-              }}
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-
-        {/* Filter Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600, marginRight: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-            <Filter size={13} /> Style:
-          </span>
-          {[
-            { key: 'ALL', label: 'All Styles' },
-            { key: 'Rolling', label: 'Rolling' },
-            { key: 'DAS', label: 'DAS' },
-            { key: 'Hypertap', label: 'Hypertap' },
-          ].map(f => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setPlaystyleFilter(f.key)}
-              style={{
-                padding: '0.35rem 0.75rem',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.8rem',
-                fontWeight: playstyleFilter === f.key ? 700 : 500,
-                background: playstyleFilter === f.key ? 'var(--color-gold-bg)' : 'transparent',
-                border: playstyleFilter === f.key ? '1px solid var(--color-gold)' : '1px solid var(--color-border-subtle)',
-                color: playstyleFilter === f.key ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Filters Group: Org & Sort */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {/* Organization Circuit Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Building2 size={14} color="var(--color-text-muted)" />
-            <select
-              value={orgFilter}
-              onChange={e => setOrgFilter(e.target.value)}
-              style={{
-                padding: '0.45rem 0.75rem',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--color-border)',
-                background: 'var(--color-bg-base)',
-                color: 'var(--color-text-primary)',
-                fontSize: '0.8rem',
-              }}
-            >
-              <option value="ALL">All Organizations</option>
-              {organizations.map(org => (
-                <option key={org.id} value={org.id}>
-                  {org.name} ({org.shortName || org.slug.toUpperCase()})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Sort Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <ArrowUpDown size={14} color="var(--color-text-muted)" />
-            <select
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value as 'NAME_ASC' | 'PB_DESC' | 'PB_ASC' | 'COUNTRY')}
-              style={{
-                padding: '0.45rem 0.75rem',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--color-border)',
-                background: 'var(--color-bg-base)',
-                color: 'var(--color-text-primary)',
-                fontSize: '0.8rem',
-              }}
-            >
-              <option value="PB_DESC">Sort: PB High to Low</option>
-              <option value="PB_ASC">Sort: PB Low to High</option>
-              <option value="NAME_ASC">Sort: Name (A–Z)</option>
-              <option value="COUNTRY">Sort: Country</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <PlayerDirectoryFilterBar
+        onSearchChange={handleSearchChange}
+        playstyleFilter={playstyleFilter}
+        onPlaystyleChange={handlePlaystyleChange}
+        orgFilter={orgFilter}
+        onOrgFilterChange={handleOrgFilterChange}
+        sortBy={sortBy}
+        onSortChange={handleSortChange}
+        organizations={organizations}
+      />
 
       {/* Players Table */}
-      <div
-        style={{
-          background: 'var(--color-bg-surface)',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--color-border)',
-          overflow: 'hidden',
-        }}
-      >
-        {filteredPlayers.length === 0 ? (
-          <div
-            style={{
-              padding: '4rem 1.5rem',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '1rem',
-            }}
-          >
-            <div
-              style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                background: 'var(--color-gold-bg)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-gold-bright)',
-              }}
-            >
-              <Users size={28} />
-            </div>
-            <div>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: '0 0 0.35rem 0' }}>
-                {globalPlayers.length === 0 ? 'Global Player Directory is Empty' : 'No Competitors Match Your Filter'}
-              </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', maxWidth: '420px', margin: 0 }}>
-                {globalPlayers.length === 0
-                  ? 'Add competitors manually or click "Generate Fake Players" to simulate authentic competitors for tournaments.'
-                  : 'Try adjusting your search query or playstyle filter.'}
-              </p>
-            </div>
-            {globalPlayers.length === 0 && (
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setIsGenerateModalOpen(true)}
-                  className="btn btn-secondary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                >
-                  <Sparkles size={16} color="var(--color-gold-bright)" />
-                  Generate Fake Players
-                </button>
-                <button
-                  type="button"
-                  onClick={handleOpenAddModal}
-                  className="btn btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                >
-                  <Plus size={16} />
-                  Add Competitor
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ background: 'var(--color-bg-base)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>
-                  <th style={{ padding: '0.75rem 1rem', width: '50px', textAlign: 'center' }}>#</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Competitor</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Country</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Playstyle</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Personal Best</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Status</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Notes</th>
-                  <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPlayers.map((player, idx) => {
-                  const isMaxout = (player.personalBest || 0) >= 999999;
-                  return (
-                    <tr
-                      key={player.id}
-                      style={{
-                        borderBottom: '1px solid var(--color-border-subtle)',
-                        background: 'transparent',
-                        transition: 'background 0.15s ease',
-                      }}
-                    >
-                      {/* Index */}
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'center', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                        {idx + 1}
-                      </td>
-
-                      {/* Name */}
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                          <div
-                            style={{
-                              width: '30px',
-                              height: '30px',
-                              borderRadius: '50%',
-                              background: 'var(--color-bg-surface-elevated)',
-                              border: '1px solid var(--color-border)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 700,
-                              fontSize: '0.75rem',
-                              color: 'var(--color-gold-bright)',
-                              flexShrink: 0,
-                            }}
-                          >
-                            {player.name.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                              <PlayerAvatar player={player} />
-                              <span>{player.name}</span>
-                              {player.nickname && (
-                                <span style={{ fontSize: '0.8rem', color: 'var(--color-gold-bright)', fontStyle: 'italic', fontWeight: 600 }}>
-                                  &quot;{player.nickname}&quot;
-                                </span>
-                              )}
-                              {player.displayName && player.displayName !== player.name && (
-                                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                                  ({player.displayName})
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.15rem' }}>
-                              {player.twitchUsername && (
-                                <a
-                                  href={`https://twitch.tv/${player.twitchUsername}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={e => e.stopPropagation()}
-                                  style={{ color: '#c084fc', textDecoration: 'none', fontWeight: 600 }}
-                                  title={`Twitch: ${player.twitchUsername}`}
-                                >
-                                  twitch.tv/{player.twitchUsername}
-                                </a>
-                              )}
-                              <span>ID: {player.id}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Country */}
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        {player.country ? (
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              padding: '0.15rem 0.45rem',
-                              borderRadius: 'var(--radius-sm)',
-                              background: 'var(--color-bg-surface-highlight)',
-                              fontWeight: 700,
-                              fontSize: '0.75rem',
-                              color: 'var(--color-text-primary)',
-                              border: '1px solid var(--color-border-subtle)',
-                            }}
-                          >
-                            <PlayerAvatar player={player} country={player.country} />
-                            <span>{player.country}</span>
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--color-text-muted)' }}>—</span>
-                        )}
-                      </td>
-
-                      {/* Playstyle */}
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <PlaystyleChip style={player.playstyle} />
-                      </td>
-
-                      {/* Personal Best */}
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                          <span
-                            style={{
-                              fontWeight: 700,
-                              fontFamily: 'monospace',
-                              fontSize: '0.9rem',
-                              color: isMaxout ? 'var(--color-gold-bright)' : 'var(--color-text-primary)',
-                            }}
-                          >
-                            {player.personalBest ? player.personalBest.toLocaleString() : '—'}
-                          </span>
-                          {isMaxout && (
-                            <span
-                              style={{
-                                fontSize: '0.65rem',
-                                padding: '0.1rem 0.35rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(245, 158, 11, 0.2)',
-                                color: 'var(--color-gold-bright)',
-                                fontWeight: 800,
-                                border: '1px solid var(--color-gold)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.2rem',
-                              }}
-                            >
-                              <Trophy size={10} /> MAXOUT
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: 'var(--radius-sm)',
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            background: 'rgba(34, 197, 94, 0.1)',
-                            color: '#4ade80',
-                          }}
-                        >
-                          Active
-                        </span>
-                      </td>
-
-                      {/* Notes */}
-                      <td style={{ padding: '0.75rem 1rem', maxWidth: '240px' }}>
-                        <div
-                          style={{
-                            color: 'var(--color-text-secondary)',
-                            fontSize: '0.8rem',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                          title={player.notes}
-                        >
-                          {player.notes || <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal(player)}
-                            className="btn btn-secondary"
-                            style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
-                            title="Edit competitor profile"
-                          >
-                            <Edit2 size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPlayerToDelete(player)}
-                            className="btn btn-secondary"
-                            style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', color: 'var(--color-red)' }}
-                            title="Delete competitor from catalog"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Generate Fake Players Modal */}
-      <GenerateFakePlayersModal
-        isOpen={isGenerateModalOpen}
-        onClose={() => setIsGenerateModalOpen(false)}
-        onGenerate={count => generateFakeGlobalPlayers(count)}
-        existingCount={globalPlayers.length}
+      <PlayerDirectoryTable
+        filteredPlayers={filteredPlayers}
+        totalPlayersCount={globalPlayers.length}
+        onEditPlayer={handleOpenEditModal}
+        onDeletePlayer={handleRequestDelete}
+        onOpenGenerateModal={handleOpenGenerateModal}
+        onOpenAddModal={handleOpenAddModal}
       />
 
-      {/* Add / Edit Player Modal */}
-      <PlayerEditModal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingPlayer(null);
-        }}
-        onSave={handleSavePlayer}
-        initialPlayer={editingPlayer}
-        existingNames={existingNames}
-        allowDisqualify={false}
-      />
+      {/* Generate Fake Players Modal (conditionally mounted) */}
+      {isGenerateModalOpen && (
+        <GenerateFakePlayersModal
+          isOpen={isGenerateModalOpen}
+          onClose={handleCloseGenerateModal}
+          onGenerate={count => generateFakeGlobalPlayers(count)}
+          existingCount={globalPlayers.length}
+        />
+      )}
+
+      {/* Add / Edit Player Modal (conditionally mounted) */}
+      {isEditModalOpen && (
+        <PlayerEditModal
+          key={editingPlayer?.id ?? 'new'}
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSave={handleSavePlayer}
+          initialPlayer={editingPlayer}
+          existingNames={existingNames}
+          allowDisqualify={false}
+        />
+      )}
 
       {/* Delete Single Player Speedbump Modal */}
       {playerToDelete && (
@@ -839,28 +369,34 @@ export const PlayerDirectory: React.FC = () => {
                   width: '40px',
                   height: '40px',
                   borderRadius: '50%',
-                  background: 'rgba(239, 68, 68, 0.15)',
+                  background: enrolledTournamentsForDelete.length > 0 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: 'var(--color-red)',
+                  color: enrolledTournamentsForDelete.length > 0 ? 'var(--color-gold-bright)' : 'var(--color-red)',
                 }}
               >
                 <AlertTriangle size={22} />
               </div>
               <div>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
-                  Delete Competitor?
+                  {enrolledTournamentsForDelete.length > 0 ? 'Cannot Delete Competitor' : 'Delete Competitor?'}
                 </h3>
                 <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0 }}>
-                  Remove from master player directory
+                  {enrolledTournamentsForDelete.length > 0 ? 'Competitor is active in tournaments' : 'Remove from master player directory'}
                 </p>
               </div>
             </div>
 
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-              Are you sure you want to permanently delete <strong>{playerToDelete.name}</strong> from the global player pool?
-            </p>
+            {enrolledTournamentsForDelete.length > 0 ? (
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+                <strong style={{ color: 'var(--color-text-primary)' }}>{playerToDelete.name}</strong> cannot be deleted from the global pool because they are currently enrolled in: <strong>{enrolledTournamentsForDelete.map(t => t.name).join(', ')}</strong>. To delete this competitor, remove them from tournament rosters first.
+              </p>
+            ) : (
+              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+                Are you sure you want to permanently delete <strong>{playerToDelete.name}</strong> from the global player pool?
+              </p>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button
@@ -869,16 +405,18 @@ export const PlayerDirectory: React.FC = () => {
                 className="btn btn-secondary"
                 style={{ padding: '0.5rem 1.15rem', fontSize: '0.85rem' }}
               >
-                Cancel
+                {enrolledTournamentsForDelete.length > 0 ? 'Close' : 'Cancel'}
               </button>
-              <button
-                type="button"
-                onClick={handleDeleteConfirm}
-                className="btn btn-danger"
-                style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}
-              >
-                Delete Competitor
-              </button>
+              {enrolledTournamentsForDelete.length === 0 && (
+                <button
+                  type="button"
+                  onClick={handleDeleteConfirm}
+                  className="btn btn-danger"
+                  style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}
+                >
+                  Delete Competitor
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -938,7 +476,13 @@ export const PlayerDirectory: React.FC = () => {
             </div>
 
             <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-              This will permanently delete all <strong>{globalPlayers.length}</strong> competitors from <code style={{ color: 'var(--color-gold-bright)' }}>classic_tetris_global_players</code>. This action cannot be undone.
+              This will permanently delete <strong>{unattachedCount}</strong> unattached competitor{unattachedCount === 1 ? '' : 's'} from the global player pool.{' '}
+              {enrolledCount > 0 && (
+                <span>
+                  <strong>{enrolledCount}</strong> competitor{enrolledCount === 1 ? '' : 's'} enrolled in tournaments will be preserved.{' '}
+                </span>
+              )}
+              This action cannot be undone.
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
@@ -953,10 +497,16 @@ export const PlayerDirectory: React.FC = () => {
               <button
                 type="button"
                 onClick={handleClearAllConfirm}
+                disabled={unattachedCount === 0}
                 className="btn btn-danger"
-                style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}
+                style={{
+                  padding: '0.5rem 1.25rem',
+                  fontSize: '0.85rem',
+                  opacity: unattachedCount === 0 ? 0.5 : 1,
+                  cursor: unattachedCount === 0 ? 'not-allowed' : 'pointer',
+                }}
               >
-                Clear Entire Catalog
+                Clear Unattached Competitors
               </button>
             </div>
           </div>

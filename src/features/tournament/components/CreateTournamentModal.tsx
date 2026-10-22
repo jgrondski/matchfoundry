@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTournament } from '../store';
 import { useOrganization } from '../../organizations/store';
-import { QualFormat, Tournament, DEFAULT_POINTS_THRESHOLDS } from '../types';
+import { QualFormat, QualMode, Tournament, DEFAULT_POINTS_THRESHOLDS } from '../types';
 import { createEmptyTournament } from '../defaults';
 import { ClearableNumberInput } from '../../../components/ClearableNumberInput';
 import { X, Building2 } from 'lucide-react';
@@ -32,6 +32,8 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
   const [newTourneySlug, setNewTourneySlug] = useState('');
   const [newTourneyDate, setNewTourneyDate] = useState('');
   const [newTourneyLocation, setNewTourneyLocation] = useState('');
+  const [newTourneyMode, setNewTourneyMode] = useState<QualMode>('HYBRID');
+  const [newTourneyWindowMinutes, setNewTourneyWindowMinutes] = useState<number>(90);
   const [newTourneyFormat, setNewTourneyFormat] = useState<QualFormat>('AVERAGE_OF_X');
   const [newTourneyAvgCount, setNewTourneyAvgCount] = useState<number | undefined>(2);
   const [avgCountError, setAvgCountError] = useState<string | null>(null);
@@ -91,6 +93,8 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
           location: newTourneyLocation.trim() || 'TBD',
           qualFormat: newTourneyFormat,
           qualAverageCount: parsedAvgCount,
+          qualMode: newTourneyMode,
+          qualWindowMinutes: newTourneyWindowMinutes,
           pointsConfig: newTourneyFormat === 'POINTS'
             ? (org?.defaultRules?.pointsConfig || DEFAULT_POINTS_THRESHOLDS)
             : undefined,
@@ -234,6 +238,35 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                 value={newTourneyLocation}
                 onChange={e => setNewTourneyLocation(e.target.value)}
                 placeholder="e.g. St. Louis, MO"
+                style={modalInputStyle}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div>
+              <label style={modalLabelStyle}>Qualifying Mode</label>
+              <select
+                value={newTourneyMode}
+                onChange={e => setNewTourneyMode(e.target.value as QualMode)}
+                style={modalInputStyle}
+              >
+                <option value="HYBRID">Hybrid (In-Person &amp; Online)</option>
+                <option value="IN_PERSON">In-Person Live Event</option>
+                <option value="ONLINE">100% Online Tournament</option>
+              </select>
+            </div>
+            <div>
+              <label style={modalLabelStyle}>Qual Duration (Minutes)</label>
+              <input
+                type="number"
+                min={1}
+                max={1440}
+                value={newTourneyWindowMinutes}
+                onChange={e => {
+                  const val = parseInt(e.target.value, 10);
+                  setNewTourneyWindowMinutes(isNaN(val) || val < 1 ? 1 : val);
+                }}
                 style={modalInputStyle}
               />
             </div>

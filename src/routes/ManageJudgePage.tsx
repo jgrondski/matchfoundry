@@ -162,22 +162,24 @@ const ManageJudgeView: React.FC<ManageJudgeViewProps> = ({ tournament }) => {
           })}
         </div>
 
-        <Link
-          to={`/${tournament.slug}/manage/bracket/${tier.slug}`}
-          className="btn btn-secondary"
-          style={{
-            padding: '0.35rem 0.75rem',
-            fontSize: '0.75rem',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            color: 'var(--color-text-secondary)',
-          }}
-          title="Open Visual Bracket for this Tier"
-        >
-          <GitBranch size={13} />
-          <span>View Bracket</span>
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <Link
+            to={`/${tournament.slug}/manage/bracket/${tier.slug}`}
+            className="btn btn-secondary"
+            style={{
+              padding: '0.35rem 0.75rem',
+              fontSize: '0.75rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              color: 'var(--color-text-secondary)',
+            }}
+            title="Open Visual Bracket for this Tier"
+          >
+            <GitBranch size={13} />
+            <span>View Bracket</span>
+          </Link>
+        </div>
       </div>
 
       <main style={{ flex: 1, padding: '0.75rem 0.5rem', width: '100%', maxWidth: '520px', margin: '0 auto', boxSizing: 'border-box' }}>

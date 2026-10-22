@@ -12,6 +12,7 @@ import {
 import { Clock, CheckCircle2, ChevronRight, Lock, Search } from 'lucide-react';
 import { PlayerDetailDrawer } from '../../qualifiers/components/PlayerDetailDrawer';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
+import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { getInheritedRoundBestOf } from './OrganizerSheetMatrix';
 
 interface MatchCardFeedProps {
@@ -118,11 +119,13 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
     const query = searchTerm.trim().toLowerCase();
     if (!query) return matches;
     return matches.filter((m) => {
-      const p1Name = m.player1.player?.name?.toLowerCase() || '';
-      const p2Name = m.player2.player?.name?.toLowerCase() || '';
+      const p1Effective = getEffectivePlayerName(m.player1.player).toLowerCase();
+      const p1Original = (m.player1.player?.name || '').toLowerCase();
+      const p2Effective = getEffectivePlayerName(m.player2.player).toLowerCase();
+      const p2Original = (m.player2.player?.name || '').toLowerCase();
       const matchNum = `#${m.matchNumber}`.toLowerCase();
       const numOnly = m.matchNumber.toString();
-      return p1Name.includes(query) || p2Name.includes(query) || matchNum.includes(query) || numOnly === query;
+      return p1Effective.includes(query) || p1Original.includes(query) || p2Effective.includes(query) || p2Original.includes(query) || matchNum.includes(query) || numOnly === query;
     });
   };
 
@@ -408,8 +411,8 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
               return `${isLoserDrop ? 'Loser' : 'Winner'} #${src.matchNumber || fallbackNumber}`;
             };
 
-            const p1Name = p1?.name || getSlotPlaceholder(match.player1, 1);
-            const p2Name = p2?.name || getSlotPlaceholder(match.player2, 2);
+            const p1Name = getEffectivePlayerName(p1) || getSlotPlaceholder(match.player1, 1);
+            const p2Name = getEffectivePlayerName(p2) || getSlotPlaceholder(match.player2, 2);
 
             const p1Wins = record?.player1Wins || 0;
             const p2Wins = record?.player2Wins || 0;

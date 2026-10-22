@@ -104,5 +104,7 @@ describe('MatchFoundry™ Rebrand & Common-Law Trademark Verification', () => {
 
     expect(html).toContain('MatchFoundry™ Access Control');
     expect(html).toContain('© 2026 MatchFoundry™. All rights reserved.');
+    expect(html).not.toContain('Dev Mode Hint');
+    expect(html).not.toContain('Tournament Admins enter the tournament PIN');
   });
 });

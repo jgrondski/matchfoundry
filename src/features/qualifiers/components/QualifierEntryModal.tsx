@@ -331,22 +331,24 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                             {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            await deleteQualifierScore(tournament.id, sub.id);
-                          }}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--color-red)',
-                            cursor: 'pointer',
-                            padding: '0.25rem',
-                          }}
-                          title="Delete attempt"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        {!tournament.isLocked && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await deleteQualifierScore(tournament.id, sub.id);
+                            }}
+                            style={{
+                              background: 'transparent',
+                              border: 'none',
+                              color: 'var(--color-red)',
+                              cursor: 'pointer',
+                              padding: '0.25rem',
+                            }}
+                            title="Delete attempt"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>

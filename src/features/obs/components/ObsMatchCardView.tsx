@@ -2,8 +2,10 @@ import React, { useEffect } from 'react';
 import { Tournament, TournamentTier, PlayerProfile } from '../../tournament/types';
 import { BracketMatch } from '../../bracket/types';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
+import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { Trophy } from 'lucide-react';
 import { colorWithAlpha } from '../../bracket/colorUtils';
+import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
 
 export interface ObsMatchCardViewProps {
   tournament: Tournament;
@@ -151,6 +153,7 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <TournamentQualTimerHud tournament={tournament} isObsMode={true} readOnly={true} compact={true} />
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted, #94a3b8)' }}>
               Best of {bestOf}
             </span>
@@ -196,19 +199,9 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
                   </span>
                 )}
                 <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {p1?.name || (targetMatch?.slotA ? `Seed ${targetMatch.slotA}` : 'TBD')}
+                  {getEffectivePlayerName(p1Profile || p1) || (targetMatch?.slotA ? `Seed ${targetMatch.slotA}` : 'TBD')}
                 </span>
-                {p1Profile?.nickname && (
-                  <span style={{ fontSize: '0.8rem', color: 'var(--color-gold-bright, #ffc905)', fontStyle: 'italic', fontWeight: 600 }}>
-                    &quot;{p1Profile.nickname}&quot;
-                  </span>
-                )}
               </div>
-              {p1Profile?.displayName && p1Profile.displayName !== p1Profile.name && (
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted, #94a3b8)' }}>
-                  Alias: {p1Profile.displayName}
-                </div>
-              )}
             </div>
           </div>
 
@@ -243,13 +236,8 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.85rem', textAlign: 'right' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem', flexWrap: 'wrap' }}>
-                {p2Profile?.nickname && (
-                  <span style={{ fontSize: '0.8rem', color: 'var(--color-gold-bright, #ffc905)', fontStyle: 'italic', fontWeight: 600 }}>
-                    &quot;{p2Profile.nickname}&quot;
-                  </span>
-                )}
                 <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {p2?.name || (targetMatch?.slotB ? `Seed ${targetMatch.slotB}` : 'TBD')}
+                  {getEffectivePlayerName(p2Profile || p2) || (targetMatch?.slotB ? `Seed ${targetMatch.slotB}` : 'TBD')}
                 </span>
                 {targetMatch?.player2?.player?.seed && (
                   <span style={{ fontSize: '0.72rem', fontWeight: 800, color: primaryColor }}>
@@ -257,11 +245,6 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
                   </span>
                 )}
               </div>
-              {p2Profile?.displayName && p2Profile.displayName !== p2Profile.name && (
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted, #94a3b8)' }}>
-                  Alias: {p2Profile.displayName}
-                </div>
-              )}
             </div>
             {p2Profile ? (
               <PlayerAvatar player={p2Profile} size={44} country={p2Profile.country} />

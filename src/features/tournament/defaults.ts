@@ -148,6 +148,8 @@ export function createEmptyTournament(overrides?: Partial<Tournament>): Tourname
     qualFormat: DEFAULT_QUAL_FORMAT,
     qualAverageCount: DEFAULT_QUAL_AVERAGE_COUNT,
     pointsConfig: DEFAULT_POINTS_THRESHOLDS,
+    qualMode: 'HYBRID',
+    qualWindowMinutes: 90,
     isLocked: false,
     seedingMethod: DEFAULT_SEEDING_METHOD,
     manualSeeds: [],

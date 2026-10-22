@@ -5,8 +5,8 @@ export interface GlobalPlayersHook {
   globalPlayers: PlayerProfile[];
   addGlobalPlayer: (player: Omit<PlayerProfile, 'id'>) => PlayerProfile;
   updateGlobalPlayer: (playerId: string, updates: Partial<PlayerProfile>) => void;
-  deleteGlobalPlayer: (playerId: string) => void;
-  clearAllGlobalPlayers: () => void;
+  deleteGlobalPlayer: (playerId: string) => Promise<{ success: boolean; error?: string }>;
+  clearAllGlobalPlayers: () => Promise<void>;
   generateFakeGlobalPlayers: (count: number) => PlayerProfile[];
   importPlayersToTournament: (tournamentId: string, players: PlayerProfile[]) => void;
   removePlayerFromTournament: (

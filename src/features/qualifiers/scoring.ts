@@ -29,6 +29,8 @@ export interface LeaderboardRankRow {
   kickerScore?: number;
   isDisqualified: boolean;
   status: QualifierStatus;
+  submissionSource?: 'IN_PERSON' | 'ONLINE';
+  twitchVodUrl?: string;
   assignedTier?: TournamentTier;
   tierSeed?: number;
   isDNQ: boolean;
@@ -39,6 +41,12 @@ export interface LeaderboardRankRow {
  * Derives the current qualifier status for a player in a tournament.
  * - If brackets are locked, all players are auto-flipped to 'verified'.
  * - If marked isVerified in tournamentPlayers, returns 'verified'.
+ * - For online submissions:
+ *   - status === 'SUBMITTED' -> 'awaiting verification'
+ *   - status === 'VERIFIED' -> 'verified'
+ *   - status === 'DNQ' -> 'dnq'
+ *   - status === 'DQ' -> 'dq'
+ *   - status === 'IN_PROGRESS' -> 'in progress'
  * - If 0 qualifier submissions, returns 'not started'.
  * - Otherwise returns 'in progress'.
  */
@@ -50,16 +58,32 @@ export function getPlayerQualifierStatus(
     return 'verified';
   }
 
+  const playerSubs = (tournament.qualifierSubmissions || []).filter(
+    s => s.playerId === playerId
+  );
+
+  if (playerSubs.some(s => s.status === 'DQ')) {
+    return 'dq';
+  }
+
+  if (playerSubs.some(s => s.status === 'SUBMITTED')) {
+    return 'awaiting verification';
+  }
+
+  if (playerSubs.length > 0 && playerSubs.every(s => s.status === 'DNQ')) {
+    return 'dnq';
+  }
+
   const tPlayer = tournament.tournamentPlayers?.[playerId];
   if (tPlayer?.isVerified || tPlayer?.qualsCompleted) {
     return 'verified';
   }
 
-  const playerSubs = (tournament.qualifierSubmissions || []).filter(
-    s => s.playerId === playerId
-  );
+  if (playerSubs.some(s => s.status === 'VERIFIED')) {
+    return 'verified';
+  }
 
-  if (playerSubs.length === 0) {
+  if (playerSubs.length === 0 || playerSubs.every(s => s.status === 'NOT_STARTED')) {
     return 'not started';
   }
 
@@ -156,6 +180,24 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
   const submissions = tournament.qualifierSubmissions || [];
   const tournamentPlayers = tournament.tournamentPlayers || {};
 
+  // Guarantee that every competitor with a submission is included in the pool
+  const poolPlayerIds = new Set(pool.map(p => p.id));
+  const effectivePool = [...pool];
+  for (const sub of submissions) {
+    if (!poolPlayerIds.has(sub.playerId)) {
+      poolPlayerIds.add(sub.playerId);
+      effectivePool.push({
+        id: sub.playerId,
+        name: sub.submittedTwitchUsername || 'Online Competitor',
+        country: 'US',
+        avatarType: 'flag',
+        playstyle: 'DAS',
+        personalBest: 0,
+        isDisqualified: false,
+      });
+    }
+  }
+
   // Group submissions by player
   const submissionsByPlayer = new Map<string, QualifierSubmission[]>();
   for (const sub of submissions) {
@@ -165,13 +207,17 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
   }
 
   // Calculate score per player
-  const rawRows = pool.map(player => {
-    const playerSubs = (submissionsByPlayer.get(player.id) || []).sort(
+  const rawRows = effectivePool.map(player => {
+    const allPlayerSubs = (submissionsByPlayer.get(player.id) || []).sort(
       (a, b) => a.submittedAt - b.submittedAt
+    );
+    // Exclude IN_PROGRESS and NOT_STARTED session rows from scored game attempts
+    const playerSubs = allPlayerSubs.filter(
+      s => s.status !== 'IN_PROGRESS' && s.status !== 'NOT_STARTED'
     );
     const tPlayer = tournamentPlayers[player.id];
     const isCompleted = tournament.isLocked || Boolean(tPlayer?.qualsCompleted);
-    const isDisqualified = Boolean(player.isDisqualified);
+    const isDisqualified = Boolean(player.isDisqualified || allPlayerSubs.some(s => s.status === 'DQ'));
 
     let finalScore = 0;
     let formattedDetail = 'No attempts';
@@ -211,6 +257,13 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
       ? Math.min(...playerSubs.map(s => s.submittedAt))
       : Number.MAX_SAFE_INTEGER;
 
+    const primarySource = allPlayerSubs.some(s => s.submissionSource === 'ONLINE')
+      ? 'ONLINE'
+      : allPlayerSubs.length > 0
+        ? 'IN_PERSON'
+        : undefined;
+    const twitchVodUrl = allPlayerSubs.find(s => s.twitchVodUrl)?.twitchVodUrl;
+
     return {
       player,
       attempts: playerSubs.map(s => s.score),
@@ -221,6 +274,8 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
       kickerScore,
       isDisqualified,
       status: getPlayerQualifierStatus(tournament, player.id),
+      submissionSource: primarySource as 'IN_PERSON' | 'ONLINE' | undefined,
+      twitchVodUrl,
       earliestTimestamp,
     };
   });
@@ -293,17 +348,32 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
     currentCutoff = endRank;
   }
 
-  // Assign ranks, tier cutoffs, and tier seeds ONLY to players with recorded attempts
+  // Assign ranks, tier cutoffs, and tier seeds ONLY to players with recorded attempts.
+  // Players explicitly marked status === 'dnq' are retained in the leaderboard audit list
+  // with isDNQ: true and do not consume a bracket tier seed slot.
   let activeRankCounter = 1;
+  let seedingRankCounter = 1;
   const qualifiedResult: LeaderboardRankRow[] = qualifiedRows.map((item, idx) => {
     const rank = activeRankCounter++;
+    if (item.status === 'dnq') {
+      return {
+        ...item,
+        rank,
+        globalRank: idx + 1,
+        assignedTier: undefined,
+        tierSeed: undefined,
+        isDNQ: true,
+      };
+    }
+
+    const seedingRank = seedingRankCounter++;
     // Find matching tier range
     const matchingRange = tierRanges.find(
-      r => rank >= r.startRank && rank <= r.endRank
+      r => seedingRank >= r.startRank && seedingRank <= r.endRank
     );
 
     if (matchingRange) {
-      const tierSeed = rank - matchingRange.startRank + 1;
+      const tierSeed = seedingRank - matchingRange.startRank + 1;
       return {
         ...item,
         rank,
@@ -351,8 +421,6 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
 }
 
 /**
- * Recalculates brackets for each tier from the dynamic leaderboard standings.
-/**
  * Generates a full populated bracket structure for a given tier and seeded players.
  * Guarantees that all N slots (up to tier capacity) are filled with valid seeds or placeholders.
  */
@@ -391,6 +459,7 @@ export function generateFullTierBracket(tier: TournamentTier, availablePlayers: 
 /**
  * Computes projected draft brackets for all tiers of a tournament.
  * Used during DRAFT mode to keep bracket previews live and reactive.
+ * Strictly excludes players marked DNQ or AWAITING_VERIFICATION (Assertion 5.3).
  */
 export function generateDraftBracketsForTournament(tournament: Tournament): TournamentTier[] {
   const sortedTiers = [...tournament.tiers].sort((a, b) => a.priority - b.priority);
@@ -416,6 +485,8 @@ export function generateDraftBracketsForTournament(tournament: Tournament): Tour
           seed: idx + 1,
           country: p?.country,
           playstyle: p?.playstyle,
+          displayName: p?.displayName,
+          nickname: p?.nickname,
         };
       });
 
@@ -427,19 +498,28 @@ export function generateDraftBracketsForTournament(tournament: Tournament): Tour
   }
 
   const leaderboard = deriveLeaderboard(tournament);
+  const eligibleRows = leaderboard.filter(
+    row =>
+      row.attempts.length > 0 &&
+      row.status !== 'dnq' &&
+      row.status !== 'dq' &&
+      row.status !== 'awaiting verification'
+  );
 
+  let currentOffset = 0;
   return sortedTiers.map(tier => {
-    // Get seeded players for this tier
-    const tierRows = leaderboard.filter(
-      row => row.assignedTier?.id === tier.id && row.tierSeed !== undefined
-    );
+    const tierCapacity = tier.playerCount;
+    const tierRows = eligibleRows.slice(currentOffset, currentOffset + tierCapacity);
+    currentOffset += tierCapacity;
 
-    const seededPlayers: SeededPlayer[] = tierRows.map(row => ({
+    const seededPlayers: SeededPlayer[] = tierRows.map((row, idx) => ({
       id: row.player.id,
       name: row.player.name,
-      seed: row.tierSeed!,
+      seed: idx + 1,
       country: row.player.country,
       playstyle: row.player.playstyle,
+      displayName: row.player.displayName,
+      nickname: row.player.nickname,
     }));
 
     return {

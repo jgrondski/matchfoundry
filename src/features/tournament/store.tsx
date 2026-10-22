@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   Tournament,
   TournamentTier,
@@ -25,6 +25,7 @@ interface TournamentContextType {
   dbError: string | null;
   checkDbHealth: () => Promise<boolean>;
   retryConnection: () => Promise<void>;
+  refreshTournament: (tournamentIdOrSlug: string) => Promise<Tournament | null>;
   apiError?: string | null;
   clearApiError?: () => void;
   simulateSampleTournament: () => Promise<Tournament | undefined>;
@@ -96,8 +97,8 @@ interface TournamentContextType {
   deleteTournament: (tournamentId: string) => Promise<boolean>;
   addGlobalPlayer: (player: Omit<PlayerProfile, 'id'>) => PlayerProfile;
   updateGlobalPlayer: (playerId: string, updates: Partial<PlayerProfile>) => void;
-  deleteGlobalPlayer: (playerId: string) => void;
-  clearAllGlobalPlayers: () => void;
+  deleteGlobalPlayer: (playerId: string) => Promise<{ success: boolean; error?: string }>;
+  clearAllGlobalPlayers: () => Promise<void>;
   generateFakeGlobalPlayers: (count: number) => PlayerProfile[];
   importPlayersToTournament: (tournamentId: string, players: PlayerProfile[]) => void;
   removePlayerFromTournament: (
@@ -309,6 +310,44 @@ export const TournamentProvider: React.FC<{
       }
     }
   };
+
+  const refreshTournament = useCallback(async (tournamentIdOrSlug: string): Promise<Tournament | null> => {
+    if (typeof fetch === 'undefined') return null;
+    try {
+      const fresh = await apiCall(`/api/tournaments/${tournamentIdOrSlug}`);
+      if (fresh && fresh.id) {
+        setIsDbConnected(true);
+        setDbError(null);
+        setTournaments(prev => {
+          const matchIndex = prev.findIndex(
+            t => t.id === fresh.id || (fresh.slug && t.slug === fresh.slug)
+          );
+          if (matchIndex >= 0) {
+            const next = [...prev];
+            next[matchIndex] = fresh;
+            return next;
+          }
+          return [fresh, ...prev];
+        });
+
+        // Sync updated & new players into globalPlayers
+        if (Array.isArray(fresh.playersPool)) {
+          setGlobalPlayers(prev => {
+            const freshMap = new Map(fresh.playersPool.map((p: PlayerProfile) => [p.id, p]));
+            const existingIds = new Set(prev.map(p => p.id));
+            const updatedPrev = prev.map(p => freshMap.get(p.id) || p);
+            const toAdd = fresh.playersPool.filter((p: PlayerProfile) => !existingIds.has(p.id));
+            return toAdd.length > 0 ? [...updatedPrev, ...toAdd] : updatedPrev;
+          });
+        }
+        return fresh;
+      }
+      return null;
+    } catch (err: any) {
+      console.warn(`[Store] Failed to refresh tournament "${tournamentIdOrSlug}":`, err);
+      return null;
+    }
+  }, []);
 
   const syncTournamentToApi = async (tourney: Tournament): Promise<Tournament | null> => {
     try {
@@ -732,7 +771,35 @@ export const TournamentProvider: React.FC<{
         qualsCompleted: newVerified,
       },
     };
-    syncTournamentToApi({ ...tournament, tournamentPlayers: updatedPlayers });
+
+    const updatedSubmissions = (tournament.qualifierSubmissions || []).map(s => {
+      if (s.playerId === playerId) {
+        return {
+          ...s,
+          status: (newVerified ? 'VERIFIED' : 'SUBMITTED') as any,
+          verifiedAt: newVerified ? Date.now() : undefined,
+          verifiedBy: newVerified ? (s.verifiedBy || 'Judge') : undefined,
+        };
+      }
+      return s;
+    });
+
+    const updatedLegacyQuals = (tournament.qualifiers || []).map(q => {
+      if (q.playerId === playerId) {
+        return { ...q, verified: newVerified };
+      }
+      return q;
+    });
+
+    const updatedTourney: Tournament = {
+      ...tournament,
+      tournamentPlayers: updatedPlayers,
+      qualifierSubmissions: updatedSubmissions,
+      qualifiers: updatedLegacyQuals,
+    };
+
+    setTournaments(prev => prev.map(t => (t.id === tournament.id ? updatedTourney : t)));
+    syncTournamentToApi(updatedTourney);
   };
 
   const lockTournament = async (tournamentId: string): Promise<Tournament | null> => {
@@ -1238,18 +1305,28 @@ export const TournamentProvider: React.FC<{
       });
   };
 
-  const deleteGlobalPlayer = (playerId: string) => {
-    apiCall(`/api/players/${playerId}`, { method: 'DELETE' })
-      .then(() => {
-        setGlobalPlayers(prev => prev.filter(p => p.id !== playerId));
-      })
-      .catch(err => {
-        setApiError(`Failed to delete global player: ${err.message}`);
-      });
+  const deleteGlobalPlayer = async (playerId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await apiCall(`/api/players/${playerId}`, { method: 'DELETE' });
+      setGlobalPlayers(prev => prev.filter(p => p.id !== playerId));
+      return { success: true };
+    } catch (err: any) {
+      const msg = err.message || 'Failed to delete global player';
+      setApiError(`Failed to delete global player: ${msg}`);
+      return { success: false, error: msg };
+    }
   };
 
-  const clearAllGlobalPlayers = () => {
-    setGlobalPlayers([]);
+  const clearAllGlobalPlayers = async (): Promise<void> => {
+    try {
+      const res = await apiCall('/api/players', { method: 'DELETE' });
+      if (res && Array.isArray(res.deletedIds)) {
+        const deletedSet = new Set(res.deletedIds);
+        setGlobalPlayers(prev => prev.filter(p => !deletedSet.has(p.id)));
+      }
+    } catch (err: any) {
+      setApiError(`Failed to clear global players: ${err.message}`);
+    }
   };
 
   const generateFakeGlobalPlayers = (count: number): PlayerProfile[] => {
@@ -1348,37 +1425,25 @@ export const TournamentProvider: React.FC<{
       };
     }
 
-    const updatedPool = (tournament.playersPool || []).filter(p => p.id !== playerId);
-    const updatedSubs = (tournament.qualifierSubmissions || []).filter(s => s.playerId !== playerId);
-    const updatedQuals = (tournament.qualifiers || []).filter(q => q.playerId !== playerId);
-    const updatedManualSeeds = (tournament.manualSeeds || []).filter(id => id !== playerId);
-    const updatedTournamentPlayers = { ...(tournament.tournamentPlayers || {}) };
-    delete updatedTournamentPlayers[playerId];
-    updatedManualSeeds.forEach((id, idx) => {
-      if (updatedTournamentPlayers[id]) {
-        updatedTournamentPlayers[id] = {
-          ...updatedTournamentPlayers[id],
-          seed: idx + 1,
-        };
-      }
-    });
-
-    const updated: Tournament = {
-      ...tournament,
-      playersPool: updatedPool,
-      qualifierSubmissions: updatedSubs,
-      qualifiers: updatedQuals,
-      manualSeeds: updatedManualSeeds,
-      tournamentPlayers: updatedTournamentPlayers,
-    };
-    if (!updated.isLocked) {
-      updated.tiers = generateDraftBracketsForTournament(updated);
+    if (tournament.isLocked) {
+      return {
+        success: false,
+        error: 'Cannot remove competitor while brackets are locked. Unlock brackets first.',
+      };
     }
 
-    apiCall(`/api/tournaments/${tournament.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updated),
+    const hasQualScores = (tournament.qualifierSubmissions || []).some(
+      s => s.playerId === playerId
+    );
+    if (hasQualScores) {
+      return {
+        success: false,
+        error: 'Cannot remove competitor while they have recorded qualifier scores. Delete their qualifier scores first.',
+      };
+    }
+
+    apiCall(`/api/tournaments/${tournament.id}/players/${playerId}`, {
+      method: 'DELETE',
     })
       .then(saved => {
         if (saved && saved.id) {
@@ -1763,6 +1828,7 @@ export const TournamentProvider: React.FC<{
         dbError,
         checkDbHealth,
         retryConnection,
+        refreshTournament,
         apiError,
         clearApiError,
       }}

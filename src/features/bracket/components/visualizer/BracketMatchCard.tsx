@@ -7,6 +7,7 @@ import {
 } from '../../types';
 import { Tournament, TournamentTier, PlayerProfile, GameScoreEntry } from '../../../tournament/types';
 import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
+import { getEffectivePlayerName } from '../../../players/playerNameUtils';
 import {
   colorWithAlpha,
   getAlternateShade,
@@ -151,8 +152,8 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
     return `${isLoserDrop ? 'Loser' : 'Winner'} of M#${src.matchNumber || fallbackNumber}`;
   };
 
-  const p1Name = p1?.name || getSlotPlaceholder(match.player1, 1);
-  const p2Name = p2?.name || getSlotPlaceholder(match.player2, 2);
+  const p1Name = getEffectivePlayerName(p1) || getSlotPlaceholder(match.player1, 1);
+  const p2Name = getEffectivePlayerName(p2) || getSlotPlaceholder(match.player2, 2);
 
   const p1Wins = record?.player1Wins || 0;
   const p2Wins = record?.player2Wins || 0;

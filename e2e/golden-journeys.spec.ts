@@ -1,9 +1,45 @@
 import { test, expect } from '@playwright/test';
+import { getDb } from '../src/db';
+import { tournaments } from '../src/db/schema';
+import { eq, inArray } from 'drizzle-orm';
 
 const SYSTEM_ADMIN_PIN = process.env.SYSTEM_ADMIN_RECOVERY_PIN || '!Te67Omentris69420!';
 const generateTestPin = () => String(Math.floor(100000 + Math.random() * 900000));
 
 test.describe('Golden User Journeys: Security & Access Control', () => {
+  const originalPins: Record<string, string | null> = {};
+
+  test.beforeAll(async () => {
+    try {
+      process.loadEnvFile?.();
+    } catch {}
+    try {
+      const db = getDb();
+      const rows = await db
+        .select({ slug: tournaments.slug, adminPinEncrypted: tournaments.adminPinEncrypted })
+        .from(tournaments)
+        .where(inArray(tournaments.slug, ['omen-open', 'omen-d']));
+      for (const r of rows) {
+        originalPins[r.slug] = r.adminPinEncrypted;
+      }
+    } catch (err) {
+      console.warn('[E2E Setup] Failed to snapshot original tournament PINs:', err);
+    }
+  });
+
+  test.afterAll(async () => {
+    try {
+      const db = getDb();
+      for (const [slug, pin] of Object.entries(originalPins)) {
+        await db
+          .update(tournaments)
+          .set({ adminPinEncrypted: pin })
+          .where(eq(tournaments.slug, slug));
+      }
+    } catch (err) {
+      console.warn('[E2E Teardown] Failed to restore original tournament PINs:', err);
+    }
+  });
 
   test('Journey 1: Public Spectator Friction-Zero Journey', async ({ page, context }) => {
     // Ensure clean spectator session
@@ -47,6 +83,8 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
 
   test('Journey 2: Route Gating & System Admin Emergency Recovery PIN', async ({ page, context }) => {
     await context.clearCookies();
+    await page.goto('/');
+    await page.evaluate(() => localStorage.clear());
 
     // 1. Unauthenticated spectator attempts to access protected settings directly
     await page.goto('/omen-open/manage/settings');
@@ -241,6 +279,104 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     // Step G: Unauthorized access to omen-ao3 redirects to /admin
     await page.goto('/omen-ao3/manage/settings');
     await expect(page).toHaveURL(/\/admin/);
+  });
+
+  test('Journey 5: Remote Competitor Online Qualification & Judge Adjudication (Phase 10 Golden Journey 4)', async ({ page, context }) => {
+    await context.clearCookies();
+    const runnerHandle = `Runner_${Math.floor(10000 + Math.random() * 90000)}`;
+
+    // 1. Remote competitor navigates directly to the public competitor portal for omen-ao3
+    await page.goto('/omen-ao3/qualify');
+    await expect(page.getByTestId('competitor-portal')).toBeVisible();
+    await expect(page.getByTestId('competitor-checkin-card')).toBeVisible();
+
+    // 2. Competitor enters player name and twitch handle
+    await page.getByTestId('player-name-input').fill(runnerHandle);
+    await page.getByTestId('twitch-handle-input').fill(runnerHandle);
+
+    // 3. Launch official qualifier pre-flight briefing
+    await page.getByTestId('start-preflight-button').click();
+
+    // Checklist modal appears
+    const preFlightModal = page.getByTestId('pre-flight-modal');
+    await expect(preFlightModal).toBeVisible();
+
+    // Check all checklist items
+    const checkLabels = preFlightModal.locator('label');
+    const labelCount = await checkLabels.count();
+    for (let i = 0; i < labelCount; i++) {
+      await checkLabels.nth(i).click();
+    }
+
+    // Confirm & Begin official run
+    const beginBtn = page.getByTestId('confirm-begin-button');
+    await expect(beginBtn).toBeEnabled();
+    await beginBtn.click();
+    await expect(preFlightModal).not.toBeVisible();
+
+    // 6. Active session HUD displays immutable NES Authword
+    const authwordCard = page.getByTestId('authword-hud-card');
+    await expect(authwordCard).toBeVisible();
+    const authwordText = await page.getByTestId('assigned-authword').textContent();
+    expect(authwordText?.trim()).toMatch(/^[A-Z0-9.\-!♥]{6,8}$/);
+
+    // 7. Fill out scores and paste Twitch broadcast VOD link
+    const scoreInput = page.getByTestId('score-input-0');
+    await expect(scoreInput).toBeVisible();
+    await scoreInput.fill('1124500');
+
+    const vodInput = page.getByTestId('twitch-vod-input');
+    await expect(vodInput).toBeVisible();
+    await vodInput.fill('https://twitch.tv/videos/9876543210?t=00h45m12s');
+
+    // Submit official score
+    const submitBtn = page.getByTestId('submit-qual-button');
+    await expect(submitBtn).toBeEnabled();
+    await submitBtn.click();
+
+    // Confirmed receipt card displays with player name in heading; competitor-identity-bar is removed
+    await expect(page.getByTestId('awaiting-verification-card')).toBeVisible();
+    await expect(page.getByText(`${runnerHandle}: Official Qual Submitted`)).toBeVisible();
+    await expect(page.getByTestId('competitor-identity-bar')).not.toBeVisible();
+    await expect(page.getByText('1,124,500')).toBeVisible();
+
+    // 8. Public Leaderboard reflects provisional standing [⏳ Awaiting Verification]
+    await page.goto('/omen-ao3/leaderboard');
+    const competitorRow = page.locator('tr', { hasText: runnerHandle });
+    await expect(competitorRow).toBeVisible();
+    await expect(competitorRow.getByText('Awaiting Verification')).toBeVisible();
+
+    // 9. Staff Admin navigates to Qual Review
+    await page.goto('/omen-ao3/manage/review');
+    await expect(page).toHaveURL(/\/admin\?.*redirect=%2Fomen-ao3%2Fmanage%2Freview/);
+    await page.getByPlaceholder('Enter PIN or Key').fill(SYSTEM_ADMIN_PIN);
+    await page.getByRole('button', { name: /unlock administration/i }).click();
+
+    // Lands on Qual Review view
+    await expect(page).toHaveURL(/\/omen-ao3\/manage\/review/);
+    await expect(page.getByRole('heading', { name: 'Qual Review' })).toBeVisible();
+
+    // Find submission row in ReviewQueueTable
+    const reviewRow = page.locator('tr', { hasText: runnerHandle });
+    await expect(reviewRow).toBeVisible();
+    await reviewRow.getByRole('button', { name: /review/i }).click();
+
+    // 10. Judge Adjudication Dialog opens
+    const adjDialog = page.getByRole('dialog');
+    await expect(adjDialog).toBeVisible();
+    await expect(adjDialog.getByText(new RegExp(`Adjudicate Run: ${runnerHandle}`, 'i'))).toBeVisible();
+    await expect(adjDialog.getByText(authwordText!.trim())).toBeVisible();
+
+    // Judge clicks "Verify Qual"
+    await adjDialog.getByRole('button', { name: /verify qual/i }).click();
+    await expect(adjDialog).not.toBeVisible();
+
+    // 11. Public Leaderboard updates to official "✓ Verified" status
+    await page.goto('/omen-ao3/leaderboard');
+    const verifiedRow = page.locator('tr', { hasText: runnerHandle });
+    await expect(verifiedRow).toBeVisible();
+    await expect(verifiedRow.getByText(/verified/i)).toBeVisible();
+    await expect(verifiedRow.getByText('Awaiting Verification')).not.toBeVisible();
   });
 
 });
