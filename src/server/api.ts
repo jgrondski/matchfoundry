@@ -39,6 +39,7 @@ import {
   voidAndResetOnlineQualSession,
   adjudicateOnlineSubmission,
   verifyAllQualifierSubmissions,
+  setTournamentPlayerDisqualification,
   listOnlineQualSessions,
   dispatchDiscordWebhook,
 } from '../api/qualifiers';
@@ -948,6 +949,28 @@ export function createApiMiddleware() {
             });
           }
           return sendJson(res, 200, session);
+        }
+
+        // POST /api/tournaments/:id/qualify/disqualification (Tournament Admin only)
+        // Explicit tournament-scoped DQ toggle. The full-tournament PUT never writes DQ state.
+        if (subAction === 'qualify/disqualification' && method === 'POST') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          if (!body?.playerId || typeof body?.isDisqualified !== 'boolean') {
+            return sendError(res, 400, 'playerId and isDisqualified are required');
+          }
+          await setTournamentPlayerDisqualification(tourneyId, {
+            playerId: body.playerId,
+            isDisqualified: body.isDisqualified,
+            changedBy: body?.changedBy,
+          });
+          const t = await getFullTournament(tourneyId);
+          if (!t) return sendError(res, 404, 'Tournament not found');
+          if (!t.isLocked) {
+            t.tiers = generateDraftBracketsForTournament(t);
+            const saved = await saveFullTournament(t);
+            return sendJson(res, 200, saved);
+          }
+          return sendJson(res, 200, t);
         }
 
         // POST /api/tournaments/:id/qualify/verify-all (Judge / Tournament Admin only)

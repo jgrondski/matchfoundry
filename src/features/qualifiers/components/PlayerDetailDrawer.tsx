@@ -72,7 +72,9 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
   const leaderboard = useMemo(() => deriveLeaderboard(tournament), [tournament]);
   const effectiveRankRow = useMemo(() => {
     if (!player) return undefined;
-    return rankRow || leaderboard.find(r => r.player.id === player.id);
+    // Prefer the live row: a caller-provided rankRow is a click-time snapshot and goes stale
+    // when a judge ruling changes while the drawer is open.
+    return leaderboard.find(r => r.player.id === player.id) || rankRow;
   }, [rankRow, leaderboard, player]);
 
   // Derive global standings for the player
@@ -147,11 +149,12 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
   const overallQualSeed = useMemo(() => {
     if (!effectiveRankRow) return '—';
     if (effectiveRankRow.isDisqualified) return 'DQ';
+    if (effectiveRankRow.status === 'dnq') return 'DNQ';
     if (effectiveRankRow.attempts.length === 0 && effectiveRankRow.finalScore === 0) {
       const hasSubs = (tournament.qualifierSubmissions || []).some(s => s.playerId === player?.id);
       if (!hasSubs) return '—';
     }
-    return typeof effectiveRankRow.rank === 'number' ? `#${effectiveRankRow.rank}` : String(effectiveRankRow.rank);
+    return typeof effectiveRankRow.rank === 'number' ? `#${effectiveRankRow.rank}` : '—';
   }, [effectiveRankRow, tournament.qualifierSubmissions, player?.id]);
 
   const bracketSeed = useMemo(() => {
@@ -1517,7 +1520,6 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
           setIsEditModalOpen(false);
         }}
         existingNames={[]}
-        allowDisqualify={true}
       />
     )}
     </>

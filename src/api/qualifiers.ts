@@ -1168,7 +1168,7 @@ export async function adjudicateOnlineSubmission(
     }
     await db
       .update(tournamentPlayers)
-      .set({ qualsCompleted: true })
+      .set({ qualsCompleted: true, isDisqualified: false })
       .where(
         and(
           eq(tournamentPlayers.tournamentId, tourney.id),
@@ -1230,7 +1230,7 @@ export async function adjudicateOnlineSubmission(
 
     await db
       .update(tournamentPlayers)
-      .set({ qualsCompleted: true })
+      .set({ qualsCompleted: true, isDisqualified: false })
       .where(
         and(
           eq(tournamentPlayers.tournamentId, tourney.id),
@@ -1260,7 +1260,7 @@ export async function adjudicateOnlineSubmission(
     }
     await db
       .update(tournamentPlayers)
-      .set({ qualsCompleted: false })
+      .set({ qualsCompleted: false, isDisqualified: false })
       .where(
         and(
           eq(tournamentPlayers.tournamentId, tourney.id),
@@ -1277,10 +1277,16 @@ export async function adjudicateOnlineSubmission(
         : `[DQ]: ${input.judgeNotes.trim()}`
       : existing.judgeNotes || '[DQ]: Disqualified by judge';
 
+    // Tournament-scoped DQ: reversible by a later VERIFY / EDIT_AND_VERIFY / DNQ ruling
     await db
-      .update(players)
-      .set({ isDisqualified: true })
-      .where(eq(players.id, input.playerId));
+      .update(tournamentPlayers)
+      .set({ isDisqualified: true, qualsCompleted: false })
+      .where(
+        and(
+          eq(tournamentPlayers.tournamentId, tourney.id),
+          eq(tournamentPlayers.playerId, input.playerId)
+        )
+      );
 
     for (const subId of existing.submissionIds) {
       await db
@@ -1515,4 +1521,55 @@ export async function verifyAllQualifierSubmissions(
     verifiedCount: results.length,
     sessions: results,
   };
+}
+
+/**
+ * Explicitly sets or lifts a competitor's tournament-scoped disqualification (organizer toggle).
+ * Lifting a DQ sends any DQ'd submissions back to SUBMITTED so they re-enter the judge review queue.
+ */
+export async function setTournamentPlayerDisqualification(
+  tournamentIdOrSlug: string,
+  input: { playerId: string; isDisqualified: boolean; changedBy?: string }
+): Promise<void> {
+  const db = getDb();
+  const tourney = await resolveTournamentRow(tournamentIdOrSlug);
+
+  const [updated] = await db
+    .update(tournamentPlayers)
+    .set({ isDisqualified: input.isDisqualified })
+    .where(
+      and(
+        eq(tournamentPlayers.tournamentId, tourney.id),
+        eq(tournamentPlayers.playerId, input.playerId)
+      )
+    )
+    .returning();
+  if (!updated) {
+    throw new Error('Competitor is not registered in this tournament');
+  }
+
+  if (!input.isDisqualified) {
+    const dqSubs = await db
+      .select()
+      .from(qualifierSubmissions)
+      .where(
+        and(
+          eq(qualifierSubmissions.tournamentId, tourney.id),
+          eq(qualifierSubmissions.playerId, input.playerId),
+          eq(qualifierSubmissions.status, 'DQ')
+        )
+      );
+    const liftNote = `[DQ LIFTED BY ${input.changedBy || 'Organizer'}]`;
+    for (const sub of dqSubs) {
+      await db
+        .update(qualifierSubmissions)
+        .set({
+          status: 'SUBMITTED',
+          judgeNotes: sub.judgeNotes ? `${sub.judgeNotes}\n${liftNote}` : liftNote,
+          verifiedBy: null,
+          verifiedAt: null,
+        })
+        .where(eq(qualifierSubmissions.id, sub.id));
+    }
+  }
 }

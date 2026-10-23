@@ -592,6 +592,10 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                               >
                                 {assignedTier!.name} #{row.tierSeed}
                               </span>
+                            ) : row.isDisqualified ? (
+                              <span className="badge badge-muted" title="Disqualified from this tournament">
+                                DQ
+                              </span>
                             ) : row.isDNQ ? (
                               <span className="badge badge-muted" title="Did Not Qualify for active brackets">
                                 DNQ

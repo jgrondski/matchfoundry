@@ -714,7 +714,7 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
       expect(status).toBe('dnq');
     });
 
-    it('adjudicates with DQ action, setting isDisqualified on global player profile', async () => {
+    it('adjudicates with DQ action, setting a tournament-scoped DQ (never the global player profile)', async () => {
       const adjReq = createMockReq({
         url: `/api/tournaments/${tourney.id}/qualify/adjudicate`,
         method: 'POST',
@@ -733,7 +733,10 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
       expect(adjRes.getBody().status).toBe('DQ');
 
       const dbPlayer = await getPlayer(player.id);
-      expect(dbPlayer?.isDisqualified).toBe(true);
+      expect(dbPlayer?.isDisqualified).toBe(false);
+
+      const reloaded = await getFullTournament(tourney.id);
+      expect(reloaded?.playersPool?.find(p => p.id === player.id)?.isDisqualified).toBe(true);
     });
   });
 });

@@ -715,9 +715,12 @@ export const TournamentProvider: React.FC<{
     playerId: string,
     updates: Partial<PlayerProfile>
   ) => {
+    // DQ is tournament-scoped and set only via judge adjudication: never write it from profile edits
+    const { isDisqualified: _ignoredDq, ...profileUpdates } = updates;
+
     // Optimistically update globalPlayers
     setGlobalPlayers(prev =>
-      prev.map(p => (p.id === playerId ? { ...p, ...updates } : p))
+      prev.map(p => (p.id === playerId ? { ...p, ...profileUpdates } : p))
     );
 
     setTournaments(prev => {
@@ -725,7 +728,7 @@ export const TournamentProvider: React.FC<{
       if (!target) return prev;
       const currentPool = target.playersPool || [];
       const updatedPool = currentPool.map(p =>
-        p.id === playerId ? { ...p, ...updates } : p
+        p.id === playerId ? { ...p, ...profileUpdates } : p
       );
       const updated = { ...target, playersPool: updatedPool };
       if (!updated.isLocked) {
@@ -735,7 +738,7 @@ export const TournamentProvider: React.FC<{
       apiCall(`/api/players/${playerId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+        body: JSON.stringify(profileUpdates),
       })
         .then(() => {
           apiCall(`/api/tournaments/${target.id}`, {
@@ -812,15 +815,31 @@ export const TournamentProvider: React.FC<{
   ) => {
     const tournament = tournaments.find(t => t.id === tournamentId || t.slug === tournamentId);
     if (!tournament) return;
-    const currentPool = tournament.playersPool || [];
-    const updatedPool = currentPool.map(p =>
-      p.id === playerId ? { ...p, isDisqualified } : p
-    );
-    const updated = { ...tournament, playersPool: updatedPool };
-    if (!updated.isLocked) {
-      updated.tiers = generateDraftBracketsForTournament(updated);
+    void persistDisqualification(tournament.id, playerId, isDisqualified);
+  };
+
+  // DQ is tournament-scoped and only persisted through the dedicated endpoint;
+  // the full-tournament PUT intentionally ignores it.
+  const persistDisqualification = async (
+    tournamentId: string,
+    playerId: string,
+    isDisqualified: boolean
+  ): Promise<Tournament | null> => {
+    try {
+      const saved = await apiCall(`/api/tournaments/${tournamentId}/qualify/disqualification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, isDisqualified }),
+      });
+      if (saved && saved.id) {
+        setTournaments(prev => prev.map(t => (t.id === saved.id ? saved : t)));
+        return saved;
+      }
+      return null;
+    } catch (err: any) {
+      setApiError(`Failed to update disqualification: ${err.message}`);
+      return null;
     }
-    syncTournamentToApi(updated);
   };
 
   const togglePlayerQualsCompleted = (

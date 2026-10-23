@@ -476,7 +476,6 @@ export const ManageTournamentPlayersPage: React.FC = () => {
         onClose={() => setIsRegisterModalOpen(false)}
         onSave={handleRegisterNewCompetitor}
         existingNames={existingRosterNames}
-        allowDisqualify={true}
       />
 
       <PlayerEditModal
@@ -496,7 +495,6 @@ export const ManageTournamentPlayersPage: React.FC = () => {
         existingNames={existingRosterNames.filter(
           n => n.toLowerCase() !== editingPlayer?.name.toLowerCase()
         )}
-        allowDisqualify={true}
       />
 
       <ImportFromGlobalModal

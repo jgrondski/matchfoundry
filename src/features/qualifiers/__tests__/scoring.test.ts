@@ -170,49 +170,47 @@ describe('Qualifiers Scoring Engine', () => {
       tournamentPlayers: {},
     };
 
-    it('ranks all players strictly by qualifier score regardless of player disqualification status', () => {
+    it('drops DQ players to the bottom without a rank, tier, or seed slot', () => {
       const rows = deriveLeaderboard(tournament);
 
       // Total 6 players
       expect(rows).toHaveLength(6);
 
-      // Rank 1 should be Dave (1,200,000 maxout)
-      expect(rows[0].player.name).toBe('Dave (DQ)');
+      // Dave (1,200,000 maxout) is DQ'd: highest score, but takes no rank or seed
+      // Rank 1 should be Alice (1,000,000 maxout) -> Gold Seed 1
+      expect(rows[0].player.name).toBe('Alice');
       expect(rows[0].rank).toBe(1);
       expect(rows[0].assignedTier?.id).toBe('gold');
-      expect(rows[0].tierSeed).toBe(1); // Gold Seed 1
+      expect(rows[0].tierSeed).toBe(1);
 
-      // Rank 2 should be Alice (1,000,000 maxout)
-      expect(rows[1].player.name).toBe('Alice');
+      // Rank 2 should be Bob (900,000) -> Gold Seed 2
+      expect(rows[1].player.name).toBe('Bob');
       expect(rows[1].rank).toBe(2);
       expect(rows[1].assignedTier?.id).toBe('gold');
-      expect(rows[1].tierSeed).toBe(2); // Gold Seed 2
+      expect(rows[1].tierSeed).toBe(2);
 
-      // Rank 3 should be Bob (900,000) -> Silver tier (cutoff ranks 3-4)
-      expect(rows[2].player.name).toBe('Bob');
+      // Ranks 3-4 -> Silver tier
+      expect(rows[2].player.name).toBe('Charlie');
       expect(rows[2].rank).toBe(3);
       expect(rows[2].assignedTier?.id).toBe('silver');
       expect(rows[2].tierSeed).toBe(1);
-
-      // Rank 4 should be Charlie (850,000) -> Silver tier
-      expect(rows[3].player.name).toBe('Charlie');
+      expect(rows[3].player.name).toBe('Eve');
       expect(rows[3].rank).toBe(4);
       expect(rows[3].assignedTier?.id).toBe('silver');
       expect(rows[3].tierSeed).toBe(2);
 
-      // Rank 5 should be Eve (800,000) -> DNQ (past Gold 2p + Silver 2p = 4 cutoffs)
-      expect(rows[4].player.name).toBe('Eve');
+      // Rank 5: Frank (700,000) misses the cutoff -> DNQ
+      expect(rows[4].player.name).toBe('Frank');
       expect(rows[4].rank).toBe(5);
       expect(rows[4].assignedTier).toBeUndefined();
-      expect(rows[4].tierSeed).toBeUndefined();
       expect(rows[4].isDNQ).toBe(true);
 
-      // Rank 6 should be Frank (700,000) -> DNQ
-      expect(rows[5].player.name).toBe('Frank');
-      expect(rows[5].rank).toBe(6);
+      // Dave (DQ) sits at the bottom, unranked and unseeded
+      expect(rows[5].player.name).toBe('Dave (DQ)');
+      expect(rows[5].isDisqualified).toBe(true);
+      expect(rows[5].rank).toBeUndefined();
       expect(rows[5].assignedTier).toBeUndefined();
       expect(rows[5].tierSeed).toBeUndefined();
-      expect(rows[5].isDNQ).toBe(true);
     });
 
     it('breaks ties deterministically by earlier submission timestamp', () => {
@@ -329,19 +327,24 @@ describe('Qualifiers Scoring Engine', () => {
     it('dynamically generates draft brackets with tier-relative seeding', () => {
       const draftTiers = generateDraftBracketsForTournament(tournament);
 
-      // Gold tier bracket should feature Dave (Seed 1) vs Alice (Seed 2)
+      // Gold tier bracket should feature Alice (Seed 1) vs Bob (Seed 2); DQ'd Dave takes no slot
       const goldBracket = draftTiers.find(t => t.id === 'gold')!.bracket;
-      expect(goldBracket.rounds[0].matches[0].player1.player?.name).toBe('Dave (DQ)');
+      expect(goldBracket.rounds[0].matches[0].player1.player?.name).toBe('Alice');
       expect(goldBracket.rounds[0].matches[0].player1.player?.seed).toBe(1);
-      expect(goldBracket.rounds[0].matches[0].player2.player?.name).toBe('Alice');
+      expect(goldBracket.rounds[0].matches[0].player2.player?.name).toBe('Bob');
       expect(goldBracket.rounds[0].matches[0].player2.player?.seed).toBe(2);
 
-      // Silver tier bracket should feature Bob (Seed 1) vs Charlie (Seed 2)
+      // Silver tier bracket should feature Charlie (Seed 1) vs Eve (Seed 2)
       const silverBracket = draftTiers.find(t => t.id === 'silver')!.bracket;
-      expect(silverBracket.rounds[0].matches[0].player1.player?.name).toBe('Bob');
+      expect(silverBracket.rounds[0].matches[0].player1.player?.name).toBe('Charlie');
       expect(silverBracket.rounds[0].matches[0].player1.player?.seed).toBe(1);
-      expect(silverBracket.rounds[0].matches[0].player2.player?.name).toBe('Charlie');
+      expect(silverBracket.rounds[0].matches[0].player2.player?.name).toBe('Eve');
       expect(silverBracket.rounds[0].matches[0].player2.player?.seed).toBe(2);
+
+      const seededIds = draftTiers.flatMap(t =>
+        t.bracket.rounds.flatMap(r => r.matches.flatMap(m => [m.player1.player?.id, m.player2.player?.id]))
+      );
+      expect(seededIds).not.toContain('p4');
     });
 
     it('assigns ranks without marking players as DNQ when tournament has no tiers (bracketless quals)', () => {
@@ -353,18 +356,19 @@ describe('Qualifiers Scoring Engine', () => {
       const rows = deriveLeaderboard(tierlessTournament);
       expect(rows).toHaveLength(6);
 
-      // Ranked 1 through 6
+      // Eligible players ranked 1 through 5; DQ'd Dave unranked at the bottom
       expect(rows[0].rank).toBe(1);
-      expect(rows[0].player.name).toBe('Dave (DQ)');
+      expect(rows[0].player.name).toBe('Alice');
       expect(rows[0].isDNQ).toBe(false);
       expect(rows[0].assignedTier).toBeUndefined();
       expect(rows[0].tierSeed).toBeUndefined();
 
-      expect(rows[1].rank).toBe(2);
-      expect(rows[1].player.name).toBe('Alice');
+      expect(rows[4].rank).toBe(5);
+      expect(rows[4].player.name).toBe('Frank');
+      expect(rows[4].isDNQ).toBe(false);
 
-      expect(rows[5].rank).toBe(6);
-      expect(rows[5].player.name).toBe('Frank');
+      expect(rows[5].player.name).toBe('Dave (DQ)');
+      expect(rows[5].rank).toBeUndefined();
       expect(rows[5].isDNQ).toBe(false);
     });
 
@@ -377,9 +381,13 @@ describe('Qualifiers Scoring Engine', () => {
       };
 
       const rows = deriveLeaderboard(tourneyWithStatus);
-      // Dave (p4) has submissions and is not verified -> 'in progress'
+      // Bob (p2) has submissions and is not verified -> 'in progress'
+      const bob = rows.find(r => r.player.id === 'p2');
+      expect(bob?.status).toBe('in progress');
+
+      // Dave (p4) carries the tournament DQ flag -> 'dq'
       const dave = rows.find(r => r.player.id === 'p4');
-      expect(dave?.status).toBe('in progress');
+      expect(dave?.status).toBe('dq');
 
       // Alice (p1) is marked isVerified: true -> 'verified'
       const alice = rows.find(r => r.player.id === 'p1');

@@ -62,7 +62,10 @@ export function getPlayerQualifierStatus(
     s => s.playerId === playerId
   );
 
-  if (playerSubs.some(s => s.status === 'DQ')) {
+  const isProfileDQ = Boolean(
+    (tournament.playersPool || []).find(p => p.id === playerId)?.isDisqualified
+  );
+  if (isProfileDQ || playerSubs.some(s => s.status === 'DQ')) {
     return 'dq';
   }
 
@@ -173,7 +176,16 @@ export function calculatePoints(
 }
 
 /**
+ * Single rule for whether a competitor may occupy a tier/seed slot.
+ * DQ and DNQ competitors never take a bracket or seed slot, in the leaderboard or in draft brackets.
+ */
+export function isSeedingEligible(row: Pick<LeaderboardRankRow, 'isDisqualified' | 'status'>): boolean {
+  return !row.isDisqualified && row.status !== 'dq' && row.status !== 'dnq';
+}
+
+/**
  * Derives dynamic leaderboard rows for a tournament, sorted deterministically.
+ * Order: ranked eligible competitors, then DNQ, then DQ, then unstarted.
  */
 export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] {
   const pool = tournament.playersPool || [];
@@ -280,9 +292,14 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
     };
   });
 
-  // Partition into competitors who have completed at least one attempt vs competitors with 0 attempts
-  const qualifiedRows = rawRows.filter(r => r.attempts.length > 0);
-  const unstartedRows = rawRows.filter(r => r.attempts.length === 0);
+  // Partition: eligible competitors with attempts are ranked; DQ / DNQ rulings drop to the bottom
+  // without a rank, tier, or seed; competitors with 0 attempts stay unstarted.
+  const qualifiedRows = rawRows.filter(r => r.attempts.length > 0 && isSeedingEligible(r));
+  const dnqRulingRows = rawRows.filter(r => !r.isDisqualified && r.status === 'dnq');
+  const dqRows = rawRows.filter(r => r.isDisqualified || r.status === 'dq');
+  const unstartedRows = rawRows.filter(
+    r => r.attempts.length === 0 && isSeedingEligible(r)
+  );
 
   // Sort qualifiedRows deterministically:
   // 1. If HIGH_SCORE:
@@ -295,7 +312,7 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
   //    If other formats: finalScore descending
   // 2. Earlier timestamp first (for ties)
   // 3. Player ID ascending fallback
-  qualifiedRows.sort((a, b) => {
+  const qualifiedRowsComparator = (a: typeof rawRows[number], b: typeof rawRows[number]): number => {
     if (tournament.qualFormat === 'HIGH_SCORE') {
       const aMax = a.maxoutCount || 0;
       const bMax = b.maxoutCount || 0;
@@ -335,7 +352,8 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
       return a.earliestTimestamp - b.earliestTimestamp;
     }
     return a.player.id.localeCompare(b.player.id);
-  });
+  };
+  qualifiedRows.sort(qualifiedRowsComparator);
 
   // Calculate tier cutoff ranges based on priority
   const sortedTiers = [...tournament.tiers].sort((a, b) => a.priority - b.priority);
@@ -348,32 +366,16 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
     currentCutoff = endRank;
   }
 
-  // Assign ranks, tier cutoffs, and tier seeds ONLY to players with recorded attempts.
-  // Players explicitly marked status === 'dnq' are retained in the leaderboard audit list
-  // with isDNQ: true and do not consume a bracket tier seed slot.
-  let activeRankCounter = 1;
-  let seedingRankCounter = 1;
+  // Assign ranks, tier cutoffs, and tier seeds ONLY to eligible players with recorded attempts.
   const qualifiedResult: LeaderboardRankRow[] = qualifiedRows.map((item, idx) => {
-    const rank = activeRankCounter++;
-    if (item.status === 'dnq') {
-      return {
-        ...item,
-        rank,
-        globalRank: idx + 1,
-        assignedTier: undefined,
-        tierSeed: undefined,
-        isDNQ: true,
-      };
-    }
-
-    const seedingRank = seedingRankCounter++;
+    const rank = idx + 1;
     // Find matching tier range
     const matchingRange = tierRanges.find(
-      r => seedingRank >= r.startRank && seedingRank <= r.endRank
+      r => rank >= r.startRank && rank <= r.endRank
     );
 
     if (matchingRange) {
-      const tierSeed = seedingRank - matchingRange.startRank + 1;
+      const tierSeed = rank - matchingRange.startRank + 1;
       return {
         ...item,
         rank,
@@ -417,7 +419,23 @@ export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] 
     isDNQ: false,
   }));
 
-  return [...qualifiedResult, ...unstartedResult];
+  // Judge rulings: kept for audit at the bottom, ordered by score, never ranked or seeded
+  const rulingResult = (rows: typeof rawRows, isDNQ: boolean): LeaderboardRankRow[] =>
+    [...rows].sort(qualifiedRowsComparator).map(item => ({
+      ...item,
+      rank: undefined,
+      globalRank: undefined,
+      assignedTier: undefined,
+      tierSeed: undefined,
+      isDNQ,
+    }));
+
+  return [
+    ...qualifiedResult,
+    ...rulingResult(dnqRulingRows, true),
+    ...rulingResult(dqRows, false),
+    ...unstartedResult,
+  ];
 }
 
 /**
@@ -459,7 +477,7 @@ export function generateFullTierBracket(tier: TournamentTier, availablePlayers: 
 /**
  * Computes projected draft brackets for all tiers of a tournament.
  * Used during DRAFT mode to keep bracket previews live and reactive.
- * Strictly excludes players marked DNQ or AWAITING_VERIFICATION (Assertion 5.3).
+ * Strictly excludes DQ / DNQ players (isSeedingEligible) and AWAITING_VERIFICATION (Assertion 5.3).
  */
 export function generateDraftBracketsForTournament(tournament: Tournament): TournamentTier[] {
   const sortedTiers = [...tournament.tiers].sort((a, b) => a.priority - b.priority);
@@ -469,7 +487,14 @@ export function generateDraftBracketsForTournament(tournament: Tournament): Tour
   if (tournament.seedingMethod === 'MANUAL') {
     const manualIds = tournament.manualSeeds || [];
     const playerMap = new Map((tournament.playersPool || []).map(p => [p.id, p]));
-    const validIds = manualIds.filter(id => playerMap.has(id));
+    const validIds = manualIds.filter(
+      id =>
+        playerMap.has(id) &&
+        isSeedingEligible({
+          isDisqualified: Boolean(playerMap.get(id)?.isDisqualified),
+          status: getPlayerQualifierStatus(tournament, id),
+        })
+    );
 
     let currentOffset = 0;
     return sortedTiers.map(tier => {
@@ -501,8 +526,7 @@ export function generateDraftBracketsForTournament(tournament: Tournament): Tour
   const eligibleRows = leaderboard.filter(
     row =>
       row.attempts.length > 0 &&
-      row.status !== 'dnq' &&
-      row.status !== 'dq' &&
+      isSeedingEligible(row) &&
       row.status !== 'awaiting verification'
   );
 

@@ -335,7 +335,6 @@ export const PlayerDirectory: React.FC = () => {
           onSave={handleSavePlayer}
           initialPlayer={editingPlayer}
           existingNames={existingNames}
-          allowDisqualify={false}
         />
       )}
 
