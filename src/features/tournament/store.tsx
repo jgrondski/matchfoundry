@@ -45,7 +45,7 @@ interface TournamentContextType {
   saveTiers: (tournamentId: string, tiers: TournamentTier[]) => Promise<Tournament | null>;
   addPlayerToPool: (tournamentId: string, player: Omit<PlayerProfile, 'id'>) => PlayerProfile;
   updatePlayerInPool: (tournamentId: string, playerId: string, updates: Partial<PlayerProfile>) => void;
-  submitQualifierScore: (tournamentId: string, playerId: string, score: number) => Promise<Tournament | null>;
+  submitQualifierScore: (tournamentId: string, playerId: string, score: number, playerName?: string) => Promise<Tournament | null>;
   deleteQualifierScore: (tournamentId: string, submissionId: string) => Promise<Tournament | null>;
   togglePlayerDisqualification: (
     tournamentId: string,
@@ -100,6 +100,7 @@ interface TournamentContextType {
   deleteGlobalPlayer: (playerId: string) => Promise<{ success: boolean; error?: string }>;
   clearAllGlobalPlayers: () => Promise<void>;
   generateFakeGlobalPlayers: (count: number) => PlayerProfile[];
+  refreshGlobalPlayers: () => Promise<void>;
   importPlayersToTournament: (tournamentId: string, players: PlayerProfile[]) => void;
   removePlayerFromTournament: (
     tournamentId: string,
@@ -349,6 +350,18 @@ export const TournamentProvider: React.FC<{
     }
   }, []);
 
+  const refreshGlobalPlayers = useCallback(async (): Promise<void> => {
+    if (typeof fetch === 'undefined') return;
+    try {
+      const players = await apiCall('/api/players');
+      if (Array.isArray(players)) {
+        setGlobalPlayers(players);
+      }
+    } catch (err: any) {
+      console.warn('[Store] Failed to refresh global players:', err);
+    }
+  }, []);
+
   const syncTournamentToApi = async (tourney: Tournament): Promise<Tournament | null> => {
     try {
       const saved = await apiCall(`/api/tournaments/${tourney.id}`, {
@@ -567,57 +580,128 @@ export const TournamentProvider: React.FC<{
     tournamentId: string,
     player: Omit<PlayerProfile, 'id'>
   ): PlayerProfile => {
-    const tempId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `p_${Date.now()}`;
-    const newPlayer: PlayerProfile = { ...player, id: tempId };
+    const cleanName = player.name.trim();
+    const lowerName = cleanName.toLowerCase();
 
-    apiCall('/api/players', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newPlayer),
-    })
-      .then((createdPlayer: any) => {
-        const savedPlayer: PlayerProfile = {
-          ...newPlayer,
-          id: createdPlayer?.id || newPlayer.id,
-        };
-        setGlobalPlayers(prev => {
-          if (prev.some(p => p.id === savedPlayer.id || p.name.toLowerCase() === savedPlayer.name.toLowerCase())) {
-            return prev;
-          }
-          return [...prev, savedPlayer];
-        });
+    // 1. If competitor already exists in global players, reuse and import them
+    const existingGlobal = globalPlayers.find(
+      p => p.name.trim().toLowerCase() === lowerName
+    );
+    if (existingGlobal) {
+      importPlayersToTournament(tournamentId, [existingGlobal]);
+      return existingGlobal;
+    }
 
-        const target = tournaments.find(t => t.id === tournamentId || t.slug === tournamentId);
-        if (!target) return;
-        const currentPool = target.playersPool || [];
-        const updatedPool = [...currentPool, savedPlayer];
-        const currentTournamentPlayers = { ...(target.tournamentPlayers || {}) };
-        currentTournamentPlayers[savedPlayer.id] = {
-          playerId: savedPlayer.id,
-          tournamentId: target.id,
-          organizationId: target.organizationId,
+    // 2. Generate a valid RFC4122 UUID for the new player
+    const tempId = generateUUID();
+    const newPlayer: PlayerProfile = {
+      ...player,
+      name: cleanName,
+      id: tempId,
+      personalBest: player.personalBest ?? 0,
+      playstyle: player.playstyle || 'Rolling',
+      avatarType: player.avatarType || 'flag',
+    };
+
+    // Optimistically update global players
+    setGlobalPlayers(prev => {
+      if (prev.some(p => p.id === tempId || p.name.toLowerCase() === lowerName)) {
+        return prev;
+      }
+      return [newPlayer, ...prev];
+    });
+
+    // Optimistically update tournament roster
+    setTournaments(prev =>
+      prev.map(t => {
+        if (t.id !== tournamentId && t.slug !== tournamentId) return t;
+        const currentPool = t.playersPool || [];
+        if (currentPool.some(p => p.id === tempId || p.name.toLowerCase() === lowerName)) {
+          return t;
+        }
+        const updatedPool = [...currentPool, newPlayer];
+        const currentTournamentPlayers = { ...(t.tournamentPlayers || {}) };
+        currentTournamentPlayers[tempId] = {
+          playerId: tempId,
+          tournamentId: t.id,
+          organizationId: t.organizationId,
         };
         const updated = {
-          ...target,
+          ...t,
           playersPool: updatedPool,
           tournamentPlayers: currentTournamentPlayers,
         };
         if (!updated.isLocked) {
           updated.tiers = generateDraftBracketsForTournament(updated);
         }
-        apiCall(`/api/tournaments/${target.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updated),
-        })
-          .then(savedTourney => {
-            if (savedTourney && savedTourney.id) {
-              setTournaments(prev => prev.map(t => (t.id === savedTourney.id ? savedTourney : t)));
-            }
+        return updated;
+      })
+    );
+
+    apiCall('/api/players', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...newPlayer,
+        upsertIfExists: true,
+      }),
+    })
+      .then((createdPlayer: any) => {
+        const savedPlayer: PlayerProfile = {
+          ...newPlayer,
+          id: createdPlayer?.id || newPlayer.id,
+        };
+
+        if (savedPlayer.id !== tempId) {
+          setGlobalPlayers(prev =>
+            prev.map(p => (p.id === tempId ? savedPlayer : p))
+          );
+        }
+
+        setTournaments(prev => {
+          const currentTarget = prev.find(t => t.id === tournamentId || t.slug === tournamentId);
+          if (!currentTarget) return prev;
+
+          const currentPool = (currentTarget.playersPool || []).map(p =>
+            p.id === tempId ? savedPlayer : p
+          );
+          const currentTournamentPlayers = { ...(currentTarget.tournamentPlayers || {}) };
+          if (savedPlayer.id !== tempId) {
+            delete currentTournamentPlayers[tempId];
+          }
+          currentTournamentPlayers[savedPlayer.id] = {
+            playerId: savedPlayer.id,
+            tournamentId: currentTarget.id,
+            organizationId: currentTarget.organizationId,
+          };
+
+          const updated = {
+            ...currentTarget,
+            playersPool: currentPool,
+            tournamentPlayers: currentTournamentPlayers,
+          };
+          if (!updated.isLocked) {
+            updated.tiers = generateDraftBracketsForTournament(updated);
+          }
+
+          apiCall(`/api/tournaments/${currentTarget.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updated),
           })
-          .catch(err => {
-            setApiError(`Failed to save tournament player: ${err.message}`);
-          });
+            .then(savedTourney => {
+              if (savedTourney && savedTourney.id) {
+                setTournaments(innerPrev =>
+                  innerPrev.map(t => (t.id === savedTourney.id ? savedTourney : t))
+                );
+              }
+            })
+            .catch(err => {
+              setApiError(`Failed to save tournament player: ${err.message}`);
+            });
+
+          return prev.map(t => (t.id === currentTarget.id ? updated : t));
+        });
       })
       .catch(err => {
         setApiError(`Failed to create player: ${err.message}`);
@@ -631,42 +715,57 @@ export const TournamentProvider: React.FC<{
     playerId: string,
     updates: Partial<PlayerProfile>
   ) => {
-    const target = tournaments.find(t => t.id === tournamentId || t.slug === tournamentId);
-    if (!target) return;
-    const currentPool = target.playersPool || [];
-    const updatedPool = currentPool.map(p =>
-      p.id === playerId ? { ...p, ...updates } : p
+    // Optimistically update globalPlayers
+    setGlobalPlayers(prev =>
+      prev.map(p => (p.id === playerId ? { ...p, ...updates } : p))
     );
-    const updated = { ...target, playersPool: updatedPool };
-    if (!updated.isLocked) {
-      updated.tiers = generateDraftBracketsForTournament(updated);
-    }
-    apiCall(`/api/players/${playerId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    })
-      .then(() => {
-        apiCall(`/api/tournaments/${target.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updated),
-        })
-          .then(saved => {
-            if (saved && saved.id) {
-              setTournaments(prev => prev.map(t => (t.id === saved.id ? saved : t)));
-            }
-          })
-          .catch(err => {
-            setApiError(`Failed to update tournament player: ${err.message}`);
-          });
+
+    setTournaments(prev => {
+      const target = prev.find(t => t.id === tournamentId || t.slug === tournamentId);
+      if (!target) return prev;
+      const currentPool = target.playersPool || [];
+      const updatedPool = currentPool.map(p =>
+        p.id === playerId ? { ...p, ...updates } : p
+      );
+      const updated = { ...target, playersPool: updatedPool };
+      if (!updated.isLocked) {
+        updated.tiers = generateDraftBracketsForTournament(updated);
+      }
+
+      apiCall(`/api/players/${playerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
       })
-      .catch(err => {
-        setApiError(`Failed to update player: ${err.message}`);
-      });
+        .then(() => {
+          apiCall(`/api/tournaments/${target.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updated),
+          })
+            .then(saved => {
+              if (saved && saved.id) {
+                setTournaments(innerPrev => innerPrev.map(t => (t.id === saved.id ? saved : t)));
+              }
+            })
+            .catch(err => {
+              setApiError(`Failed to update tournament player: ${err.message}`);
+            });
+        })
+        .catch(err => {
+          setApiError(`Failed to update player: ${err.message}`);
+        });
+
+      return prev.map(t => (t.id === target.id ? updated : t));
+    });
   };
 
-  const submitQualifierScore = async (tournamentId: string, playerId: string, score: number): Promise<Tournament | null> => {
+  const submitQualifierScore = async (
+    tournamentId: string,
+    playerId: string,
+    score: number,
+    playerName?: string
+  ): Promise<Tournament | null> => {
     const tournament = tournaments.find(t => t.id === tournamentId || t.slug === tournamentId);
     if (!tournament) return null;
 
@@ -674,7 +773,7 @@ export const TournamentProvider: React.FC<{
       const saved = await apiCall(`/api/tournaments/${tournament.id}/qualifiers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId, score }),
+        body: JSON.stringify({ playerId, score, playerName }),
       });
       if (saved && saved.id) {
         setTournaments(prev => prev.map(t => (t.id === saved.id ? saved : t)));
@@ -1359,51 +1458,55 @@ export const TournamentProvider: React.FC<{
   };
 
   const importPlayersToTournament = (tournamentId: string, playersToImport: PlayerProfile[]) => {
-    const target = tournaments.find(t => t.id === tournamentId || t.slug === tournamentId);
-    if (!target) return;
-    const existingPool = target.playersPool || [];
-    const existingIds = new Set(existingPool.map(p => p.id));
-    const existingNames = new Set(existingPool.map(p => p.name.toLowerCase()));
+    setTournaments(prev => {
+      const target = prev.find(t => t.id === tournamentId || t.slug === tournamentId);
+      if (!target) return prev;
+      const existingPool = target.playersPool || [];
+      const existingIds = new Set(existingPool.map(p => p.id));
+      const existingNames = new Set(existingPool.map(p => p.name.toLowerCase()));
 
-    const toAdd = playersToImport.filter(
-      p => !existingIds.has(p.id) && !existingNames.has(p.name.toLowerCase())
-    );
+      const toAdd = playersToImport.filter(
+        p => !existingIds.has(p.id) && !existingNames.has(p.name.toLowerCase())
+      );
 
-    if (toAdd.length === 0) return;
+      if (toAdd.length === 0) return prev;
 
-    const updatedTournamentPlayers = { ...(target.tournamentPlayers || {}) };
-    toAdd.forEach(p => {
-      if (!updatedTournamentPlayers[p.id]) {
-        updatedTournamentPlayers[p.id] = {
-          playerId: p.id,
-          tournamentId: target.id,
-          organizationId: target.organizationId,
-        };
-      }
-    });
-
-    const updated = {
-      ...target,
-      playersPool: [...existingPool, ...toAdd],
-      tournamentPlayers: updatedTournamentPlayers,
-    };
-    if (!updated.isLocked) {
-      updated.tiers = generateDraftBracketsForTournament(updated);
-    }
-
-    apiCall(`/api/tournaments/${target.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updated),
-    })
-      .then(saved => {
-        if (saved && saved.id) {
-          setTournaments(prev => prev.map(t => (t.id === saved.id ? saved : t)));
+      const updatedTournamentPlayers = { ...(target.tournamentPlayers || {}) };
+      toAdd.forEach(p => {
+        if (!updatedTournamentPlayers[p.id]) {
+          updatedTournamentPlayers[p.id] = {
+            playerId: p.id,
+            tournamentId: target.id,
+            organizationId: target.organizationId,
+          };
         }
-      })
-      .catch(err => {
-        setApiError(`Failed to import players: ${err.message}`);
       });
+
+      const updated = {
+        ...target,
+        playersPool: [...existingPool, ...toAdd],
+        tournamentPlayers: updatedTournamentPlayers,
+      };
+      if (!updated.isLocked) {
+        updated.tiers = generateDraftBracketsForTournament(updated);
+      }
+
+      apiCall(`/api/tournaments/${target.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      })
+        .then(saved => {
+          if (saved && saved.id) {
+            setTournaments(innerPrev => innerPrev.map(t => (t.id === saved.id ? saved : t)));
+          }
+        })
+        .catch(err => {
+          setApiError(`Failed to import players: ${err.message}`);
+        });
+
+      return prev.map(t => (t.id === target.id ? updated : t));
+    });
   };
 
   const removePlayerFromTournament = (
@@ -1829,6 +1932,7 @@ export const TournamentProvider: React.FC<{
         checkDbHealth,
         retryConnection,
         refreshTournament,
+        refreshGlobalPlayers,
         apiError,
         clearApiError,
       }}

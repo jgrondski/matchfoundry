@@ -14,6 +14,7 @@ import {
   Trash2,
   Check,
   AlertTriangle,
+  Edit2,
 } from 'lucide-react';
 import { LeaderboardRankRow, MAXOUT_THRESHOLD, deriveLeaderboard, getPlayerQualifierStatus } from '../scoring';
 import { calculateGlobalStandings, getRankOrdinal } from '../../tournament/standings';
@@ -25,6 +26,7 @@ import {
 } from '../../bracket/colorUtils';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../players/components/PlaystyleChip';
+import { PlayerEditModal } from '../../players/components/PlayerEditModal';
 
 export interface PlayerDetailDrawerProps {
   isOpen: boolean;
@@ -52,8 +54,9 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
     ? canManageProp
     : Boolean(authCanManage(tournament.id) || authCanManage(tournament.slug));
 
-  const { submitQualifierScore, deleteQualifierScore } = useTournament();
+  const { submitQualifierScore, deleteQualifierScore, updatePlayerInPool } = useTournament();
   const [scoreInput, setScoreInput] = useState('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Keyboard escape listener to close drawer smoothly
   useEffect(() => {
@@ -569,7 +572,8 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
   );
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <>
+      <div style={overlayStyle} onClick={onClose}>
       <div
         style={{
           ...drawerStyle,
@@ -865,38 +869,74 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
             </div>
           </div>
 
-          {/* Close Action Button with Themed Hover */}
-          <button
-            onClick={onClose}
-            aria-label="Close drawer"
-            style={{
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-border)')}`,
-              color: 'var(--color-text-muted)',
-              cursor: 'pointer',
-              padding: '0.45rem',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.15s ease',
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#ffffff';
-              e.currentTarget.style.borderColor = primaryColor;
-              e.currentTarget.style.background = colorWithAlpha(primaryColor, 0.18);
-              e.currentTarget.style.boxShadow = `0 0 10px ${colorWithAlpha(primaryColor, 0.3)}`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--color-text-muted)';
-              e.currentTarget.style.borderColor = colorWithAlpha(primaryColor, 0.35, 'var(--color-border)');
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <X size={20} />
-          </button>
+          {/* Header Actions: Edit Profile (if admin) + Close */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+            {canManageTournament && (
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(true)}
+                aria-label="Edit competitor profile"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-border)')}`,
+                  color: primaryColor,
+                  cursor: 'pointer',
+                  padding: '0.45rem 0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = colorWithAlpha(primaryColor, 0.18);
+                  e.currentTarget.style.borderColor = primaryColor;
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.borderColor = colorWithAlpha(primaryColor, 0.35, 'var(--color-border)');
+                }}
+              >
+                <Edit2 size={13} />
+                <span>Edit Profile</span>
+              </button>
+            )}
+
+            {/* Close Action Button with Themed Hover */}
+            <button
+              onClick={onClose}
+              aria-label="Close drawer"
+              style={{
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-border)')}`,
+                color: 'var(--color-text-muted)',
+                cursor: 'pointer',
+                padding: '0.45rem',
+                borderRadius: 'var(--radius-md)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.15s ease',
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#ffffff';
+                e.currentTarget.style.borderColor = primaryColor;
+                e.currentTarget.style.background = colorWithAlpha(primaryColor, 0.18);
+                e.currentTarget.style.boxShadow = `0 0 10px ${colorWithAlpha(primaryColor, 0.3)}`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--color-text-muted)';
+                e.currentTarget.style.borderColor = colorWithAlpha(primaryColor, 0.35, 'var(--color-border)');
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Body Content */}
@@ -1467,6 +1507,20 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
         </div>
       </div>
     </div>
+    {canManageTournament && isEditModalOpen && (
+      <PlayerEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        initialPlayer={player}
+        onSave={async (playerData) => {
+          await updatePlayerInPool(tournament.id, player.id, playerData);
+          setIsEditModalOpen(false);
+        }}
+        existingNames={[]}
+        allowDisqualify={true}
+      />
+    )}
+    </>
   );
 };
 

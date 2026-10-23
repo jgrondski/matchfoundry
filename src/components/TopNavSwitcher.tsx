@@ -16,6 +16,9 @@ export const TopNavSwitcher: React.FC = () => {
   const isOrganizations = location.pathname.startsWith('/organizations') || location.pathname.startsWith('/org/');
   const isPlayers = location.pathname.startsWith('/players');
 
+  const isTournamentAdmin = session?.role === 'TOURNAMENT_ADMIN';
+  const showAdminNav = isSystemAdmin || isTournamentAdmin;
+
   const navTabs = [
     {
       to: '/',
@@ -23,6 +26,7 @@ export const TopNavSwitcher: React.FC = () => {
       icon: Trophy,
       count: tournaments.length,
       isActive: isTournaments,
+      show: true,
     },
     {
       to: '/organizations',
@@ -30,6 +34,7 @@ export const TopNavSwitcher: React.FC = () => {
       icon: Building2,
       count: organizations.length,
       isActive: isOrganizations,
+      show: isSystemAdmin,
     },
     {
       to: '/players',
@@ -37,8 +42,9 @@ export const TopNavSwitcher: React.FC = () => {
       icon: Users,
       count: globalPlayers ? globalPlayers.length : 0,
       isActive: isPlayers,
+      show: isSystemAdmin || isTournamentAdmin,
     },
-  ];
+  ].filter(tab => tab.show);
 
   const handleLogout = () => {
     logout();
@@ -94,13 +100,13 @@ export const TopNavSwitcher: React.FC = () => {
           </span>
         </Link>
 
-        {/* Center: Global Navigation Pills (Strictly restricted to System Admin) */}
-        {isSystemAdmin ? (
+        {/* Center: Global Navigation Pills (Restricted to Authenticated Admins) */}
+        {showAdminNav ? (
           <nav
             aria-label="Global System Navigation"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gridTemplateColumns: `repeat(${navTabs.length}, minmax(0, 1fr))`,
               alignItems: 'center',
               padding: '0.3rem',
               background: 'var(--color-bg-surface-elevated, #161922)',
@@ -109,7 +115,7 @@ export const TopNavSwitcher: React.FC = () => {
               boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
               gap: '0.25rem',
               width: '100%',
-              maxWidth: '520px',
+              maxWidth: navTabs.length === 2 ? '360px' : '520px',
               margin: '0 auto',
               boxSizing: 'border-box',
             }}

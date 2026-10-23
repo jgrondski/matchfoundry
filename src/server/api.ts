@@ -576,7 +576,7 @@ export function createApiMiddleware() {
           return sendJson(res, 200, updated);
         }
         if (method === 'DELETE') {
-          if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN')) return;
           const result = await deletePlayer(playerId);
           if (!result.success) {
             const statusCode = result.error === 'Player not found' ? 404 : 400;
@@ -766,7 +766,20 @@ export function createApiMiddleware() {
           if (tourneyCheck.isLocked) {
             return sendError(res, 400, 'Cannot modify qualifier scores while brackets are locked. Unlock brackets first.');
           }
-          await submitQualifierScore(tourneyId, body.playerId, body.score);
+
+          let targetPlayerId = body.playerId;
+          if (body.playerName && (!targetPlayerId || !isUuid(targetPlayerId) || !(await getPlayer(targetPlayerId)))) {
+            const resolved = await createPlayer({
+              id: isUuid(targetPlayerId) ? targetPlayerId : undefined,
+              name: body.playerName,
+              playstyle: body.playstyle || 'Rolling',
+              personalBest: body.personalBest ?? 0,
+              upsertIfExists: true,
+            });
+            targetPlayerId = resolved.id;
+          }
+
+          await submitQualifierScore(tourneyId, targetPlayerId, body.score);
           const t = await getFullTournament(tourneyId);
           if (t && !t.isLocked) {
             t.tiers = generateDraftBracketsForTournament(t);

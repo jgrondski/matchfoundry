@@ -114,6 +114,9 @@ export async function submitQualifierScore(
   const submissionSource = options?.submissionSource || 'IN_PERSON';
   const status = options?.status || 'SUBMITTED';
 
+  // Ensure competitor is registered in tournament roster so leaderboard derivation and bracket seeding recognize them
+  await ensureTournamentPlayerRegistration(tourney.id, playerId);
+
   const [created] = await db
     .insert(qualifierSubmissions)
     .values({
@@ -154,6 +157,11 @@ export async function submitQualifiersBatch(
   if (submissions.length === 0) return [];
   const tourney = await resolveTournamentRow(tournamentId);
   if (tourney.qualsClosed) throw new Error('Qualifiers are closed for this tournament');
+
+  const uniquePlayerIds = Array.from(new Set(submissions.map(s => s.playerId)));
+  for (const pid of uniquePlayerIds) {
+    await ensureTournamentPlayerRegistration(tourney.id, pid);
+  }
 
   const inserted = await db
     .insert(qualifierSubmissions)
