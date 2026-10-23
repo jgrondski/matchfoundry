@@ -42,5 +42,23 @@ export const RequireSystemAdmin: React.FC<GuardProps> = ({ children }) => {
   return <>{children}</>;
 };
 
+/**
+ * Route guard for views accessible to any authenticated admin (System Admin or Tournament Admin),
+ * such as the Global Competitors Directory (/players).
+ * Unauthenticated users are redirected to /admin.
+ */
+export const RequireAnyAdmin: React.FC<GuardProps> = ({ children }) => {
+  const location = useLocation();
+  const { isSystemAdmin, session } = usePinAuth();
+  const isAnyAdmin = isSystemAdmin || session?.role === 'TOURNAMENT_ADMIN';
+
+  if (!isAnyAdmin) {
+    const returnPath = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/admin?redirect=${returnPath}`} replace />;
+  }
+
+  return <>{children}</>;
+};
+
 // Backwards-compatible alias
 export const RequireMasterAdmin = RequireSystemAdmin;

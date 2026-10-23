@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { PreFlightModal } from './PreFlightModal';
 import { AuthwordHudCard } from './AuthwordHudCard';
-import { CountdownTimerHud } from './CountdownTimerHud';
 import { SubmissionFormCard } from './SubmissionFormCard';
 import { StreamCrashModal } from './StreamCrashModal';
 import { AwaitingVerificationCard } from './AwaitingVerificationCard';
@@ -752,18 +751,12 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
           ) : (
             /* ACTIVE RUN (IN_PROGRESS) */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {/* HUD: Authword and Optional Countdown Timer */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-                <AuthwordHudCard
-                  authWord={activeSession.authWord}
-                  onReportCrash={() => setIsCrashModalOpen(true)}
-                />
-                <CountdownTimerHud
-                  timerLog={activeSession.timerLog}
-                  qualWindowMinutes={windowMinutes}
-                  isCompleted={false}
-                />
-              </div>
+              {/* HUD: Authword (session time is recorded for judges but not shown to competitors) */}
+              <AuthwordHudCard
+                authWord={activeSession.authWord}
+                onReportCrash={() => setIsCrashModalOpen(true)}
+                timerLog={activeSession.timerLog}
+              />
 
               {/* Score and VOD Submission Form */}
               <SubmissionFormCard

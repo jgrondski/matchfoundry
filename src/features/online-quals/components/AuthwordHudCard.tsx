@@ -1,16 +1,22 @@
 import React from 'react';
-import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Info, ShieldCheck } from 'lucide-react';
+import type { QualTimerLog } from '../../tournament/types';
 
 export interface AuthwordHudCardProps {
   authWord: string | null;
   onReportCrash?: () => void;
+  /**
+   * Session timer log, used only for the reset-request banner. Elapsed time is recorded server-side for
+   * judges but intentionally not shown: competitors run their own on-stream timer, and two clocks confuse.
+   */
+  timerLog?: QualTimerLog;
 }
 
 export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({
   authWord,
   onReportCrash,
+  timerLog,
 }) => {
-
   return (
     <div
       style={{
@@ -58,6 +64,30 @@ export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({
         )}
       </div>
 
+      {/* Reset Request Active Banner */}
+      {timerLog?.resetRequested && (
+        <div
+          style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            borderRadius: '8px',
+            padding: '0.75rem 1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            color: '#fca5a5',
+            fontSize: '0.85rem',
+          }}
+          data-testid="reset-requested-banner"
+        >
+          <Info size={18} style={{ flexShrink: 0 }} />
+          <div>
+            <strong>Reset Request Pending:</strong> "{timerLog.resetReason || 'Stream crash reported'}".
+            Awaiting tournament judge review or session restart.
+          </div>
+        </div>
+      )}
+
       {/* Authword Presentation Block */}
       <div
         style={{
@@ -90,6 +120,7 @@ export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({
             {authWord}
           </div>
         </div>
+
       </div>
 
       {/* Rule Notice */}

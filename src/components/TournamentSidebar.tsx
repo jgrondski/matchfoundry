@@ -185,7 +185,12 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
       setIsAdminModalOpen(true);
       return;
     }
-    if ((url === '/organizations' || url === '/players') && !isSystemAdmin) {
+    if (url === '/organizations' && !isSystemAdmin) {
+      e.preventDefault();
+      setIsAdminModalOpen(true);
+      return;
+    }
+    if (url === '/players' && !(isAuthorized || isSystemAdmin)) {
       e.preventDefault();
       setIsAdminModalOpen(true);
       return;
@@ -760,48 +765,52 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                     <Trophy size={13} />
                     <span>All Tournaments</span>
                   </Link>
-                  <Link
-                    to="/organizations"
-                    onClick={e => {
-                      setIsTournamentMenuOpen(false);
-                      handleLinkClick(e, '/organizations');
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.35rem 0.55rem',
-                      borderRadius: 'var(--radius-sm, 6px)',
-                      fontSize: '0.74rem',
-                      color: 'var(--color-text-secondary, #94a3b8)',
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <Building2 size={13} />
-                    <span>Organizations Directory</span>
-                  </Link>
-                  <Link
-                    to="/players"
-                    onClick={e => {
-                      setIsTournamentMenuOpen(false);
-                      handleLinkClick(e, '/players');
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.35rem 0.55rem',
-                      borderRadius: 'var(--radius-sm, 6px)',
-                      fontSize: '0.74rem',
-                      color: 'var(--color-text-secondary, #94a3b8)',
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <Users size={13} />
-                    <span>Global Player Directory</span>
-                  </Link>
+                  {isSystemAdmin && (
+                    <Link
+                      to="/organizations"
+                      onClick={e => {
+                        setIsTournamentMenuOpen(false);
+                        handleLinkClick(e, '/organizations');
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.35rem 0.55rem',
+                        borderRadius: 'var(--radius-sm, 6px)',
+                        fontSize: '0.74rem',
+                        color: 'var(--color-text-secondary, #94a3b8)',
+                        textDecoration: 'none',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <Building2 size={13} />
+                      <span>Organizations Directory</span>
+                    </Link>
+                  )}
+                  {(isSystemAdmin || isAuthorized) && (
+                    <Link
+                      to="/players"
+                      onClick={e => {
+                        setIsTournamentMenuOpen(false);
+                        handleLinkClick(e, '/players');
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.35rem 0.55rem',
+                        borderRadius: 'var(--radius-sm, 6px)',
+                        fontSize: '0.74rem',
+                        color: 'var(--color-text-secondary, #94a3b8)',
+                        textDecoration: 'none',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <Users size={13} />
+                      <span>Global Player Directory</span>
+                    </Link>
+                  )}
                 </div>
               </div>
             )}
@@ -1077,8 +1086,8 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
             </Link>
           )}
 
-          {/* Global Player Pool (System Admin Only) */}
-          {isSystemAdmin && (
+          {/* Global Player Pool (System Admin or Authorized Tournament Admin) */}
+          {(isSystemAdmin || isAuthorized) && (
             <Link
               to="/players"
               onClick={e => handleLinkClick(e, '/players')}

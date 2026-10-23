@@ -99,6 +99,8 @@ export const tournamentPlayers = pgTable('tournament_players', {
   tierId: uuid('tier_id').references(() => bracketTiers.id, { onDelete: 'set null' }),
   seed: integer('seed'),
   qualsCompleted: boolean('quals_completed').notNull().default(false),
+  // Tournament-scoped DQ. players.is_disqualified is global and must not be used for judge rulings.
+  isDisqualified: boolean('is_disqualified').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

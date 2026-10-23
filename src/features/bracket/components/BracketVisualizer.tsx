@@ -180,14 +180,10 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
     };
   }, [effectiveObsView]);
 
-  const handlePlayerClick = (pId: string, pName: string, country?: string) => {
-    const profile = (tournament.playersPool || []).find((p) => p.id === pId) || {
-      id: pId,
-      name: pName,
-      country,
-      personalBest: 0,
-      playstyle: 'DAS' as const,
-    };
+  const handlePlayerClick = (pId: string) => {
+    // Only registered competitors have a profile; draft placeholder seeds ("Seed N") are not players
+    const profile = (tournament.playersPool || []).find((p) => p.id === pId);
+    if (!profile) return;
     setSelectedPlayerForDrawer(profile);
     setIsPlayerDrawerOpen(true);
   };
@@ -973,9 +969,9 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
           match={selectedMatch.match}
           matchScoreRecord={tournament.matchScores[selectedMatch.match.id]}
           roundName={selectedMatch.roundName}
-          onSelectPlayer={(pId, pName, country) => {
+          onSelectPlayer={(pId) => {
             setSelectedMatch(null);
-            handlePlayerClick(pId, pName, country);
+            handlePlayerClick(pId);
           }}
         />
       )}

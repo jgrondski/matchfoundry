@@ -12,7 +12,6 @@ interface PlayerEditModalProps {
   onSave: (player: Omit<PlayerProfile, 'id'>) => void;
   initialPlayer?: PlayerProfile | null;
   existingNames: string[];
-  allowDisqualify?: boolean;
 }
 
 export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
@@ -21,7 +20,6 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
   onSave,
   initialPlayer,
   existingNames,
-  allowDisqualify = false,
 }) => {
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -34,7 +32,6 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
   const [personalBest, setPersonalBest] = useState<string>('1000000');
   const [playstyle, setPlaystyle] = useState<Playstyle>('Rolling');
   const [notes, setNotes] = useState('');
-  const [isDisqualified, setIsDisqualified] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -51,7 +48,6 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
       setPersonalBest(String(initialPlayer.personalBest || 1000000));
       setPlaystyle(initialPlayer.playstyle || 'Rolling');
       setNotes(initialPlayer.notes || '');
-      setIsDisqualified(Boolean(initialPlayer.isDisqualified));
       setError(null);
     } else {
       setName('');
@@ -65,7 +61,6 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
       setPersonalBest('1000000');
       setPlaystyle('Rolling');
       setNotes('');
-      setIsDisqualified(false);
       setError(null);
     }
   }, [initialPlayer, isOpen]);
@@ -106,7 +101,6 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
       personalBest: pbNum,
       playstyle,
       notes: notes.trim() || undefined,
-      isDisqualified: allowDisqualify ? isDisqualified : false,
     });
     onClose();
   };
@@ -510,37 +504,6 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
               />
             </div>
 
-            {/* Disqualification Flag - only enabled for tournament view */}
-            {allowDisqualify && (
-              <div
-                style={{
-                  padding: '0.75rem 1rem',
-                  background: isDisqualified ? 'rgba(239, 68, 68, 0.1)' : 'var(--color-bg-base)',
-                  border: isDisqualified ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--color-border-subtle)',
-                  borderRadius: 'var(--radius-sm)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                }}
-                onClick={() => setIsDisqualified(!isDisqualified)}
-              >
-                <input
-                  type="checkbox"
-                  id="is-dq-checkbox"
-                  checked={isDisqualified}
-                  onChange={e => setIsDisqualified(e.target.checked)}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                />
-                <label
-                  htmlFor="is-dq-checkbox"
-                  onClick={e => e.stopPropagation()}
-                  style={{ fontSize: '0.85rem', color: isDisqualified ? '#f87171' : 'var(--color-text-secondary)', cursor: 'pointer' }}
-                >
-                  <strong>Mark Competitor as Disqualified</strong> (moves competitor to bottom of tournament standings)
-                </label>
-              </div>
-            )}
           </div>
 
           {/* Footer */}

@@ -169,10 +169,17 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     // Should authenticate and land on Omen Open manage page
     await expect(page).toHaveURL(/\/omen-open\/manage\//);
 
-    // Sidebar displays Tournament Admin status and isolates global directories
+    // Sidebar displays Tournament Admin status, reveals Global Players, and isolates organizations
     await expect(page.getByRole('button', { name: /log out \(admin\)/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /^organizations$/i })).not.toBeVisible();
-    await expect(page.getByRole('link', { name: /^global players$/i })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: /^global players$/i })).toBeVisible();
+
+    // Verify Tournament Admin can view /players without escalation bounce
+    await page.getByRole('link', { name: /^global players$/i }).click();
+    await expect(page).toHaveURL('/players');
+    await expect(page.getByRole('heading', { name: 'Global Player Pool' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /generate fake players/i })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /clear all/i })).not.toBeVisible();
 
     // Step D: Verify scoped presentation on '/'
     await page.goto('/');

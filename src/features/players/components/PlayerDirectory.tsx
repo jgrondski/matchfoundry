@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useTournament } from '../../tournament/store';
 import { useOrganization } from '../../organizations/store';
+import { usePinAuth } from '../../auth/AuthContext';
 import { PlayerProfile } from '../../tournament/types';
 import { GenerateFakePlayersModal } from './GenerateFakePlayersModal';
 import { PlayerEditModal } from './PlayerEditModal';
@@ -28,6 +29,7 @@ export const PlayerDirectory: React.FC = () => {
     generateFakeGlobalPlayers,
   } = useTournament();
   const { organizations } = useOrganization();
+  const { isSystemAdmin } = usePinAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [playstyleFilter, setPlaystyleFilter] = useState<string>('ALL');
@@ -244,15 +246,17 @@ export const PlayerDirectory: React.FC = () => {
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={handleOpenGenerateModal}
-            className="btn btn-secondary"
-            style={{ padding: '0.6rem 1.15rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            <Sparkles size={16} color="var(--color-gold-bright)" />
-            Generate Fake Players
-          </button>
+          {isSystemAdmin && (
+            <button
+              type="button"
+              onClick={handleOpenGenerateModal}
+              className="btn btn-secondary"
+              style={{ padding: '0.6rem 1.15rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <Sparkles size={16} color="var(--color-gold-bright)" />
+              Generate Fake Players
+            </button>
+          )}
 
           <button
             type="button"
@@ -264,7 +268,7 @@ export const PlayerDirectory: React.FC = () => {
             Add Competitor
           </button>
 
-          {globalPlayers.length > 0 && (
+          {isSystemAdmin && globalPlayers.length > 0 && (
             <button
               type="button"
               onClick={() => setIsClearAllConfirmOpen(true)}
@@ -331,7 +335,6 @@ export const PlayerDirectory: React.FC = () => {
           onSave={handleSavePlayer}
           initialPlayer={editingPlayer}
           existingNames={existingNames}
-          allowDisqualify={false}
         />
       )}
 

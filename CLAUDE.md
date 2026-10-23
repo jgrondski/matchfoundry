@@ -10,7 +10,7 @@
 ## 1. Operating Environment & Cross-Platform Compatibility
 - **Cross-Platform Parity**: Code and scripts MUST run identically on Windows (PowerShell) and macOS/Linux (Bash/Zsh).
 - **Paths**: Never compare `import.meta.url === file://${process.argv[1]}` directly (fails on Windows slashes). Always normalize paths with `.replace(/\\/g, '/')`.
-- **Database Connection**: Docker PostgreSQL runs on port 5433 (`POSTGRES_PORT=5433` in `.env`). Standalone Node scripts must invoke `process.loadEnvFile()` if `process.env.DATABASE_URL` is empty. Never hardcode port 5432.
+- **Database Connection**: The Docker PostgreSQL port is NOT fixed. It varies (5432 or 5433) depending on which services claimed ports first. `POSTGRES_PORT` and `DATABASE_URL` in `.env` are the source of truth. Before running `db:push` or DB scripts, check `.env` and `docker compose ps` to confirm they agree and point at `localhost`. Standalone Node scripts must invoke `process.loadEnvFile()` if `process.env.DATABASE_URL` is empty. Never hardcode a port.
 - **Shell Syntax**: Avoid bash-specific pipes (`||`, `&&`, `rm -rf`, `export`) in instructions intended for PowerShell. Keep npm scripts cross-platform.
 
 ## 2. Token & Credit Efficiency Rules (Agent Ergonomics)

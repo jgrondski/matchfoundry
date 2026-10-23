@@ -106,6 +106,7 @@ export function setupTestDb() {
       tier_id UUID REFERENCES bracket_tiers(id) ON DELETE SET NULL,
       seed INTEGER,
       quals_completed BOOLEAN NOT NULL DEFAULT false,
+      is_disqualified BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMP NOT NULL DEFAULT now()
     );
 

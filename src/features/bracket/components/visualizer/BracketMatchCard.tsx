@@ -472,9 +472,10 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
           >
             <div
               onClick={(e) => {
-                if (p1?.id) {
+                // Only registered competitors open a profile; draft placeholder seeds ("Seed N") are inert
+                if (p1 && p1Profile) {
                   e.stopPropagation();
-                  onPlayerClick(p1.id, p1.name, p1Profile?.country);
+                  onPlayerClick(p1.id, p1.name, p1Profile.country);
                 }
               }}
               style={{
@@ -484,11 +485,11 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                 overflow: 'hidden',
                 padding: '0.05rem 0.2rem',
                 borderRadius: 'var(--radius-sm)',
-                cursor: p1?.id ? 'pointer' : 'inherit',
+                cursor: p1Profile ? 'pointer' : 'inherit',
                 minWidth: 0,
                 flex: 1,
               }}
-              title={p1?.id ? 'View competitor tournament profile' : undefined}
+              title={p1Profile ? 'View competitor tournament profile' : undefined}
             >
               {p1?.seed && (
                 <span
@@ -663,9 +664,10 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
           >
             <div
               onClick={(e) => {
-                if (p2?.id) {
+                // Only registered competitors open a profile; draft placeholder seeds ("Seed N") are inert
+                if (p2 && p2Profile) {
                   e.stopPropagation();
-                  onPlayerClick(p2.id, p2.name, p2Profile?.country);
+                  onPlayerClick(p2.id, p2.name, p2Profile.country);
                 }
               }}
               style={{
@@ -675,11 +677,11 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                 overflow: 'hidden',
                 padding: '0.05rem 0.2rem',
                 borderRadius: 'var(--radius-sm)',
-                cursor: p2?.id ? 'pointer' : 'inherit',
+                cursor: p2Profile ? 'pointer' : 'inherit',
                 minWidth: 0,
                 flex: 1,
               }}
-              title={p2?.id ? 'View competitor tournament profile' : undefined}
+              title={p2Profile ? 'View competitor tournament profile' : undefined}
             >
               {p2?.seed && (
                 <span

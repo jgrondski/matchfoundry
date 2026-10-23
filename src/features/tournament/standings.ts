@@ -977,7 +977,8 @@ export function calculateGlobalStandings(tournament: Tournament): GlobalStanding
 
   // 3. Handle pure qualifiers tournament without tiers/brackets
   if (sortedTiers.length === 0) {
-    const qualRows = leaderboard.filter(r => !r.isDisqualified && !placedPlayerIds.has(r.player.id));
+    // Judge DNQ rulings fall through to the DNQ section below
+    const qualRows = leaderboard.filter(r => !r.isDisqualified && !r.isDNQ && !placedPlayerIds.has(r.player.id));
     for (const row of qualRows) {
       const stats = calculatePlayerStats(tournament, row.player.id);
       const qualRank = qualRankMap.get(row.player.id);
