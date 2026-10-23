@@ -6,7 +6,6 @@ import { CompetitorPortalView } from '../components/CompetitorPortalView';
 import { PreFlightModal } from '../components/PreFlightModal';
 import { IdentityClaimModal } from '../components/IdentityClaimModal';
 import { AuthwordHudCard } from '../components/AuthwordHudCard';
-import { CountdownTimerHud } from '../components/CountdownTimerHud';
 import { SubmissionFormCard } from '../components/SubmissionFormCard';
 import { AwaitingVerificationCard } from '../components/AwaitingVerificationCard';
 import { TournamentProvider } from '../../tournament/store';
@@ -188,6 +187,8 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       expect(html).toContain('Store past broadcasts');
       expect(html).toContain('NES Authword proof rule');
       expect(html).toContain('90-minute window');
+      expect(html).toContain('90-minute countdown timer');
+      expect(html).toContain('is on my Twitch scene');
       expect(html).toContain('Confirm &amp; Begin Official Run');
     });
   });
@@ -212,31 +213,16 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       expect(html).toContain('NES Authword Proof Rule');
     });
 
-    it('renders live countdown timer telemetry', () => {
-      const html = renderToStaticMarkup(
-        <CountdownTimerHud timerLog={mockTimerLog} qualWindowMinutes={90} isCompleted={false} />
-      );
-
-      expect(html).toContain('Time Remaining');
-      expect(html).toContain('Official Window:');
-      expect(html).toContain('90 minutes');
-      expect(html).toContain('Elapsed:');
-    });
-
-    it('renders non-blocking alert banner when session is over-time', () => {
-      const overTimeLog: QualTimerLog = {
-        startedAt: Date.now() - 95 * 60 * 1000, // 95 minutes elapsed
-        elapsedSeconds: 95 * 60,
-        pauses: [],
-        overTime: true,
-      };
-
-      const html = renderToStaticMarkup(
-        <CountdownTimerHud timerLog={overTimeLog} qualWindowMinutes={90} isCompleted={false} />
-      );
-
-      expect(html).toContain('Official Window Expired');
-      expect(html).toContain('Over-time telemetry is recorded for judges');
+    it('does not show competitors a session timer or elapsed time', () => {
+      const overTimeLog: QualTimerLog = { ...mockTimerLog, elapsedSeconds: 95 * 60, overTime: true };
+      for (const timerLog of [mockTimerLog, overTimeLog]) {
+        const html = renderToStaticMarkup(<AuthwordHudCard authWord="ROCKET" timerLog={timerLog} />);
+        expect(html).toContain('ROCKET');
+        expect(html).not.toContain('Elapsed');
+        expect(html).not.toContain('Optional Pacing Timer');
+        expect(html).not.toContain('Start Timer');
+        expect(html).not.toContain('Official Window Expired');
+      }
     });
   });
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StreamCrashModal } from '../components/StreamCrashModal';
-import { CountdownTimerHud } from '../components/CountdownTimerHud';
+import { AuthwordHudCard } from '../components/AuthwordHudCard';
 import { setupTestDb } from '../../../db/testDb';
 import { setDb } from '../../../db';
 import { createPlayer } from '../../../api/players';
@@ -78,7 +78,7 @@ describe('Journey 4: Stream Crash Technical Reset & Session Recovery (ATDD)', ()
   });
 
   describe('2. Active Run Reset Request & HUD Banner', () => {
-    it('renders amber reset request pending banner on CountdownTimerHud when resetRequested is true', () => {
+    it('renders reset request pending banner on the AuthwordHudCard when resetRequested is true', () => {
       const timerLogWithReset: QualTimerLog = {
         startedAt: Date.now() - 15 * 60 * 1000,
         elapsedSeconds: 15 * 60,
@@ -89,10 +89,9 @@ describe('Journey 4: Stream Crash Technical Reset & Session Recovery (ATDD)', ()
       };
 
       const html = renderToStaticMarkup(
-        <CountdownTimerHud
+        <AuthwordHudCard
+          authWord="ROCKET"
           timerLog={timerLogWithReset}
-          qualWindowMinutes={90}
-          isCompleted={false}
         />
       );
 

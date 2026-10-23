@@ -52,7 +52,12 @@ import {
   deleteOrganization,
   seedDefaultOrganizations,
 } from '../api/organizations';
-import { runFullSimulation, generateSimulatedQualifiers } from '../features/tournament/simulation';
+import {
+  runFullSimulation,
+  generateSimulatedQualifiers,
+  generateAdditionalFakePlayers,
+  getSimulatedQualifierTargetCount,
+} from '../features/tournament/simulation';
 import { AUTHENTIC_COMPETITOR_NAMES } from '../features/tournament/data/authenticPlayers';
 import {
   generateTraditionalBracket,
@@ -68,6 +73,57 @@ import type {
   MatchScoreRecord,
   GameScoreEntry,
 } from '../features/tournament/types';
+
+/**
+ * Loads the global player supply for a qualifier simulation, first creating real player rows if
+ * the global pool can't cover the largest possible simulated field. The simulator would otherwise
+ * invent non-UUID players that saveFullTournament silently drops while brackets still reference them.
+ */
+async function loadSimulationPlayerSupply(t: Tournament): Promise<PlayerProfile[]> {
+  const toProfile = (p: Awaited<ReturnType<typeof listPlayers>>[number]): PlayerProfile => ({
+    id: p.id,
+    name: p.name,
+    country: p.country || undefined,
+    avatarType: p.avatarType,
+    avatarUrl: p.avatarUrl || undefined,
+    personalBest: p.personalBest,
+    playstyle: (p.playstyle as PlayerProfile['playstyle']) || 'Rolling',
+    // DQ is tournament-scoped; the legacy global flag must not leak into simulated rosters
+    isDisqualified: false,
+  });
+  const profiles = (await listPlayers()).map(toProfile);
+
+  const pool = t.playersPool || [];
+  const poolIds = new Set(pool.map(p => p.id));
+  const poolNames = new Set(pool.map(p => p.name.toLowerCase()));
+  const available = profiles.filter(p => !poolIds.has(p.id) && !poolNames.has(p.name.toLowerCase()));
+  const needed = getSimulatedQualifierTargetCount(t, 6) - pool.length - available.length;
+
+  if (needed > 0) {
+    const fakes = generateAdditionalFakePlayers(needed, [...pool, ...profiles]);
+    const created = await createPlayersBatch(
+      fakes.map(f => ({ name: f.name, country: f.country, personalBest: f.personalBest, playstyle: f.playstyle }))
+    );
+    profiles.push(...created.map(toProfile));
+  }
+  return profiles;
+}
+
+/** Marks every competitor with simulated (pre-verified) runs as having completed quals. */
+function markSimulatedQualsCompleted(t: Tournament): void {
+  const simulatedIds = new Set(
+    (t.qualifierSubmissions || []).filter(s => s.verifiedBy === 'Simulation').map(s => s.playerId)
+  );
+  const tournamentPlayers = { ...(t.tournamentPlayers || {}) };
+  for (const playerId of simulatedIds) {
+    tournamentPlayers[playerId] = {
+      ...(tournamentPlayers[playerId] || { playerId, tournamentId: t.id }),
+      qualsCompleted: true,
+      isVerified: true,
+    };
+  }
+  t.tournamentPlayers = tournamentPlayers;
+}
 
 async function parseBody(req: IncomingMessage): Promise<unknown> {
   if (req.method === 'GET' || req.method === 'HEAD') return undefined;
@@ -778,6 +834,9 @@ export function createApiMiddleware() {
               upsertIfExists: true,
             });
             targetPlayerId = resolved.id;
+          } else if (!targetPlayerId || !isUuid(targetPlayerId) || !(await getPlayer(targetPlayerId))) {
+            // e.g. a draft bracket placeholder seed ("placeholder-seed-…") is not a real competitor
+            return sendError(res, 400, 'Qualifier scores can only be recorded for registered competitors');
           }
 
           await submitQualifierScore(tourneyId, targetPlayerId, body.score);
@@ -1078,21 +1137,12 @@ export function createApiMiddleware() {
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');
 
-          const allDbPlayers = await listPlayers();
-          const profiles: PlayerProfile[] = allDbPlayers.map(p => ({
-            id: p.id,
-            name: p.name,
-            country: p.country || undefined,
-            avatarType: p.avatarType,
-            avatarUrl: p.avatarUrl || undefined,
-            personalBest: p.personalBest,
-            playstyle: (p.playstyle as PlayerProfile['playstyle']) || 'Rolling',
-            isDisqualified: p.isDisqualified,
-          }));
+          const profiles = await loadSimulationPlayerSupply(t);
 
           const { players: selectedPlayers, submissions } = generateSimulatedQualifiers(t, profiles);
           t.playersPool = selectedPlayers;
           t.qualifierSubmissions = submissions;
+          markSimulatedQualsCompleted(t);
           t.matchScores = {};
           t.isLocked = false;
           t.tiers = t.tiers.map(tier => ({ ...tier, isLocked: false }));
@@ -1108,19 +1158,10 @@ export function createApiMiddleware() {
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');
 
-          const allDbPlayers = await listPlayers();
-          const profiles: PlayerProfile[] = allDbPlayers.map(p => ({
-            id: p.id,
-            name: p.name,
-            country: p.country || undefined,
-            avatarType: p.avatarType,
-            avatarUrl: p.avatarUrl || undefined,
-            personalBest: p.personalBest,
-            playstyle: (p.playstyle as PlayerProfile['playstyle']) || 'Rolling',
-            isDisqualified: p.isDisqualified,
-          }));
+          const profiles = await loadSimulationPlayerSupply(t);
 
           const simulated = runFullSimulation(t, profiles);
+          markSimulatedQualsCompleted(simulated);
           const saved = await saveFullTournament(simulated);
           return sendJson(res, 200, saved);
         }

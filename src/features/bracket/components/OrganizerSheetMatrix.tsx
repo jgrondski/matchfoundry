@@ -150,15 +150,10 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
 
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerProfile | null>(null);
 
-  const handlePlayerClick = (pId: string, pName: string, country?: string) => {
-    const profile = (tournament.playersPool || []).find(p => p.id === pId) || {
-      id: pId,
-      name: pName,
-      country,
-      playstyle: 'DAS' as const,
-      personalBest: 0,
-      createdAt: Date.now(),
-    };
+  const handlePlayerClick = (pId: string) => {
+    // Only registered competitors have a profile; draft placeholder seeds ("Seed N") are not players
+    const profile = (tournament.playersPool || []).find(p => p.id === pId);
+    if (!profile) return;
     setSelectedPlayer(profile);
   };
 

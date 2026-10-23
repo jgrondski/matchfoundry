@@ -134,6 +134,17 @@ export function generateAdditionalFakePlayers(
  * Pulls from the global player pool first, keeping any already added players,
  * and falling back to generic players if the global pool is empty or exhausted.
  */
+/**
+ * Number of competitors a qualifier simulation aims for, given a 1d6 roll (1-6).
+ * Callers that persist results use the max roll (6) to pre-provision enough real players.
+ */
+export function getSimulatedQualifierTargetCount(tournament: Tournament, extra1d6: number): number {
+  const totalCapacity = tournament.tiers.reduce((acc, t) => acc + (t.playerCount || 0), 0);
+  return totalCapacity > 0
+    ? Math.max(8, totalCapacity + extra1d6)
+    : Math.max(24, (tournament.playersPool || []).length) + extra1d6;
+}
+
 export function generateSimulatedQualifiers(
   tournament: Tournament,
   globalPlayersPool: PlayerProfile[] = []
@@ -141,11 +152,8 @@ export function generateSimulatedQualifiers(
   players: PlayerProfile[];
   submissions: QualifierSubmission[];
 } {
-  const totalCapacity = tournament.tiers.reduce((acc, t) => acc + (t.playerCount || 0), 0);
   const extra1d6 = Math.floor(Math.random() * 6) + 1; // 1d6 roll (1 to 6)
-  const targetCount = totalCapacity > 0
-    ? Math.max(8, totalCapacity + extra1d6)
-    : Math.max(24, (tournament.playersPool || []).length) + extra1d6;
+  const targetCount = getSimulatedQualifierTargetCount(tournament, extra1d6);
 
   // Preserve any competitors already added to the tournament
   const players: PlayerProfile[] = [...(tournament.playersPool || [])];
@@ -258,13 +266,20 @@ export function generateSimulatedQualifiers(
         score = Math.floor((650000 + Math.random() * 550000) * skillMultiplier);
       }
 
+      const submittedAt = baseTime + pIdx * 60000 + attempt * 120000;
+      // Simulated runs are already-judged in-person attempts, so they seed draft brackets immediately
+      // (unverified SUBMITTED runs are excluded from brackets as 'awaiting verification').
       submissions.push({
         id: `sub_sim_${player.id}_${attempt}`,
         tournamentId: tournament.id,
         organizationId: tournament.organizationId,
         playerId: player.id,
         score,
-        submittedAt: baseTime + pIdx * 60000 + attempt * 120000,
+        submittedAt,
+        submissionSource: 'IN_PERSON',
+        status: 'VERIFIED',
+        verifiedBy: 'Simulation',
+        verifiedAt: submittedAt,
       });
     }
   });

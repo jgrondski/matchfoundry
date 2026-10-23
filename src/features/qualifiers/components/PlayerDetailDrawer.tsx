@@ -215,6 +215,10 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
   }, [tournament, player]);
 
   const isVerified = qualStatus === 'verified';
+  // Qual entry is only valid for competitors registered in this tournament (never draft placeholder seeds)
+  const isRegisteredCompetitor = Boolean(
+    player && (tournament.playersPool || []).some(p => p.id === player.id)
+  );
 
   if (!isOpen || !player) return null;
 
@@ -958,7 +962,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
           {/* Section 0: Quick Qual Submission & Judge Verification (Either/Or) */}
           {!tournament.isLocked && (
             <>
-              {canManageTournament && (
+              {canManageTournament && isRegisteredCompetitor && (
                 <div
                   style={{
                     background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.12)} 0%, ${getAlternateShade(cardColor, 3)} 100%)`,
