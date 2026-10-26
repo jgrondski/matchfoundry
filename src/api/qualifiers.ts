@@ -5,6 +5,7 @@ import {
   tournamentPlayers,
   matches,
   bracketTiers,
+  organizations,
 } from '../db/schema';
 import { eq, and, or, desc, sql, ne } from 'drizzle-orm';
 import { getDb } from '../db';
@@ -13,12 +14,20 @@ import type {
   IdentityStatus,
   SubmissionStatus,
   QualTimerLog,
+  PointsThreshold,
 } from '../features/tournament/types';
 import {
   generateNesAuthword,
   createInitialTimerLog,
   computeTimerTelemetry,
 } from '../features/online-quals/authwordEngine';
+import {
+  buildQualDiscordMessage,
+  escapeDiscordMarkdown,
+  isDiscordWebhookUrl,
+  PLAYER_NOTES_MAX_LENGTH,
+  type QualDiscordEvent,
+} from '../features/online-quals/discordMessages';
 
 export interface QualifierSubmissionRecord {
   id: string;
@@ -34,6 +43,7 @@ export interface QualifierSubmissionRecord {
   status: SubmissionStatus;
   timerLog: QualTimerLog | null;
   judgeNotes: string | null;
+  playerNotes: string | null;
   verifiedBy: string | null;
   verifiedAt: Date | null;
   createdAt: Date;
@@ -60,8 +70,11 @@ export interface OnlineQualSessionSummary {
   timerLog: QualTimerLog;
   scores: number[];
   judgeNotes: string | null;
+  playerNotes?: string | null;
   submissionIds: string[];
   submissionSource?: SubmissionSource;
+  // Only startOnlineQualSession sets this: true when it created the run, not when it resumed one.
+  isNewSession?: boolean;
 }
 
 function isUuid(val: string): boolean {
@@ -477,6 +490,7 @@ export async function getOnlineQualSession(
       },
     scores: scoredRows.map(s => s.score),
     judgeNotes: first.judgeNotes || null,
+    playerNotes: first.playerNotes || null,
     submissionIds: matchedSubs.map(s => s.id),
   };
 }
@@ -551,6 +565,7 @@ export async function listOnlineQualSessions(
         },
       scores: scoredRows.map(s => s.score),
       judgeNotes: first.judgeNotes || null,
+      playerNotes: first.playerNotes || null,
       submissionIds: subs.map(s => s.id),
     });
   }
@@ -558,60 +573,114 @@ export async function listOnlineQualSessions(
   return result;
 }
 
+const DISCORD_TIMEOUT_MS = 3000;
+
+/**
+ * Webhook for a tournament's announcements: its own URL, else its organization's.
+ * Only genuine Discord webhook URLs are returned.
+ */
+async function resolveDiscordWebhook(
+  tourney: typeof tournaments.$inferSelect
+): Promise<{ url: string; source: 'tournament' | 'organization' } | null> {
+  const meta = (tourney.metadata as Record<string, any>) || {};
+  if (isDiscordWebhookUrl(meta.discordWebhookUrl)) {
+    return { url: meta.discordWebhookUrl.trim(), source: 'tournament' };
+  }
+  if (tourney.organizationId) {
+    const [org] = await getDb()
+      .select({ discordWebhookUrl: organizations.discordWebhookUrl })
+      .from(organizations)
+      .where(eq(organizations.id, tourney.organizationId))
+      .limit(1);
+    if (isDiscordWebhookUrl(org?.discordWebhookUrl)) {
+      return { url: org.discordWebhookUrl!.trim(), source: 'organization' };
+    }
+  }
+  return null;
+}
+
+async function postToDiscord(url: string, content: string): Promise<boolean> {
+  if (typeof fetch === 'undefined') return false;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // Never let player-supplied text ping @everyone, roles, or users.
+      body: JSON.stringify({ content, allowed_mentions: { parse: [] } }),
+      signal: AbortSignal.timeout(DISCORD_TIMEOUT_MS),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Track 10F: Dispatches automated Discord webhook notifications for online qualifier events.
- * Non-blocking and failsafe (never throws on webhook failures).
+ * Callers await it so serverless runtimes don't drop the request after the response is sent;
+ * it is bounded by DISCORD_TIMEOUT_MS and never throws.
  */
 export async function dispatchDiscordWebhook(
   tournamentIdOrSlug: string,
-  event: 'START' | 'SUBMIT' | 'VERIFIED',
+  event: QualDiscordEvent,
   data: {
     playerName: string;
     twitchUsername?: string;
     authWord?: string;
     twitchVodUrl?: string;
-    score?: number | string;
+    scores?: number[];
     judgeName?: string;
+    playerNotes?: string;
   }
 ): Promise<boolean> {
   try {
     const tourney = await resolveTournamentRow(tournamentIdOrSlug);
-    const meta = (tourney.metadata as Record<string, any>) || {};
-    const webhookUrl = tourney.discordWebhookUrl || meta.discordWebhookUrl;
-    if (!webhookUrl || typeof webhookUrl !== 'string' || !webhookUrl.startsWith('http')) {
-      return false;
-    }
+    const webhook = await resolveDiscordWebhook(tourney);
+    if (!webhook) return false;
 
-    let messageContent = '';
-    const tourneyName = tourney.name || 'Tournament';
-    const twitchUrl = data.twitchUsername ? `https://twitch.tv/${data.twitchUsername}` : '';
-
-    if (event === 'START') {
-      messageContent = `🎮 **${data.playerName}** started an official qual for **${tourneyName}**!${
-        twitchUrl ? ` Watch live: ${twitchUrl}` : ''
-      }${data.authWord ? ` (Authword: \`${data.authWord}\`)` : ''}`;
-    } else if (event === 'SUBMIT') {
-      messageContent = `🏆 **${data.playerName}** submitted qual: **${
-        data.score ?? 'Scores recorded'
-      }**!${data.twitchVodUrl ? ` VOD: ${data.twitchVodUrl}` : ''}`;
-    } else if (event === 'VERIFIED') {
-      messageContent = `✓ **${data.playerName}**'s qualification has been verified by judge${
-        data.judgeName ? ` (${data.judgeName})` : ''
-      }: **${data.score ?? 'Approved'}**`;
-    }
-
-    if (typeof fetch !== 'undefined') {
-      await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: messageContent }),
-      }).catch(() => {});
-      return true;
-    }
+    const content = buildQualDiscordMessage(event, {
+      ...data,
+      tournamentName: tourney.name || 'Tournament',
+      tournamentSlug: tourney.slug || undefined,
+      format: {
+        qualFormat: tourney.qualFormat,
+        qualAverageCount: tourney.qualAverageCount,
+        pointsConfig: tourney.pointsConfig as PointsThreshold[] | null,
+      },
+    });
+    return await postToDiscord(webhook.url, content);
   } catch {
-    // Fail silently
+    return false;
   }
-  return false;
+}
+
+/**
+ * Sends a test message so organizers can confirm a webhook works. Uses `overrideUrl` (an unsaved
+ * value typed in settings) when given, otherwise the tournament's or its organization's webhook.
+ */
+export async function sendTestDiscordWebhook(
+  tournamentIdOrSlug: string,
+  overrideUrl?: string
+): Promise<{ success: boolean; source?: 'tournament' | 'organization'; error?: string }> {
+  const tourney = await resolveTournamentRow(tournamentIdOrSlug);
+  let target: { url: string; source: 'tournament' | 'organization' } | null;
+  if (overrideUrl?.trim()) {
+    if (!isDiscordWebhookUrl(overrideUrl)) {
+      return { success: false, error: 'That is not a Discord webhook URL (https://discord.com/api/webhooks/...)' };
+    }
+    target = { url: overrideUrl.trim(), source: 'tournament' };
+  } else {
+    target = await resolveDiscordWebhook(tourney);
+    if (!target) {
+      return { success: false, error: 'No webhook configured for this tournament or its organization' };
+    }
+  }
+
+  const name = escapeDiscordMarkdown(tourney.name || 'Tournament');
+  const ok = await postToDiscord(target.url, `🔔 Test from MatchFoundry: qual announcements for **${name}** will post here.`);
+  return ok
+    ? { success: true, source: target.source }
+    : { success: false, source: target.source, error: 'Discord rejected the message or did not respond' };
 }
 
 /**
@@ -791,6 +860,7 @@ export async function startOnlineQualSession(
     scores: [],
     judgeNotes: null,
     submissionIds: [inserted.id],
+    isNewSession: true,
   };
 }
 
@@ -803,6 +873,7 @@ export async function submitOnlineQualScores(
     playerId: string;
     scores: number[];
     twitchVodUrl: string;
+    playerNotes?: string;
     submittedTwitchId?: string;
     submittedTwitchUsername?: string;
     identityStatus?: IdentityStatus;
@@ -812,6 +883,11 @@ export async function submitOnlineQualScores(
   const db = getDb();
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
   const meta = (tourney.metadata as Record<string, any>) || {};
+
+  const playerNotes = typeof input.playerNotes === 'string' ? input.playerNotes.trim() || null : null;
+  if (playerNotes && playerNotes.length > PLAYER_NOTES_MAX_LENGTH) {
+    throw new Error(`Notes must be ${PLAYER_NOTES_MAX_LENGTH} characters or fewer`);
+  }
 
   if (tourney.qualsClosed || meta.isLocked) {
     throw new Error('Qualifiers are closed for this tournament');
@@ -833,6 +909,10 @@ export async function submitOnlineQualScores(
   await ensureTournamentPlayerRegistration(tourney.id, input.playerId);
 
   const existing = await getOnlineQualSession(tourney.id, { playerId: input.playerId });
+  // A submitted (or judged) run can't be replaced by submitting again; only a judge reset reopens it.
+  if (existing && existing.status !== 'IN_PROGRESS') {
+    throw new Error('You have already submitted your qualifier run for this tournament');
+  }
   const nowMs = input.nowMs ?? Date.now();
   const windowMinutes = tourney.qualWindowMinutes ?? meta.qualWindowMinutes ?? 90;
 
@@ -874,6 +954,7 @@ export async function submitOnlineQualScores(
         identityStatus,
         timerLog: finalTimerLog,
         judgeNotes: existing?.judgeNotes || null,
+        playerNotes,
         createdAt: new Date(nowMs + idx),
       }))
     )
@@ -891,129 +972,8 @@ export async function submitOnlineQualScores(
     timerLog: finalTimerLog,
     scores: input.scores,
     judgeNotes: existing?.judgeNotes || null,
+    playerNotes,
     submissionIds: (inserted as Array<{ id: string }>).map(r => r.id),
-  };
-}
-
-/**
- * Competitor reports a stream crash / technical reset request during an active run (Assertion 4.1).
- */
-export async function requestOnlineQualReset(
-  tournamentIdOrSlug: string,
-  input: {
-    playerId: string;
-    reason: string;
-    nowMs?: number;
-  }
-): Promise<OnlineQualSessionSummary> {
-  const db = getDb();
-  const tourney = await resolveTournamentRow(tournamentIdOrSlug);
-  const existing = await getOnlineQualSession(tourney.id, { playerId: input.playerId });
-  if (!existing) {
-    throw new Error('No active online qualifier session found for this player');
-  }
-
-  const cleanReason = input.reason.trim() || 'Stream crash / technical issue reported';
-  const nowMs = input.nowMs ?? Date.now();
-  const updatedTimerLog: QualTimerLog = {
-    ...existing.timerLog,
-    resetRequested: true,
-    resetReason: cleanReason,
-    resetRequestedAt: nowMs,
-  };
-  const updatedNotes = existing.judgeNotes
-    ? `${existing.judgeNotes}\n[RESET REQUEST]: ${cleanReason}`
-    : `[RESET REQUEST]: ${cleanReason}`;
-
-  for (const subId of existing.submissionIds) {
-    await db
-      .update(qualifierSubmissions)
-      .set({
-        timerLog: updatedTimerLog,
-        judgeNotes: updatedNotes,
-      })
-      .where(eq(qualifierSubmissions.id, subId));
-  }
-
-  return {
-    ...existing,
-    timerLog: updatedTimerLog,
-    judgeNotes: updatedNotes,
-  };
-}
-
-/**
- * Judge voids an active/crashed online session and issues a brand new NES Authword
- * and fresh countdown timer without creating duplicate submissions (Assertion 4.2).
- */
-export async function voidAndResetOnlineQualSession(
-  tournamentIdOrSlug: string,
-  input: {
-    playerId: string;
-    judgeNote?: string;
-    nowMs?: number;
-  }
-): Promise<OnlineQualSessionSummary> {
-  const db = getDb();
-  const tourney = await resolveTournamentRow(tournamentIdOrSlug);
-  const meta = (tourney.metadata as Record<string, any>) || {};
-  const existing = await getOnlineQualSession(tourney.id, { playerId: input.playerId });
-
-  const allTourneySubs = (await db
-    .select()
-    .from(qualifierSubmissions)
-    .where(eq(qualifierSubmissions.tournamentId, tourney.id))) as QualifierSubmissionRecord[];
-  const usedWords = allTourneySubs
-    .map(s => s.authWord)
-    .filter((w): w is string => Boolean(w));
-  if (existing?.authWord) {
-    usedWords.push(existing.authWord);
-  }
-
-  if (existing && existing.submissionIds.length > 0) {
-    for (const subId of existing.submissionIds) {
-      await db.delete(qualifierSubmissions).where(eq(qualifierSubmissions.id, subId));
-    }
-  }
-
-  const customWords =
-    (tourney.customAuthWords as string[] | null) ||
-    (meta.customAuthWords as string[] | undefined) ||
-    [];
-  const newAuthWord = generateNesAuthword(customWords, usedWords);
-  const newTimerLog = createInitialTimerLog(input.nowMs ?? Date.now());
-  const note = input.judgeNote?.trim() || null;
-
-  const [inserted] = await db
-    .insert(qualifierSubmissions)
-    .values({
-      tournamentId: tourney.id,
-      playerId: input.playerId,
-      score: 0,
-      submissionSource: 'ONLINE',
-      status: 'IN_PROGRESS',
-      authWord: newAuthWord,
-      submittedTwitchId: existing?.submittedTwitchId || null,
-      submittedTwitchUsername: existing?.submittedTwitchUsername || null,
-      identityStatus: existing?.identityStatus || 'VERIFIED_MATCH',
-      timerLog: newTimerLog,
-      judgeNotes: note,
-    })
-    .returning();
-
-  return {
-    tournamentId: tourney.id,
-    playerId: input.playerId,
-    status: 'IN_PROGRESS',
-    authWord: newAuthWord,
-    twitchVodUrl: null,
-    submittedTwitchId: existing?.submittedTwitchId || null,
-    submittedTwitchUsername: existing?.submittedTwitchUsername || null,
-    identityStatus: existing?.identityStatus || 'VERIFIED_MATCH',
-    timerLog: newTimerLog,
-    scores: [],
-    judgeNotes: note,
-    submissionIds: [inserted.id],
   };
 }
 
@@ -1216,6 +1176,7 @@ export async function adjudicateOnlineSubmission(
         identityStatus: 'VERIFIED_MATCH' as const,
         timerLog: existing.timerLog,
         judgeNotes: combinedNotes,
+        playerNotes: existing.playerNotes ?? null,
         verifiedBy: judgeBy,
         verifiedAt: now,
         createdAt: new Date(now.getTime() + idx),
@@ -1507,9 +1468,7 @@ export async function verifyAllQualifierSubmissions(
 ): Promise<{ verifiedCount: number; sessions: OnlineQualSessionSummary[] }> {
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
   const sessions = await listOnlineQualSessions(tourney.id);
-  const unverified = sessions.filter(
-    s => s.status === 'SUBMITTED' || Boolean(s.timerLog?.resetRequested)
-  );
+  const unverified = sessions.filter(s => s.status === 'SUBMITTED');
 
   const results: OnlineQualSessionSummary[] = [];
   for (const s of unverified) {

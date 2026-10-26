@@ -2,7 +2,7 @@ import React from 'react';
 import { Plus, Trash2, ArrowUp, ArrowDown, Palette, ChevronDown } from 'lucide-react';
 import { TournamentTier, BracketRouting } from '../../types';
 import { getDefaultTierColors, colorWithAlpha } from '../../../bracket/colorUtils';
-import { getValidFlatWidths } from '../../../bracket/math';
+import { getValidFlatWidths, getDoubleEliminationConfigError } from '../../../bracket/math';
 import { BestOfSelect } from '../../../bracket/components/BestOfSelect';
 import { BracketThemeEditor } from '../../../bracket/components/BracketThemeEditor';
 import { RoundOverridesEditor } from '../RoundOverridesEditor';
@@ -301,15 +301,15 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                         onChange={e => onUpdateTier(idx, { flatWidth: parseInt(e.target.value, 10) })}
                         style={{
                           ...inputStyle,
-                          borderColor: tier.playerCount % (tier.flatWidth || 4) !== 0 ? '#ef4444' : undefined,
+                          borderColor: getDoubleEliminationConfigError(tier.playerCount, tier) ? '#ef4444' : undefined,
                         }}
                       >
                         <option value={4}>4 Wide</option>
                         <option value={8}>8 Wide</option>
                       </select>
-                      {tier.playerCount % (tier.flatWidth || 4) !== 0 && (
+                      {getDoubleEliminationConfigError(tier.playerCount, tier) && (
                         <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '0.25rem' }}>
-                          Participant count ({tier.playerCount}) must be a multiple of flat width ({tier.flatWidth || 4}).
+                          {getDoubleEliminationConfigError(tier.playerCount, tier)}
                         </div>
                       )}
                     </div>
@@ -340,6 +340,11 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                         <option value={8}>Top 8</option>
                         <option value={16}>Top 16</option>
                       </select>
+                      {getDoubleEliminationConfigError(tier.playerCount, tier) && (
+                        <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '0.25rem' }}>
+                          {getDoubleEliminationConfigError(tier.playerCount, tier)}
+                        </div>
+                      )}
                     </div>
                   )}
 

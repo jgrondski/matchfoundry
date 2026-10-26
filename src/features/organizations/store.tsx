@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Organization } from '../tournament/types';
 import { CreateOrganizationInput } from './types';
-import { getAuthHeaders } from '../auth/AuthContext';
+import { getAuthHeaders, usePinAuth } from '../auth/AuthContext';
 
 export const ORGANIZATIONS_STORAGE_KEY = 'classic_tetris_organizations';
 
@@ -38,7 +38,7 @@ export const OrganizationProvider: React.FC<{
     let isMounted = true;
     setIsLoading(true);
     if (typeof window !== 'undefined' && typeof fetch === 'function') {
-      fetch('/api/organizations')
+      fetch('/api/organizations', { headers: getAuthHeaders() })
         .then(res => {
           if (!res.ok) throw new Error('Failed to load organizations');
           return res.json();
@@ -67,6 +67,21 @@ export const OrganizationProvider: React.FC<{
       isMounted = false;
     };
   }, []);
+
+  // Webhook URLs are only returned to system admins, so reload when the session changes.
+  const { session } = usePinAuth();
+  const authToken = session?.token;
+  const lastAuthTokenRef = useRef(authToken);
+  useEffect(() => {
+    if (lastAuthTokenRef.current === authToken) return;
+    lastAuthTokenRef.current = authToken;
+    fetch('/api/organizations', { headers: getAuthHeaders() })
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (Array.isArray(data)) setOrganizations(data);
+      })
+      .catch(() => {});
+  }, [authToken]);
 
   const getOrganizationById = (id: string) => {
     return organizations.find(o => o.id === id);

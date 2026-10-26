@@ -7,7 +7,12 @@ import {
   QualifierStatus,
 } from '../tournament/types';
 import { SeededPlayer, BracketStructure } from '../bracket/types';
-import { generateTraditionalBracket, generateFlatBracket, generateDoubleEliminationBracket } from '../bracket/math';
+import {
+  generateTraditionalBracket,
+  generateFlatBracket,
+  generateDoubleEliminationBracket,
+  getDoubleEliminationConfigError,
+} from '../bracket/math';
 
 export const MAXOUT_THRESHOLD = 999999;
 
@@ -466,6 +471,21 @@ export function generateFullTierBracket(tier: TournamentTier, availablePlayers: 
     flatWidth: tier.flatWidth,
     finalsCutoff: tier.finalsCutoff,
   };
+
+  // An invalid double-elim setup (e.g. 9 players flat staged 4 wide) gets an empty draft bracket
+  // instead of throwing; the settings form shows the reason and blocks saving.
+  if (tier.eliminationType === 'DOUBLE' && getDoubleEliminationConfigError(capacity, options)) {
+    return {
+      tierId: tier.id,
+      type: 'TRADITIONAL',
+      eliminationType: 'DOUBLE',
+      bracketRouting: tier.bracketRouting,
+      totalPlayers: capacity,
+      totalRounds: 0,
+      rounds: [],
+      matchesById: {},
+    };
+  }
 
   return tier.eliminationType === 'DOUBLE'
     ? generateDoubleEliminationBracket(fullSeeds, options)

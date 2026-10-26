@@ -1,14 +1,21 @@
 import React from 'react';
 import { Send, Plus, Trash2, Video, AlertCircle } from 'lucide-react';
-import type { QualFormat } from '../../tournament/types';
+import type { PointsThreshold, QualFormat } from '../../tournament/types';
+import { PLAYER_NOTES_MAX_LENGTH } from '../discordMessages';
+import { summarizeQualScores, type QualScoreSummary } from '../../qualifiers/qualSummary';
+
+const SUMMARY_DEBOUNCE_MS = 400;
 
 export interface SubmissionFormCardProps {
   qualFormat: QualFormat;
   qualAverageCount?: number;
+  pointsConfig?: PointsThreshold[];
   scores: number[];
   onScoresChange: (scores: number[]) => void;
   twitchVodUrl: string;
   onTwitchVodUrlChange: (url: string) => void;
+  playerNotes: string;
+  onPlayerNotesChange: (notes: string) => void;
   onSubmit: () => void;
   isSubmitting?: boolean;
   errorMessage?: string | null;
@@ -18,10 +25,13 @@ export interface SubmissionFormCardProps {
 export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
   qualFormat,
   qualAverageCount = 2,
+  pointsConfig,
   scores,
   onScoresChange,
   twitchVodUrl,
   onTwitchVodUrlChange,
+  playerNotes,
+  onPlayerNotesChange,
   onSubmit,
   isSubmitting = false,
   errorMessage,
@@ -42,6 +52,16 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
   } else {
     currentScores = scores.length === 0 ? [0] : scores;
   }
+
+  // The summary trails typing slightly (or catches up when a score field loses focus) so totals
+  // don't flicker through partial values like 8 -> 84 -> 845 while a score is being typed.
+  const [summaryScores, setSummaryScores] = React.useState<number[]>(currentScores);
+  const scoresKey = currentScores.join(',');
+  React.useEffect(() => {
+    const timer = setTimeout(() => setSummaryScores(scoresKey.split(',').map(Number)), SUMMARY_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [scoresKey]);
+  const summary = summarizeQualScores({ qualFormat, qualAverageCount, pointsConfig }, summaryScores);
 
   React.useEffect(() => {
     if (newlyAddedIndexRef.current !== null) {
@@ -153,6 +173,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
                   type="text"
                   value={scoreVal === 0 ? '' : scoreVal.toLocaleString()}
                   onChange={e => handleScoreChange(idx, e.target.value)}
+                  onBlur={() => setSummaryScores(currentScores)}
                   placeholder="0"
                   disabled={disabled}
                   style={{
@@ -215,6 +236,8 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
           )}
         </div>
 
+        {summary && <QualScoreSummaryPanel summary={summary} />}
+
         {/* Twitch VOD URL Input */}
         <div>
           <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.4rem' }}>
@@ -257,6 +280,37 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
           </div>
         </div>
 
+        {/* Optional public notes (posted with the submission to Discord) */}
+        <div>
+          <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.4rem' }}>
+            Notes (optional)
+          </label>
+          <textarea
+            value={playerNotes}
+            onChange={e => onPlayerNotesChange(e.target.value)}
+            placeholder="e.g. Stream dropped during game 2, restarted at 0:42:10."
+            maxLength={PLAYER_NOTES_MAX_LENGTH}
+            rows={3}
+            disabled={disabled}
+            style={{
+              width: '100%',
+              padding: '0.7rem 0.85rem',
+              borderRadius: '8px',
+              background: 'var(--color-bg-base, #0a0e14)',
+              border: '1px solid var(--color-border, #263342)',
+              color: '#ffffff',
+              fontSize: '0.92rem',
+              fontFamily: 'inherit',
+              resize: 'vertical',
+              boxSizing: 'border-box',
+            }}
+            data-testid="player-notes-input"
+          />
+          <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.3rem' }}>
+            Anything judges should know. Notes are public: they're posted with your submission.
+          </div>
+        </div>
+
         {/* Submit Button */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
           <button
@@ -286,3 +340,86 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
     </div>
   );
 };
+
+const summaryRowStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  gap: '1rem',
+  fontSize: '0.88rem',
+  color: 'var(--color-text-secondary, #94a3b8)',
+};
+
+const summaryValueStyle: React.CSSProperties = {
+  fontFamily: "'JetBrains Mono', monospace",
+  fontWeight: 700,
+  color: '#ffffff',
+};
+
+const summaryTotalStyle: React.CSSProperties = {
+  ...summaryRowStyle,
+  borderTop: '1px solid var(--color-border, #263342)',
+  paddingTop: '0.4rem',
+  marginTop: '0.15rem',
+  fontWeight: 800,
+  color: '#e2e8f0',
+};
+
+/** Live result of the scores entered so far, in the tournament's qual format. */
+const QualScoreSummaryPanel: React.FC<{ summary: QualScoreSummary }> = ({ summary }) => (
+  <div
+    style={{
+      background: 'rgba(245, 158, 11, 0.06)',
+      border: '1px solid rgba(245, 158, 11, 0.3)',
+      borderRadius: '8px',
+      padding: '0.75rem 1rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.3rem',
+    }}
+    data-testid="qual-score-summary"
+  >
+    {summary.kind === 'MAXES' && (
+      <>
+        <div style={summaryRowStyle}>
+          <span>Maxes</span>
+          <span style={summaryValueStyle}>{summary.maxoutCount}</span>
+        </div>
+        {summary.kickerScore > 0 && (
+          <div style={summaryRowStyle}>
+            <span>Kicker</span>
+            <span style={summaryValueStyle}>{summary.kickerScore.toLocaleString()}</span>
+          </div>
+        )}
+      </>
+    )}
+
+    {summary.kind === 'AVERAGE' && (
+      <>
+        <div style={summaryTotalStyle}>
+          <span>Average of {summary.targetCount}</span>
+          <span style={summaryValueStyle}>{summary.average.toLocaleString()}</span>
+        </div>
+        {summary.scores.length < summary.targetCount && (
+          <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted, #64748b)' }}>
+            {summary.scores.length} of {summary.targetCount} games entered; missing games count as 0.
+          </div>
+        )}
+      </>
+    )}
+
+    {summary.kind === 'POINTS' && (
+      <>
+        {summary.breakdown.map(({ score, points }, idx) => (
+          <div key={idx} style={summaryRowStyle}>
+            <span>{score.toLocaleString()}</span>
+            <span style={summaryValueStyle}>{points} pts</span>
+          </div>
+        ))}
+        <div style={summaryTotalStyle}>
+          <span>Total</span>
+          <span style={summaryValueStyle}>{summary.totalPoints} pts</span>
+        </div>
+      </>
+    )}
+  </div>
+);

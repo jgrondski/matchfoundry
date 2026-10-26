@@ -12,7 +12,7 @@ import { TournamentProvider } from '../../tournament/store';
 import { OrganizationProvider } from '../../organizations/store';
 import { AuthProvider } from '../../auth/AuthContext';
 import { createEmptyTournament, createDefaultTier } from '../../tournament/defaults';
-import type { Tournament, QualTimerLog } from '../../tournament/types';
+import type { Tournament } from '../../tournament/types';
 import type { OnlineQualSessionSummary } from '../../../api/qualifiers';
 
 describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
@@ -194,35 +194,25 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
   });
 
   describe('5. Active Official Run HUD & Non-Blocking Countdown Timer', () => {
-    const mockTimerLog: QualTimerLog = {
-      startedAt: Date.now() - 30 * 60 * 1000, // 30 minutes elapsed
-      elapsedSeconds: 30 * 60,
-      pauses: [],
-      overTime: false,
-    };
-
     it('renders assigned NES Authword in bold high-contrast card', () => {
       const html = renderToStaticMarkup(
-        <AuthwordHudCard authWord="ROCKET" onReportCrash={vi.fn()} />
+        <AuthwordHudCard authWord="ROCKET" />
       );
 
       expect(html).toContain('Official Verification Authword');
       expect(html).toContain('ROCKET');
       expect(html).not.toContain('Copy Authword');
-      expect(html).toContain('Report Stream Crash / Reset');
+      expect(html).not.toContain('Report Stream Crash');
       expect(html).toContain('NES Authword Proof Rule');
     });
 
     it('does not show competitors a session timer or elapsed time', () => {
-      const overTimeLog: QualTimerLog = { ...mockTimerLog, elapsedSeconds: 95 * 60, overTime: true };
-      for (const timerLog of [mockTimerLog, overTimeLog]) {
-        const html = renderToStaticMarkup(<AuthwordHudCard authWord="ROCKET" timerLog={timerLog} />);
-        expect(html).toContain('ROCKET');
-        expect(html).not.toContain('Elapsed');
-        expect(html).not.toContain('Optional Pacing Timer');
-        expect(html).not.toContain('Start Timer');
-        expect(html).not.toContain('Official Window Expired');
-      }
+      const html = renderToStaticMarkup(<AuthwordHudCard authWord="ROCKET" />);
+      expect(html).toContain('ROCKET');
+      expect(html).not.toContain('Elapsed');
+      expect(html).not.toContain('Optional Pacing Timer');
+      expect(html).not.toContain('Start Timer');
+      expect(html).not.toContain('Official Window Expired');
     });
   });
 
@@ -236,6 +226,8 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
           onScoresChange={vi.fn()}
           twitchVodUrl="https://twitch.tv/videos/2481093821?t=00h14m20s"
           onTwitchVodUrlChange={vi.fn()}
+          playerNotes=""
+          onPlayerNotesChange={vi.fn()}
           onSubmit={vi.fn()}
         />
       );

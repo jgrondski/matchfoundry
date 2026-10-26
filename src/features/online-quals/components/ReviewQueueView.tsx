@@ -75,9 +75,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
     fetchSessions();
   }, [fetchSessions]);
 
-  const pendingUnverifiedCount = sessions.filter(
-    s => s.status === 'SUBMITTED' || Boolean(s.timerLog?.resetRequested)
-  ).length;
+  const pendingUnverifiedCount = sessions.filter(s => s.status === 'SUBMITTED').length;
 
   const handleOpenAdjudicate = (session: ReviewQueueSessionSummary) => {
     setSelectedAdjudication(session);
@@ -154,38 +152,6 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       const data = await res.json().catch(() => ({ verifiedCount: pendingUnverifiedCount }));
       setStatusMessage(`Successfully verified all ${data.verifiedCount || pendingUnverifiedCount} pending qualifier runs.`);
       setIsVerifyAllModalOpen(false);
-      await fetchSessions();
-      await refreshTournament?.(tournament.id);
-    } catch (e: any) {
-      setStatusMessage(`Error: ${e.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleVoidReset = async (judgeNote?: string) => {
-    if (!selectedAdjudication) return;
-    setIsSubmitting(true);
-    try {
-      const res = await fetch(`/api/tournaments/${tournament.id}/qualify/void-reset`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({
-          playerId: selectedAdjudication.playerId,
-          judgeNote,
-        }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to void and reset session');
-      }
-
-      setStatusMessage(`Session voided and fresh Authword issued for ${selectedAdjudication.playerName}`);
-      setSelectedAdjudication(null);
       await fetchSessions();
       await refreshTournament?.(tournament.id);
     } catch (e: any) {
@@ -399,7 +365,6 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           session={selectedAdjudication}
           onClose={() => setSelectedAdjudication(null)}
           onAdjudicate={handleAdjudicate}
-          onVoidReset={handleVoidReset}
           onOpenIdentity={(s) => {
             setSelectedAdjudication(null);
             setSelectedIdentity(s);

@@ -51,6 +51,7 @@ export function deriveSessionsFromTournament(tournament: Tournament): ReviewQueu
         },
       scores: scoredRows.map(s => s.score),
       judgeNotes: first.judgeNotes || null,
+      playerNotes: first.playerNotes || null,
       submissionIds: subs.map(s => s.id),
     });
   }
@@ -65,7 +66,5 @@ export function deriveSessionsFromTournament(tournament: Tournament): ReviewQueu
 export function countPendingReviewSessions(tournament: Tournament | null | undefined): number {
   if (!tournament) return 0;
   const sessions = deriveSessionsFromTournament(tournament);
-  return sessions.filter(
-    s => s.status === 'SUBMITTED' || Boolean(s.timerLog?.resetRequested)
-  ).length;
+  return sessions.filter(s => s.status === 'SUBMITTED').length;
 }

@@ -307,6 +307,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     status: s.status || 'VERIFIED',
     timerLog: s.timerLog || undefined,
     judgeNotes: s.judgeNotes || undefined,
+    playerNotes: s.playerNotes || undefined,
     verifiedBy: s.verifiedBy || undefined,
     verifiedAt: s.verifiedAt ? new Date(s.verifiedAt).getTime() : undefined,
   }));
@@ -407,7 +408,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     bannerUrl: meta.bannerUrl || undefined,
     discordWebhookUrl: t.discordWebhookUrl || meta.discordWebhookUrl || undefined,
     themeColors: meta.themeColors || undefined,
-    adminPinEncrypted: t.adminPinEncrypted || undefined,
+    // adminPinEncrypted is intentionally never returned; PIN checks read the DB row directly.
   };
 
   return fullTourney;
@@ -465,7 +466,12 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
     useOrgBranding: tourney.useOrgBranding ?? true,
     logoUrl: tourney.logoUrl || null,
     bannerUrl: tourney.bannerUrl || null,
-    discordWebhookUrl: tourney.discordWebhookUrl || null,
+    // Omitted (undefined) keeps the stored URL: clients that were sent a redacted tournament
+    // must not wipe the webhook when they save other fields.
+    discordWebhookUrl:
+      tourney.discordWebhookUrl !== undefined
+        ? tourney.discordWebhookUrl || null
+        : ((existing[0]?.metadata as Record<string, any> | null)?.discordWebhookUrl ?? null),
     themeColors: tourney.themeColors || null,
     matchScores: tourney.matchScores || {},
   };

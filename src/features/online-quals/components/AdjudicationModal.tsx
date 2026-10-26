@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CheckCircle2, AlertTriangle, ExternalLink, ShieldAlert, RotateCcw, X, Edit3, Film, UserCheck, MapPin } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ExternalLink, ShieldAlert, StickyNote, X, Edit3, Film, UserCheck, MapPin } from 'lucide-react';
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 
@@ -11,7 +11,6 @@ export interface AdjudicationModalProps {
     action: 'VERIFY' | 'EDIT_AND_VERIFY' | 'DNQ' | 'DQ',
     options?: { scores?: number[]; judgeNotes?: string }
   ) => Promise<void>;
-  onVoidReset?: (judgeNote?: string) => Promise<void>;
   onOpenIdentity?: (session: ReviewQueueSessionSummary) => void;
   isSubmitting?: boolean;
 }
@@ -21,7 +20,6 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
   session,
   onClose,
   onAdjudicate,
-  onVoidReset,
   onOpenIdentity,
   isSubmitting = false,
 }) => {
@@ -69,7 +67,6 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
   const elapsedMinutes = Math.floor(elapsedSeconds / 60);
   const elapsedRemSec = elapsedSeconds % 60;
   const isOvertime = Boolean(session.timerLog?.overTime);
-  const hasResetRequest = Boolean(session.timerLog?.resetRequested);
 
   return (
     <div
@@ -226,8 +223,8 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
             </div>
           )}
 
-          {/* Reset Request Alert */}
-          {hasResetRequest && (
+          {/* Competitor's notes from submission (also posted publicly to Discord) */}
+          {session.playerNotes && (
             <div
               style={{
                 background: 'rgba(168, 85, 247, 0.12)',
@@ -242,11 +239,11 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
-                <RotateCcw size={16} color="#a855f7" />
-                Stream Crash / Technical Reset Requested by Competitor
+                <StickyNote size={16} color="#a855f7" />
+                Competitor Notes
               </div>
-              <div style={{ color: '#ffffff', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)' }}>
-                {session.timerLog?.resetReason || 'Technical issue reported during run'}
+              <div style={{ color: '#ffffff', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                {session.playerNotes}
               </div>
             </div>
           )}
@@ -517,26 +514,8 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
             flexWrap: 'wrap',
           }}
         >
-          {/* Destructive actions (DNQ, DQ, Void) */}
+          {/* Destructive actions (DNQ, DQ) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {hasResetRequest && onVoidReset && (
-              <button
-                type="button"
-                onClick={() => onVoidReset(judgeNotes)}
-                disabled={isSubmitting}
-                className="btn btn-secondary"
-                style={{
-                  color: '#c084fc',
-                  borderColor: 'rgba(168, 85, 247, 0.4)',
-                  fontSize: '0.8rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
-              >
-                <RotateCcw size={14} /> Void &amp; Issue Fresh Authword
-              </button>
-            )}
             <button
               type="button"
               onClick={() => onAdjudicate('DNQ', { judgeNotes })}

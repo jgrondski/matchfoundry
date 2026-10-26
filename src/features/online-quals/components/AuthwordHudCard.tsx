@@ -1,22 +1,13 @@
 import React from 'react';
-import { AlertTriangle, Info, ShieldCheck } from 'lucide-react';
-import type { QualTimerLog } from '../../tournament/types';
+import { ShieldCheck } from 'lucide-react';
 
 export interface AuthwordHudCardProps {
+  // Elapsed time is recorded server-side for judges but intentionally not shown here: competitors run
+  // their own on-stream timer, and two clocks confuse.
   authWord: string | null;
-  onReportCrash?: () => void;
-  /**
-   * Session timer log, used only for the reset-request banner. Elapsed time is recorded server-side for
-   * judges but intentionally not shown: competitors run their own on-stream timer, and two clocks confuse.
-   */
-  timerLog?: QualTimerLog;
 }
 
-export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({
-  authWord,
-  onReportCrash,
-  timerLog,
-}) => {
+export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({ authWord }) => {
   return (
     <div
       style={{
@@ -38,55 +29,7 @@ export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({
             Official Verification Authword
           </span>
         </div>
-
-        {onReportCrash && (
-          <button
-            type="button"
-            onClick={onReportCrash}
-            style={{
-              background: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.35)',
-              borderRadius: '6px',
-              padding: '0.35rem 0.75rem',
-              color: '#fca5a5',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-            data-testid="report-crash-trigger"
-          >
-            <AlertTriangle size={14} />
-            Report Stream Crash / Reset
-          </button>
-        )}
       </div>
-
-      {/* Reset Request Active Banner */}
-      {timerLog?.resetRequested && (
-        <div
-          style={{
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.35)',
-            borderRadius: '8px',
-            padding: '0.75rem 1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            color: '#fca5a5',
-            fontSize: '0.85rem',
-          }}
-          data-testid="reset-requested-banner"
-        >
-          <Info size={18} style={{ flexShrink: 0 }} />
-          <div>
-            <strong>Reset Request Pending:</strong> "{timerLog.resetReason || 'Stream crash reported'}".
-            Awaiting tournament judge review or session restart.
-          </div>
-        </div>
-      )}
 
       {/* Authword Presentation Block */}
       <div

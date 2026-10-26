@@ -30,7 +30,7 @@ import { ManageReviewPage } from './routes/ManageReviewPage';
  */
 const LiveRouteSync: React.FC = () => {
   const location = useLocation();
-  const { refreshTournament, refreshGlobalPlayers } = useTournament();
+  const { refreshTournament, refreshGlobalPlayers, refreshAllTournaments } = useTournament();
 
   useEffect(() => {
     if (typeof fetch === 'undefined') return;
@@ -45,8 +45,11 @@ const LiveRouteSync: React.FC = () => {
       }
     } else if (segments[0] === 'players') {
       void refreshGlobalPlayers();
+    } else if (segments.length === 0) {
+      // Front page: pick up tournaments whose online quals opened (or closed) since the list loaded.
+      void refreshAllTournaments();
     }
-  }, [location.pathname, refreshTournament, refreshGlobalPlayers]);
+  }, [location.pathname, refreshTournament, refreshGlobalPlayers, refreshAllTournaments]);
 
   // Window Focus Sync (spectator or admin returns from Twitch tab)
   useEffect(() => {
@@ -62,12 +65,14 @@ const LiveRouteSync: React.FC = () => {
         }
       } else if (segments[0] === 'players') {
         void refreshGlobalPlayers();
+      } else if (segments.length === 0) {
+        void refreshAllTournaments();
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [location.pathname, refreshTournament, refreshGlobalPlayers]);
+  }, [location.pathname, refreshTournament, refreshGlobalPlayers, refreshAllTournaments]);
 
   return null;
 };

@@ -125,6 +125,7 @@ export function setupTestDb() {
       status TEXT NOT NULL DEFAULT 'SUBMITTED',
       timer_log JSONB,
       judge_notes TEXT,
+      player_notes TEXT,
       verified_by TEXT,
       verified_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT now()

@@ -369,10 +369,9 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
     });
   });
 
-  describe('4. Online Qual Session Lifecycle & Crash Reset (Tracks 10C, 10D & Journeys 1, 4)', () => {
+  describe('4. Online Qual Session Lifecycle (Tracks 10C, 10D & Journey 1)', () => {
     let tourney: Tournament;
     let player: PlayerProfile;
-    let adminToken: string;
 
     beforeEach(async () => {
       tourney = createEmptyTournament({ slug: 'omen-open', name: 'Omen Open' });
@@ -400,12 +399,6 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
         playstyle: 'DAS',
         isDisqualified: false,
       };
-
-      adminToken = createSessionToken({
-        role: 'TOURNAMENT_ADMIN',
-        tournamentId: tourney.id,
-        tournamentSlug: tourney.slug,
-      });
     });
 
     it('launches official qual session, generates NES Authword, and allows idempotent reload recovery', async () => {
@@ -452,56 +445,6 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
       const startRes2 = createMockRes();
       await middleware(startReq2, startRes2 as any, () => {});
       expect(startRes2.getBody().authWord).toBe(session1.authWord);
-    });
-
-    it('handles stream crash reset request and tournament admin void/restart (Journey 4)', async () => {
-      // 1. Start initial session
-      const startReq = createMockReq({
-        url: `/api/tournaments/${tourney.id}/qualify/start`,
-        method: 'POST',
-        body: { playerId: player.id },
-      });
-      const startRes = createMockRes();
-      await middleware(startReq, startRes as any, () => {});
-      const initialAuthWord = startRes.getBody().authWord;
-
-      // 2. Competitor reports stream crash (POST /api/tournaments/:id/qualify/reset-request)
-      const resetReq = createMockReq({
-        url: `/api/tournaments/${tourney.id}/qualify/reset-request`,
-        method: 'POST',
-        body: {
-          playerId: player.id,
-          reason: 'OBS crashed at 12 minutes',
-        },
-      });
-      const resetRes = createMockRes();
-      await middleware(resetReq, resetRes as any, () => {});
-
-      expect(resetRes.getStatusCode()).toBe(200);
-      const afterReport = resetRes.getBody();
-      expect(afterReport.timerLog.resetRequested).toBe(true);
-      expect(afterReport.timerLog.resetReason).toContain('OBS crashed');
-      expect(afterReport.judgeNotes).toContain('OBS crashed');
-
-      // 3. Judge voids and resets session with fresh Authword (POST /api/tournaments/:id/qualify/void-reset)
-      const voidReq = createMockReq({
-        url: `/api/tournaments/${tourney.id}/qualify/void-reset`,
-        method: 'POST',
-        headers: { authorization: `Bearer ${adminToken}` },
-        body: {
-          playerId: player.id,
-          judgeNote: 'Approved void for verified crash on stream',
-        },
-      });
-      const voidRes = createMockRes();
-      await middleware(voidReq, voidRes as any, () => {});
-
-      expect(voidRes.getStatusCode()).toBe(200);
-      const freshSession = voidRes.getBody();
-      expect(freshSession.status).toBe('IN_PROGRESS');
-      expect(freshSession.authWord).not.toBe(initialAuthWord);
-      expect(isValidNesAuthword(freshSession.authWord)).toBe(true);
-      expect(freshSession.judgeNotes).toContain('Approved void');
     });
 
     it('submits final scores + VOD URL and transitions from IN_PROGRESS to SUBMITTED', async () => {

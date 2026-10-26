@@ -15,7 +15,7 @@ export interface ReviewQueueTableProps {
   qualWindowMinutes?: number;
 }
 
-export type ReviewFilter = 'ALL' | 'PENDING' | 'RESETS' | 'ONLINE' | 'IN_PERSON';
+export type ReviewFilter = 'ALL' | 'PENDING' | 'ONLINE' | 'IN_PERSON';
 
 export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
   sessions,
@@ -26,19 +26,14 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
   const [filter, setFilter] = useState<ReviewFilter>('PENDING');
   const [search, setSearch] = useState('');
 
-  const pendingCount = sessions.filter(
-    s => s.status === 'SUBMITTED' || Boolean(s.timerLog?.resetRequested)
-  ).length;
-  const resetCount = sessions.filter(s => Boolean(s.timerLog?.resetRequested)).length;
+  const pendingCount = sessions.filter(s => s.status === 'SUBMITTED').length;
   const onlineCount = sessions.filter(s => s.submissionSource === 'ONLINE').length;
   const inPersonCount = sessions.filter(s => s.submissionSource === 'IN_PERSON').length;
 
   const filteredSessions = sessions.filter(s => {
     // Tab filter
     if (filter === 'PENDING') {
-      if (s.status !== 'SUBMITTED' && !s.timerLog?.resetRequested) return false;
-    } else if (filter === 'RESETS') {
-      if (!s.timerLog?.resetRequested) return false;
+      if (s.status !== 'SUBMITTED') return false;
     } else if (filter === 'ONLINE') {
       if (s.submissionSource !== 'ONLINE') return false;
     } else if (filter === 'IN_PERSON') {
@@ -102,40 +97,6 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
               {pendingCount}
             </span>
           </button>
-
-          {resetCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setFilter('RESETS')}
-              style={{
-                padding: '0.4rem 0.75rem',
-                borderRadius: 'var(--radius-full)',
-                border: filter === 'RESETS' ? '1px solid #a855f7' : '1px solid var(--color-border)',
-                background: filter === 'RESETS' ? 'rgba(168, 85, 247, 0.2)' : 'var(--color-bg-surface)',
-                color: filter === 'RESETS' ? '#c084fc' : 'var(--color-text-secondary)',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
-            >
-              Reset Requests
-              <span
-                style={{
-                  fontSize: '0.7rem',
-                  padding: '0.05rem 0.4rem',
-                  borderRadius: 'var(--radius-full)',
-                  background: '#a855f7',
-                  color: '#ffffff',
-                  fontWeight: 800,
-                }}
-              >
-                {resetCount}
-              </span>
-            </button>
-          )}
 
           <button
             type="button"
@@ -274,7 +235,6 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                 const elapsedMin = Math.floor(elapsedSeconds / 60);
                 const elapsedSec = elapsedSeconds % 60;
                 const isOvertime = Boolean(session.timerLog?.overTime);
-                const hasReset = Boolean(session.timerLog?.resetRequested);
 
                 return (
                   <tr
@@ -403,8 +363,9 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                               ⚠️ Overtime
                             </span>
                           )}
-                          {hasReset && (
+                          {session.playerNotes && (
                             <span
+                              title={session.playerNotes}
                               style={{
                                 fontSize: '0.68rem',
                                 fontWeight: 700,
@@ -414,7 +375,7 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                                 borderRadius: 'var(--radius-sm)',
                               }}
                             >
-                              ⚡ Reset Req
+                              📝 Notes
                             </span>
                           )}
                         </div>

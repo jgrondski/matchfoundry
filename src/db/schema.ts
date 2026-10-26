@@ -124,6 +124,8 @@ export const qualifierSubmissions = pgTable('qualifier_submissions', {
   }).notNull().default('SUBMITTED'),
   timerLog: jsonb('timer_log').$type<QualTimerLog>(),
   judgeNotes: text('judge_notes'),
+  // Competitor's own notes on an online run; public (posted with the submission to Discord).
+  playerNotes: text('player_notes'),
   verifiedBy: text('verified_by'),
   verifiedAt: timestamp('verified_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

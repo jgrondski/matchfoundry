@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
   Tournament,
   TournamentTier,
@@ -12,7 +12,7 @@ import { generateDraftBracketsForTournament } from '../qualifiers/scoring';
 import {
   generateAdditionalFakePlayers,
 } from './simulation';
-import { getAuthHeaders } from '../auth/AuthContext';
+import { getAuthHeaders, usePinAuth } from '../auth/AuthContext';
 
 interface TournamentContextType {
   tournaments: Tournament[];
@@ -53,6 +53,7 @@ interface TournamentContextType {
     isDisqualified: boolean
   ) => void;
   setOnlineQualsOpen: (tournamentId: string, open: boolean) => Promise<boolean>;
+  testDiscordWebhook: (tournamentId: string, url?: string) => Promise<{ ok: boolean; message: string }>;
   togglePlayerQualsCompleted: (
     tournamentId: string,
     playerId: string,
@@ -102,6 +103,7 @@ interface TournamentContextType {
   clearAllGlobalPlayers: () => Promise<void>;
   generateFakeGlobalPlayers: (count: number) => PlayerProfile[];
   refreshGlobalPlayers: () => Promise<void>;
+  refreshAllTournaments: () => Promise<void>;
   importPlayersToTournament: (tournamentId: string, players: PlayerProfile[]) => void;
   removePlayerFromTournament: (
     tournamentId: string,
@@ -351,6 +353,17 @@ export const TournamentProvider: React.FC<{
     }
   }, []);
 
+  // Reloads the full tournament list (e.g. the front page picking up quals opened elsewhere).
+  const refreshAllTournaments = useCallback(async (): Promise<void> => {
+    if (typeof fetch === 'undefined') return;
+    try {
+      const tourneys = await apiCall('/api/tournaments');
+      if (Array.isArray(tourneys)) setTournaments(tourneys);
+    } catch (err) {
+      console.error('Failed to reload tournaments:', err);
+    }
+  }, []);
+
   const refreshGlobalPlayers = useCallback(async (): Promise<void> => {
     if (typeof fetch === 'undefined') return;
     try {
@@ -445,6 +458,17 @@ export const TournamentProvider: React.FC<{
       isMounted = false;
     };
   }, []);
+
+  // Signing in or out changes which fields the API returns (webhook URLs are only sent to managers),
+  // so reload tournaments when the session changes after the initial hydrate.
+  const { session } = usePinAuth();
+  const authToken = session?.token;
+  const lastAuthTokenRef = useRef(authToken);
+  useEffect(() => {
+    if (lastAuthTokenRef.current === authToken) return;
+    lastAuthTokenRef.current = authToken;
+    void refreshAllTournaments();
+  }, [authToken, refreshAllTournaments]);
 
   const simulateSampleTournament = async (): Promise<Tournament | undefined> => {
     setIsLoading(true);
@@ -860,6 +884,23 @@ export const TournamentProvider: React.FC<{
     } catch (err: any) {
       setApiError(`Failed to update online qualifying: ${err.message}`);
       return false;
+    }
+  };
+
+  const testDiscordWebhook = async (
+    tournamentId: string,
+    url?: string
+  ): Promise<{ ok: boolean; message: string }> => {
+    try {
+      const result = await apiCall(`/api/tournaments/${tournamentId}/discord-webhook/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const target = result?.source === 'organization' ? "the organization's webhook" : 'the webhook';
+      return { ok: true, message: `Test message sent to ${target}. Check the Discord channel.` };
+    } catch (err: any) {
+      return { ok: false, message: err.message || 'Webhook test failed' };
     }
   };
 
@@ -1934,6 +1975,7 @@ export const TournamentProvider: React.FC<{
         deleteQualifierScore,
         togglePlayerDisqualification,
         setOnlineQualsOpen,
+        testDiscordWebhook,
         togglePlayerQualsCompleted,
         togglePlayerQualifierVerified,
         lockTournament,
@@ -1974,6 +2016,7 @@ export const TournamentProvider: React.FC<{
         retryConnection,
         refreshTournament,
         refreshGlobalPlayers,
+        refreshAllTournaments,
         apiError,
         clearApiError,
       }}

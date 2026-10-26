@@ -13,7 +13,6 @@ import {
 import { PreFlightModal } from './PreFlightModal';
 import { AuthwordHudCard } from './AuthwordHudCard';
 import { SubmissionFormCard } from './SubmissionFormCard';
-import { StreamCrashModal } from './StreamCrashModal';
 import { AwaitingVerificationCard } from './AwaitingVerificationCard';
 import type { Tournament } from '../../tournament/types';
 import { DEFAULT_POINTS_THRESHOLDS } from '../../tournament/types';
@@ -34,6 +33,7 @@ export interface PersistedPortalSession {
   activeSession: OnlineQualSessionSummary;
   scores: number[];
   twitchVodUrl: string;
+  playerNotes?: string;
 }
 
 export function clearPersistedSession(tournamentId: string): void {
@@ -122,12 +122,12 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
 
   // Modals state
   const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
-  const [isCrashModalOpen, setIsCrashModalOpen] = useState(false);
   const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false);
 
   // Form submission state
   const [scores, setScores] = useState<number[]>(initialPersisted?.scores || []);
   const [twitchVodUrl, setTwitchVodUrl] = useState(initialPersisted?.twitchVodUrl || '');
+  const [playerNotes, setPlayerNotes] = useState(initialPersisted?.playerNotes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
@@ -162,6 +162,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
         activeSession,
         scores: nextScores,
         twitchVodUrl,
+        playerNotes,
       });
     }
   };
@@ -176,6 +177,22 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
         activeSession,
         scores,
         twitchVodUrl: nextVodUrl,
+        playerNotes,
+      });
+    }
+  };
+
+  const handlePlayerNotesChange = (nextNotes: string) => {
+    setPlayerNotes(nextNotes);
+    if (activeSession && resolvedPlayer && activeSession.status === 'IN_PROGRESS') {
+      savePersistedSession(tournament.id, {
+        playerId: resolvedPlayer.id,
+        playerName: resolvedPlayer.name,
+        twitchHandle: enteredTwitchHandle,
+        activeSession,
+        scores,
+        twitchVodUrl,
+        playerNotes: nextNotes,
       });
     }
   };
@@ -282,6 +299,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
           playerId: resolvedPlayer.id,
           scores: finalScores,
           twitchVodUrl,
+          playerNotes,
           submittedTwitchUsername: enteredTwitchHandle.trim().replace(/^@/, ''),
         }),
       });
@@ -293,48 +311,6 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       setActiveSession(session);
 
       setStatusNotice('Official qualifier submitted! Your provisional score is recorded.');
-      await refreshTournament?.(tournament.id);
-    } catch (err: any) {
-      setErrorMessage(err.message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Report Stream Crash / Request Reset
-  const handleReportCrash = async (reason: string) => {
-    if (!resolvedPlayer) return;
-    try {
-      setIsSubmitting(true);
-      setErrorMessage(null);
-      const res = await fetch(`/api/tournaments/${tournament.id}/qualify/reset-request`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playerId: resolvedPlayer.id,
-          reason,
-        }),
-      });
-      const session = await res.json();
-      if (!res.ok) throw new Error(session.error || 'Failed to report stream crash');
-
-      setActiveSession(session);
-
-      if (session.status === 'IN_PROGRESS') {
-        savePersistedSession(tournament.id, {
-          playerId: resolvedPlayer.id,
-          playerName: resolvedPlayer.name,
-          twitchHandle: enteredTwitchHandle,
-          activeSession: session,
-          scores,
-          twitchVodUrl,
-        });
-      } else {
-        clearPersistedSession(tournament.id);
-      }
-
-      setIsCrashModalOpen(false);
-      setStatusNotice('Technical reset request transmitted to tournament judges.');
       await refreshTournament?.(tournament.id);
     } catch (err: any) {
       setErrorMessage(err.message);
@@ -360,6 +336,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
     setEnteredTwitchHandle('');
     setScores([]);
     setTwitchVodUrl('');
+    setPlayerNotes('');
     setErrorMessage(null);
     setStatusNotice(null);
   };
@@ -781,20 +758,19 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
             /* ACTIVE RUN (IN_PROGRESS) */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {/* HUD: Authword (session time is recorded for judges but not shown to competitors) */}
-              <AuthwordHudCard
-                authWord={activeSession.authWord}
-                onReportCrash={() => setIsCrashModalOpen(true)}
-                timerLog={activeSession.timerLog}
-              />
+              <AuthwordHudCard authWord={activeSession.authWord} />
 
               {/* Score and VOD Submission Form */}
               <SubmissionFormCard
                 qualFormat={tournament.qualFormat}
                 qualAverageCount={tournament.qualAverageCount || 2}
+                pointsConfig={tournament.pointsConfig}
                 scores={scores}
                 onScoresChange={handleScoresChange}
                 twitchVodUrl={twitchVodUrl}
                 onTwitchVodUrlChange={handleVodUrlChange}
+                playerNotes={playerNotes}
+                onPlayerNotesChange={handlePlayerNotesChange}
                 onSubmit={handleSubmitScores}
                 isSubmitting={isSubmitting}
                 errorMessage={errorMessage}
@@ -806,24 +782,21 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       )}
 
       {/* MODALS */}
-      <PreFlightModal
-        isOpen={isPreFlightOpen}
-        tournamentName={tournament.name}
-        qualWindowMinutes={windowMinutes}
-        qualFormat={tournament.qualFormat}
-        qualAverageCount={tournament.qualAverageCount || 2}
-        twitchUsername={cleanTwitchUsername}
-        onConfirm={handleStartRun}
-        onCancel={() => setIsPreFlightOpen(false)}
-        isStarting={isSubmitting}
-      />
-
-      <StreamCrashModal
-        isOpen={isCrashModalOpen}
-        onSubmit={handleReportCrash}
-        onClose={() => setIsCrashModalOpen(false)}
-        isSubmitting={isSubmitting}
-      />
+      {/* Mounted only while open so every opening (e.g. after switching competitor) starts with
+          all checklist boxes unchecked. */}
+      {isPreFlightOpen && (
+        <PreFlightModal
+          isOpen
+          tournamentName={tournament.name}
+          qualWindowMinutes={windowMinutes}
+          qualFormat={tournament.qualFormat}
+          qualAverageCount={tournament.qualAverageCount || 2}
+          twitchUsername={cleanTwitchUsername}
+          onConfirm={handleStartRun}
+          onCancel={() => setIsPreFlightOpen(false)}
+          isStarting={isSubmitting}
+        />
+      )}
 
       {/* Switch Competitor Confirmation Speedbump Modal */}
       {isSwitchModalOpen && (

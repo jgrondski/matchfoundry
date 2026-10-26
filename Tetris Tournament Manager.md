@@ -562,3 +562,18 @@ All entities include `id` (UUID) and `created_at` (timestamp).
   * **Telemetry Modal Decluttering:** Removed "first to" label and playstyle chips on read-only match telemetry views (`MatchTelemetryModal.tsx`).
   * **Settings Ergonomics:** Inline "Apply" button and "Inherit Organizational Theme" checkbox in theme settings; removed redundant empty overrides banner; right-aligned "Qualifier Attempts" and "Recorded Matches" telemetry badges in the settings header.
   * **Search Input Unification:** Standardized competitor search input size, padding, icons, and alignment across Standings and Qualifiers pages.
+### 11.4 Double-Elimination Flat Staged: 2-Wide & Uneven Fields (Deferred)
+* **Current behavior:** `FLAT_STAGED` offers 4 or 8 wide. Seeds enter in waves of exactly W, so the field must be a multiple of W, except fields of at most 2W, which silently fall back to a traditional double-elim tree. Widths under 4 always fall back to traditional. Invalid setups (e.g. 9 players at 4 wide) are blocked in Settings with an explanation via `getDoubleEliminationConfigError()` instead of crashing the page.
+* **To revisit:**
+  * **True 2-wide flat staged** for even fields (10, 12, 14…). Needs a new endgame: the current finish ("Top 6 cross-drop" against winners semifinal losers) assumes W ≥ 4.
+  * **Silent traditional fallback:** decide whether to warn when a flat staged tier will actually render as a traditional tree (e.g. 9 players at 8 wide).
+  * **Odd / uneven fields** can never fill equal waves without byes, which are never playable matches (Section 4.1). Traditional tree remains the answer for these unless a ragged-wave design is specified.
+
+### 11.5 Tournament ↔ Organization Association (Deferred)
+* **Current behavior:** a tournament's org can already be changed in Manage → Settings ("Parent Organization Circuit"). No schema change or data migration is needed; org dashboards and metrics read `tournaments.organization_id` live.
+* **Known issues:**
+  * No "None (Independent)" option in the Settings dropdown or the Create Tournament modal once any org exists, so tournaments can't be created independent or detached from an org.
+  * For an org-less tournament, the Settings form initializes to the *first* org (`TournamentAdminForm` `organizationId` state), so saving any unrelated setting silently attaches it to that org.
+  * Tournament Admins can change their tournament's org through the full-tournament save; there is no org-admin approval.
+* **Side effects of attaching to an org:** Discord qual announcements fall back to the org's webhook when the tournament has none; org branding applies if "Inherit Organizational Theme" is on. Slugs/URLs, qual rules, players, and scores are unaffected.
+* **Decisions pending:** who may change a tournament's org (recommendation: System Admin only, read-only for Tournament Admins); whether "Independent" should be selectable at creation and for detaching; a pre-save notice summarizing the side effects when the org changes.

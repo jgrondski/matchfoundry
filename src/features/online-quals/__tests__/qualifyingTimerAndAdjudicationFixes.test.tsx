@@ -97,6 +97,8 @@ describe('Regression & Feature Tests: Qualifying Options, Pacing Timer & Adjudic
           onScoresChange={vi.fn()}
           twitchVodUrl="https://twitch.tv/videos/12345"
           onTwitchVodUrlChange={vi.fn()}
+          playerNotes=""
+          onPlayerNotesChange={vi.fn()}
           onSubmit={vi.fn()}
         />
       );
@@ -117,6 +119,8 @@ describe('Regression & Feature Tests: Qualifying Options, Pacing Timer & Adjudic
           onScoresChange={vi.fn()}
           twitchVodUrl="https://twitch.tv/videos/12345"
           onTwitchVodUrlChange={vi.fn()}
+          playerNotes=""
+          onPlayerNotesChange={vi.fn()}
           onSubmit={vi.fn()}
         />
       );
