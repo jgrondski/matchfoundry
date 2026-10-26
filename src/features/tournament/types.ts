@@ -26,9 +26,6 @@ export interface QualTimerLog {
   elapsedSeconds: number;
   pauses: QualTimerPause[];
   overTime?: boolean;
-  resetRequested?: boolean;
-  resetReason?: string;
-  resetRequestedAt?: number;
 }
 
 export interface TournamentQualTimer {
@@ -134,6 +131,7 @@ export interface Organization {
   tierThemes?: OrgTierTheme[]; // multi-tier default themes (primary, secondary, etc.)
   branding?: OrganizationBranding;
   discordWebhookUrl?: string; // inherited by tournaments if not overridden
+  hasDiscordWebhook?: boolean; // set on public reads, where the URL itself is withheld from non-system-admins
   defaultRules?: OrganizationDefaultRules;
   createdAt: number;
 }
@@ -201,6 +199,7 @@ export interface QualifierSubmission {
   status?: SubmissionStatus;
   timerLog?: QualTimerLog;
   judgeNotes?: string;
+  playerNotes?: string;
   verifiedBy?: string;
   verifiedAt?: number;
 }
@@ -279,6 +278,7 @@ export interface Tournament {
   qualTimer?: TournamentQualTimer;
   customAuthWords?: string[]; // custom organizer dictionary words
   qualsClosed?: boolean; // true = Qualifiers closed
+  onlineQualsOpen?: boolean; // true = organizer has opened online qualifying (ONLINE/HYBRID only)
   isLocked: boolean; // false = Qualifiers Mode (Draft Preview), true = Match Play Mode (Locked)
   tiers: TournamentTier[];
   matchScores: Record<string, MatchScoreRecord>; // keyed by matchId

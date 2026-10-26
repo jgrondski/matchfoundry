@@ -9,9 +9,16 @@ import {
   Lock,
   Unlock,
   ShieldCheck,
+  Globe,
 } from 'lucide-react';
 import { useOrganization } from '../../organizations/store';
-import { generateTraditionalBracket, generateFlatBracket, generateDoubleEliminationBracket, getValidFlatWidths } from '../../bracket/math';
+import {
+  generateTraditionalBracket,
+  generateFlatBracket,
+  generateDoubleEliminationBracket,
+  getValidFlatWidths,
+  getDoubleEliminationConfigError,
+} from '../../bracket/math';
 import { getDefaultTierColors, TierThemeColors } from '../../bracket/colorUtils';
 import { generateDraftBracketsForTournament } from '../../qualifiers/scoring';
 import { pruneInvalidRoundOverrides } from '../roundOverrides';
@@ -45,6 +52,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     seedQualifiers,
     simulateFullTournament,
     unlockBrackets,
+    setOnlineQualsOpen,
+    testDiscordWebhook,
   } = useTournament();
   const { isSystemAdmin } = usePinAuth();
 
@@ -68,7 +77,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
   const [bannerUrl, setBannerUrl] = useState<string>(
     tournament.bannerUrl || ''
   );
-  const [webhookTestStatus, setWebhookTestStatus] = useState<string | null>(null);
+  const [webhookTestStatus, setWebhookTestStatus] = useState<{ ok: boolean; message: string } | null>(null);
 
   const selectedOrg = getOrganizationById(organizationId);
 
@@ -112,19 +121,26 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     );
   };
 
-  const handleTestDiscordWebhook = () => {
-    const targetUrl = discordWebhookUrl.trim() || selectedOrg?.discordWebhookUrl?.trim();
-    if (!targetUrl) {
-      setWebhookTestStatus('No webhook URL configured (either tournament or organization)');
-      setTimeout(() => setWebhookTestStatus(null), 3000);
-      return;
-    }
-    setWebhookTestStatus('Ping simulated: Discord webhook target resolved successfully!');
-    setTimeout(() => setWebhookTestStatus(null), 4000);
+  // Sends a real message through the server: the URL in the field (even unsaved), else the saved
+  // tournament webhook, else the organization's.
+  const handleTestDiscordWebhook = async () => {
+    setWebhookTestStatus({ ok: true, message: 'Sending test message...' });
+    const result = await testDiscordWebhook(tournament.id, discordWebhookUrl.trim() || undefined);
+    setWebhookTestStatus(result);
+    setTimeout(() => setWebhookTestStatus(null), 6000);
   };
 
   // Tiers State
   const [tiers, setTiers] = useState<TournamentTier[]>(tournament.tiers || []);
+  // First double-elim tier that can't be generated as configured; blocks saving until fixed.
+  const tierConfigError = useMemo(() => {
+    for (const tier of tiers) {
+      if (tier.eliminationType !== 'DOUBLE') continue;
+      const err = getDoubleEliminationConfigError(Math.max(tier.playerCount || 2, 2), tier);
+      if (err) return `${tier.name}: ${err}`;
+    }
+    return null;
+  }, [tiers]);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [tierToDelete, setTierToDelete] = useState<{ index: number; tier: TournamentTier } | null>(null);
@@ -445,6 +461,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
   };
 
   const saveCurrentConfig = async (): Promise<boolean> => {
+    if (tierConfigError) return false;
     let updatedTiers: TournamentTier[];
     if (tournament.isLocked) {
       // In locked match play mode, preserve existing active bracket matches, results, and player progression
@@ -507,7 +524,10 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         slug,
         organizationId,
         useOrgBranding,
-        discordWebhookUrl,
+        // Only send the webhook when edited, so a tournament loaded without it (redacted) isn't wiped.
+        ...((discordWebhookUrl || '').trim() !== (tournament.discordWebhookUrl || '').trim()
+          ? { discordWebhookUrl }
+          : {}),
         logoUrl,
         bannerUrl,
         date,
@@ -707,6 +727,48 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         </div>
       </div>
 
+      {/* Online Qualifying open/close (saved immediately via its own endpoint, not the form Save) */}
+      {!tournament.isLocked && (tournament.qualMode || 'HYBRID') !== 'IN_PERSON' && (
+        <div
+          style={{
+            background: 'var(--color-bg-surface)',
+            border: tournament.onlineQualsOpen ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '0.6rem 1.15rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+          }}
+          data-testid="online-quals-toggle-bar"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <Globe size={18} color={tournament.onlineQualsOpen ? '#34d399' : 'var(--color-text-muted)'} style={{ flexShrink: 0 }} />
+            <div>
+              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: tournament.onlineQualsOpen ? '#34d399' : 'var(--color-text-primary)', marginRight: '0.5rem' }}>
+                {tournament.onlineQualsOpen ? 'ONLINE QUALIFYING OPEN' : 'ONLINE QUALIFYING CLOSED'}
+              </span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>
+                {tournament.onlineQualsOpen
+                  ? 'Listed on the front page; competitors can start online runs.'
+                  : 'Hidden from the front page; online runs cannot be started.'}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void setOnlineQualsOpen(tournament.id, !tournament.onlineQualsOpen);
+            }}
+            className={tournament.onlineQualsOpen ? 'btn btn-secondary' : 'btn btn-primary'}
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+          >
+            {tournament.onlineQualsOpen ? 'Close Online Quals' : 'Open Online Quals'}
+          </button>
+        </div>
+      )}
+
       {/* Section 1: Tournament Information */}
       <TournamentInfoSection
         name={name}
@@ -842,16 +904,22 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           Discard Changes
         </button>
 
+        {tierConfigError && (
+          <span style={{ color: 'var(--color-red)', fontSize: '0.8rem', fontWeight: 600 }}>
+            {tierConfigError}
+          </span>
+        )}
         <button
           type="submit"
-          disabled={!isDirty || isSaving}
+          disabled={!isDirty || isSaving || Boolean(tierConfigError)}
+          title={tierConfigError || undefined}
           className="btn btn-primary"
           style={{
             padding: '0.65rem 1.75rem',
             fontSize: '0.95rem',
             boxShadow: isDirty ? 'var(--shadow-gold)' : 'none',
-            opacity: !isDirty || isSaving ? 0.45 : 1,
-            cursor: !isDirty || isSaving ? 'not-allowed' : 'pointer',
+            opacity: !isDirty || isSaving || tierConfigError ? 0.45 : 1,
+            cursor: !isDirty || isSaving || tierConfigError ? 'not-allowed' : 'pointer',
           }}
         >
           <Save size={18} />

@@ -71,6 +71,8 @@ export const tournaments = pgTable('tournaments', {
   qualWindowMinutes: integer('qual_window_minutes').notNull().default(90),
   customAuthWords: jsonb('custom_auth_words').$type<string[]>(),
   qualsClosed: boolean('quals_closed').notNull().default(false),
+  // Organizer opt-in for online qualifying. Only written by the dedicated endpoint, never the full-tournament save.
+  onlineQualsOpen: boolean('online_quals_open').notNull().default(false),
   isVerified: boolean('is_verified').notNull().default(false),
   adminPinEncrypted: text('admin_pin_encrypted'),
   metadata: jsonb('metadata').$type<TournamentMetadata>(),
@@ -99,6 +101,8 @@ export const tournamentPlayers = pgTable('tournament_players', {
   tierId: uuid('tier_id').references(() => bracketTiers.id, { onDelete: 'set null' }),
   seed: integer('seed'),
   qualsCompleted: boolean('quals_completed').notNull().default(false),
+  // Tournament-scoped DQ. players.is_disqualified is global and must not be used for judge rulings.
+  isDisqualified: boolean('is_disqualified').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -120,6 +124,8 @@ export const qualifierSubmissions = pgTable('qualifier_submissions', {
   }).notNull().default('SUBMITTED'),
   timerLog: jsonb('timer_log').$type<QualTimerLog>(),
   judgeNotes: text('judge_notes'),
+  // Competitor's own notes on an online run; public (posted with the submission to Discord).
+  playerNotes: text('player_notes'),
   verifiedBy: text('verified_by'),
   verifiedAt: timestamp('verified_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

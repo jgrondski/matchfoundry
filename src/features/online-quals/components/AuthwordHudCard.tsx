@@ -1,16 +1,13 @@
 import React from 'react';
-import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export interface AuthwordHudCardProps {
+  // Elapsed time is recorded server-side for judges but intentionally not shown here: competitors run
+  // their own on-stream timer, and two clocks confuse.
   authWord: string | null;
-  onReportCrash?: () => void;
 }
 
-export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({
-  authWord,
-  onReportCrash,
-}) => {
-
+export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({ authWord }) => {
   return (
     <div
       style={{
@@ -32,30 +29,6 @@ export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({
             Official Verification Authword
           </span>
         </div>
-
-        {onReportCrash && (
-          <button
-            type="button"
-            onClick={onReportCrash}
-            style={{
-              background: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.35)',
-              borderRadius: '6px',
-              padding: '0.35rem 0.75rem',
-              color: '#fca5a5',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-            data-testid="report-crash-trigger"
-          >
-            <AlertTriangle size={14} />
-            Report Stream Crash / Reset
-          </button>
-        )}
       </div>
 
       {/* Authword Presentation Block */}
@@ -90,6 +63,7 @@ export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({
             {authWord}
           </div>
         </div>
+
       </div>
 
       {/* Rule Notice */}

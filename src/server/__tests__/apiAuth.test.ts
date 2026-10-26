@@ -512,4 +512,86 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       expect(revealRes.getBody().pin).toBe('8844');
     });
   });
+
+  describe('7. Global Player & Qualifier Walk-In Management', () => {
+    it('allows Tournament Admin to create, update, and delete unattached players', async () => {
+      const tourneyId = crypto.randomUUID();
+      const token = createSessionToken({
+        role: 'TOURNAMENT_ADMIN',
+        tournamentId: tourneyId,
+      });
+
+      // Create player
+      const createReq = createMockReq({
+        url: '/api/players',
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}` },
+        body: { name: 'Walk-In Star', personalBest: 950000 },
+      });
+      const createRes = createMockRes();
+      await middleware(createReq, createRes as any, () => {});
+
+      expect(createRes.getStatusCode()).toBe(201);
+      const created = createRes.getBody();
+      expect(created.name).toBe('Walk-In Star');
+
+      // Update player
+      const updateReq = createMockReq({
+        url: `/api/players/${created.id}`,
+        method: 'PUT',
+        headers: { authorization: `Bearer ${token}` },
+        body: { personalBest: 980000 },
+      });
+      const updateRes = createMockRes();
+      await middleware(updateReq, updateRes as any, () => {});
+
+      expect(updateRes.getStatusCode()).toBe(200);
+      expect(updateRes.getBody().personalBest).toBe(980000);
+
+      // Delete unattached player
+      const deleteReq = createMockReq({
+        url: `/api/players/${created.id}`,
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      const deleteRes = createMockRes();
+      await middleware(deleteReq, deleteRes as any, () => {});
+
+      expect(deleteRes.getStatusCode()).toBe(200);
+    });
+
+    it('submitting qualifier with playerName auto-registers player in tournament playersPool', async () => {
+      const tourneyId = crypto.randomUUID();
+      const tourney = createEmptyTournament({ slug: 'walkin-tourney', name: 'Walk-in Tourney' });
+      tourney.id = tourneyId;
+      tourney.organizationId = 'org_ctwc';
+      await saveFullTournament(tourney);
+
+      const token = createSessionToken({
+        role: 'TOURNAMENT_ADMIN',
+        tournamentId: tourneyId,
+      });
+
+      const tempId = crypto.randomUUID();
+      const qualReq = createMockReq({
+        url: `/api/tournaments/${tourneyId}/qualifiers`,
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}` },
+        body: {
+          playerId: tempId,
+          score: 875000,
+          playerName: 'Fresh Walkin Competitor',
+        },
+      });
+      const qualRes = createMockRes();
+      await middleware(qualReq, qualRes as any, () => {});
+
+      expect(qualRes.getStatusCode()).toBe(201);
+      const updatedTourney = qualRes.getBody();
+      expect(updatedTourney.qualifierSubmissions.length).toBe(1);
+      expect(updatedTourney.qualifierSubmissions[0].score).toBe(875000);
+      // The player was auto-registered in playersPool
+      expect(updatedTourney.playersPool.some((p: any) => p.name === 'Fresh Walkin Competitor')).toBe(true);
+    });
+  });
 });

@@ -20,7 +20,10 @@ export interface PlayerRecord {
   createdAt: Date;
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function createPlayer(data: {
+  id?: string;
   name: string;
   displayName?: string;
   nickname?: string;
@@ -33,6 +36,7 @@ export async function createPlayer(data: {
   personalBest?: number;
   playstyle?: string;
   notes?: string;
+  upsertIfExists?: boolean;
 }): Promise<PlayerRecord> {
   const trimmed = data.name.trim();
   if (!trimmed) throw new Error('Player name is required');
@@ -45,28 +49,38 @@ export async function createPlayer(data: {
     .where(sql`lower(trim(${players.name})) = ${lower}`)
     .limit(1);
   if (existing.length > 0) {
+    if (data.upsertIfExists) {
+      return existing[0] as PlayerRecord;
+    }
     throw new Error(`Player with name "${trimmed}" already exists`);
   }
 
   const cleanTwitch = data.twitchUsername ? data.twitchUsername.trim().replace(/^@/, '') : null;
   const cleanTwitchId = data.twitchId ? data.twitchId.trim() : null;
+  const validId = data.id && UUID_REGEX.test(data.id) ? data.id : undefined;
+
+  const insertValues: typeof players.$inferInsert = {
+    name: trimmed,
+    displayName: data.displayName?.trim() || null,
+    nickname: data.nickname?.trim() || null,
+    twitchUsername: cleanTwitch || null,
+    twitchId: cleanTwitchId || null,
+    country: data.country || null,
+    avatarType: data.avatarType || 'flag',
+    avatarUrl: data.avatarUrl || null,
+    avatarThumbnailUrl: data.avatarThumbnailUrl || null,
+    personalBest: data.personalBest ?? 0,
+    playstyle: data.playstyle || null,
+    notes: data.notes || null,
+  };
+
+  if (validId) {
+    insertValues.id = validId;
+  }
 
   const [created] = await db
     .insert(players)
-    .values({
-      name: trimmed,
-      displayName: data.displayName?.trim() || null,
-      nickname: data.nickname?.trim() || null,
-      twitchUsername: cleanTwitch || null,
-      twitchId: cleanTwitchId || null,
-      country: data.country || null,
-      avatarType: data.avatarType || 'flag',
-      avatarUrl: data.avatarUrl || null,
-      avatarThumbnailUrl: data.avatarThumbnailUrl || null,
-      personalBest: data.personalBest ?? 0,
-      playstyle: data.playstyle || null,
-      notes: data.notes || null,
-    })
+    .values(insertValues)
     .returning();
   return created as PlayerRecord;
 }

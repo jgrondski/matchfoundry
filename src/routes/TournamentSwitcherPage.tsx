@@ -6,6 +6,7 @@ import { Tournament } from '../features/tournament/types';
 import { TournamentCard } from '../features/tournament/components/TournamentCard';
 import { CreateTournamentModal } from '../features/tournament/components/CreateTournamentModal';
 import { usePinAuth } from '../features/auth/AuthContext';
+import { OpenQualsCard } from '../features/online-quals/components/OpenQualsCard';
 
 export const TournamentSwitcherPage: React.FC = () => {
   const { isSystemAdmin, session, canManage } = usePinAuth();
@@ -237,6 +238,9 @@ export const TournamentSwitcherPage: React.FC = () => {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+            {/* 0. Open online quals callout (same for every viewer; hidden when none are open) */}
+            <OpenQualsCard tournaments={tournaments} />
+
             {/* 1. Scoped Workspace for Tournament Admin */}
             {isTournamentAdmin && (
               (() => {

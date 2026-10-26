@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   X,
   Layers,
+  Edit2,
 } from 'lucide-react';
 import { LoadingScreen } from '../components/LoadingScreen';
 
@@ -29,6 +30,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
     getTournamentBySlug,
     removePlayerFromTournament,
     addPlayerToPool,
+    updatePlayerInPool,
     importPlayersToTournament,
     globalPlayers,
     isLoading,
@@ -38,6 +40,8 @@ export const ManageTournamentPlayersPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<PlayerProfile | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPlayerForDrawer, setSelectedPlayerForDrawer] = useState<PlayerProfile | null>(null);
   const [isPlayerDrawerOpen, setIsPlayerDrawerOpen] = useState(false);
   const [playerToRemove, setPlayerToRemove] = useState<PlayerProfile | null>(null);
@@ -432,15 +436,29 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                           {player.personalBest ? player.personalBest.toLocaleString() : '—'}
                         </td>
                         <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            onClick={() => setPlayerToRemove(player)}
-                            className="btn btn-secondary"
-                            style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', color: 'var(--color-red)' }}
-                            title="Remove competitor from tournament roster"
-                          >
-                            <UserX size={14} /> Remove
-                          </button>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingPlayer(player);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="btn btn-secondary"
+                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                              title="Edit competitor profile"
+                            >
+                              <Edit2 size={13} /> Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPlayerToRemove(player)}
+                              className="btn btn-secondary"
+                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', color: 'var(--color-red)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                              title="Remove competitor from tournament roster"
+                            >
+                              <UserX size={14} /> Remove
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -458,7 +476,25 @@ export const ManageTournamentPlayersPage: React.FC = () => {
         onClose={() => setIsRegisterModalOpen(false)}
         onSave={handleRegisterNewCompetitor}
         existingNames={existingRosterNames}
-        allowDisqualify={true}
+      />
+
+      <PlayerEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingPlayer(null);
+        }}
+        initialPlayer={editingPlayer || undefined}
+        onSave={async (playerData) => {
+          if (editingPlayer) {
+            await updatePlayerInPool(tournament.id, editingPlayer.id, playerData);
+          }
+          setIsEditModalOpen(false);
+          setEditingPlayer(null);
+        }}
+        existingNames={existingRosterNames.filter(
+          n => n.toLowerCase() !== editingPlayer?.name.toLowerCase()
+        )}
       />
 
       <ImportFromGlobalModal

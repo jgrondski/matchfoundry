@@ -62,7 +62,7 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
   const handleCreatePlayer = (name: string): PlayerProfile => {
     return addPlayerToPool(tournament.id, {
       name,
-      personalBest: 1000000,
+      personalBest: 0,
       playstyle: 'Rolling',
     });
   };
@@ -79,7 +79,7 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      await submitQualifierScore(tournament.id, selectedPlayer.id, numericScore);
+      await submitQualifierScore(tournament.id, selectedPlayer.id, numericScore, selectedPlayer.name);
       setScoreInput('');
     } finally {
       setIsSubmitting(false);

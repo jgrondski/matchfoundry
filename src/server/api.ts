@@ -35,10 +35,11 @@ import {
   getOnlineQualSession,
   startOnlineQualSession,
   submitOnlineQualScores,
-  requestOnlineQualReset,
-  voidAndResetOnlineQualSession,
   adjudicateOnlineSubmission,
   verifyAllQualifierSubmissions,
+  setTournamentPlayerDisqualification,
+  setOnlineQualsOpen,
+  sendTestDiscordWebhook,
   listOnlineQualSessions,
   dispatchDiscordWebhook,
 } from '../api/qualifiers';
@@ -51,7 +52,12 @@ import {
   deleteOrganization,
   seedDefaultOrganizations,
 } from '../api/organizations';
-import { runFullSimulation, generateSimulatedQualifiers } from '../features/tournament/simulation';
+import {
+  runFullSimulation,
+  generateSimulatedQualifiers,
+  generateAdditionalFakePlayers,
+  getSimulatedQualifierTargetCount,
+} from '../features/tournament/simulation';
 import { AUTHENTIC_COMPETITOR_NAMES } from '../features/tournament/data/authenticPlayers';
 import {
   generateTraditionalBracket,
@@ -66,7 +72,59 @@ import type {
   PlayerProfile,
   MatchScoreRecord,
   GameScoreEntry,
+  Organization,
 } from '../features/tournament/types';
+
+/**
+ * Loads the global player supply for a qualifier simulation, first creating real player rows if
+ * the global pool can't cover the largest possible simulated field. The simulator would otherwise
+ * invent non-UUID players that saveFullTournament silently drops while brackets still reference them.
+ */
+async function loadSimulationPlayerSupply(t: Tournament): Promise<PlayerProfile[]> {
+  const toProfile = (p: Awaited<ReturnType<typeof listPlayers>>[number]): PlayerProfile => ({
+    id: p.id,
+    name: p.name,
+    country: p.country || undefined,
+    avatarType: p.avatarType,
+    avatarUrl: p.avatarUrl || undefined,
+    personalBest: p.personalBest,
+    playstyle: (p.playstyle as PlayerProfile['playstyle']) || 'Rolling',
+    // DQ is tournament-scoped; the legacy global flag must not leak into simulated rosters
+    isDisqualified: false,
+  });
+  const profiles = (await listPlayers()).map(toProfile);
+
+  const pool = t.playersPool || [];
+  const poolIds = new Set(pool.map(p => p.id));
+  const poolNames = new Set(pool.map(p => p.name.toLowerCase()));
+  const available = profiles.filter(p => !poolIds.has(p.id) && !poolNames.has(p.name.toLowerCase()));
+  const needed = getSimulatedQualifierTargetCount(t, 6) - pool.length - available.length;
+
+  if (needed > 0) {
+    const fakes = generateAdditionalFakePlayers(needed, [...pool, ...profiles]);
+    const created = await createPlayersBatch(
+      fakes.map(f => ({ name: f.name, country: f.country, personalBest: f.personalBest, playstyle: f.playstyle }))
+    );
+    profiles.push(...created.map(toProfile));
+  }
+  return profiles;
+}
+
+/** Marks every competitor with simulated (pre-verified) runs as having completed quals. */
+function markSimulatedQualsCompleted(t: Tournament): void {
+  const simulatedIds = new Set(
+    (t.qualifierSubmissions || []).filter(s => s.verifiedBy === 'Simulation').map(s => s.playerId)
+  );
+  const tournamentPlayers = { ...(t.tournamentPlayers || {}) };
+  for (const playerId of simulatedIds) {
+    tournamentPlayers[playerId] = {
+      ...(tournamentPlayers[playerId] || { playerId, tournamentId: t.id }),
+      qualsCompleted: true,
+      isVerified: true,
+    };
+  }
+  t.tournamentPlayers = tournamentPlayers;
+}
 
 async function parseBody(req: IncomingMessage): Promise<unknown> {
   if (req.method === 'GET' || req.method === 'HEAD') return undefined;
@@ -96,6 +154,42 @@ function sendJson(res: ServerResponse, status: number, data: unknown) {
 
 function sendError(res: ServerResponse, status: number, message: string) {
   sendJson(res, status, { error: message });
+}
+
+/** Non-failing counterpart to checkAuth: the caller's session, or null, without writing a response. */
+function getRequestSession(req: IncomingMessage): SessionPayload | null {
+  const authHeader = (req.headers && req.headers['authorization']) || '';
+  if (!authHeader.startsWith('Bearer ')) return null;
+  return verifySessionToken(authHeader.slice(7).trim());
+}
+
+function isSystemSession(session: SessionPayload | null): boolean {
+  return Boolean(session && (session.role === 'SYSTEM_ADMIN' || session.role === 'MASTER_ADMIN'));
+}
+
+function sessionCanManageTournament(session: SessionPayload | null, t: { id: string; slug: string }): boolean {
+  if (!session) return false;
+  if (isSystemSession(session)) return true;
+  if (session.role !== 'TOURNAMENT_ADMIN') return false;
+  return (
+    session.tournamentId === t.id ||
+    session.tournamentSlug === t.slug ||
+    Boolean(session.tournamentIds?.includes(t.id)) ||
+    Boolean(session.tournamentSlugs?.includes(t.slug))
+  );
+}
+
+// A Discord webhook URL lets anyone holding it post to the channel, so public reads omit it.
+function redactTournamentForCaller(t: Tournament, session: SessionPayload | null): Tournament {
+  if (sessionCanManageTournament(session, t)) return t;
+  const { discordWebhookUrl: _webhook, ...rest } = t;
+  return rest;
+}
+
+function redactOrganizationForCaller(org: Organization, session: SessionPayload | null): Organization {
+  if (isSystemSession(session)) return org;
+  const { discordWebhookUrl, ...rest } = org;
+  return { ...rest, hasDiscordWebhook: Boolean(discordWebhookUrl) };
 }
 
 function checkAuth(
@@ -576,7 +670,7 @@ export function createApiMiddleware() {
           return sendJson(res, 200, updated);
         }
         if (method === 'DELETE') {
-          if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN')) return;
           const result = await deletePlayer(playerId);
           if (!result.success) {
             const statusCode = result.error === 'Player not found' ? 404 : 400;
@@ -590,7 +684,8 @@ export function createApiMiddleware() {
       // GET /api/organizations
       if (pathname === '/api/organizations' && method === 'GET') {
         const orgs = await listOrganizations();
-        return sendJson(res, 200, orgs);
+        const session = getRequestSession(req);
+        return sendJson(res, 200, orgs.map(org => redactOrganizationForCaller(org, session)));
       }
 
       // POST /api/organizations
@@ -607,7 +702,7 @@ export function createApiMiddleware() {
         if (method === 'GET') {
           const org = await getOrganizationById(orgId);
           if (!org) return sendError(res, 404, 'Organization not found');
-          return sendJson(res, 200, org);
+          return sendJson(res, 200, redactOrganizationForCaller(org, getRequestSession(req)));
         }
         if (method === 'PUT') {
           if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
@@ -629,7 +724,8 @@ export function createApiMiddleware() {
       // GET /api/tournaments
       if (pathname === '/api/tournaments' && method === 'GET') {
         const fullTourneys = await listFullTournaments();
-        return sendJson(res, 200, fullTourneys);
+        const session = getRequestSession(req);
+        return sendJson(res, 200, fullTourneys.map(t => redactTournamentForCaller(t, session)));
       }
 
       // POST /api/tournaments
@@ -657,7 +753,7 @@ export function createApiMiddleware() {
           if (method === 'GET') {
             const t = await getFullTournament(tourneyId);
             if (!t) return sendError(res, 404, 'Tournament not found');
-            return sendJson(res, 200, t);
+            return sendJson(res, 200, redactTournamentForCaller(t, getRequestSession(req)));
           }
           if (method === 'PUT') {
             if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
@@ -766,7 +862,23 @@ export function createApiMiddleware() {
           if (tourneyCheck.isLocked) {
             return sendError(res, 400, 'Cannot modify qualifier scores while brackets are locked. Unlock brackets first.');
           }
-          await submitQualifierScore(tourneyId, body.playerId, body.score);
+
+          let targetPlayerId = body.playerId;
+          if (body.playerName && (!targetPlayerId || !isUuid(targetPlayerId) || !(await getPlayer(targetPlayerId)))) {
+            const resolved = await createPlayer({
+              id: isUuid(targetPlayerId) ? targetPlayerId : undefined,
+              name: body.playerName,
+              playstyle: body.playstyle || 'Rolling',
+              personalBest: body.personalBest ?? 0,
+              upsertIfExists: true,
+            });
+            targetPlayerId = resolved.id;
+          } else if (!targetPlayerId || !isUuid(targetPlayerId) || !(await getPlayer(targetPlayerId))) {
+            // e.g. a draft bracket placeholder seed ("placeholder-seed-…") is not a real competitor
+            return sendError(res, 400, 'Qualifier scores can only be recorded for registered competitors');
+          }
+
+          await submitQualifierScore(tourneyId, targetPlayerId, body.score);
           const t = await getFullTournament(tourneyId);
           if (t && !t.isLocked) {
             t.tiers = generateDraftBracketsForTournament(t);
@@ -844,11 +956,14 @@ export function createApiMiddleware() {
             nowMs: body?.nowMs,
           });
           const p = await getPlayer(session.playerId);
-          void dispatchDiscordWebhook(tourneyId, 'START', {
-            playerName: p?.name || session.submittedTwitchUsername || 'Player',
-            twitchUsername: session.submittedTwitchUsername || undefined,
-            authWord: session.authWord || undefined,
-          });
+          // Resumed or already-submitted runs come back from start too; only announce a brand-new run.
+          if (session.isNewSession) {
+            await dispatchDiscordWebhook(tourneyId, 'START', {
+              playerName: p?.name || session.submittedTwitchUsername || 'Player',
+              twitchUsername: session.submittedTwitchUsername || undefined,
+              authWord: session.authWord || undefined,
+            });
+          }
           return sendJson(res, 200, {
             ...session,
             player: p || undefined,
@@ -861,6 +976,7 @@ export function createApiMiddleware() {
             playerId: body?.playerId,
             scores: body?.scores,
             twitchVodUrl: body?.twitchVodUrl,
+            playerNotes: body?.playerNotes,
             submittedTwitchId: body?.submittedTwitchId,
             submittedTwitchUsername: body?.submittedTwitchUsername,
             identityStatus: body?.identityStatus,
@@ -872,39 +988,13 @@ export function createApiMiddleware() {
             await saveFullTournament(t);
           }
           const p = await getPlayer(session.playerId);
-          const topScore = session.scores.length > 0 ? Math.max(...session.scores) : undefined;
-          void dispatchDiscordWebhook(tourneyId, 'SUBMIT', {
+          await dispatchDiscordWebhook(tourneyId, 'SUBMIT', {
             playerName: p?.name || session.submittedTwitchUsername || 'Player',
             twitchUsername: session.submittedTwitchUsername || undefined,
             twitchVodUrl: session.twitchVodUrl || undefined,
-            score: topScore,
+            scores: session.scores,
+            playerNotes: session.playerNotes || undefined,
           });
-          return sendJson(res, 200, session);
-        }
-
-        // POST /api/tournaments/:id/qualify/reset-request
-        if (subAction === 'qualify/reset-request' && method === 'POST') {
-          const session = await requestOnlineQualReset(tourneyId, {
-            playerId: body?.playerId,
-            reason: body?.reason,
-            nowMs: body?.nowMs,
-          });
-          return sendJson(res, 200, session);
-        }
-
-        // POST /api/tournaments/:id/qualify/void-reset (Judge / Tournament Admin only)
-        if (subAction === 'qualify/void-reset' && method === 'POST') {
-          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
-          const session = await voidAndResetOnlineQualSession(tourneyId, {
-            playerId: body?.playerId,
-            judgeNote: body?.judgeNote,
-            nowMs: body?.nowMs,
-          });
-          const t = await getFullTournament(tourneyId);
-          if (t && !t.isLocked) {
-            t.tiers = generateDraftBracketsForTournament(t);
-            await saveFullTournament(t);
-          }
           return sendJson(res, 200, session);
         }
 
@@ -927,14 +1017,60 @@ export function createApiMiddleware() {
           }
           if (session && (body?.action === 'VERIFY' || body?.action === 'EDIT_AND_VERIFY')) {
             const p = await getPlayer(session.playerId);
-            const topScore = session.scores.length > 0 ? Math.max(...session.scores) : undefined;
-            void dispatchDiscordWebhook(tourneyId, 'VERIFIED', {
+            await dispatchDiscordWebhook(tourneyId, 'VERIFIED', {
               playerName: p?.name || session.submittedTwitchUsername || 'Player',
-              score: topScore,
+              scores: session.scores,
               judgeName: body?.verifiedBy || 'Judge',
             });
           }
           return sendJson(res, 200, session);
+        }
+
+        // POST /api/tournaments/:id/qualify/disqualification (Tournament Admin only)
+        // Explicit tournament-scoped DQ toggle. The full-tournament PUT never writes DQ state.
+        if (subAction === 'qualify/disqualification' && method === 'POST') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          if (!body?.playerId || typeof body?.isDisqualified !== 'boolean') {
+            return sendError(res, 400, 'playerId and isDisqualified are required');
+          }
+          await setTournamentPlayerDisqualification(tourneyId, {
+            playerId: body.playerId,
+            isDisqualified: body.isDisqualified,
+            changedBy: body?.changedBy,
+          });
+          const t = await getFullTournament(tourneyId);
+          if (!t) return sendError(res, 404, 'Tournament not found');
+          if (!t.isLocked) {
+            t.tiers = generateDraftBracketsForTournament(t);
+            const saved = await saveFullTournament(t);
+            return sendJson(res, 200, saved);
+          }
+          return sendJson(res, 200, t);
+        }
+
+        // POST /api/tournaments/:id/online-quals (Tournament Admin only)
+        // Explicit open/close toggle. The full-tournament PUT never writes this flag.
+        if (subAction === 'online-quals' && method === 'POST') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          if (typeof body?.open !== 'boolean') {
+            return sendError(res, 400, 'open (boolean) is required');
+          }
+          await setOnlineQualsOpen(tourneyId, body.open);
+          const t = await getFullTournament(tourneyId);
+          if (!t) return sendError(res, 404, 'Tournament not found');
+          return sendJson(res, 200, t);
+        }
+
+        // POST /api/tournaments/:id/discord-webhook/test (Tournament Admin only)
+        // Sends a real test message to the given (possibly unsaved) URL, or the saved tournament/org webhook.
+        if (subAction === 'discord-webhook/test' && method === 'POST') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const result = await sendTestDiscordWebhook(
+            tourneyId,
+            typeof body?.url === 'string' ? body.url : undefined
+          );
+          if (!result.success) return sendError(res, 400, result.error || 'Webhook test failed');
+          return sendJson(res, 200, result);
         }
 
         // POST /api/tournaments/:id/qualify/verify-all (Judge / Tournament Admin only)
@@ -1042,21 +1178,12 @@ export function createApiMiddleware() {
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');
 
-          const allDbPlayers = await listPlayers();
-          const profiles: PlayerProfile[] = allDbPlayers.map(p => ({
-            id: p.id,
-            name: p.name,
-            country: p.country || undefined,
-            avatarType: p.avatarType,
-            avatarUrl: p.avatarUrl || undefined,
-            personalBest: p.personalBest,
-            playstyle: (p.playstyle as PlayerProfile['playstyle']) || 'Rolling',
-            isDisqualified: p.isDisqualified,
-          }));
+          const profiles = await loadSimulationPlayerSupply(t);
 
           const { players: selectedPlayers, submissions } = generateSimulatedQualifiers(t, profiles);
           t.playersPool = selectedPlayers;
           t.qualifierSubmissions = submissions;
+          markSimulatedQualsCompleted(t);
           t.matchScores = {};
           t.isLocked = false;
           t.tiers = t.tiers.map(tier => ({ ...tier, isLocked: false }));
@@ -1072,19 +1199,10 @@ export function createApiMiddleware() {
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');
 
-          const allDbPlayers = await listPlayers();
-          const profiles: PlayerProfile[] = allDbPlayers.map(p => ({
-            id: p.id,
-            name: p.name,
-            country: p.country || undefined,
-            avatarType: p.avatarType,
-            avatarUrl: p.avatarUrl || undefined,
-            personalBest: p.personalBest,
-            playstyle: (p.playstyle as PlayerProfile['playstyle']) || 'Rolling',
-            isDisqualified: p.isDisqualified,
-          }));
+          const profiles = await loadSimulationPlayerSupply(t);
 
           const simulated = runFullSimulation(t, profiles);
+          markSimulatedQualsCompleted(simulated);
           const saved = await saveFullTournament(simulated);
           return sendJson(res, 200, saved);
         }

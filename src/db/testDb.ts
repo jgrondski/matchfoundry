@@ -78,6 +78,7 @@ export function setupTestDb() {
       qual_window_minutes INTEGER NOT NULL DEFAULT 90,
       custom_auth_words JSONB,
       quals_closed BOOLEAN NOT NULL DEFAULT false,
+      online_quals_open BOOLEAN NOT NULL DEFAULT false,
       is_verified BOOLEAN NOT NULL DEFAULT false,
       admin_pin_encrypted TEXT,
       metadata JSONB,
@@ -106,6 +107,7 @@ export function setupTestDb() {
       tier_id UUID REFERENCES bracket_tiers(id) ON DELETE SET NULL,
       seed INTEGER,
       quals_completed BOOLEAN NOT NULL DEFAULT false,
+      is_disqualified BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMP NOT NULL DEFAULT now()
     );
 
@@ -123,6 +125,7 @@ export function setupTestDb() {
       status TEXT NOT NULL DEFAULT 'SUBMITTED',
       timer_log JSONB,
       judge_notes TEXT,
+      player_notes TEXT,
       verified_by TEXT,
       verified_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT now()

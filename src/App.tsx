@@ -19,7 +19,7 @@ import { ObsOverlayPage } from './routes/ObsOverlayPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Database, AlertTriangle } from 'lucide-react';
 import { AuthProvider } from './features/auth/AuthContext';
-import { RequireTournamentAdmin, RequireMasterAdmin } from './features/auth/RouteGuards';
+import { RequireTournamentAdmin, RequireMasterAdmin, RequireAnyAdmin } from './features/auth/RouteGuards';
 import { AdminLoginPage } from './routes/AdminLoginPage';
 import { PublicQualifyPage } from './routes/PublicQualifyPage';
 import { ManageReviewPage } from './routes/ManageReviewPage';
@@ -30,7 +30,7 @@ import { ManageReviewPage } from './routes/ManageReviewPage';
  */
 const LiveRouteSync: React.FC = () => {
   const location = useLocation();
-  const { refreshTournament } = useTournament();
+  const { refreshTournament, refreshGlobalPlayers, refreshAllTournaments } = useTournament();
 
   useEffect(() => {
     if (typeof fetch === 'undefined') return;
@@ -43,8 +43,13 @@ const LiveRouteSync: React.FC = () => {
       if (slug) {
         void refreshTournament(slug);
       }
+    } else if (segments[0] === 'players') {
+      void refreshGlobalPlayers();
+    } else if (segments.length === 0) {
+      // Front page: pick up tournaments whose online quals opened (or closed) since the list loaded.
+      void refreshAllTournaments();
     }
-  }, [location.pathname, refreshTournament]);
+  }, [location.pathname, refreshTournament, refreshGlobalPlayers, refreshAllTournaments]);
 
   // Window Focus Sync (spectator or admin returns from Twitch tab)
   useEffect(() => {
@@ -58,12 +63,16 @@ const LiveRouteSync: React.FC = () => {
         if (slug) {
           void refreshTournament(slug);
         }
+      } else if (segments[0] === 'players') {
+        void refreshGlobalPlayers();
+      } else if (segments.length === 0) {
+        void refreshAllTournaments();
       }
     };
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [location.pathname, refreshTournament]);
+  }, [location.pathname, refreshTournament, refreshGlobalPlayers, refreshAllTournaments]);
 
   return null;
 };
@@ -156,13 +165,13 @@ export const App: React.FC = () => {
                 />
                 <Route path="/org/:orgSlug" element={<OrganizationDetailPage />} />
 
-                {/* Global Player Directory (Master Admin Restricted) */}
+                {/* Global Player Directory (Any Admin: System Admin or Tournament Admin) */}
                 <Route
                   path="/players"
                   element={
-                    <RequireMasterAdmin>
+                    <RequireAnyAdmin>
                       <PlayerDirectoryPage />
-                    </RequireMasterAdmin>
+                    </RequireAnyAdmin>
                   }
                 />
 

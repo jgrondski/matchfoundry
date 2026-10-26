@@ -6,14 +6,13 @@ import { CompetitorPortalView } from '../components/CompetitorPortalView';
 import { PreFlightModal } from '../components/PreFlightModal';
 import { IdentityClaimModal } from '../components/IdentityClaimModal';
 import { AuthwordHudCard } from '../components/AuthwordHudCard';
-import { CountdownTimerHud } from '../components/CountdownTimerHud';
 import { SubmissionFormCard } from '../components/SubmissionFormCard';
 import { AwaitingVerificationCard } from '../components/AwaitingVerificationCard';
 import { TournamentProvider } from '../../tournament/store';
 import { OrganizationProvider } from '../../organizations/store';
 import { AuthProvider } from '../../auth/AuthContext';
 import { createEmptyTournament, createDefaultTier } from '../../tournament/defaults';
-import type { Tournament, QualTimerLog } from '../../tournament/types';
+import type { Tournament } from '../../tournament/types';
 import type { OnlineQualSessionSummary } from '../../../api/qualifiers';
 
 describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
@@ -188,55 +187,32 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       expect(html).toContain('Store past broadcasts');
       expect(html).toContain('NES Authword proof rule');
       expect(html).toContain('90-minute window');
+      expect(html).toContain('90-minute countdown timer');
+      expect(html).toContain('is on my Twitch scene');
       expect(html).toContain('Confirm &amp; Begin Official Run');
     });
   });
 
   describe('5. Active Official Run HUD & Non-Blocking Countdown Timer', () => {
-    const mockTimerLog: QualTimerLog = {
-      startedAt: Date.now() - 30 * 60 * 1000, // 30 minutes elapsed
-      elapsedSeconds: 30 * 60,
-      pauses: [],
-      overTime: false,
-    };
-
     it('renders assigned NES Authword in bold high-contrast card', () => {
       const html = renderToStaticMarkup(
-        <AuthwordHudCard authWord="ROCKET" onReportCrash={vi.fn()} />
+        <AuthwordHudCard authWord="ROCKET" />
       );
 
       expect(html).toContain('Official Verification Authword');
       expect(html).toContain('ROCKET');
       expect(html).not.toContain('Copy Authword');
-      expect(html).toContain('Report Stream Crash / Reset');
+      expect(html).not.toContain('Report Stream Crash');
       expect(html).toContain('NES Authword Proof Rule');
     });
 
-    it('renders live countdown timer telemetry', () => {
-      const html = renderToStaticMarkup(
-        <CountdownTimerHud timerLog={mockTimerLog} qualWindowMinutes={90} isCompleted={false} />
-      );
-
-      expect(html).toContain('Time Remaining');
-      expect(html).toContain('Official Window:');
-      expect(html).toContain('90 minutes');
-      expect(html).toContain('Elapsed:');
-    });
-
-    it('renders non-blocking alert banner when session is over-time', () => {
-      const overTimeLog: QualTimerLog = {
-        startedAt: Date.now() - 95 * 60 * 1000, // 95 minutes elapsed
-        elapsedSeconds: 95 * 60,
-        pauses: [],
-        overTime: true,
-      };
-
-      const html = renderToStaticMarkup(
-        <CountdownTimerHud timerLog={overTimeLog} qualWindowMinutes={90} isCompleted={false} />
-      );
-
-      expect(html).toContain('Official Window Expired');
-      expect(html).toContain('Over-time telemetry is recorded for judges');
+    it('does not show competitors a session timer or elapsed time', () => {
+      const html = renderToStaticMarkup(<AuthwordHudCard authWord="ROCKET" />);
+      expect(html).toContain('ROCKET');
+      expect(html).not.toContain('Elapsed');
+      expect(html).not.toContain('Optional Pacing Timer');
+      expect(html).not.toContain('Start Timer');
+      expect(html).not.toContain('Official Window Expired');
     });
   });
 
@@ -250,6 +226,8 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
           onScoresChange={vi.fn()}
           twitchVodUrl="https://twitch.tv/videos/2481093821?t=00h14m20s"
           onTwitchVodUrlChange={vi.fn()}
+          playerNotes=""
+          onPlayerNotesChange={vi.fn()}
           onSubmit={vi.fn()}
         />
       );

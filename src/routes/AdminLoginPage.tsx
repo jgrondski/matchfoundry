@@ -53,8 +53,12 @@ export const AdminLoginPage: React.FC = () => {
       }
 
       setSuccessMsg('Authentication successful!');
+      // A manage redirect for a different tournament than the one logged into would bounce back here.
+      const redirectSlug = redirectUrl.split('/')[1] || '';
+      const redirectFitsLogin =
+        !selectedTourneySlug || !redirectUrl.includes('/manage') || redirectSlug === selectedTourneySlug;
       setTimeout(() => {
-        if (redirectUrl) {
+        if (redirectUrl && redirectFitsLogin) {
           navigate(redirectUrl, { replace: true });
         } else if (selectedTourneySlug) {
           navigate(`/${selectedTourneySlug}/manage/qualifiers`, { replace: true });

@@ -12,7 +12,7 @@ interface OrgBrandPaletteSectionProps {
   discordWebhookUrl: string;
   logoUrl: string;
   bannerUrl: string;
-  webhookTestStatus: string | null;
+  webhookTestStatus: { ok: boolean; message: string } | null;
   onOrganizationIdChange: (id: string) => void;
   onUseOrgBrandingChange: (use: boolean) => void;
   onDiscordWebhookUrlChange: (url: string) => void;
@@ -203,9 +203,6 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label style={{ ...labelStyle, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <span>Discord Webhook URL</span>
-                <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', fontWeight: 600 }}>
-                  Groundwork
-                </span>
               </label>
             </div>
 
@@ -214,7 +211,7 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
                 type="text"
                 value={discordWebhookUrl}
                 onChange={e => onDiscordWebhookUrlChange(e.target.value)}
-                placeholder={selectedOrg?.discordWebhookUrl ? `Fallback: ${selectedOrg.shortName} Webhook` : 'https://discord.com/api/webhooks/...'}
+                placeholder={selectedOrg?.discordWebhookUrl || selectedOrg?.hasDiscordWebhook ? `Fallback: ${selectedOrg.shortName} Webhook` : 'https://discord.com/api/webhooks/...'}
                 style={{ ...inputStyle, flex: 1 }}
               />
               <button
@@ -222,7 +219,7 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
                 onClick={onTestDiscordWebhook}
                 className="btn btn-secondary"
                 style={{ padding: '0.4rem 0.75rem', fontSize: '0.78rem', whiteSpace: 'nowrap', gap: '0.35rem' }}
-                title="Test resolve tournament or fallback organization webhook"
+                title="Send a test message to this webhook (or the organization's fallback)"
               >
                 <Send size={13} />
                 Test
@@ -232,14 +229,14 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
             <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
               {discordWebhookUrl.trim()
                 ? 'Active tournament-specific webhook override.'
-                : selectedOrg?.discordWebhookUrl
-                ? `Inherited from ${selectedOrg.name} (${selectedOrg.discordWebhookUrl.slice(0, 32)}...)`
-                : 'No webhook configured. Circuit announcements disabled.'}
+                : selectedOrg?.discordWebhookUrl || selectedOrg?.hasDiscordWebhook
+                ? `Inherited from ${selectedOrg.name}'s webhook.`
+                : 'No webhook configured. Qual announcements disabled.'}
             </span>
 
             {webhookTestStatus && (
-              <div style={{ fontSize: '0.75rem', color: webhookTestStatus.includes('resolved') ? '#34d399' : '#f87171', fontWeight: 600 }}>
-                {webhookTestStatus}
+              <div style={{ fontSize: '0.75rem', color: webhookTestStatus.ok ? '#34d399' : '#f87171', fontWeight: 600 }}>
+                {webhookTestStatus.message}
               </div>
             )}
           </div>

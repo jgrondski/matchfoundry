@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { CountdownTimerHud } from '../components/CountdownTimerHud';
 import { SubmissionFormCard } from '../components/SubmissionFormCard';
 import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
 import { getPlayerQualifierStatus, deriveLeaderboard } from '../../qualifiers/scoring';
@@ -88,30 +87,6 @@ describe('Regression & Feature Tests: Qualifying Options, Pacing Timer & Adjudic
     });
   });
 
-  describe('2. Competitor Pacing Timer (CountdownTimerHud)', () => {
-    it('does NOT start automatically, displays Start Timer button and Optional badge', () => {
-      const html = renderToStaticMarkup(
-        <CountdownTimerHud qualWindowMinutes={90} isCompleted={false} />
-      );
-
-      expect(html).toContain('Optional Pacing Timer');
-      expect(html).toContain('Start Timer');
-      expect(html).toContain('Reset');
-      expect(html).toContain('Official Window:');
-      expect(html).toContain('90 minutes');
-      expect(html).toContain('01:30:00');
-    });
-
-    it('renders edit time duration button when not completed', () => {
-      const html = renderToStaticMarkup(
-        <CountdownTimerHud qualWindowMinutes={45} isCompleted={false} />
-      );
-
-      expect(html).toContain('45 minutes');
-      expect(html).toContain('Edit');
-    });
-  });
-
   describe('3. Deterministic AVERAGE_OF_X Submission Fields', () => {
     it('automatically renders exactly X score fields and hides Add Qualifier button', () => {
       const html = renderToStaticMarkup(
@@ -122,6 +97,8 @@ describe('Regression & Feature Tests: Qualifying Options, Pacing Timer & Adjudic
           onScoresChange={vi.fn()}
           twitchVodUrl="https://twitch.tv/videos/12345"
           onTwitchVodUrlChange={vi.fn()}
+          playerNotes=""
+          onPlayerNotesChange={vi.fn()}
           onSubmit={vi.fn()}
         />
       );
@@ -142,6 +119,8 @@ describe('Regression & Feature Tests: Qualifying Options, Pacing Timer & Adjudic
           onScoresChange={vi.fn()}
           twitchVodUrl="https://twitch.tv/videos/12345"
           onTwitchVodUrlChange={vi.fn()}
+          playerNotes=""
+          onPlayerNotesChange={vi.fn()}
           onSubmit={vi.fn()}
         />
       );

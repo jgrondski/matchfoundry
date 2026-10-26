@@ -75,6 +75,13 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
         boxSizing: 'border-box',
       }}
     >
+      {/* OBS: TournamentPageHeader hides its action slot, so the read-only timer renders on its own */}
+      {isObsMode && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <TournamentQualTimerHud tournament={tournament} isObsMode={true} readOnly={true} />
+        </div>
+      )}
+
       {/* Header with Search, OBS Overlay, and Record Qual Score */}
       <TournamentPageHeader
         eyebrow="Qualifying Leaderboard"
@@ -101,13 +108,8 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
         searchPlaceholder="Search competitor, country, style..."
         action={
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            {(!canManage || isObsMode) && (
-              <TournamentQualTimerHud
-                tournament={tournament}
-                isObsMode={isObsMode}
-                compact={!isObsMode}
-                readOnly={true}
-              />
+            {!canManage && !isObsMode && (
+              <TournamentQualTimerHud tournament={tournament} compact={true} readOnly={true} />
             )}
             {canManage && (
               <button
@@ -591,6 +593,10 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                                 }}
                               >
                                 {assignedTier!.name} #{row.tierSeed}
+                              </span>
+                            ) : row.isDisqualified ? (
+                              <span className="badge badge-muted" title="Disqualified from this tournament">
+                                DQ
                               </span>
                             ) : row.isDNQ ? (
                               <span className="badge badge-muted" title="Did Not Qualify for active brackets">

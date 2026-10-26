@@ -277,7 +277,8 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     personalBest: row.player.personalBest,
     playstyle: (row.player.playstyle as any) || 'Rolling',
     notes: row.player.notes || undefined,
-    isDisqualified: row.player.isDisqualified,
+    // DQ is tournament-scoped (tournament_players), never the global players flag
+    isDisqualified: Boolean(row.tp.isDisqualified),
   }));
 
   const tournamentPlayersMap: Record<string, TournamentPlayer> = {};
@@ -306,6 +307,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     status: s.status || 'VERIFIED',
     timerLog: s.timerLog || undefined,
     judgeNotes: s.judgeNotes || undefined,
+    playerNotes: s.playerNotes || undefined,
     verifiedBy: s.verifiedBy || undefined,
     verifiedAt: s.verifiedAt ? new Date(s.verifiedAt).getTime() : undefined,
   }));
@@ -391,6 +393,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     qualTimer: (meta.qualTimer as any) || undefined,
     customAuthWords: (t.customAuthWords as string[]) || meta.customAuthWords || undefined,
     qualsClosed: Boolean(t.qualsClosed),
+    onlineQualsOpen: Boolean(t.onlineQualsOpen),
     isLocked: Boolean(meta.isLocked),
     tiers: compositeTiers,
     matchScores: {
@@ -405,7 +408,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     bannerUrl: meta.bannerUrl || undefined,
     discordWebhookUrl: t.discordWebhookUrl || meta.discordWebhookUrl || undefined,
     themeColors: meta.themeColors || undefined,
-    adminPinEncrypted: t.adminPinEncrypted || undefined,
+    // adminPinEncrypted is intentionally never returned; PIN checks read the DB row directly.
   };
 
   return fullTourney;
@@ -463,7 +466,12 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
     useOrgBranding: tourney.useOrgBranding ?? true,
     logoUrl: tourney.logoUrl || null,
     bannerUrl: tourney.bannerUrl || null,
-    discordWebhookUrl: tourney.discordWebhookUrl || null,
+    // Omitted (undefined) keeps the stored URL: clients that were sent a redacted tournament
+    // must not wipe the webhook when they save other fields.
+    discordWebhookUrl:
+      tourney.discordWebhookUrl !== undefined
+        ? tourney.discordWebhookUrl || null
+        : ((existing[0]?.metadata as Record<string, any> | null)?.discordWebhookUrl ?? null),
     themeColors: tourney.themeColors || null,
     matchScores: tourney.matchScores || {},
   };
@@ -803,31 +811,13 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
         const existingSub = existingDbSubMap.get(s.id)!;
         const isOnline = (existingSub as any).submissionSource === 'ONLINE';
 
+        // Online submissions are owned exclusively by the /qualify/* endpoints (portal + judge adjudication).
+        // A full-tournament PUT is a client snapshot that may be stale, so it never mutates them.
         if (isOnline) {
-          const dbStatus = (existingSub as any).status;
-          const isDbFinished = dbStatus !== 'IN_PROGRESS' && dbStatus !== 'NOT_STARTED';
-          const isIncomingStaleStatus = s.status === 'IN_PROGRESS' || s.status === 'NOT_STARTED';
-
-          // 1. Protect finished online submissions from stale IN_PROGRESS/NOT_STARTED overwrites
-          if (isDbFinished && isIncomingStaleStatus) {
-            continue;
-          }
-
-          // 2. Protect terminal judge rulings (DNQ / DQ) from stale overwrites
-          if ((dbStatus === 'DNQ' || dbStatus === 'DQ') && (s.status === 'IN_PROGRESS' || s.status === 'NOT_STARTED' || s.status === 'SUBMITTED')) {
-            continue;
-          }
-
-          // 3. Protect judge VERIFIED runs from stale unadjudicated SUBMITTED snapshots:
-          // A stale snapshot has status === 'SUBMITTED' with no verifiedAt/verifiedBy, while the DB was already verified by a judge.
-          if (dbStatus === 'VERIFIED' && s.status === 'SUBMITTED' && !s.verifiedBy && !s.verifiedAt && (existingSub as any).verifiedAt) {
-            continue;
-          }
+          continue;
         }
 
-        const resolvedScore = (isOnline && (existingSub as any).score > 0 && (!s.score || s.score === 0))
-          ? (existingSub as any).score
-          : s.score;
+        const resolvedScore = s.score;
 
         const resolvedStatus = (s.status as any) || (existingSub as any).status || 'SUBMITTED';
 

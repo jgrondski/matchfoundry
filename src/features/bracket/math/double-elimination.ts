@@ -1764,6 +1764,34 @@ export function generateAcceleratedHybrid(
 }
 
 /**
+ * Why a double-elimination tier can't be generated for this player count, or null if it can.
+ * Mirrors the throws in generateFlatDoubleElim and generateAcceleratedHybrid so callers can block
+ * the configuration instead of crashing.
+ */
+export function getDoubleEliminationConfigError(
+  playerCount: number,
+  options: Pick<GenerateBracketOptions, 'bracketRouting' | 'flatWidth' | 'finalsCutoff'>
+): string | null {
+  if (playerCount < 2) return 'Double elimination needs at least 2 players.';
+
+  if (options.bracketRouting === 'FLAT_STAGED') {
+    const flatWidth = options.flatWidth || 4;
+    // Fields of at most 2x the width fall back to a traditional tree (see generateFlatDoubleElim).
+    if (flatWidth >= 4 && playerCount > 2 * flatWidth && playerCount % flatWidth !== 0) {
+      const lower = Math.floor(playerCount / flatWidth) * flatWidth;
+      return `Flat staged ${flatWidth} wide needs a multiple of ${flatWidth} players (e.g. ${lower} or ${lower + flatWidth}), not ${playerCount}.`;
+    }
+  } else if (options.bracketRouting === 'ACCELERATED_HYBRID') {
+    const finalsCutoff = options.finalsCutoff || 16;
+    // Players outside the cutoff play a pre-bracket, so there must be none of them or at least 2.
+    if (playerCount < finalsCutoff || playerCount === finalsCutoff + 1) {
+      return `Accelerated hybrid with a Top ${finalsCutoff} cutoff needs exactly ${finalsCutoff} or at least ${finalsCutoff + 2} players, not ${playerCount}.`;
+    }
+  }
+  return null;
+}
+
+/**
  * Universal dispatcher for Double Elimination brackets.
  * Routes to:
  * - 'TRADITIONAL_TREE' (default): Traditional binary-tree double elimination

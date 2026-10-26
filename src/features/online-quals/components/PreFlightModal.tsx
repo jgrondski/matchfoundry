@@ -28,10 +28,11 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
   const [checkVodStorage, setCheckVodStorage] = useState(false);
   const [checkAuthwordRule, setCheckAuthwordRule] = useState(false);
   const [checkTimeLimit, setCheckTimeLimit] = useState(false);
+  const [checkStreamTimer, setCheckStreamTimer] = useState(false);
 
   if (!isOpen) return null;
 
-  const allChecked = checkLive && checkVodStorage && checkAuthwordRule && checkTimeLimit;
+  const allChecked = checkLive && checkVodStorage && checkStreamTimer && checkAuthwordRule && checkTimeLimit;
 
   const formatDescription =
     qualFormat === 'HIGH_SCORE'
@@ -186,7 +187,37 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
               </div>
             </label>
 
-            {/* Item 3: Authword rule */}
+            {/* Item 3: On-stream countdown timer (the portal does not display one) */}
+            <label
+              onClick={() => setCheckStreamTimer(!checkStreamTimer)}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.75rem',
+                cursor: 'pointer',
+                background: checkStreamTimer ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+                border: `1px solid ${checkStreamTimer ? 'rgba(34, 197, 94, 0.4)' : 'var(--color-border, #263342)'}`,
+                borderRadius: '8px',
+                padding: '0.85rem',
+              }}
+            >
+              <div
+                style={{ cursor: 'pointer', color: checkStreamTimer ? '#22c55e' : 'var(--color-text-muted, #64748b)' }}
+              >
+                {checkStreamTimer ? <CheckSquare size={20} /> : <Square size={20} />}
+              </div>
+              <div style={{ fontSize: '0.88rem', color: '#f0f6fc' }}>
+                <div>
+                  A visible <strong>{qualWindowMinutes}-minute countdown timer</strong> is on my Twitch scene.
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.2rem' }}>
+                  I will start it when I begin my run. It must stay on screen for the whole run so judges can verify my
+                  time on the VOD.
+                </div>
+              </div>
+            </label>
+
+            {/* Item 4: Authword rule */}
             <label
               onClick={() => setCheckAuthwordRule(!checkAuthwordRule)}
               style={{
@@ -216,7 +247,7 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
               </div>
             </label>
 
-            {/* Item 4: Time window */}
+            {/* Item 5: Time window */}
             <label
               onClick={() => setCheckTimeLimit(!checkTimeLimit)}
               style={{
@@ -240,8 +271,8 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
                   I understand the <strong>{qualWindowMinutes}-minute window</strong>.
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.2rem' }}>
-                  The countdown starts the instant I click Confirm &amp; Begin. Expiry does not lock my screen, but logs
-                  over-time telemetry for adjudicators.
+                  My run is timed from the moment I click Confirm &amp; Begin. Going over the window does not lock me out,
+                  but it is logged for judges.
                 </div>
               </div>
             </label>
