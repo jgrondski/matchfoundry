@@ -1,9 +1,10 @@
 import React from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Tournament, TournamentTier } from '../features/tournament/types';
 import { useOrganization } from '../features/organizations/store';
 import { usePinAuth } from '../features/auth/AuthContext';
 import { isOnlineQualsOpen } from '../features/online-quals/onlineQualsStatus';
+import { getTournamentTargetUrl } from './TournamentSidebar';
 import {
   Trophy,
   BarChart3,
@@ -40,7 +41,6 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
   onOpenShare,
 }) => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { isSystemAdmin, canManage } = usePinAuth();
   const hasManageAccess = isSystemAdmin || canManage(tournament.slug);
   const { getOrganizationById } = useOrganization();
@@ -48,6 +48,13 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
 
   const defaultTierSlug = activeTier?.slug || tournament.tiers[0]?.slug;
   const bracketUrl = defaultTierSlug ? `/${tournament.slug}/${defaultTierSlug}` : `/${tournament.slug}/brackets`;
+  // Manage-side equivalent of this public view; used by Manage and as the post-login destination.
+  const managePath =
+    activeView === 'bracket'
+      ? defaultTierSlug
+        ? `/${tournament.slug}/manage/bracket/${defaultTierSlug}`
+        : `/${tournament.slug}/manage/bracket`
+      : getTournamentTargetUrl(tournament, activeView === 'qualify' ? 'review' : activeView);
 
   const navItems = [
     {
@@ -263,7 +270,7 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
 
           {hasManageAccess ? (
             <Link
-              to={defaultTierSlug ? `/${tournament.slug}/manage/bracket/${defaultTierSlug}` : `/${tournament.slug}/manage/bracket`}
+              to={managePath}
               className="btn btn-secondary"
               style={{
                 padding: '0.35rem 0.65rem',
@@ -281,7 +288,7 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
             </Link>
           ) : (
             <Link
-              to={`/admin?slug=${tournament.slug}&redirect=${encodeURIComponent(location.pathname)}`}
+              to={`/admin?slug=${tournament.slug}&redirect=${encodeURIComponent(managePath)}`}
               className="btn btn-secondary"
               style={{
                 padding: '0.35rem 0.65rem',
