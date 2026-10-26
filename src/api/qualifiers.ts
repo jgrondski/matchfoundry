@@ -638,6 +638,12 @@ export async function startOnlineQualSession(
   if (tourney.qualsClosed || meta.isLocked) {
     throw new Error('Qualifiers are closed for this tournament');
   }
+  if (tourney.qualMode === 'IN_PERSON') {
+    throw new Error('Online qualifying is not available for in-person tournaments');
+  }
+  if (!tourney.onlineQualsOpen) {
+    throw new Error('Online qualifying is not open for this tournament');
+  }
 
   let targetPlayerId = input.playerId;
   let targetPlayerName = input.playerName;
@@ -1572,4 +1578,20 @@ export async function setTournamentPlayerDisqualification(
         .where(eq(qualifierSubmissions.id, sub.id));
     }
   }
+}
+
+/**
+ * Opens or closes online qualifying (organizer toggle). Kept out of the full-tournament save so a
+ * stale tab can't silently reopen or close quals. In-person tournaments can never be opened.
+ */
+export async function setOnlineQualsOpen(tournamentIdOrSlug: string, open: boolean): Promise<void> {
+  const db = getDb();
+  const tourney = await resolveTournamentRow(tournamentIdOrSlug);
+  if (open && tourney.qualMode === 'IN_PERSON') {
+    throw new Error('Online qualifying is not available for in-person tournaments');
+  }
+  await db
+    .update(tournaments)
+    .set({ onlineQualsOpen: open })
+    .where(eq(tournaments.id, tourney.id));
 }

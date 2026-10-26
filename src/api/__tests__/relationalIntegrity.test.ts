@@ -9,6 +9,7 @@ import {
   saveFullTournament,
   deleteTournament,
 } from '../tournaments';
+import { setOnlineQualsOpen } from '../qualifiers';
 import { runFullSimulation } from '../../features/tournament/simulation';
 import { generateDraftBracketsForTournament, deriveLeaderboard } from '../../features/qualifiers/scoring';
 import { createApiMiddleware } from '../../server/api';
@@ -1242,6 +1243,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
         ],
       });
       const tourney = created.tournament;
+      await setOnlineQualsOpen(tourney.id, true);
       const [comp] = await createCompetitors(1);
 
       // 1. Competitor starts run -> creates placeholder IN_PROGRESS row

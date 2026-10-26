@@ -19,6 +19,7 @@ import type { Tournament } from '../../tournament/types';
 import { DEFAULT_POINTS_THRESHOLDS } from '../../tournament/types';
 import type { OnlineQualSessionSummary } from '../../../api/qualifiers';
 import { TournamentContext } from '../../tournament/store';
+import { isOnlineQualsOpen } from '../onlineQualsStatus';
 
 export interface CompetitorPortalViewProps {
   tournament: Tournament;
@@ -134,6 +135,8 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
   const [showPointsTooltip, setShowPointsTooltip] = useState(false);
   const windowMinutes = tournament.qualWindowMinutes || 90;
   const isQualsClosed = Boolean(tournament.qualsClosed || tournament.isLocked);
+  // New runs need the organizer's opt-in; a run already in progress can still be submitted.
+  const canStartRun = isOnlineQualsOpen(tournament);
 
   // Derive Qualifier Format presentation
   const formatLabel = (() => {
@@ -512,6 +515,32 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
         </div>
       )}
 
+      {!isQualsClosed && !canStartRun && !activeSession && (
+        <div
+          style={{
+            background: 'rgba(245, 158, 11, 0.1)',
+            border: '1px solid rgba(245, 158, 11, 0.35)',
+            borderRadius: '10px',
+            padding: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            marginBottom: '2rem',
+          }}
+          data-testid="online-quals-not-open"
+        >
+          <ShieldAlert size={28} color="#fbbf24" style={{ flexShrink: 0 }} />
+          <div>
+            <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fbbf24', fontWeight: 800 }}>
+              Online Qualifying Not Open
+            </h4>
+            <p style={{ margin: '0.25rem 0 0', color: 'var(--color-text-secondary, #94a3b8)', fontSize: '0.9rem' }}>
+              Online qualifying is not currently open for this tournament. New runs can't be started.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* STEP 1: Streamlined Competitor Intake (No OAuth / No premature DB persistence) */}
       {!activeSession ? (
         <div
@@ -571,7 +600,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                   value={enteredPlayerName}
                   onChange={e => setEnteredPlayerName(e.target.value)}
                   placeholder="e.g. Sharky"
-                  disabled={isSubmitting || isQualsClosed}
+                  disabled={isSubmitting || !canStartRun}
                   required
                   style={{
                     width: '100%',
@@ -602,7 +631,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                   value={enteredTwitchHandle}
                   onChange={e => setEnteredTwitchHandle(e.target.value)}
                   placeholder="e.g. ITZsharky1"
-                  disabled={isSubmitting || isQualsClosed}
+                  disabled={isSubmitting || !canStartRun}
                   required
                   style={{
                     width: '100%',
@@ -624,7 +653,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
 
             <button
               type="submit"
-              disabled={isSubmitting || isQualsClosed}
+              disabled={isSubmitting || !canStartRun}
               style={{
                 marginTop: '0.5rem',
                 background: 'var(--color-gold-bright, #f59e0b)',
@@ -634,7 +663,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                 padding: '0.85rem 1.5rem',
                 fontSize: '1rem',
                 fontWeight: 800,
-                cursor: isQualsClosed ? 'not-allowed' : 'pointer',
+                cursor: !canStartRun ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

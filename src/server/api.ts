@@ -40,6 +40,7 @@ import {
   adjudicateOnlineSubmission,
   verifyAllQualifierSubmissions,
   setTournamentPlayerDisqualification,
+  setOnlineQualsOpen,
   listOnlineQualSessions,
   dispatchDiscordWebhook,
 } from '../api/qualifiers';
@@ -1029,6 +1030,19 @@ export function createApiMiddleware() {
             const saved = await saveFullTournament(t);
             return sendJson(res, 200, saved);
           }
+          return sendJson(res, 200, t);
+        }
+
+        // POST /api/tournaments/:id/online-quals (Tournament Admin only)
+        // Explicit open/close toggle. The full-tournament PUT never writes this flag.
+        if (subAction === 'online-quals' && method === 'POST') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          if (typeof body?.open !== 'boolean') {
+            return sendError(res, 400, 'open (boolean) is required');
+          }
+          await setOnlineQualsOpen(tourneyId, body.open);
+          const t = await getFullTournament(tourneyId);
+          if (!t) return sendError(res, 404, 'Tournament not found');
           return sendJson(res, 200, t);
         }
 

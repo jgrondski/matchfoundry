@@ -15,6 +15,7 @@ import {
   listOnlineQualSessions,
   adjudicateOnlineSubmission,
   verifyAllQualifierSubmissions,
+  setOnlineQualsOpen,
 } from '../../../api/qualifiers';
 import { deriveLeaderboard, generateDraftBracketsForTournament } from '../../qualifiers/scoring';
 import { TournamentSidebar } from '../../../components/TournamentSidebar';
@@ -50,6 +51,7 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
     ];
 
     tourney = await saveFullTournament(baseTourney);
+    await setOnlineQualsOpen(tourney.id, true);
   });
 
   describe('Assertion 2.1: Ingestion Source Separation & Review Queue Ingestion', () => {

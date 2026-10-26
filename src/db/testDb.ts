@@ -78,6 +78,7 @@ export function setupTestDb() {
       qual_window_minutes INTEGER NOT NULL DEFAULT 90,
       custom_auth_words JSONB,
       quals_closed BOOLEAN NOT NULL DEFAULT false,
+      online_quals_open BOOLEAN NOT NULL DEFAULT false,
       is_verified BOOLEAN NOT NULL DEFAULT false,
       admin_pin_encrypted TEXT,
       metadata JSONB,

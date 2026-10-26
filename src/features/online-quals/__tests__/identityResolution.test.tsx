@@ -14,6 +14,7 @@ import {
   getOnlineQualSession,
   listOnlineQualSessions,
   adjudicateOnlineSubmission,
+  setOnlineQualsOpen,
 } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { IdentityResolutionModal } from '../components/IdentityResolutionModal';
@@ -45,6 +46,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
     ];
 
     tourney = await saveFullTournament(baseTourney);
+    await setOnlineQualsOpen(tourney.id, true);
   });
 
   describe('Assertion 3.1: Confirm Identity Binding', () => {

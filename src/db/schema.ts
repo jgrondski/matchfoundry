@@ -71,6 +71,8 @@ export const tournaments = pgTable('tournaments', {
   qualWindowMinutes: integer('qual_window_minutes').notNull().default(90),
   customAuthWords: jsonb('custom_auth_words').$type<string[]>(),
   qualsClosed: boolean('quals_closed').notNull().default(false),
+  // Organizer opt-in for online qualifying. Only written by the dedicated endpoint, never the full-tournament save.
+  onlineQualsOpen: boolean('online_quals_open').notNull().default(false),
   isVerified: boolean('is_verified').notNull().default(false),
   adminPinEncrypted: text('admin_pin_encrypted'),
   metadata: jsonb('metadata').$type<TournamentMetadata>(),

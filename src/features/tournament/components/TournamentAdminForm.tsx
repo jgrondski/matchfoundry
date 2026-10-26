@@ -9,6 +9,7 @@ import {
   Lock,
   Unlock,
   ShieldCheck,
+  Globe,
 } from 'lucide-react';
 import { useOrganization } from '../../organizations/store';
 import { generateTraditionalBracket, generateFlatBracket, generateDoubleEliminationBracket, getValidFlatWidths } from '../../bracket/math';
@@ -45,6 +46,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     seedQualifiers,
     simulateFullTournament,
     unlockBrackets,
+    setOnlineQualsOpen,
   } = useTournament();
   const { isSystemAdmin } = usePinAuth();
 
@@ -706,6 +708,48 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           )}
         </div>
       </div>
+
+      {/* Online Qualifying open/close (saved immediately via its own endpoint, not the form Save) */}
+      {!tournament.isLocked && (tournament.qualMode || 'HYBRID') !== 'IN_PERSON' && (
+        <div
+          style={{
+            background: 'var(--color-bg-surface)',
+            border: tournament.onlineQualsOpen ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '0.6rem 1.15rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+          }}
+          data-testid="online-quals-toggle-bar"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <Globe size={18} color={tournament.onlineQualsOpen ? '#34d399' : 'var(--color-text-muted)'} style={{ flexShrink: 0 }} />
+            <div>
+              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: tournament.onlineQualsOpen ? '#34d399' : 'var(--color-text-primary)', marginRight: '0.5rem' }}>
+                {tournament.onlineQualsOpen ? 'ONLINE QUALIFYING OPEN' : 'ONLINE QUALIFYING CLOSED'}
+              </span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>
+                {tournament.onlineQualsOpen
+                  ? 'Listed on the front page; competitors can start online runs.'
+                  : 'Hidden from the front page; online runs cannot be started.'}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void setOnlineQualsOpen(tournament.id, !tournament.onlineQualsOpen);
+            }}
+            className={tournament.onlineQualsOpen ? 'btn btn-secondary' : 'btn btn-primary'}
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+          >
+            {tournament.onlineQualsOpen ? 'Close Online Quals' : 'Open Online Quals'}
+          </button>
+        </div>
+      )}
 
       {/* Section 1: Tournament Information */}
       <TournamentInfoSection

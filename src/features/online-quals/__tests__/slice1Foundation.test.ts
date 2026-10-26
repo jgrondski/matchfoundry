@@ -5,6 +5,7 @@ import { setDb } from '../../../db';
 import { createApiMiddleware } from '../../../server/api';
 import { createSessionToken } from '../../../server/pinCrypto';
 import { saveFullTournament, getFullTournament } from '../../../api/tournaments';
+import { setOnlineQualsOpen } from '../../../api/qualifiers';
 import { seedDefaultOrganizations } from '../../../api/organizations';
 import { createPlayer, getPlayer } from '../../../api/players';
 import { createEmptyTournament, createDefaultTier } from '../../tournament/defaults';
@@ -263,6 +264,7 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
       tourney.qualMode = 'HYBRID';
       tourney.qualWindowMinutes = 90;
       await saveFullTournament(tourney);
+      await setOnlineQualsOpen(tourney.id, true);
     });
 
     it('resolves Bucket 1: Verified repeat competitor (matchedPlayer with VERIFIED_MATCH)', async () => {
@@ -381,6 +383,7 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
       tourney.customAuthWords = ['NESCHAMP', 'WARPZONE'];
       tourney.tiers = [createDefaultTier(1, { id: crypto.randomUUID(), playerCount: 4 })];
       await saveFullTournament(tourney);
+      await setOnlineQualsOpen(tourney.id, true);
 
       const dbPlayer = await createPlayer({
         name: 'SpeedyTetris',
@@ -562,6 +565,7 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
       tourney.isLocked = false;
       tourney.tiers = [createDefaultTier(1, { id: crypto.randomUUID(), playerCount: 4 })];
       await saveFullTournament(tourney);
+      await setOnlineQualsOpen(tourney.id, true);
 
       const dbPlayer = await createPlayer({
         name: 'OmenDASCompetitor',

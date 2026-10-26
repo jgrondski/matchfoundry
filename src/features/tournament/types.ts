@@ -279,6 +279,7 @@ export interface Tournament {
   qualTimer?: TournamentQualTimer;
   customAuthWords?: string[]; // custom organizer dictionary words
   qualsClosed?: boolean; // true = Qualifiers closed
+  onlineQualsOpen?: boolean; // true = organizer has opened online qualifying (ONLINE/HYBRID only)
   isLocked: boolean; // false = Qualifiers Mode (Draft Preview), true = Match Play Mode (Locked)
   tiers: TournamentTier[];
   matchScores: Record<string, MatchScoreRecord>; // keyed by matchId

@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Tournament, TournamentTier } from '../features/tournament/types';
 import { useOrganization } from '../features/organizations/store';
 import { usePinAuth } from '../features/auth/AuthContext';
+import { isOnlineQualsOpen } from '../features/online-quals/onlineQualsStatus';
 import {
   Trophy,
   BarChart3,
@@ -67,7 +68,7 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
       icon: Trophy,
       to: `/${tournament.slug}/standings`,
     },
-    ...(tournament.qualMode !== 'IN_PERSON'
+    ...(isOnlineQualsOpen(tournament)
       ? [
           {
             id: 'qualify' as const,

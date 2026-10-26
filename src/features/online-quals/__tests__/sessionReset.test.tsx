@@ -13,6 +13,7 @@ import {
   requestOnlineQualReset,
   getOnlineQualSession,
   voidAndResetOnlineQualSession,
+  setOnlineQualsOpen,
 } from '../../../api/qualifiers';
 import type { Tournament, QualTimerLog } from '../../tournament/types';
 
@@ -36,6 +37,7 @@ describe('Journey 4: Stream Crash Technical Reset & Session Recovery (ATDD)', ()
     tourney.id = crypto.randomUUID();
     tourney.organizationId = 'org_ctwc';
     await saveFullTournament(tourney);
+    await setOnlineQualsOpen(tourney.id, true);
 
     const player = await createPlayer({
       name: 'StreamCrashGamer',

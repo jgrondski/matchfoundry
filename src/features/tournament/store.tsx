@@ -52,6 +52,7 @@ interface TournamentContextType {
     playerId: string,
     isDisqualified: boolean
   ) => void;
+  setOnlineQualsOpen: (tournamentId: string, open: boolean) => Promise<boolean>;
   togglePlayerQualsCompleted: (
     tournamentId: string,
     playerId: string,
@@ -839,6 +840,26 @@ export const TournamentProvider: React.FC<{
     } catch (err: any) {
       setApiError(`Failed to update disqualification: ${err.message}`);
       return null;
+    }
+  };
+
+  // Online quals open/close only goes through its dedicated endpoint;
+  // the full-tournament PUT intentionally ignores it.
+  const setOnlineQualsOpen = async (tournamentId: string, open: boolean): Promise<boolean> => {
+    try {
+      const saved = await apiCall(`/api/tournaments/${tournamentId}/online-quals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ open }),
+      });
+      if (saved && saved.id) {
+        setTournaments(prev => prev.map(t => (t.id === saved.id ? saved : t)));
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      setApiError(`Failed to update online qualifying: ${err.message}`);
+      return false;
     }
   };
 
@@ -1912,6 +1933,7 @@ export const TournamentProvider: React.FC<{
         submitQualifierScore,
         deleteQualifierScore,
         togglePlayerDisqualification,
+        setOnlineQualsOpen,
         togglePlayerQualsCompleted,
         togglePlayerQualifierVerified,
         lockTournament,

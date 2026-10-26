@@ -5,6 +5,7 @@ import { setDb } from '../../../db';
 import { createApiMiddleware } from '../../../server/api';
 import { createSessionToken } from '../../../server/pinCrypto';
 import { saveFullTournament, getFullTournament } from '../../../api/tournaments';
+import { setOnlineQualsOpen } from '../../../api/qualifiers';
 import { seedDefaultOrganizations } from '../../../api/organizations';
 import { createPlayer, getPlayer } from '../../../api/players';
 import { createEmptyTournament, createDefaultTier } from '../../tournament/defaults';
@@ -97,6 +98,7 @@ describe('Tournament-scoped DQ / DNQ reversibility and seeding', () => {
     tourney.isLocked = false;
     tourney.tiers = [createDefaultTier(1, { id: crypto.randomUUID(), playerCount: 4 })];
     await saveFullTournament(tourney);
+    await setOnlineQualsOpen(tourney.id, true);
     const token = createSessionToken({ role: 'TOURNAMENT_ADMIN', tournamentId: tourney.id });
     return { tourney, token };
   }

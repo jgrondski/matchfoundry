@@ -392,6 +392,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     qualTimer: (meta.qualTimer as any) || undefined,
     customAuthWords: (t.customAuthWords as string[]) || meta.customAuthWords || undefined,
     qualsClosed: Boolean(t.qualsClosed),
+    onlineQualsOpen: Boolean(t.onlineQualsOpen),
     isLocked: Boolean(meta.isLocked),
     tiers: compositeTiers,
     matchScores: {
