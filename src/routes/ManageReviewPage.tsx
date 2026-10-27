@@ -78,7 +78,7 @@ export const ManageReviewPage: React.FC = () => {
             Qual Review
           </h1>
           <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', marginTop: '0.35rem', marginBottom: 0 }}>
-            Audit incoming NES Authwords against Twitch VOD recordings, verify competitor scores, and resolve claims.
+            Verify authwords and scores; reconcile users.
           </p>
         </div>
 

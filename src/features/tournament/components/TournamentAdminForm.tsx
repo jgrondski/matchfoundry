@@ -751,7 +751,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
               </span>
               <span style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>
                 {tournament.onlineQualsOpen
-                  ? 'Listed on the front page; competitors can start online runs.'
+                  ? 'Listed on the front page.'
                   : 'Hidden from the front page; online runs cannot be started.'}
               </span>
             </div>

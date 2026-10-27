@@ -118,9 +118,6 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted, #64748b)' }}>
-              ID: {tournament.slug}
-            </span>
             {onDeleteClick && (
               <button
                 type="button"
@@ -165,7 +162,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Users size={15} color="var(--color-gold-bright, #ffc905)" />
             {hasTiers
-              ? `${totalPlayers} Players Seeded`
+              ? `${totalPlayers} Players`
               : `${(tournament.playersPool || []).length} Competitors Registered`}
           </span>
         </div>
@@ -174,7 +171,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         {hasTiers ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted, #64748b)', letterSpacing: '0.05em' }}>
-              Configured Tiers ({tournament.tiers.length})
+              Brackets ({tournament.tiers.length})
             </span>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               {tournament.tiers.map(tier => {
@@ -221,7 +218,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           </div>
         ) : (
           <div style={{ padding: '0.85rem', background: 'var(--color-bg-base, #0c0d12)', borderRadius: 'var(--radius-md, 8px)', border: '1px dashed var(--color-border, rgba(255,255,255,0.1))', color: 'var(--color-text-muted, #64748b)', fontSize: '0.85rem' }}>
-            No bracket tiers configured yet.{variant === 'admin' && ' Visit Settings to set up tournament tiers.'}
+            No bracket tiers configured.{variant === 'admin' && ' Visit Settings to set up tournament tiers.'}
           </div>
         )}
       </div>

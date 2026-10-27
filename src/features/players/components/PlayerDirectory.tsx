@@ -240,7 +240,7 @@ export const PlayerDirectory: React.FC = () => {
             </h1>
           </div>
           <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>
-            Master directory of competitive players, manual personal bests, and playstyles.
+            List of Global Players and their relevant data.
           </p>
         </div>
 

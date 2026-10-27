@@ -62,7 +62,7 @@ export const TournamentSwitcherPage: React.FC = () => {
             Tournaments
           </h1>
           <p style={{ fontSize: '1.1rem', color: 'var(--color-text-secondary)', maxWidth: '650px', margin: '0 auto 1.5rem' }}>
-            Organizer command center, public broadcast brackets, and mobile floor judge portal for competitive gaming tournaments.
+            Manage and view tournaments.
           </p>
 
           {isSystemAdmin && (
@@ -367,14 +367,9 @@ export const TournamentSwitcherPage: React.FC = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Globe size={18} color="var(--color-gold-bright)" />
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
-                    {isSystemAdmin && systemViewTab === 'admin' ? 'All Managed Tournaments' : 'Public Tournaments Directory'}
+                    {isSystemAdmin && systemViewTab === 'admin' ? 'All Managed Tournaments' : 'Active Tournaments'}
                   </h2>
                 </div>
-                <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
-                  {isSystemAdmin && systemViewTab === 'admin'
-                    ? 'Full Administrative Controls'
-                    : 'Friction-Free Public Spectator Access'}
-                </span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(480px, 1fr))', gap: '1.5rem' }}>

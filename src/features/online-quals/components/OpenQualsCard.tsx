@@ -4,6 +4,8 @@ import { Gamepad2, ChevronRight } from 'lucide-react';
 import type { Tournament } from '../../tournament/types';
 import { useOrganization } from '../../organizations/store';
 import { isOnlineQualsOpen } from '../onlineQualsStatus';
+import { qualFormatLabel } from '../../qualifiers/qualFormatLabel';
+import { PointsInfoTip } from '../../qualifiers/components/PointsInfoTip';
 
 interface OpenQualsCardProps {
   tournaments: Tournament[];
@@ -30,7 +32,6 @@ export const OpenQualsCard: React.FC<OpenQualsCardProps> = ({ tournaments }) => 
         border: '1px solid rgba(245, 158, 11, 0.45)',
         borderRadius: 'var(--radius-lg)',
         boxShadow: 'var(--shadow-gold)',
-        overflow: 'hidden',
         boxSizing: 'border-box',
       }}
     >
@@ -80,10 +81,11 @@ export const OpenQualsCard: React.FC<OpenQualsCardProps> = ({ tournaments }) => 
                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text-primary)', overflowWrap: 'anywhere' }}>
                   {tournament.name}
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.15rem' }}>
-                  {[org?.shortName || org?.name, tournament.qualMode === 'ONLINE' ? 'Online' : 'Online & In-Person']
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: '0.15rem' }}>
+                  {[org?.shortName || org?.name, qualFormatLabel(tournament.qualFormat, tournament.qualAverageCount)]
                     .filter(Boolean)
                     .join(' · ')}
+                  {tournament.qualFormat === 'POINTS' && <PointsInfoTip pointsConfig={tournament.pointsConfig} size={13} />}
                 </div>
               </div>
               <Link
