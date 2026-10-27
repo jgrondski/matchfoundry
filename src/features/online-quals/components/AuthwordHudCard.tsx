@@ -26,7 +26,7 @@ export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({ authWord }) =>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <ShieldCheck size={20} color="var(--color-gold-bright, #fbbf24)" />
           <span style={{ fontSize: '0.9rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#e2e8f0' }}>
-            Official Verification Authword
+            Official Authword
           </span>
         </div>
       </div>

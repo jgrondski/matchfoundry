@@ -117,9 +117,6 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
         <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
           Official Score Submission
         </h3>
-        <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--color-text-secondary, #94a3b8)' }}>
-          Enter the top game scores achieved during your live qualifying session and paste your Twitch VOD link.
-        </p>
       </div>
 
       {errorMessage && (
@@ -276,7 +273,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
             />
           </div>
           <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.3rem' }}>
-            Include timestamp if possible (e.g. <code>?t=00h14m20s</code>) to assist judges in locating your topout Authword.
+            Include timestamp if possible (e.g. <code>?t=00h14m20s</code>)
           </div>
         </div>
 
@@ -293,6 +290,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
             rows={3}
             disabled={disabled}
             style={{
+              display: 'block',
               width: '100%',
               padding: '0.7rem 0.85rem',
               borderRadius: '8px',
@@ -307,7 +305,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
             data-testid="player-notes-input"
           />
           <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.3rem' }}>
-            Anything judges should know. Notes are public: they're posted with your submission.
+            Notes are public.
           </div>
         </div>
 
@@ -333,7 +331,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
             data-testid="submit-qual-button"
           >
             <Send size={18} />
-            {isSubmitting ? 'Submitting Official Qual...' : 'Submit Official Qual'}
+            {isSubmitting ? 'Submitting Qual...' : 'Submit Qual'}
           </button>
         </div>
       </form>

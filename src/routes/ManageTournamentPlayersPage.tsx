@@ -175,7 +175,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
               {tournament.name}
             </h1>
             <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>
-              Manage registered competitors and seeding for this tournament. Players registered here can submit qualifier scores and seed into tournament brackets.
+              Manage registered competitors and seeding for this tournament.
             </p>
           </div>
 

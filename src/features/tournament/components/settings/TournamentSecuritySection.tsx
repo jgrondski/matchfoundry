@@ -150,7 +150,6 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
 
       <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
         Tournament PIN protects floor judge and management views (<code>/{tournamentSlug}/manage/*</code>).
-        Spectator and OBS broadcast overlay routes remain friction-free and publicly accessible.
       </p>
 
       {/* Reveal Existing PIN (System Admin Only) */}
@@ -173,7 +172,7 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
               Current Tournament PIN:
             </div>
             <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
-              Encrypted at rest with AES-256-GCM. Reveal without resetting session.
+              Encrypted with AES-256-GCM.
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>

@@ -83,7 +83,7 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
         {/* Left Column: Organization Selection & Palette */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <label style={labelStyle}>Parent Organization Circuit</label>
+            <label style={labelStyle}>Parent Organization</label>
             <select
               value={organizationId}
               onChange={e => onOrganizationIdChange(e.target.value)}
@@ -231,7 +231,7 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
                 ? 'Active tournament-specific webhook override.'
                 : selectedOrg?.discordWebhookUrl || selectedOrg?.hasDiscordWebhook
                 ? `Inherited from ${selectedOrg.name}'s webhook.`
-                : 'No webhook configured. Qual announcements disabled.'}
+                : 'No webhook configured.'}
             </span>
 
             {webhookTestStatus && (

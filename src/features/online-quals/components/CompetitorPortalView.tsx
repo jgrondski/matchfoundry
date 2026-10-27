@@ -8,14 +8,13 @@ import {
   ShieldAlert,
   User,
   LogOut,
-  HelpCircle,
 } from 'lucide-react';
 import { PreFlightModal } from './PreFlightModal';
 import { AuthwordHudCard } from './AuthwordHudCard';
 import { SubmissionFormCard } from './SubmissionFormCard';
 import { AwaitingVerificationCard } from './AwaitingVerificationCard';
 import type { Tournament } from '../../tournament/types';
-import { DEFAULT_POINTS_THRESHOLDS } from '../../tournament/types';
+import { PointsInfoTip } from '../../qualifiers/components/PointsInfoTip';
 import type { OnlineQualSessionSummary } from '../../../api/qualifiers';
 import { TournamentContext } from '../../tournament/store';
 import { isOnlineQualsOpen } from '../onlineQualsStatus';
@@ -132,7 +131,6 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
 
-  const [showPointsTooltip, setShowPointsTooltip] = useState(false);
   const windowMinutes = tournament.qualWindowMinutes || 90;
   const isQualsClosed = Boolean(tournament.qualsClosed || tournament.isLocked);
   // New runs need the organizer's opt-in; a run already in progress can still be submitted.
@@ -145,12 +143,8 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       const attempts = tournament.qualAverageCount || 3;
       return `Average of ${attempts} (Ao${attempts}) Qualifier`;
     }
-    return 'High Score Qualifier';
+    return '# of Maxes';
   })();
-
-  const pointsThresholds = (tournament.pointsConfig && tournament.pointsConfig.length > 0)
-    ? [...tournament.pointsConfig].sort((a, b) => b.minScore - a.minScore)
-    : [...DEFAULT_POINTS_THRESHOLDS].sort((a, b) => b.minScore - a.minScore);
 
   const handleScoresChange = (nextScores: number[]) => {
     setScores(nextScores);
@@ -275,7 +269,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       }
 
       setIsPreFlightOpen(false);
-      setStatusNotice('Official qualifier run launched! Your NES Authword is ready.');
+      setStatusNotice('Authword Ready. Start your timer when authword is entered, and remember your final game in progress when the timer ends will count.');
       void refreshTournament?.(tournament.id);
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to launch qualifier run');
@@ -366,61 +360,15 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
             data-testid="qual-format-badge"
           >
             {formatLabel}
-            {tournament.qualFormat === 'POINTS' && (
-              <span
-                onMouseEnter={() => setShowPointsTooltip(true)}
-                onMouseLeave={() => setShowPointsTooltip(false)}
-                style={{
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  color: 'var(--color-gold-bright, #fbbf24)',
-                }}
-                title="View points threshold breakdown"
-                data-testid="points-info-icon"
-              >
-                <HelpCircle size={14} />
-              </span>
-            )}
+            {tournament.qualFormat === 'POINTS' && <PointsInfoTip pointsConfig={tournament.pointsConfig} />}
           </span>
-
-          {showPointsTooltip && tournament.qualFormat === 'POINTS' && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                marginTop: '0.35rem',
-                background: 'var(--color-bg-surface-elevated, #161e27)',
-                border: '1px solid rgba(245, 158, 11, 0.4)',
-                borderRadius: '8px',
-                padding: '0.75rem 1rem',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.6)',
-                zIndex: 100,
-                minWidth: '220px',
-              }}
-              data-testid="points-breakdown-tooltip"
-            >
-              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-gold-bright, #fbbf24)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                Points Cutoff Breakdown
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {pointsThresholds.map((pt, idx) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#e2e8f0', fontFamily: "'JetBrains Mono', monospace" }}>
-                    <span>&ge; {pt.minScore.toLocaleString()}</span>
-                    <span style={{ fontWeight: 700, color: 'var(--color-gold-bright, #fbbf24)' }}>{pt.points} pts</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#ffffff', margin: '0 0 0.5rem', letterSpacing: '-0.02em' }}>
           {tournament.name}
         </h1>
         <p style={{ margin: 0, fontSize: '1rem', color: 'var(--color-text-secondary, #94a3b8)', lineHeight: 1.5 }}>
-          Stream your games, verify with your NES Authword, and submit scores directly for adjudication.
+          Stream live, prove it with your Authword, submit scores.
         </p>
       </div>
 
@@ -694,26 +642,9 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                 </div>
 
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <strong style={{ fontSize: '1.1rem', color: '#ffffff' }}>
-                      {resolvedPlayer?.name || activeSession.playerName || enteredPlayerName}
-                    </strong>
-                    <span
-                      style={{
-                        background: 'rgba(34, 197, 94, 0.15)',
-                        border: '1px solid rgba(34, 197, 94, 0.4)',
-                        color: '#4ade80',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: '4px',
-                        fontSize: '0.72rem',
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                      }}
-                      data-testid="identity-status-badge"
-                    >
-                      Active Run
-                    </span>
-                  </div>
+                  <strong style={{ fontSize: '1.1rem', color: '#ffffff' }}>
+                    {resolvedPlayer?.name || activeSession.playerName || enteredPlayerName}
+                  </strong>
                   {(activeSession.submittedTwitchUsername || enteredTwitchHandle) && (
                     <div style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.15rem' }}>
                       Twitch: <span style={{ color: '#a855f7' }}>@{activeSession.submittedTwitchUsername || cleanTwitchUsername}</span>
@@ -791,6 +722,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
           qualWindowMinutes={windowMinutes}
           qualFormat={tournament.qualFormat}
           qualAverageCount={tournament.qualAverageCount || 2}
+          pointsConfig={tournament.pointsConfig}
           twitchUsername={cleanTwitchUsername}
           onConfirm={handleStartRun}
           onCancel={() => setIsPreFlightOpen(false)}

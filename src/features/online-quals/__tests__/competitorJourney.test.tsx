@@ -181,15 +181,15 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
         />
       );
 
-      expect(html).toContain('Pre-Flight Rules &amp; Checklist');
-      expect(html).toContain('Average of top 2 games');
+      expect(html).toContain('Qualifier Checklist');
+      expect(html).toContain('Average of 2');
       expect(html).toContain('twitch.tv/sharky_das');
       expect(html).toContain('Store past broadcasts');
       expect(html).toContain('NES Authword proof rule');
       expect(html).toContain('90-minute window');
       expect(html).toContain('90-minute countdown timer');
       expect(html).toContain('is on my Twitch scene');
-      expect(html).toContain('Confirm &amp; Begin Official Run');
+      expect(html).toContain('Confirm &amp; Begin Qual');
     });
   });
 
@@ -199,7 +199,7 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
         <AuthwordHudCard authWord="ROCKET" />
       );
 
-      expect(html).toContain('Official Verification Authword');
+      expect(html).toContain('Official Authword');
       expect(html).toContain('ROCKET');
       expect(html).not.toContain('Copy Authword');
       expect(html).not.toContain('Report Stream Crash');
@@ -239,7 +239,7 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       expect(html).toContain('Game 2:');
       expect(html).toContain('721,450');
       expect(html).toContain('Twitch Broadcast VOD URL *');
-      expect(html).toContain('Submit Official Qual');
+      expect(html).toContain('Submit Qual');
     });
   });
 
@@ -355,7 +355,7 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
 
       // Verify restored active run HUD
       expect(html).toContain('Sharky DAS');
-      expect(html).toContain('Active Run');
+      expect(html).not.toContain('Active Run');
       expect(html).toContain('ROCKET');
       expect(html).toContain('950,000');
       expect(html).toContain('Switch Competitor');
@@ -416,7 +416,7 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       // Qual is over! Refresh-resilience must NOT hold onto the completed session.
       // Must present clean intake check-in form and purge the stale storage.
       expect(html).toContain('Competitor Qualification Check-In');
-      expect(html).not.toContain('Active Run');
+      expect(html).not.toContain('Official Authword');
       expect(html).not.toContain('Sharky DAS: Official Qual Submitted');
       expect(fakeStorage.getItem('tm_qual_portal_omen-das-tourney')).toBeNull();
     });

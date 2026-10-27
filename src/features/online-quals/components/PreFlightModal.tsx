@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { CheckSquare, Square, X, ShieldCheck } from 'lucide-react';
+import type { PointsThreshold } from '../../tournament/types';
+import { qualFormatLabel } from '../../qualifiers/qualFormatLabel';
+import { PointsInfoTip } from '../../qualifiers/components/PointsInfoTip';
 
 export interface PreFlightModalProps {
   isOpen: boolean;
@@ -7,6 +10,7 @@ export interface PreFlightModalProps {
   qualWindowMinutes: number;
   qualFormat: string;
   qualAverageCount?: number;
+  pointsConfig?: PointsThreshold[];
   twitchUsername: string;
   onConfirm: () => void;
   onCancel: () => void;
@@ -19,6 +23,7 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
   qualWindowMinutes,
   qualFormat,
   qualAverageCount = 2,
+  pointsConfig,
   twitchUsername,
   onConfirm,
   onCancel,
@@ -33,13 +38,6 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
   if (!isOpen) return null;
 
   const allChecked = checkLive && checkVodStorage && checkStreamTimer && checkAuthwordRule && checkTimeLimit;
-
-  const formatDescription =
-    qualFormat === 'HIGH_SCORE'
-      ? 'Single highest score wins. Multiple attempts permitted during window.'
-      : qualFormat === 'AVERAGE_OF_X'
-      ? `Average of top ${qualAverageCount} games during your window.`
-      : 'Points system based on score thresholds achieved.';
 
   return (
     <div
@@ -83,7 +81,7 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <ShieldCheck size={22} color="var(--color-gold-bright, #fbbf24)" />
             <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
-              Pre-Flight Rules & Checklist
+              Qualifier Checklist
             </h3>
           </div>
           <button
@@ -118,7 +116,13 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
               {tournamentName}
             </div>
             <div style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary, #94a3b8)', lineHeight: 1.5 }}>
-              <strong>Window:</strong> {qualWindowMinutes} minutes &bull; <strong>Format:</strong> {formatDescription}
+              <strong>Window:</strong> {qualWindowMinutes} minutes &bull; <strong>Format:</strong> {qualFormatLabel(qualFormat, qualAverageCount)}
+              {qualFormat === 'POINTS' && (
+                <>
+                  {' '}
+                  <PointsInfoTip pointsConfig={pointsConfig} />
+                </>
+              )}
             </div>
           </div>
 
@@ -152,9 +156,6 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
                   My Twitch stream is currently <strong>LIVE</strong> at{' '}
                   <span style={{ color: '#a855f7' }}>twitch.tv/{twitchUsername}</span>.
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.2rem' }}>
-                  Judges will verify game play directly against your live broadcast VOD.
-                </div>
               </div>
             </label>
 
@@ -181,9 +182,6 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
                 <div>
                   <strong>Store past broadcasts</strong> is toggled <strong>ON</strong> in Creator Dashboard.
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.2rem' }}>
-                  Without a saved VOD link, submissions cannot be adjudicated and will result in DNQ.
-                </div>
               </div>
             </label>
 
@@ -209,10 +207,6 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
               <div style={{ fontSize: '0.88rem', color: '#f0f6fc' }}>
                 <div>
                   A visible <strong>{qualWindowMinutes}-minute countdown timer</strong> is on my Twitch scene.
-                </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.2rem' }}>
-                  I will start it when I begin my run. It must stay on screen for the whole run so judges can verify my
-                  time on the VOD.
                 </div>
               </div>
             </label>
@@ -241,8 +235,7 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
                   I understand the <strong>NES Authword proof rule</strong>.
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.2rem' }}>
-                  I must intentionally top out at &ge; 10,000 points and enter my assigned Authword on the high-score name
-                  screen live on stream.
+                  Before starting the timer, play a game to 10k, top out, and enter authword in the high score post-game.
                 </div>
               </div>
             </label>
@@ -271,8 +264,7 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
                   I understand the <strong>{qualWindowMinutes}-minute window</strong>.
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.2rem' }}>
-                  My run is timed from the moment I click Confirm &amp; Begin. Going over the window does not lock me out,
-                  but it is logged for judges.
+                  After authword, start the timer and begin playing. Any game in progress at the end of the timer will count.
                 </div>
               </div>
             </label>
@@ -323,7 +315,7 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
             }}
             data-testid="confirm-begin-button"
           >
-            {isStarting ? 'Launching Run...' : 'Confirm & Begin Official Run'}
+            {isStarting ? 'Launching Run...' : 'Confirm & Begin Qual'}
           </button>
         </div>
       </div>

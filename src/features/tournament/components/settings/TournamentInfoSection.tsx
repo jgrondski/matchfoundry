@@ -178,7 +178,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
           </div>
           <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
             {seedingMethod === 'QUALIFIERS'
-              ? 'Players submit scores during Qualifiers Mode; brackets dynamically populate according to leaderboard standings.'
+              ? 'Brackets dynamically populate according to leaderboard standings.'
               : 'Qualifiers are bypassed. Organize seeds manually, paste a pre-ranked list, or randomize draw order in the Seeding manager.'}
           </span>
         </div>
@@ -342,8 +342,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
           }}>
             <Sliders size={18} color="var(--color-brand)" style={{ flexShrink: 0 }} />
             <div>
-              <strong style={{ color: 'var(--color-text-primary)' }}>Direct Seeding Active: </strong>
-              Qualifiers are bypassed. Brackets will be seeded directly from the custom rank order in the <strong>Seeding</strong> manager.
+              <strong style={{ color: 'var(--color-text-primary)' }}>Direct Seeding Active</strong>
             </div>
           </div>
         </div>
