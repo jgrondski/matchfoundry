@@ -39,6 +39,37 @@ This playbook provides a complete, step-by-step operational guide for connecting
 
 ---
 
+## ⚠️ Database Environments: Preview Deploys Share the PRODUCTION Database
+
+**Current state (as of 2026-10-27):** there are only **two** databases, even though there are three deploy targets.
+
+| Deploy target | Database it uses |
+| :--- | :--- |
+| Local dev (`npm run dev`) | Local Docker PostgreSQL (`.env`) |
+| Vercel **Preview** (feature branch / PR deploys) | **Production Neon** |
+| Vercel **Production** (`main` → `matchfoundry.gg`) | **Production Neon** |
+
+What this means in practice:
+
+1. **Opening or updating a PR migrates the production schema.** The CI "Push Database Schema to Neon" step (`npm run db:push:ci`, which runs `drizzle-kit push --force`) runs on `pull_request` events too, using the same `secrets.DATABASE_URL`. A schema change hits prod before the PR is merged, while prod is still running the old code. Until this is fixed, every schema change must be **additive and backward-compatible**: nullable or defaulted columns, new tables, and new indexes. No drops, renames, or type changes.
+2. **`--force` applies data-loss statements without asking.** Read the verbose SQL in the PR's CI log. If it shows anything other than the change you expected, prod has drifted from the schema. Stop and investigate before merging.
+3. **drizzle-kit still prompts in some cases, even with `--force`.** One example is adding a unique *constraint* to a table that already has rows: it asks whether to truncate the table, and CI has no terminal, so the step crashes. Use `uniqueIndex(...)` instead of `.unique()`.
+4. **Testing on a preview URL writes real production data.** Test tournaments, players, and qualifier runs created on a preview deploy are visible in prod and must be cleaned up by hand.
+5. **The schema can be ahead of the deployed code.** An abandoned PR that ran CI can leave its columns or tables in prod.
+
+### TODO: Separate Preview Database (planned)
+
+Goal: three real environments (local → preview → production), with preview deploys and PR CI runs never touching the production database.
+
+Likely approach (to be designed):
+- Use a **Neon branch** for previews: either a single long-lived `preview` branch, or one branch per PR via the Neon/Vercel integration. Neon branches are copy-on-write copies of prod, so preview gets realistic data cheaply.
+- Point Vercel's **Preview** environment `DATABASE_URL` at that branch. Keep the **Production** value on the main Neon branch.
+- In `ci.yml`, run `db:push:ci` against the preview database on `pull_request` events. Run it against prod only on `push` to `main`. For example, use separate GitHub secrets (`DATABASE_URL_PREVIEW` and `DATABASE_URL`), or the value from `vercel pull` for the matching environment.
+- Decide how preview data is refreshed (reset the branch from prod periodically or per PR), and make sure secrets like `PIN_ENCRYPTION_KEY` work against copied data.
+- Update this playbook, the environment variable table below, and the CI section once the change is done.
+
+---
+
 ## 2. Environment Variables Inventory
 
 Before deploying, ensure you have values for the following four environment variables:

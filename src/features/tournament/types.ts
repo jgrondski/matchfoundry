@@ -28,6 +28,13 @@ export interface QualTimerLog {
   overTime?: boolean;
 }
 
+/** Autosaved, not-yet-submitted contents of an online run. Never included in the public tournament payload. */
+export interface QualRunDraft {
+  scores: number[];
+  twitchVodUrl?: string;
+  playerNotes?: string;
+}
+
 export interface TournamentQualTimer {
   durationMinutes: number;
   elapsedSeconds: number;

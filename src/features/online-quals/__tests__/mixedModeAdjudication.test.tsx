@@ -26,6 +26,7 @@ import { AuthProvider } from '../../auth/AuthContext';
 import { TournamentProvider } from '../../tournament/store';
 import { OrganizationProvider } from '../../organizations/store';
 import type { Tournament } from '../../tournament/types';
+import { runToken } from './runToken';
 
 describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
   let tourney: Tournament;
@@ -69,7 +70,7 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
         submittedTwitchUsername: 'pixelandy',
       });
       const onlineSub = await submitOnlineQualScores(tourney.id, {
-        playerId: pOnlineId,
+        playerId: pOnlineId, resumeToken: await runToken(tourney.id, pOnlineId),
         scores: [1250000],
         twitchVodUrl: 'https://twitch.tv/videos/123456789',
         submittedTwitchUsername: 'pixelandy',
@@ -255,7 +256,7 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
         submittedTwitchUsername: 'pixelandy',
       });
       await submitOnlineQualScores(tourney.id, {
-        playerId: pOnlineId,
+        playerId: pOnlineId, resumeToken: await runToken(tourney.id, pOnlineId),
         scores: [1180000, 1140000],
         twitchVodUrl: 'https://twitch.tv/videos/987654321',
         submittedTwitchUsername: 'pixelandy',
@@ -473,7 +474,7 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
         twitchUsername: 'pixelandy',
       });
       await submitOnlineQualScores(tourney.id, {
-        playerId: pOnlineId,
+        playerId: pOnlineId, resumeToken: await runToken(tourney.id, pOnlineId),
         scores: [1150000],
         twitchVodUrl: 'https://twitch.tv/videos/999999999',
       });
@@ -503,8 +504,8 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
         </MemoryRouter>
       );
 
-      // Verify All button exists in Batch Adjudication section
-      expect(html).toContain('Batch Adjudication');
+      // Verify All button exists in Batch Verify section
+      expect(html).toContain('Batch Verify');
       expect(html).toContain('Verify All');
     });
   });

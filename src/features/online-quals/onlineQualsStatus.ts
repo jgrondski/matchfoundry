@@ -15,3 +15,11 @@ export function isOnlineQualsOpen(
     !tournament.isLocked
   );
 }
+
+/**
+ * IN_PROGRESS / NOT_STARTED rows are run placeholders, not scores: they never count as qualifier
+ * results, never block roster removal or player deletion, and are hidden from the leaderboard.
+ */
+export function isPlaceholderSubmissionStatus(status: string | null | undefined): boolean {
+  return status === 'IN_PROGRESS' || status === 'NOT_STARTED';
+}

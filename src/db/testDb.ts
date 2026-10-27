@@ -126,10 +126,14 @@ export function setupTestDb() {
       timer_log JSONB,
       judge_notes TEXT,
       player_notes TEXT,
+      resume_token TEXT,
+      draft JSONB,
       verified_by TEXT,
       verified_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT now()
     );
+
+    CREATE UNIQUE INDEX qualifier_submissions_resume_token_idx ON qualifier_submissions (resume_token);
 
     CREATE TABLE matches (
       id TEXT PRIMARY KEY DEFAULT gen_random_uuid(),

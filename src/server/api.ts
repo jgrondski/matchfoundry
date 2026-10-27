@@ -42,7 +42,12 @@ import {
   sendTestDiscordWebhook,
   listOnlineQualSessions,
   dispatchDiscordWebhook,
+  getOnlineQualRunByToken,
+  saveOnlineQualDraft,
+  discardOnlineQualRun,
+  QualRunAccessError,
 } from '../api/qualifiers';
+import { isPlaceholderSubmissionStatus } from '../features/online-quals/onlineQualsStatus';
 import { clearTournamentMatches } from '../api/brackets';
 import {
   listOrganizations,
@@ -937,6 +942,36 @@ export function createApiMiddleware() {
           return sendJson(res, 200, session);
         }
 
+        // GET /api/tournaments/:id/qualify/run?token=… (the competitor's own run link)
+        if (subAction === 'qualify/run' && method === 'GET') {
+          const run = await getOnlineQualRunByToken(tourneyId, url.searchParams.get('token') || '');
+          if (!run) return sendError(res, 404, 'This run link is no longer active');
+          return sendJson(res, 200, run);
+        }
+
+        // POST /api/tournaments/:id/qualify/draft (autosave; requires the run token)
+        if (subAction === 'qualify/draft' && method === 'POST') {
+          try {
+            const saved = await saveOnlineQualDraft(tourneyId, {
+              resumeToken: body?.resumeToken,
+              scores: body?.scores,
+              twitchVodUrl: body?.twitchVodUrl,
+              playerNotes: body?.playerNotes,
+            });
+            return sendJson(res, 200, saved);
+          } catch (err) {
+            if (err instanceof QualRunAccessError) return sendError(res, 403, err.message);
+            throw err;
+          }
+        }
+
+        // POST /api/tournaments/:id/qualify/discard (Tournament Admin only): throw away an unfinished run
+        if (subAction === 'qualify/discard' && method === 'POST') {
+          if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const result = await discardOnlineQualRun(tourneyId, body?.playerId);
+          return sendJson(res, 200, result);
+        }
+
         // GET /api/tournaments/:id/qualify/sessions (Review Queue - Tournament Admin only)
         if (subAction === 'qualify/sessions' && method === 'GET') {
           if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
@@ -972,16 +1007,23 @@ export function createApiMiddleware() {
 
         // POST /api/tournaments/:id/qualify/submit
         if (subAction === 'qualify/submit' && method === 'POST') {
-          const session = await submitOnlineQualScores(tourneyId, {
-            playerId: body?.playerId,
-            scores: body?.scores,
-            twitchVodUrl: body?.twitchVodUrl,
-            playerNotes: body?.playerNotes,
-            submittedTwitchId: body?.submittedTwitchId,
-            submittedTwitchUsername: body?.submittedTwitchUsername,
-            identityStatus: body?.identityStatus,
-            nowMs: body?.nowMs,
-          });
+          let session;
+          try {
+            session = await submitOnlineQualScores(tourneyId, {
+              playerId: body?.playerId,
+              scores: body?.scores,
+              twitchVodUrl: body?.twitchVodUrl,
+              playerNotes: body?.playerNotes,
+              resumeToken: body?.resumeToken,
+              submittedTwitchId: body?.submittedTwitchId,
+              submittedTwitchUsername: body?.submittedTwitchUsername,
+              identityStatus: body?.identityStatus,
+              nowMs: body?.nowMs,
+            });
+          } catch (err) {
+            if (err instanceof QualRunAccessError) return sendError(res, 403, err.message);
+            throw err;
+          }
           const t = await getFullTournament(tourneyId);
           if (t && !t.isLocked) {
             t.tiers = generateDraftBracketsForTournament(t);
@@ -1275,7 +1317,8 @@ export function createApiMiddleware() {
             );
           }
 
-          const qualSubs = (t.qualifierSubmissions || []).filter(s => s.playerId === playerId);
+          const playerSubs = (t.qualifierSubmissions || []).filter(s => s.playerId === playerId);
+          const qualSubs = playerSubs.filter(s => !isPlaceholderSubmissionStatus(s.status));
           if (qualSubs.length > 0) {
             return sendError(
               res,
@@ -1286,6 +1329,12 @@ export function createApiMiddleware() {
 
           if (isUuid(playerId)) {
             const db = getDb();
+            // An unfinished online run goes with the roster entry.
+            for (const sub of playerSubs) {
+              if (isUuid(sub.id)) {
+                await db.delete(qualifierSubmissions).where(eq(qualifierSubmissions.id, sub.id));
+              }
+            }
             await db
               .delete(tournamentPlayers)
               .where(
