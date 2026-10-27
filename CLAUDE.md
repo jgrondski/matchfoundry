@@ -22,6 +22,7 @@
 
 ## 3. Database & Drizzle Relational Invariants
 - **Mock DB vs. Real Postgres**: `vitest` runs in `pg-mem`. Passing unit tests DO NOT guarantee Postgres migration parity. Schema changes in `src/db/schema.ts` MUST be validated by running `npm run db:push` against real Docker PostgreSQL.
+- **Preview Deploys Share the Production DB**: Vercel Preview deploys and PR CI runs use the PRODUCTION Neon database. CI runs `db:push:ci` (`drizzle-kit push --force`) on PRs, so opening a PR migrates prod. Schema changes MUST be additive and backward-compatible: no drops, renames, or type changes. Use `uniqueIndex()` rather than `.unique()` on existing tables, because the constraint form triggers a truncate prompt that crashes CI. See `docs/DEPLOYMENT_PLAYBOOK.md` ("Database Environments"); separate preview DBs are a planned TODO.
 - **Naming Parity**:
   - `bracket_tiers.num_players` (SQL) maps to `tier.playerCount` in TS. Support both defensively.
   - Bracket routing supports both `'TRADITIONAL_TREE'` and `'TRADITIONAL'`.
