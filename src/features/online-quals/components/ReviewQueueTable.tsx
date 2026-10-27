@@ -7,26 +7,31 @@ import {
 } from 'lucide-react';
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
+import { isAbandonedRun } from '../sessionDerivation';
 
 export interface ReviewQueueTableProps {
   sessions: ReviewQueueSessionSummary[];
   onOpenAdjudicate: (session: ReviewQueueSessionSummary) => void;
   onOpenIdentityModal: (session: ReviewQueueSessionSummary) => void;
+  onDiscardRun?: (session: ReviewQueueSessionSummary) => void;
   qualWindowMinutes?: number;
 }
 
-export type ReviewFilter = 'ALL' | 'PENDING' | 'ONLINE' | 'IN_PERSON';
+export type ReviewFilter = 'ALL' | 'PENDING' | 'UNFINISHED' | 'ONLINE' | 'IN_PERSON';
 
 export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
   sessions,
   onOpenAdjudicate,
   onOpenIdentityModal,
+  onDiscardRun,
   qualWindowMinutes = 90,
 }) => {
   const [filter, setFilter] = useState<ReviewFilter>('PENDING');
   const [search, setSearch] = useState('');
 
   const pendingCount = sessions.filter(s => s.status === 'SUBMITTED').length;
+  const unfinishedCount = sessions.filter(s => s.status === 'IN_PROGRESS').length;
+  const abandonedCount = sessions.filter(s => isAbandonedRun(s, qualWindowMinutes)).length;
   const onlineCount = sessions.filter(s => s.submissionSource === 'ONLINE').length;
   const inPersonCount = sessions.filter(s => s.submissionSource === 'IN_PERSON').length;
 
@@ -34,6 +39,8 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
     // Tab filter
     if (filter === 'PENDING') {
       if (s.status !== 'SUBMITTED') return false;
+    } else if (filter === 'UNFINISHED') {
+      if (s.status !== 'IN_PROGRESS') return false;
     } else if (filter === 'ONLINE') {
       if (s.submissionSource !== 'ONLINE') return false;
     } else if (filter === 'IN_PERSON') {
@@ -96,6 +103,42 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
             >
               {pendingCount}
             </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilter('UNFINISHED')}
+            data-testid="unfinished-filter"
+            style={{
+              padding: '0.4rem 0.75rem',
+              borderRadius: 'var(--radius-full)',
+              border: filter === 'UNFINISHED' ? '1px solid #f87171' : '1px solid var(--color-border)',
+              background: filter === 'UNFINISHED' ? 'rgba(239, 68, 68, 0.15)' : 'var(--color-bg-surface)',
+              color: filter === 'UNFINISHED' ? '#fca5a5' : 'var(--color-text-secondary)',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+            }}
+          >
+            Unfinished ({unfinishedCount})
+            {abandonedCount > 0 && (
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  padding: '0.05rem 0.4rem',
+                  borderRadius: 'var(--radius-full)',
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  fontWeight: 800,
+                }}
+                title={`${abandonedCount} abandoned: still unfinished more than an hour past the window`}
+              >
+                {abandonedCount} abandoned
+              </span>
+            )}
           </button>
 
           <button
@@ -226,7 +269,7 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
             {filteredSessions.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                  No online qualifier runs found in this view.
+                  No Qualifiers Found.
                 </td>
               </tr>
             ) : (
@@ -235,6 +278,7 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                 const elapsedMin = Math.floor(elapsedSeconds / 60);
                 const elapsedSec = elapsedSeconds % 60;
                 const isOvertime = Boolean(session.timerLog?.overTime);
+                const isAbandoned = isAbandonedRun(session, qualWindowMinutes);
 
                 return (
                   <tr
@@ -461,11 +505,45 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                         {session.status === 'SUBMITTED' && 'Pending'}
                         {session.status === 'VERIFIED' && 'Verified'}
                       </span>
+                      {isAbandoned && (
+                        <div
+                          style={{
+                            marginTop: '0.3rem',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            color: '#ef4444',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            padding: '0.05rem 0.35rem',
+                            borderRadius: 'var(--radius-sm)',
+                            display: 'inline-block',
+                          }}
+                          title="Still unfinished more than an hour past the qual window"
+                          data-testid="abandoned-run-flag"
+                        >
+                          ⚠️ Abandoned
+                        </div>
+                      )}
                     </td>
 
                     {/* Actions */}
                     <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                        {session.status === 'IN_PROGRESS' && onDiscardRun && (
+                          <button
+                            type="button"
+                            onClick={() => onDiscardRun(session)}
+                            className="btn btn-secondary"
+                            data-testid="discard-run-button"
+                            style={{
+                              fontSize: '0.75rem',
+                              padding: '0.25rem 0.5rem',
+                              color: '#f87171',
+                              borderColor: 'rgba(239, 68, 68, 0.35)',
+                            }}
+                          >
+                            Discard
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => onOpenIdentityModal(session)}

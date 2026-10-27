@@ -9,6 +9,7 @@ import type {
   TierMetadata,
   MatchMetadata,
   QualTimerLog,
+  QualRunDraft,
 } from '../features/tournament/types';
 
 export const players = pgTable(
@@ -126,10 +127,17 @@ export const qualifierSubmissions = pgTable('qualifier_submissions', {
   judgeNotes: text('judge_notes'),
   // Competitor's own notes on an online run; public (posted with the submission to Discord).
   playerNotes: text('player_notes'),
+  // Secret handed only to the competitor running an online qual; proves ownership for resume/draft/submit.
+  resumeToken: text('resume_token'),
+  draft: jsonb('draft').$type<QualRunDraft>(),
   verifiedBy: text('verified_by'),
   verifiedAt: timestamp('verified_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  // A unique index, not a unique constraint: drizzle-kit push prompts (and fails in CI) when adding a
+  // unique constraint to a table that already has rows.
+  uniqueIndex('qualifier_submissions_resume_token_idx').on(table.resumeToken),
+]);
 
 export const matches = pgTable(
   'matches',

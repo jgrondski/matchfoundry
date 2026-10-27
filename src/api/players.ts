@@ -1,6 +1,7 @@
 import { players, tournamentPlayers, qualifierSubmissions, matches, tournaments } from '../db/schema';
 import { eq, sql, or, inArray, isNotNull } from 'drizzle-orm';
 import { getDb } from '../db';
+import { isPlaceholderSubmissionStatus } from '../features/online-quals/onlineQualsStatus';
 
 export interface PlayerRecord {
   id: string;
@@ -175,14 +176,17 @@ export async function deletePlayer(
     .innerJoin(tournaments, eq(tournamentPlayers.tournamentId, tournaments.id))
     .where(eq(tournamentPlayers.playerId, id));
 
-  // Find qualifier submissions
-  const quals = await db
+  // Find qualifier submissions; unfinished-run placeholders are not results and don't block deletion
+  const allQuals = await db
     .select({
+      id: qualifierSubmissions.id,
+      status: qualifierSubmissions.status,
       tournamentName: tournaments.name,
     })
     .from(qualifierSubmissions)
     .innerJoin(tournaments, eq(qualifierSubmissions.tournamentId, tournaments.id))
     .where(eq(qualifierSubmissions.playerId, id));
+  const quals = allQuals.filter((q: { status: string }) => !isPlaceholderSubmissionStatus(q.status));
 
   // Find matches
   const matchRows = await db
@@ -211,6 +215,11 @@ export async function deletePlayer(
       success: false,
       error: `Cannot delete competitor because they are ${detail}. Remove them from tournament rosters first.`,
     };
+  }
+
+  const placeholderIds = allQuals.map((q: { id: string }) => q.id);
+  if (placeholderIds.length > 0) {
+    await db.delete(qualifierSubmissions).where(inArray(qualifierSubmissions.id, placeholderIds));
   }
 
   const res = await db.delete(players).where(eq(players.id, id)).returning();

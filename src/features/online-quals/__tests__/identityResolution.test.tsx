@@ -21,6 +21,7 @@ import { IdentityResolutionModal } from '../components/IdentityResolutionModal';
 import { AdjudicationModal } from '../components/AdjudicationModal';
 import { ReviewQueueTable } from '../components/ReviewQueueTable';
 import type { Tournament } from '../../tournament/types';
+import { runToken } from './runToken';
 
 describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
   let tourney: Tournament;
@@ -68,7 +69,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         identityStatus: 'CLAIMED_PENDING_REVIEW',
       });
       await submitOnlineQualScores(tourney.id, {
-        playerId: p1Id,
+        playerId: p1Id, resumeToken: await runToken(tourney.id, p1Id),
         scores: [1100000],
         twitchVodUrl: 'https://twitch.tv/videos/111222',
         submittedTwitchId: 'twitch_jonas_123',
@@ -106,7 +107,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         submittedTwitchUsername: 'harryhong',
       });
       await submitOnlineQualScores(tourney.id, {
-        playerId: p1Id,
+        playerId: p1Id, resumeToken: await runToken(tourney.id, p1Id),
         scores: [1150000],
         twitchVodUrl: 'https://twitch.tv/videos/333444',
         submittedTwitchId: 'twitch_harry_456',
@@ -163,7 +164,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         identityStatus: 'PROVISIONAL_NEW',
       });
       await submitOnlineQualScores(tourney.id, {
-        playerId: walkInPlayerId,
+        playerId: walkInPlayerId, resumeToken: await runToken(tourney.id, walkInPlayerId),
         scores: [1050000],
         twitchVodUrl: 'https://twitch.tv/videos/555666',
         submittedTwitchId: 'twitch_retro_789',
@@ -347,7 +348,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
       expect(session.identityStatus).toBe('CLAIMED_PENDING_REVIEW');
 
       await submitOnlineQualScores(tourney.id, {
-        playerId: p1Id,
+        playerId: p1Id, resumeToken: await runToken(tourney.id, p1Id),
         scores: [1200000],
         twitchVodUrl: 'https://twitch.tv/videos/999888',
         submittedTwitchUsername: 'jonas_official',
@@ -381,7 +382,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         submittedTwitchUsername: 'real_harry_stream',
       });
       await submitOnlineQualScores(tourney.id, {
-        playerId: mistaken.id,
+        playerId: mistaken.id, resumeToken: await runToken(tourney.id, mistaken.id),
         scores: [1020000],
         twitchVodUrl: 'https://twitch.tv/videos/777888',
         submittedTwitchUsername: 'real_harry_stream',
@@ -416,7 +417,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         submittedTwitchUsername: 'jonas_junior_live',
       });
       await submitOnlineQualScores(tourney.id, {
-        playerId: p1Id,
+        playerId: p1Id, resumeToken: await runToken(tourney.id, p1Id),
         scores: [890000],
         twitchVodUrl: 'https://twitch.tv/videos/555444',
         submittedTwitchUsername: 'jonas_junior_live',
@@ -456,7 +457,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         submittedTwitchUsername: 'omen_impostor',
       });
       await submitOnlineQualScores(tourney.id, {
-        playerId: p1Id,
+        playerId: p1Id, resumeToken: await runToken(tourney.id, p1Id),
         scores: [810000],
         twitchVodUrl: 'https://twitch.tv/videos/111222',
         submittedTwitchUsername: 'omen_impostor',

@@ -15,6 +15,7 @@ import {
   isDiscordWebhookUrl,
 } from '../discordMessages';
 import type { Tournament } from '../../tournament/types';
+import { runToken } from './runToken';
 
 const TOURNEY_HOOK = 'https://discord.com/api/webhooks/111/tourney-token';
 const ORG_HOOK = 'https://discord.com/api/webhooks/222/org-token';
@@ -198,7 +199,7 @@ describe('Discord webhook (server)', () => {
     expect(discordPosts().filter(p => p.body.content.includes('started'))).toHaveLength(1);
 
     const submit = await call(`/api/tournaments/${t.id}/qualify/submit`, {
-      body: { playerId: player.id, scores: [999999, 845123], twitchVodUrl: 'https://twitch.tv/videos/1' },
+      body: { playerId: player.id, resumeToken: await runToken(t.id, player.id), scores: [999999, 845123], twitchVodUrl: 'https://twitch.tv/videos/1' },
     });
     expect(submit.getStatusCode()).toBe(200);
     const submitPost = discordPosts().find(p => p.body.content.includes('submitted'));
@@ -209,7 +210,7 @@ describe('Discord webhook (server)', () => {
     expect(discordPosts().filter(p => p.body.content.includes('started'))).toHaveLength(1);
 
     const resubmit = await call(`/api/tournaments/${t.id}/qualify/submit`, {
-      body: { playerId: player.id, scores: [1200000], twitchVodUrl: 'https://twitch.tv/videos/2' },
+      body: { playerId: player.id, resumeToken: await runToken(t.id, player.id), scores: [1200000], twitchVodUrl: 'https://twitch.tv/videos/2' },
     });
     expect(resubmit.getStatusCode()).toBeGreaterThanOrEqual(400);
     expect(resubmit.getBody().error).toMatch(/already submitted/i);
@@ -221,12 +222,12 @@ describe('Discord webhook (server)', () => {
     await call(`/api/tournaments/${t.id}/qualify/start`, { body: { playerId: player.id } });
 
     const tooLong = await call(`/api/tournaments/${t.id}/qualify/submit`, {
-      body: { playerId: player.id, scores: [845123], twitchVodUrl: 'https://twitch.tv/videos/1', playerNotes: 'x'.repeat(1001) },
+      body: { playerId: player.id, resumeToken: await runToken(t.id, player.id), scores: [845123], twitchVodUrl: 'https://twitch.tv/videos/1', playerNotes: 'x'.repeat(1001) },
     });
     expect(tooLong.getStatusCode()).toBeGreaterThanOrEqual(400);
 
     const submit = await call(`/api/tournaments/${t.id}/qualify/submit`, {
-      body: { playerId: player.id, scores: [845123], twitchVodUrl: 'https://twitch.tv/videos/1', playerNotes: 'OBS froze in game 2' },
+      body: { playerId: player.id, resumeToken: await runToken(t.id, player.id), scores: [845123], twitchVodUrl: 'https://twitch.tv/videos/1', playerNotes: 'OBS froze in game 2' },
     });
     expect(submit.getBody().playerNotes).toBe('OBS froze in game 2');
     expect(discordPosts().find(p => p.body.content.includes('submitted'))?.body.content).toContain('> OBS froze in game 2');

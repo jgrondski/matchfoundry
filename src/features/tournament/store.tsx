@@ -13,6 +13,7 @@ import {
   generateAdditionalFakePlayers,
 } from './simulation';
 import { getAuthHeaders, usePinAuth } from '../auth/AuthContext';
+import { isPlaceholderSubmissionStatus } from '../online-quals/onlineQualsStatus';
 
 interface TournamentContextType {
   tournaments: Tournament[];
@@ -242,6 +243,9 @@ export function jumpSeedsBunched(
 
 export const TournamentContext = createContext<TournamentContextType | null>(null);
 
+// Waits between retries of the initial load (4 attempts, ~7s total) before showing a connection error.
+const HYDRATE_RETRY_DELAYS_MS = [1000, 2000, 4000];
+
 async function apiCall(endpoint: string, options: RequestInit = {}) {
   if (typeof fetch === 'undefined') return null;
   const authHeaders = getAuthHeaders();
@@ -418,33 +422,47 @@ export const TournamentProvider: React.FC<{
   useEffect(() => {
     if (initialHydrated) return;
     let isMounted = true;
+    // One load attempt; false when the server or database couldn't be reached.
+    async function loadOnce(): Promise<boolean> {
+      const isHealthy = await checkDbHealth();
+      if (!isHealthy) {
+        console.warn('[Store] Database health check failed. PostgreSQL is offline.');
+        return false;
+      }
+      let tournamentsFailed = false;
+      const [tourneys, players] = await Promise.all([
+        apiCall('/api/tournaments').catch(err => {
+          console.error('Failed to load tournaments from DB:', err);
+          setIsDbConnected(false);
+          setDbError(err.message);
+          tournamentsFailed = true;
+          return [];
+        }),
+        apiCall('/api/players').catch(err => {
+          console.error('Failed to load players from DB:', err);
+          return [];
+        }),
+      ]);
+      if (tournamentsFailed) return false;
+      if (isMounted) {
+        if (Array.isArray(tourneys)) {
+          setTournaments(tourneys);
+        }
+        if (Array.isArray(players)) {
+          setGlobalPlayers(players);
+        }
+      }
+      return true;
+    }
+
     async function hydrate() {
       setIsLoading(true);
       try {
-        const isHealthy = await checkDbHealth();
-        if (!isHealthy) {
-          console.warn('[Store] Database health check failed. PostgreSQL is offline.');
-          return;
-        }
-        const [tourneys, players] = await Promise.all([
-          apiCall('/api/tournaments').catch(err => {
-            console.error('Failed to load tournaments from DB:', err);
-            setIsDbConnected(false);
-            setDbError(err.message);
-            return [];
-          }),
-          apiCall('/api/players').catch(err => {
-            console.error('Failed to load players from DB:', err);
-            return [];
-          }),
-        ]);
-        if (isMounted) {
-          if (Array.isArray(tourneys)) {
-            setTournaments(tourneys);
-          }
-          if (Array.isArray(players)) {
-            setGlobalPlayers(players);
-          }
+        // A phone waking up often has no connection for the first few seconds; retry before giving up.
+        for (let attempt = 0; isMounted; attempt++) {
+          if (await loadOnce()) break;
+          if (attempt >= HYDRATE_RETRY_DELAYS_MS.length) break;
+          await new Promise(resolve => setTimeout(resolve, HYDRATE_RETRY_DELAYS_MS[attempt]));
         }
       } finally {
         if (isMounted) {
@@ -1617,7 +1635,7 @@ export const TournamentProvider: React.FC<{
     }
 
     const hasQualScores = (tournament.qualifierSubmissions || []).some(
-      s => s.playerId === playerId
+      s => s.playerId === playerId && !isPlaceholderSubmissionStatus(s.status)
     );
     if (hasQualScores) {
       return {

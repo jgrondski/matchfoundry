@@ -22,6 +22,7 @@ import {
   Edit2,
 } from 'lucide-react';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { isPlaceholderSubmissionStatus } from '../features/online-quals/onlineQualsStatus';
 
 export const ManageTournamentPlayersPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -77,7 +78,9 @@ export const ManageTournamentPlayersPage: React.FC = () => {
 
   const playerQualCount = useMemo(() => {
     if (!playerToRemove || !tournament?.qualifierSubmissions) return 0;
-    return tournament.qualifierSubmissions.filter(s => s.playerId === playerToRemove.id).length;
+    return tournament.qualifierSubmissions.filter(
+      s => s.playerId === playerToRemove.id && !isPlaceholderSubmissionStatus(s.status)
+    ).length;
   }, [playerToRemove, tournament?.qualifierSubmissions]);
 
   const isRemovalBlocked = useMemo(() => {

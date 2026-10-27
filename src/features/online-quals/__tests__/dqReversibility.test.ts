@@ -15,6 +15,7 @@ import {
   getPlayerQualifierStatus,
 } from '../../qualifiers/scoring';
 import type { Tournament, PlayerProfile, QualifierSubmission } from '../../tournament/types';
+import { runToken } from './runToken';
 
 function createMockReq(options: {
   url: string;
@@ -122,7 +123,7 @@ describe('Tournament-scoped DQ / DNQ reversibility and seeding', () => {
       createMockReq({
         url: `/api/tournaments/${tourneyId}/qualify/submit`,
         method: 'POST',
-        body: { playerId, scores, twitchVodUrl: 'https://twitch.tv/videos/1' },
+        body: { playerId, resumeToken: await runToken(tourneyId, playerId), scores, twitchVodUrl: 'https://twitch.tv/videos/1' },
       }),
       createMockRes() as any,
       () => {}

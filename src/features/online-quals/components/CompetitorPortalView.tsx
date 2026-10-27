@@ -1,4 +1,5 @@
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Gamepad2,
   Tv,
@@ -8,6 +9,7 @@ import {
   ShieldAlert,
   User,
   LogOut,
+  Link2,
 } from 'lucide-react';
 import { PreFlightModal } from './PreFlightModal';
 import { AuthwordHudCard } from './AuthwordHudCard';
@@ -33,7 +35,14 @@ export interface PersistedPortalSession {
   scores: number[];
   twitchVodUrl: string;
   playerNotes?: string;
+  // Token from the `?run=` link; absent for runs started before run links existed.
+  resumeToken?: string;
+  // True while this browser holds edits the server has not confirmed saving.
+  draftDirty?: boolean;
 }
+
+const DRAFT_SAVE_DELAY_MS = 800;
+const DRAFT_RETRY_DELAY_MS = 5000;
 
 export function clearPersistedSession(tournamentId: string): void {
   const storage = typeof window !== 'undefined' && window.localStorage ? window.localStorage : (typeof globalThis !== 'undefined' && (globalThis as any).localStorage ? (globalThis as any).localStorage : null);
@@ -76,23 +85,19 @@ export function loadPersistedSession(tournament: Tournament): PersistedPortalSes
       return null;
     }
 
-    // Reconcile with latest server submissions in tournament prop if present
+    // Reconcile with the server's rows for this player. Row order is arbitrary, so look for the
+    // in-progress row itself; if the player has rows but none in progress, the qual is over.
     const subs = (tournament.qualifierSubmissions || []).filter(s => s.playerId === parsed.playerId);
     if (subs.length > 0) {
-      const first = subs[0];
-      // If the submission is no longer in progress (e.g. submitted, verified, dq, dnq), the qual is over!
-      if (first.status && first.status !== 'IN_PROGRESS') {
+      const live = subs.find(s => s.status === 'IN_PROGRESS');
+      if (!live) {
         clearPersistedSession(tournament.id);
         return null;
       }
-      const scoredRows = subs.filter(s => s.status !== 'IN_PROGRESS' && s.status !== 'NOT_STARTED');
       parsed.activeSession = {
         ...parsed.activeSession,
-        status: first.status || parsed.activeSession.status,
-        authWord: first.authWord || parsed.activeSession.authWord,
-        twitchVodUrl: first.twitchVodUrl || parsed.activeSession.twitchVodUrl,
-        timerLog: first.timerLog || parsed.activeSession.timerLog,
-        scores: scoredRows.length > 0 ? scoredRows.map(s => s.score) : parsed.activeSession.scores,
+        authWord: live.authWord || parsed.activeSession.authWord,
+        timerLog: live.timerLog || parsed.activeSession.timerLog,
       };
     }
     return parsed;
@@ -105,7 +110,14 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
   const tournamentContext = useContext(TournamentContext);
   const refreshTournament = tournamentContext?.refreshTournament;
 
-  const initialPersisted = loadPersistedSession(tournament);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlToken = searchParams.get('run');
+
+  // Read once on mount. A run link for a different run than the one saved here wins.
+  const [initialPersisted] = useState(() => {
+    const persisted = loadPersistedSession(tournament);
+    return urlToken && persisted?.resumeToken !== urlToken ? null : persisted;
+  });
 
   // Intake form state (strictly local until Pre-Flight confirmation)
   const [enteredPlayerName, setEnteredPlayerName] = useState(initialPersisted?.playerName || '');
@@ -118,6 +130,9 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
   const [activeSession, setActiveSession] = useState<OnlineQualSessionSummary | null>(
     initialPersisted?.activeSession || null
   );
+  const [resumeToken, setResumeToken] = useState<string | null>(urlToken || initialPersisted?.resumeToken || null);
+  // A run link with nothing saved in this browser shows a loading state until the server answers.
+  const [isRestoring, setIsRestoring] = useState(Boolean(urlToken && !initialPersisted));
 
   // Modals state
   const [isPreFlightOpen, setIsPreFlightOpen] = useState(false);
@@ -130,6 +145,13 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
+
+  // Draft autosave: edits bump editSeq; a save only clears the dirty flag if nothing changed meanwhile.
+  const [draftStatus, setDraftStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [draftRetryTick, setDraftRetryTick] = useState(0);
+  const draftDirtyRef = useRef(Boolean(initialPersisted?.draftDirty));
+  const editSeqRef = useRef(0);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const windowMinutes = tournament.qualWindowMinutes || 90;
   const isQualsClosed = Boolean(tournament.qualsClosed || tournament.isLocked);
@@ -146,50 +168,164 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
     return '# of Maxes';
   })();
 
+  const setRunParam = (token: string | null) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (token) next.set('run', token);
+      else next.delete('run');
+      return next;
+    }, { replace: true });
+  };
+
+  const persistRun = (overrides: Partial<PersistedPortalSession> = {}) => {
+    if (!activeSession || !resolvedPlayer || activeSession.status !== 'IN_PROGRESS') return;
+    savePersistedSession(tournament.id, {
+      playerId: resolvedPlayer.id,
+      playerName: resolvedPlayer.name,
+      twitchHandle: enteredTwitchHandle,
+      activeSession,
+      scores,
+      twitchVodUrl,
+      playerNotes,
+      resumeToken: resumeToken || undefined,
+      draftDirty: draftDirtyRef.current,
+      ...overrides,
+    });
+  };
+
+  const handleDraftEdit = (overrides: Pick<Partial<PersistedPortalSession>, 'scores' | 'twitchVodUrl' | 'playerNotes'>) => {
+    editSeqRef.current += 1;
+    draftDirtyRef.current = true;
+    persistRun({ ...overrides, draftDirty: true });
+  };
+
   const handleScoresChange = (nextScores: number[]) => {
     setScores(nextScores);
-    if (activeSession && resolvedPlayer && activeSession.status === 'IN_PROGRESS') {
-      savePersistedSession(tournament.id, {
-        playerId: resolvedPlayer.id,
-        playerName: resolvedPlayer.name,
-        twitchHandle: enteredTwitchHandle,
-        activeSession,
-        scores: nextScores,
-        twitchVodUrl,
-        playerNotes,
-      });
-    }
+    handleDraftEdit({ scores: nextScores });
   };
 
   const handleVodUrlChange = (nextVodUrl: string) => {
     setTwitchVodUrl(nextVodUrl);
-    if (activeSession && resolvedPlayer && activeSession.status === 'IN_PROGRESS') {
-      savePersistedSession(tournament.id, {
-        playerId: resolvedPlayer.id,
-        playerName: resolvedPlayer.name,
-        twitchHandle: enteredTwitchHandle,
-        activeSession,
-        scores,
-        twitchVodUrl: nextVodUrl,
-        playerNotes,
-      });
-    }
+    handleDraftEdit({ twitchVodUrl: nextVodUrl });
   };
 
   const handlePlayerNotesChange = (nextNotes: string) => {
     setPlayerNotes(nextNotes);
-    if (activeSession && resolvedPlayer && activeSession.status === 'IN_PROGRESS') {
-      savePersistedSession(tournament.id, {
-        playerId: resolvedPlayer.id,
-        playerName: resolvedPlayer.name,
-        twitchHandle: enteredTwitchHandle,
-        activeSession,
-        scores,
-        twitchVodUrl,
-        playerNotes: nextNotes,
-      });
-    }
+    handleDraftEdit({ playerNotes: nextNotes });
   };
+
+  const resetToIntake = () => {
+    clearPersistedSession(tournament.id);
+    setRunParam(null);
+    setResumeToken(null);
+    draftDirtyRef.current = false;
+    setDraftStatus('idle');
+    setActiveSession(null);
+    setResolvedPlayer(null);
+    setScores([]);
+    setTwitchVodUrl('');
+    setPlayerNotes('');
+  };
+
+  // The server is the source of truth for a run with a token: load it once on mount.
+  useEffect(() => {
+    if (!resumeToken) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/tournaments/${tournament.id}/qualify/run?token=${encodeURIComponent(resumeToken)}`
+        );
+        if (cancelled) return;
+        if (res.status === 404) {
+          resetToIntake();
+          setErrorMessage('That run link is no longer active.');
+          return;
+        }
+        // Server or network trouble: keep this browser's copy and let autosave catch up later.
+        if (!res.ok) return;
+        const run = (await res.json()) as OnlineQualSessionSummary;
+        if (cancelled) return;
+
+        // Edits this device never managed to save beat the server's older draft.
+        const keepLocal = draftDirtyRef.current || !run.draft;
+        const nextScores = keepLocal ? scores : run.draft?.scores || [];
+        const nextVod = keepLocal ? twitchVodUrl : run.draft?.twitchVodUrl || '';
+        const nextNotes = keepLocal ? playerNotes : run.draft?.playerNotes || '';
+        const playerName = run.playerName || initialPersisted?.playerName || '';
+        const twitchHandle = initialPersisted?.twitchHandle || run.submittedTwitchUsername || '';
+
+        setActiveSession(run);
+        setResolvedPlayer({ id: run.playerId, name: playerName });
+        setEnteredPlayerName(playerName);
+        setEnteredTwitchHandle(twitchHandle);
+        setScores(nextScores);
+        setTwitchVodUrl(nextVod);
+        setPlayerNotes(nextNotes);
+        savePersistedSession(tournament.id, {
+          playerId: run.playerId,
+          playerName,
+          twitchHandle,
+          activeSession: run,
+          scores: nextScores,
+          twitchVodUrl: nextVod,
+          playerNotes: nextNotes,
+          resumeToken,
+          draftDirty: draftDirtyRef.current,
+        });
+        if (draftDirtyRef.current) setDraftRetryTick(t => t + 1);
+      } catch {
+        // Offline: keep this browser's copy.
+      } finally {
+        if (!cancelled) setIsRestoring(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Mount-only: later token changes come from start/submit/switch, which already hold the run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep the run link in the address bar while a tokened run is in progress.
+  useEffect(() => {
+    if (activeSession?.status === 'IN_PROGRESS' && resumeToken && urlToken !== resumeToken) {
+      setRunParam(resumeToken);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSession?.status, resumeToken, urlToken]);
+
+  // Autosave the draft to the server shortly after edits stop; retry until it lands.
+  useEffect(() => {
+    if (!draftDirtyRef.current || !resumeToken || activeSession?.status !== 'IN_PROGRESS') return;
+    const seq = editSeqRef.current;
+    const timer = setTimeout(async () => {
+      setDraftStatus('saving');
+      try {
+        const res = await fetch(`/api/tournaments/${tournament.id}/qualify/draft`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resumeToken, scores, twitchVodUrl, playerNotes }),
+        });
+        if (res.status === 403) {
+          setDraftStatus('error');
+          setErrorMessage('This run is no longer active. A judge may have closed it.');
+          return;
+        }
+        if (!res.ok) throw new Error('Draft save failed');
+        if (editSeqRef.current === seq) {
+          draftDirtyRef.current = false;
+          persistRun({ draftDirty: false });
+        }
+        setDraftStatus('saved');
+      } catch {
+        setDraftStatus('error');
+        setTimeout(() => setDraftRetryTick(t => t + 1), DRAFT_RETRY_DELAY_MS);
+      }
+    }, DRAFT_SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scores, twitchVodUrl, playerNotes, resumeToken, activeSession?.status, draftRetryTick]);
 
   // Open Pre-Flight modal after validating non-empty local intake
   const handleOpenPreFlight = (e: React.FormEvent) => {
@@ -226,8 +362,8 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
     setIsPreFlightOpen(true);
   };
 
-  // Start Official Qual Run — called ONLY when the 4 pre-flight checkboxes are confirmed!
-  // Deferred persistence: Zero database records are created until this definite user action.
+  // Start Official Qual Run — called ONLY when the pre-flight checkboxes are confirmed,
+  // or directly to resume a run that already exists for this competitor.
   const handleStartRun = async () => {
     const cleanName = enteredPlayerName.trim();
     const cleanTwitch = enteredTwitchHandle
@@ -256,20 +392,36 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
 
       // Persist to localStorage only if the run is still in-progress
       if (data.status === 'IN_PROGRESS') {
+        // Resuming: the server's draft restores everything typed so far.
+        const draft = (data as OnlineQualSessionSummary).draft;
+        const nextScores = draft ? draft.scores || [] : scores;
+        const nextVod = draft ? draft.twitchVodUrl || '' : twitchVodUrl;
+        const nextNotes = draft ? draft.playerNotes || '' : playerNotes;
+        setScores(nextScores);
+        setTwitchVodUrl(nextVod);
+        setPlayerNotes(nextNotes);
+        setResumeToken(data.resumeToken || null);
+        draftDirtyRef.current = false;
         savePersistedSession(tournament.id, {
           playerId: data.playerId,
           playerName: pName,
           twitchHandle: enteredTwitchHandle || cleanTwitch,
           activeSession: data,
-          scores,
-          twitchVodUrl,
+          scores: nextScores,
+          twitchVodUrl: nextVod,
+          playerNotes: nextNotes,
+          resumeToken: data.resumeToken || undefined,
         });
       } else {
         clearPersistedSession(tournament.id);
       }
 
       setIsPreFlightOpen(false);
-      setStatusNotice('Authword Ready. Start your timer when authword is entered, and remember your final game in progress when the timer ends will count.');
+      setStatusNotice(
+        data.isNewSession === false && data.status === 'IN_PROGRESS'
+          ? 'Welcome back. Your run has been restored.'
+          : 'Authword Ready. Start your timer when authword is entered, and remember your final game in progress when the timer ends will count.'
+      );
       void refreshTournament?.(tournament.id);
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to launch qualifier run');
@@ -294,6 +446,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
           scores: finalScores,
           twitchVodUrl,
           playerNotes,
+          resumeToken: resumeToken || undefined,
           submittedTwitchUsername: enteredTwitchHandle.trim().replace(/^@/, ''),
         }),
       });
@@ -302,6 +455,10 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
 
       // The qual is officially submitted and over! Clear persisted session so subsequent visits don't lock to this user.
       clearPersistedSession(tournament.id);
+      setRunParam(null);
+      setResumeToken(null);
+      draftDirtyRef.current = false;
+      setDraftStatus('idle');
       setActiveSession(session);
 
       setStatusNotice('Official qualifier submitted! Your provisional score is recorded.');
@@ -310,6 +467,18 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       setErrorMessage(err.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCopyRunLink = async () => {
+    if (!resumeToken) return;
+    const link = `${window.location.origin}/${tournament.slug}/qualify?run=${resumeToken}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      window.prompt('Copy your run link:', link);
     }
   };
 
@@ -322,15 +491,10 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
   };
 
   const handleConfirmSwitchCompetitor = () => {
-    clearPersistedSession(tournament.id);
+    resetToIntake();
     setIsSwitchModalOpen(false);
-    setActiveSession(null);
-    setResolvedPlayer(null);
     setEnteredPlayerName('');
     setEnteredTwitchHandle('');
-    setScores([]);
-    setTwitchVodUrl('');
-    setPlayerNotes('');
     setErrorMessage(null);
     setStatusNotice(null);
   };
@@ -467,7 +631,21 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       )}
 
       {/* STEP 1: Streamlined Competitor Intake (No OAuth / No premature DB persistence) */}
-      {!activeSession ? (
+      {isRestoring && !activeSession ? (
+        <div
+          style={{
+            background: 'var(--color-bg-surface, #121820)',
+            border: '1px solid var(--color-border, #263342)',
+            borderRadius: '14px',
+            padding: '2.5rem',
+            textAlign: 'center',
+            color: 'var(--color-text-secondary, #94a3b8)',
+          }}
+          data-testid="restoring-run"
+        >
+          Restoring your run...
+        </div>
+      ) : !activeSession ? (
         <div
           style={{
             background: 'var(--color-bg-surface, #121820)',
@@ -601,6 +779,9 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
               <Play size={18} fill="#000000" />
               Review Rules &amp; Checklist
             </button>
+            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted, #64748b)', textAlign: 'center' }}>
+              Already started? Enter the same name and Twitch to resume.
+            </span>
           </form>
         </div>
       ) : (
@@ -653,6 +834,43 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                 </div>
               </div>
 
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+              {resumeToken && (
+                <span
+                  style={{
+                    fontSize: '0.78rem',
+                    color: draftStatus === 'error' ? '#f87171' : 'var(--color-text-muted, #64748b)',
+                  }}
+                  data-testid="draft-save-status"
+                >
+                  {draftStatus === 'saving' && 'Saving...'}
+                  {draftStatus === 'saved' && 'Saved'}
+                  {draftStatus === 'error' && 'Not saved, retrying'}
+                </span>
+              )}
+              {resumeToken && (
+                <button
+                  type="button"
+                  onClick={handleCopyRunLink}
+                  data-testid="copy-run-link-button"
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid var(--color-border, #263342)',
+                    borderRadius: '6px',
+                    padding: '0.4rem 0.85rem',
+                    color: 'var(--color-text-secondary, #94a3b8)',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                  }}
+                  title="Bookmark or open this link to get back to your run on any device"
+                >
+                  <Link2 size={13} /> {linkCopied ? 'Copied!' : 'Copy Run Link'}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleRequestSwitchCompetitor}
@@ -674,6 +892,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
               >
                 <LogOut size={13} /> Switch Competitor
               </button>
+              </div>
             </div>
           )}
 
@@ -788,16 +1007,16 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
             </div>
 
             <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--color-text-secondary, #94a3b8)', lineHeight: 1.5 }}>
-              Your qualifier run for <strong style={{ color: '#ffffff' }}>{resolvedPlayer?.name || activeSession?.playerName}</strong> (Authword: <strong style={{ color: 'var(--color-gold-bright, #f59e0b)' }}>{activeSession?.authWord}</strong>) is currently marked as <strong style={{ color: 'var(--color-gold-bright, #f59e0b)' }}>In Progress</strong> on the leaderboard.
+              Your run for <strong style={{ color: '#ffffff' }}>{resolvedPlayer?.name || activeSession?.playerName}</strong> (Authword: <strong style={{ color: 'var(--color-gold-bright, #f59e0b)' }}>{activeSession?.authWord}</strong>) stays open.
             </p>
 
             <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted, #64748b)', lineHeight: 1.4 }}>
-              It will remain In Progress until a Tournament Judge resolves it in <strong style={{ color: '#ffffff' }}>Qual Review</strong>, or until you resume and finish submitting under the same competitor name (<strong style={{ color: '#ffffff' }}>{resolvedPlayer?.name || activeSession?.playerName}</strong>).
+              To come back to it, use your run link or enter the same name and Twitch.
             </p>
 
-            {scores.some(s => typeof s === 'number' && s > 0) && (
+            {(draftDirtyRef.current || !resumeToken) && scores.some(s => typeof s === 'number' && s > 0) && (
               <div style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', fontSize: '0.8rem' }}>
-                ⚠️ Any unsubmitted scores currently typed into the form will be cleared from this browser.
+                ⚠️ Some scores haven't been saved to the server yet and will be lost.
               </div>
             )}
 

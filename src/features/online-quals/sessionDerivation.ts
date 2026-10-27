@@ -22,7 +22,7 @@ export function deriveSessionsFromTournament(tournament: Tournament): ReviewQueu
   const result: ReviewQueueSessionSummary[] = [];
 
   for (const [playerId, subs] of groups.entries()) {
-    const first = subs[0];
+    const first = subs.find(s => s.status === 'IN_PROGRESS') || subs[0];
     const isOnline = subs.some(s => s.submissionSource === 'ONLINE');
     const scoredRows = subs.filter(
       s => s.status !== 'IN_PROGRESS' && s.status !== 'NOT_STARTED'
@@ -57,6 +57,22 @@ export function deriveSessionsFromTournament(tournament: Tournament): ReviewQueu
   }
 
   return result;
+}
+
+/** How long past its qual window an unfinished run goes before judges see it flagged. */
+export const ABANDONED_GRACE_MINUTES = 60;
+
+/**
+ * An unfinished online run more than an hour past its window. Only a warning for judges: nothing
+ * is DQ'd or deleted automatically.
+ */
+export function isAbandonedRun(
+  session: Pick<ReviewQueueSessionSummary, 'status' | 'timerLog'>,
+  qualWindowMinutes: number,
+  nowMs: number = Date.now()
+): boolean {
+  if (session.status !== 'IN_PROGRESS' || !session.timerLog?.startedAt) return false;
+  return nowMs > session.timerLog.startedAt + (qualWindowMinutes + ABANDONED_GRACE_MINUTES) * 60_000;
 }
 
 /**

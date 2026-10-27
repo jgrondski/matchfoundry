@@ -8,13 +8,39 @@ import { CompetitorPortalView } from '../features/online-quals/components/Compet
 export const PublicQualifyPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { getTournamentBySlug, isLoading, isHydrated } = useTournament();
+  const { getTournamentBySlug, isLoading, isHydrated, isDbConnected, retryConnection } = useTournament();
 
   if (isLoading || !isHydrated) {
     return <LoadingScreen message="Loading qualification portal..." />;
   }
 
   const tournament = slug ? getTournamentBySlug(slug) : undefined;
+  if (!tournament && !isDbConnected) {
+    // Loading failed (often a phone waking up offline). Any run in progress is still saved.
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary, #94a3b8)' }} data-testid="qualify-connection-error">
+        <h2>Can't reach the server</h2>
+        <p>Check your connection and try again. Your run is still saved.</p>
+        <button
+          onClick={() => void retryConnection()}
+          className="btn btn-primary"
+          style={{
+            marginTop: '1rem',
+            padding: '0.65rem 1.25rem',
+            background: 'var(--color-gold-bright, #f59e0b)',
+            color: '#000000',
+            border: 'none',
+            borderRadius: '8px',
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   if (!tournament) {
     return (
       <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary, #94a3b8)' }}>

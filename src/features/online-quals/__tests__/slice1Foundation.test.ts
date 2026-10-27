@@ -21,6 +21,7 @@ import {
   generateDraftBracketsForTournament,
 } from '../../qualifiers/scoring';
 import type { Tournament, PlayerProfile } from '../../tournament/types';
+import { runToken } from './runToken';
 
 function createMockReq(options: {
   url: string;
@@ -464,7 +465,7 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
         url: `/api/tournaments/${tourney.id}/qualify/submit`,
         method: 'POST',
         body: {
-          playerId: player.id,
+          playerId: player.id, resumeToken: await runToken(tourney.id, player.id),
           scores: [750000, 820000],
           twitchVodUrl: 'https://twitch.tv/videos/1234567890?t=00h15m00s',
         },
@@ -550,7 +551,7 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
           url: `/api/tournaments/${tourney.id}/qualify/submit`,
           method: 'POST',
           body: {
-            playerId: player.id,
+            playerId: player.id, resumeToken: await runToken(tourney.id, player.id),
             scores: [880000, 910000],
             twitchVodUrl: 'https://twitch.tv/videos/999?t=01h00m',
           },

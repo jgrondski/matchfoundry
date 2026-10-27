@@ -15,6 +15,7 @@ import { generateDraftBracketsForTournament, deriveLeaderboard } from '../../fea
 import { createApiMiddleware } from '../../server/api';
 import { createSessionToken } from '../../server/pinCrypto';
 import type { PlayerProfile } from '../../features/tournament/types';
+import { runToken } from '../../features/online-quals/__tests__/runToken';
 
 describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
   let db: any;
@@ -994,7 +995,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
       // 2. An online competitor "Omenvoir" registers and submits scores
       const [omenvoir] = await createCompetitors(1);
       const submitRes = await makeHttpRequest(`/api/tournaments/${tournament.id}/qualify/submit`, 'POST', {
-        playerId: omenvoir.id,
+        playerId: omenvoir.id, resumeToken: await runToken(tournament.id, omenvoir.id),
         scores: [950000, 920000],
         twitchVodUrl: 'https://twitch.tv/videos/12345678',
         submittedTwitchUsername: 'Omenvoir',
@@ -1078,7 +1079,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
 
       const [comp] = await createCompetitors(1);
       const submitRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
-        playerId: comp.id,
+        playerId: comp.id, resumeToken: await runToken(tourney.id, comp.id),
         scores: [888000],
         twitchVodUrl: 'https://twitch.tv/videos/12345678',
         submittedTwitchUsername: 'DeleteRunner',
@@ -1127,7 +1128,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
 
       const [comp] = await createCompetitors(1);
       await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
-        playerId: comp.id,
+        playerId: comp.id, resumeToken: await runToken(tourney.id, comp.id),
         scores: [777000],
         twitchVodUrl: 'https://twitch.tv/videos/12345678',
         submittedTwitchUsername: 'RemoveMe',
@@ -1188,7 +1189,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
 
       const [comp] = await createCompetitors(1);
       await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
-        playerId: comp.id,
+        playerId: comp.id, resumeToken: await runToken(tourney.id, comp.id),
         scores: [990000],
         twitchVodUrl: 'https://twitch.tv/videos/12345678',
         submittedTwitchUsername: 'ProRunner',
@@ -1268,7 +1269,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
 
       // 2. Competitor submits official scores -> placeholder is deleted and replaced by SUBMITTED row(s)
       const submitRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
-        playerId: comp.id,
+        playerId: comp.id, resumeToken: await runToken(tourney.id, comp.id),
         scores: [975000],
         twitchVodUrl: 'https://twitch.tv/videos/9999999',
         submittedTwitchUsername: 'SpeedyRunner',
@@ -1331,7 +1332,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
 
       // 1. Submit online score
       await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
-        playerId: comp.id,
+        playerId: comp.id, resumeToken: await runToken(tourney.id, comp.id),
         scores: [890000],
         twitchVodUrl: 'https://twitch.tv/videos/1111111',
         submittedTwitchUsername: 'VerifiedTarget',
@@ -1419,7 +1420,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
 
       // Submit score to Tournament A
       await makeHttpRequest(`/api/tournaments/${tourneyA.id}/qualify/submit`, 'POST', {
-        playerId: comp.id,
+        playerId: comp.id, resumeToken: await runToken(tourneyA.id, comp.id),
         scores: [650000],
         twitchVodUrl: 'https://twitch.tv/videos/iso-test',
         submittedTwitchUsername: 'IsoPlayer',

@@ -13,6 +13,7 @@ import {
   generateDoubleEliminationBracket,
   getDoubleEliminationConfigError,
 } from '../bracket/math';
+import { isPlaceholderSubmissionStatus } from '../online-quals/onlineQualsStatus';
 
 export const MAXOUT_THRESHOLD = 999999;
 
@@ -193,12 +194,20 @@ export function isSeedingEligible(row: Pick<LeaderboardRankRow, 'isDisqualified'
  * Order: ranked eligible competitors, then DNQ, then DQ, then unstarted.
  */
 export function deriveLeaderboard(tournament: Tournament): LeaderboardRankRow[] {
-  const pool = tournament.playersPool || [];
   const submissions = tournament.qualifierSubmissions || [];
   const tournamentPlayers = tournament.tournamentPlayers || {};
 
+  // Competitors whose only rows are an unfinished online run stay off the leaderboard until they submit.
+  const playersWithResults = new Set(
+    submissions.filter(s => !isPlaceholderSubmissionStatus(s.status)).map(s => s.playerId)
+  );
+  const unfinishedOnly = new Set(
+    submissions.filter(s => !playersWithResults.has(s.playerId)).map(s => s.playerId)
+  );
+  const pool = (tournament.playersPool || []).filter(p => !unfinishedOnly.has(p.id));
+
   // Guarantee that every competitor with a submission is included in the pool
-  const poolPlayerIds = new Set(pool.map(p => p.id));
+  const poolPlayerIds = new Set([...pool.map(p => p.id), ...unfinishedOnly]);
   const effectivePool = [...pool];
   for (const sub of submissions) {
     if (!poolPlayerIds.has(sub.playerId)) {

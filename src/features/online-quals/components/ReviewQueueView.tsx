@@ -50,6 +50,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
   const [selectedIdentity, setSelectedIdentity] =
     useState<ReviewQueueSessionSummary | null>(null);
   const [isVerifyAllModalOpen, setIsVerifyAllModalOpen] = useState(false);
+  const [discardTarget, setDiscardTarget] = useState<ReviewQueueSessionSummary | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -122,6 +123,41 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           : `Disqualified ${selectedAdjudication.playerName}`
       );
       setSelectedAdjudication(null);
+      await fetchSessions();
+      await refreshTournament?.(tournament.id);
+    } catch (e: any) {
+      setStatusMessage(`Error: ${e.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDiscardRun = async () => {
+    if (!discardTarget) return;
+    setIsSubmitting(true);
+    setStatusMessage(null);
+    try {
+      const res = await fetch(`/api/tournaments/${tournament.id}/qualify/discard`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ playerId: discardTarget.playerId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to discard run');
+      }
+      if (data.deletedPlayer) {
+        setDeletedProvisionalIds(prev => new Set(prev).add(discardTarget.playerId));
+      }
+      setStatusMessage(
+        data.deletedPlayer
+          ? `Discarded ${discardTarget.playerName}'s unfinished run and removed the walk-in player`
+          : `Discarded ${discardTarget.playerName}'s unfinished run`
+      );
+      setDiscardTarget(null);
       await fetchSessions();
       await refreshTournament?.(tournament.id);
     } catch (e: any) {
@@ -262,7 +298,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         >
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
-              Qualifiers Portal Status
+              Qualifiers State
             </div>
             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: isQualsClosed ? '#ef4444' : '#4ade80', marginTop: '0.2rem' }}>
               {isQualsClosed ? 'Closed (Brackets Locked)' : 'Open / Receiving'}
@@ -285,7 +321,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         >
           <div>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
-              Batch Adjudication
+              Batch Verify
             </div>
             <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.3rem' }}>
               {pendingUnverifiedCount > 0
@@ -354,6 +390,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         sessions={sessions}
         onOpenAdjudicate={handleOpenAdjudicate}
         onOpenIdentityModal={handleOpenIdentity}
+        onDiscardRun={setDiscardTarget}
         qualWindowMinutes={tournament.qualWindowMinutes || 90}
       />
 
@@ -384,6 +421,122 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           onResolve={handleResolveIdentity}
           isSubmitting={isSubmitting}
         />
+      )}
+
+      {/* Discard Unfinished Run Speedbump Modal */}
+      {discardTarget && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}
+        >
+          <div
+            data-testid="discard-run-modal"
+            style={{
+              background: 'var(--color-bg-surface, #181b20)',
+              borderRadius: 'var(--radius-lg, 12px)',
+              border: '1px solid rgba(239, 68, 68, 0.5)',
+              maxWidth: '480px',
+              width: '100%',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6)',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid var(--color-border, #2d3139)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <AlertTriangle size={22} color="#ef4444" />
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+                  Discard Unfinished Run?
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDiscardTarget(null)}
+                disabled={isSubmitting}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--color-text-muted, #94a3b8)',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  padding: '0.25rem',
+                  display: 'flex',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--color-text-secondary, #cbd5e1)', lineHeight: 1.5 }}>
+                <strong style={{ color: '#ffffff' }}>{discardTarget.playerName}</strong>'s run (Authword{' '}
+                <strong style={{ color: 'var(--color-gold-bright)' }}>{discardTarget.authWord}</strong>) and anything typed
+                into it so far will be deleted. They can start a new run afterwards.
+              </p>
+              {discardTarget.identityStatus === 'PROVISIONAL_NEW' && (
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-text-muted, #94a3b8)', lineHeight: 1.4 }}>
+                  This run created {discardTarget.playerName} as a walk-in player. If they have nothing else on record,
+                  they'll be removed from the player list too.
+                </p>
+              )}
+            </div>
+
+            <div
+              style={{
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid var(--color-border, #2d3139)',
+                background: 'var(--color-bg-base, #111317)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '0.75rem',
+              }}
+            >
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setDiscardTarget(null)}
+                className="btn btn-secondary"
+                style={{ padding: '0.55rem 1.15rem', fontSize: '0.85rem' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="confirm-discard-run-button"
+                disabled={isSubmitting}
+                onClick={handleDiscardRun}
+                style={{
+                  padding: '0.55rem 1.15rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  border: '1px solid rgba(239, 68, 68, 0.5)',
+                  color: '#ef4444',
+                  borderRadius: 'var(--radius-md, 6px)',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isSubmitting ? 'Discarding...' : 'Discard Run'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Verify All Speedbump Modal */}
