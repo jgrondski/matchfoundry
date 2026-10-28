@@ -1,5 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Load .env so tests share the dev server's SYSTEM_ADMIN_RECOVERY_PIN and DATABASE_URL.
+// Variables already set in the shell take precedence.
+try {
+  process.loadEnvFile();
+} catch {
+  // No .env file; rely on the shell environment
+}
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,

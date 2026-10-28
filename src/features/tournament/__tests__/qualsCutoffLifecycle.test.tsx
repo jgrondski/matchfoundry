@@ -18,7 +18,7 @@ import { TournamentProvider } from '../store';
 import { OrganizationProvider } from '../../organizations/store';
 import type { Tournament } from '../types';
 
-describe('Journey 5: Qualifiers Cutoff & Bracket Locking (ATDD)', () => {
+describe('Journey 4: Qualifiers Cutoff & Bracket Locking (ATDD)', () => {
   let tourney: Tournament;
   let p1Id: string;
   let p2Id: string;
@@ -47,7 +47,7 @@ describe('Journey 5: Qualifiers Cutoff & Bracket Locking (ATDD)', () => {
     tourney = await saveFullTournament(baseTourney);
   });
 
-  describe('Assertion 5.1: Gated Closure Alert', () => {
+  describe('Assertion 4.1: Gated Closure Alert', () => {
     it('shows warning alert when attempting to close qualifiers with unverified submissions remaining', () => {
       const tourneyWithPending: Tournament = {
         ...tourney,
@@ -84,7 +84,7 @@ describe('Journey 5: Qualifiers Cutoff & Bracket Locking (ATDD)', () => {
     });
   });
 
-  describe('Assertion 5.2: Locked Public Portal', () => {
+  describe('Assertion 4.2: Locked Public Portal', () => {
     it('disables run initiation and displays "Qualifiers Closed" announcement when quals_closed = true', async () => {
       const closedTourney: Tournament = {
         ...tourney,
@@ -111,7 +111,7 @@ describe('Journey 5: Qualifiers Cutoff & Bracket Locking (ATDD)', () => {
     });
   });
 
-  describe('Assertion 5.3: Draft Bracket Seeding Integrity', () => {
+  describe('Assertion 4.3: Draft Bracket Seeding Integrity', () => {
     it('auto-seeded bracket draft includes verified players and strictly excludes DNQ, DQ, and AWAITING_VERIFICATION', () => {
       // Alex Kerr: VERIFIED (in-person)
       // PixelAndy: AWAITING_VERIFICATION (SUBMITTED)

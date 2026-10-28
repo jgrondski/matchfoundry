@@ -3,7 +3,10 @@ import { getDb } from '../src/db';
 import { tournaments } from '../src/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 
-const SYSTEM_ADMIN_PIN = process.env.SYSTEM_ADMIN_RECOVERY_PIN || '!Te67Omentris69420!';
+const SYSTEM_ADMIN_PIN = (process.env.SYSTEM_ADMIN_RECOVERY_PIN || '').trim();
+if (!SYSTEM_ADMIN_PIN) {
+  throw new Error('SYSTEM_ADMIN_RECOVERY_PIN is not set. Add it to .env before running e2e tests.');
+}
 const generateTestPin = () => String(Math.floor(100000 + Math.random() * 900000));
 
 test.describe('Golden User Journeys: Security & Access Control', () => {

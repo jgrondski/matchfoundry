@@ -1,6 +1,6 @@
 # Master Implementation Plan: Tournament Manager
 
-This document is the consolidated, single source of truth for the implementation of **Tournament Manager** as specified in [SPEC.md / Tetris Tournament Manager.md](../Tetris%20Tournament%20Manager.md). It tracks completed execution, out-of-scope capabilities added along the way, and the prioritized roadmap for all remaining work.
+This document is the single source of truth for MatchFoundry's roadmap: completed phases, out-of-scope capabilities added along the way, upcoming phases, and the deferred backlog. Rules and shipped feature behavior live in the [MatchFoundry Product Spec](MatchFoundry-Product-Spec.md). Anything to build or revisit later belongs here, not in other docs.
 
 ---
 
@@ -17,9 +17,9 @@ This document is the consolidated, single source of truth for the implementation
 | **Phase 7** | Relational Database & API Backend | **Complete** | PostgreSQL (Neon/Docker) + Drizzle ORM, REST API middleware, authentic player pool (1,620 competitors). |
 | **Phase 8** | Architectural Hardening & Tournament Rules | **Complete** | Decoupled domain hooks, canonical defaults, CLI seeder, 415 automated tests, bye seed alternation (1 vs N), points qual 0-pt tiebreaker, OBS draft overlays. |
 | **Phase 9** | **Production Cloud Deployment, MatchFoundry™ Brand Launch & CI/CD** | **Complete** | Vercel Serverless runtime (`api/index.ts`), Neon cloud PostgreSQL migration, MatchFoundry™ rebrand & strategic trademark rollout, zero runtime git artifacts, and Branch/PR CI/CD deployment gating. |
-| **Phase 10**| **Live & Online Qualifiers Engine** | **Upcoming (Phase 10)** | Competitor self-service portal (`/:slug/qualify`), Twitch OAuth 2.0 on production HTTPS, 6–8 char NES Authwords, countdown telemetry, judge review queue, Discord webhooks. |
-| **Phase 11**| **Mobile-Responsive Viewport Overhaul (360×800)** | **Upcoming (Phase 11)** | Handheld 360×800 dense table card views (Leaderboard, Standings, Roster, Global Players), collapsed mobile nav & breadcrumbs. |
-| **Phase 12**| **Universal Match Data Export & Custom Analytics** | **Upcoming (Phase 12)** | Universal match data export (CSV with UTF-8 BOM, Google Sheets TSV clipboard copy, JSON) with custom column selection and reordering. |
+| **Phase 10**| **Live & Online Qualifiers Engine** | **Complete** | Competitor self-service portal (`/:slug/qualify`), Twitch OAuth 2.0 on production HTTPS, 6–8 char NES Authwords, qual window telemetry, review queue (`/:slug/manage/review`), Discord webhooks, tokened run links & draft recovery. |
+| **Phase 11**| **Mobile-Responsive Viewport Overhaul (360×800)** | **Next Up** | Handheld 360×800 dense table card views (Leaderboard, Standings, Roster, Global Players), collapsed mobile nav & breadcrumbs. |
+| **Phase 12**| **Universal Match Data Export & Custom Analytics** | **Upcoming** | Universal match data export (CSV with UTF-8 BOM, Google Sheets TSV clipboard copy, JSON) with custom column selection and reordering. |
 
 ---
 
@@ -125,15 +125,12 @@ This document is the consolidated, single source of truth for the implementation
 
 ```mermaid
 flowchart TD
-    subgraph Historic["Historic Execution [Phases 1–9 COMPLETE]"]
+    subgraph Historic["Historic Execution [Phases 1–10 COMPLETE]"]
         H1["Phases 1–9: Routing Engine, UI Canvas, Standings, Double Elim, Seeding, Relational DB, Architectural Hardening, Production Deployment & PIN Security"]
+        H2["Phase 10: Online Qualifiers Portal, Twitch OAuth, NES Authwords, Review Queue (/:slug/manage/review), Discord Webhooks, Run Links & Draft Recovery"]
     end
 
-    subgraph Phase10["Phase 10: Live & Online Qualifiers Engine [NEXT UP]"]
-        P10["• Competitor Self-Service Portal (/:slug/qualify)<br>• Twitch OAuth 2.0 Integration on Production HTTPS<br>• 6–8 Char NES-Compatible Authword Engine<br>• Countdown Timer & QualTimerLog Telemetry<br>• Online Judge Review Queue (/:slug/manage/judge)<br>• Discord Webhook Dispatches (Start & Submit)"]
-    end
-
-    subgraph Phase11["Phase 11: Mobile-Responsive Viewport Overhaul (360×800)"]
+    subgraph Phase11["Phase 11: Mobile-Responsive Viewport Overhaul (360×800) [NEXT UP]"]
         P11["• Qualifiers Leaderboard Handheld Card View<br>• Final Standings Mobile Card Rows<br>• Tournament Roster & Global Players Handheld Cards<br>• Mobile Navigation Bar & Collapsed Breadcrumbs"]
     end
 
@@ -141,7 +138,12 @@ flowchart TD
         P12["• Universal Match Data Export Modal<br>• Formats: CSV (UTF-8 BOM), Sheets TSV (Clipboard), JSON<br>• Column Selection, Reordering & Preset Layouts"]
     end
 
-    Historic --> Phase10 --> Phase11 --> Phase12
+    subgraph Backlog["Deferred Backlog (Unscheduled)"]
+        B1["• Separate Preview Database (Neon branch)<br>• Tournament ↔ Organization Association Fixes<br>• Double-Elim Flat Staged 2-Wide & Uneven Fields<br>• Organization-Level Roles (RBAC)"]
+    end
+
+    Historic --> Phase11 --> Phase12
+    Backlog -.-> Phase12
 ```
 
 ---
@@ -201,8 +203,16 @@ flowchart TD
 
 ---
 
-### Phase 10: Live & Online Qualifiers Engine [UPCOMING]
-* **Goal:** Deliver the full online self-service competitor qualification portal per Master Spec Section 10, running directly against the deployed production HTTPS environment (`matchfoundry.gg` on Vercel + Neon PostgreSQL), complete with robust identity resolution, Twitch OAuth 2.0, NES Authwords, and mixed-mode adjudication.
+### Phase 10: Live & Online Qualifiers Engine [COMPLETE]
+* **Status:** Shipped across PRs #5–#8.
+* **Beyond the original plan (PR #8, online run recovery):**
+  * Starting a run issues a private run token and link. The competitor is added to the roster only on submit, not on start.
+  * Drafts autosave by token and can be restored by run link, or by name + Twitch account.
+  * Competitors can discard an unfinished run (walk-in players are removed with it). Submitted runs cannot be discarded.
+  * Unfinished runs are hidden from the leaderboard and don't block roster removal or player deletion. Runs more than an hour past their window are flagged as abandoned.
+  * Tokens and drafts are never exposed in public data.
+  * Coverage: `src/features/online-quals/__tests__/runLinksAndCleanup.test.ts`.
+* **Goal:** Deliver the full online self-service competitor qualification portal, running directly against the deployed production HTTPS environment (`matchfoundry.gg` on Vercel + Neon PostgreSQL), complete with robust identity resolution, Twitch OAuth 2.0, NES Authwords, and mixed-mode adjudication.
 
 * **Track 10A: Relational Database Schema & Data Models (`src/db/schema.ts`, `src/features/tournament/types.ts`)**
   1. **Player Identity Extensions (`players` table):**
@@ -233,7 +243,7 @@ flowchart TD
      * **Tier 2 (Roster Claim):** Unlinked competitor claims an existing tournament roster profile $\rightarrow$ `CLAIMED_PENDING_REVIEW` (unblocks competitor run immediately, requires judge ratification).
      * **Tier 3 (Provisional New Player):** Walk-in competitor registers new competitive alias, country, and playstyle $\rightarrow$ `PROVISIONAL_NEW`.
 
-* **Track 10C: NES Authword Generator & Telemetry Engine (Spec Sec 10.2, 10.3)**
+* **Track 10C: NES Authword Generator & Telemetry Engine**
   1. **NES Character Set Enforcer:**
      * Strict validation against NES Tetris high-score charset: `A–Z`, `0–9`, `.`, `-`, `!`, `♥` (length: 6–8 chars; spaces strictly forbidden).
   2. **Curated Dictionary Engine:**
@@ -253,8 +263,6 @@ flowchart TD
      * Pre-flight checklist confirming live broadcast and Twitch past broadcast storage.
      * Session launch, active Authword HUD, game score entry, VOD URL paste.
      * "I'm Done" confirmation card with instant provisional leaderboard placement (`[⏳ Awaiting Verification]`).
-  3. **Technical Exception Handling:**
-     * "Report Stream Crash / Request Reset" action allowing competitors to request an authorized session void/restart from judges.
 
 * **Track 10E: Mixed-Mode Adjudication & Identity Resolution Queue (`/:slug/manage/review`)**
   1. **Dedicated Review Queue Interface:**
@@ -264,7 +272,7 @@ flowchart TD
      * **"Reassign / Link to Different Player":** Roster and global catalog search to correct mistaken claims.
      * **"Promote to Global Player":** Instantly creates a canonical row in `players`, imports to tournament roster, and verifies qualification.
   3. **Submission Adjudication:**
-     * Embedded Twitch VOD player with timestamp scrub for 10k topout Authword verification.
+     * Twitch VOD link for verifying the Authword on the 10k topout screen.
      * Timer log elapsed time validation.
      * Action buttons: "Verify Qual", "Edit Score & Verify", "Mark DNQ", "Disqualify (DQ)".
 
@@ -302,35 +310,70 @@ flowchart TD
      * *Assertion 3.2 (Judge Reassign):* Reassigning a submission from Player A to Player B updates `qualifier_submissions.player_id` and shifts leaderboard scores accordingly.
      * *Assertion 3.3 (Promote Provisional New Player):* Confirming a `PROVISIONAL_NEW` competitor inserts a permanent row into `players`, creates `tournament_players` registration, and attaches the submission.
 
-  4. **Journey 4 Assertions: Technical Crash & Session Reset (`src/features/online-quals/__tests__/sessionReset.test.tsx`):**
-     * *Assertion 4.1 (Reset Request):* Competitor experiencing a crash during `IN_PROGRESS` can dispatch a reset request with explanation notes.
-     * *Assertion 4.2 (Judge Void Action):* Adjudicator clicking *"Void & Issue New Authword"* clears active session timer log and generates a clean Authword, allowing the competitor to restart without duplicate submissions.
+  4. **Journey 4 Assertions: Qualifiers Cutoff & Bracket Locking (`src/features/tournament/__tests__/qualsCutoffLifecycle.test.tsx`):**
+     * *Assertion 4.1 (Gated Closure):* Attempting to close qualifiers while unverified submissions remain triggers a blocking confirmation alert.
+     * *Assertion 4.2 (Locked Public Portal):* Setting `quals_closed = true` disables run initiation on `/:slug/qualify` and shows a "Qualifying Closed" announcement.
+     * *Assertion 4.3 (Draft Bracket Seeding Integrity):* Auto-seeded bracket draft includes all verified players and strictly excludes players marked `DNQ` or `AWAITING_VERIFICATION`.
 
-  5. **Journey 5 Assertions: Qualifiers Cutoff & Bracket Locking (`src/features/tournament/__tests__/qualsCutoffLifecycle.test.tsx`):**
-     * *Assertion 5.1 (Gated Closure):* Attempting to close qualifiers while unverified submissions remain triggers a blocking confirmation alert.
-     * *Assertion 5.2 (Locked Public Portal):* Setting `quals_closed = true` disables run initiation on `/:slug/qualify` and shows a "Qualifying Closed" announcement.
-     * *Assertion 5.3 (Draft Bracket Seeding Integrity):* Auto-seeded bracket draft includes all verified players and strictly excludes players marked `DNQ` or `AWAITING_VERIFICATION`.
-
-  6. **Golden Journey 4 (Playwright E2E — `e2e/golden-journeys.spec.ts`):**
-     * End-to-end browser walkthrough: Remote competitor lands on `/omen-das/qualify` $\rightarrow$ authenticates via mock Twitch OAuth $\rightarrow$ receives Authword $\rightarrow$ submits scores + VOD link $\rightarrow$ verifies provisional leaderboard appearance $\rightarrow$ logs in as Tournament Admin $\rightarrow$ opens Review Queue $\rightarrow$ clicks "Verify Qual" $\rightarrow$ confirms public leaderboard updates to official verified standing.
+  5. **Golden Journey (Playwright E2E — Journey 5 in `e2e/golden-journeys.spec.ts`):**
+     * End-to-end browser walkthrough: Remote competitor lands on `/omen-ao3/qualify` $\rightarrow$ checks in with name and Twitch handle $\rightarrow$ completes pre-flight checklist $\rightarrow$ receives Authword $\rightarrow$ submits scores + VOD link $\rightarrow$ verifies provisional leaderboard appearance $\rightarrow$ logs in as Tournament Admin $\rightarrow$ opens Review Queue $\rightarrow$ clicks "Verify Qual" $\rightarrow$ confirms public leaderboard updates to official verified standing.
 
 ---
 
-### Phase 11: Mobile-Responsive Viewport Overhaul (360×800 Viewport) [UPCOMING]
-* **Goal:** Guarantee all data-dense views are fully readable and operational on smartphone screens without horizontal scroll clipping per Master Spec Section 11.2 / 13.2.
-1. **Qualifiers Leaderboard:** Compact mobile card/accordion view displaying Rank, Player, Playstyle, Status, and Attempts/Scores.
-2. **Final Standings:** Mobile card rows preserving Final Rank, Competitor, Seed Delta badge, and Stage Reached.
-3. **Tournament Roster & Global Players Directory:** Handheld cards for player management and search.
-4. **Global Navigation & Header:** Hamburger menu / mobile bottom tab bar and collapsed breadcrumbs on viewports $< 768\text{px}$.
+### Phase 11: Mobile-Responsive Viewport Overhaul (360×800 Viewport) [NEXT UP]
+* **Current state:** Not started. `src/index.css` has only four desktop/tablet breakpoints (680–1040px) and no mobile card layouts or mobile nav. The bracket Card Feed view is already mobile-friendly and is not part of this phase.
+* **Goal:** Guarantee all data-dense views are fully readable and operational on smartphone screens without horizontal scroll clipping.
+1. **Qualifiers Leaderboard (`/:slug/leaderboard`, `/:slug/manage/qualifiers`):** Replace wide table overflow with compact competitor cards/accordions. Rank, Player Name, Playstyle, Status, and Scores (High Score, Maxout count, Kicker, or Average of X attempt chips) must stay visible without horizontal clipping.
+2. **Final Standings:** Mobile card rows preserving Final Rank, Competitor, Qual Seed + Delta badge, Stage Reached, and Game Score Average.
+3. **Tournament Roster (`/:slug/manage/players`):** Stacked list keeping name, playstyle, PB, seed/tier assignment, and action buttons.
+4. **Global Players Directory (`/players`):** Cards with PB, playstyle, active tournament participation, and search/filter controls without squished headers.
+5. **Global Navigation & Header:** The header (`Tournaments | Organizations | Players`), active tournament chip, and breadcrumbs currently exceed 360px and wrap. Hamburger menu / mobile bottom tab bar and collapsed breadcrumbs on viewports $< 768\text{px}$. Truncate or iconify the active tournament return chip.
+6. **Other Pages:** General responsive polish across the remaining admin, organization, and settings pages .
 
 ---
 
 ### Phase 12: Universal Match Data Export & Custom Analytics [UPCOMING]
-* **Goal:** Finalize export pipelines and reporting tools per Master Spec Section 11.
-1. **Universal Match Data Export Modal:**
-   * Configurable column toggles (Tournament, Tier, Stage, Round, Players, Seeds, Game Scores, Winner, Forfeit).
-   * Formats: CSV (with UTF-8 BOM encoding for Excel), TSV (direct paste into Google Sheets), and JSON.
-   * Column reordering and export presets ("CTWC Match Sheet", "Detailed Audit", "Simple Bracket Results").
+* **Goal:** Finalize export pipelines and reporting tools.
+1. **Universal Match Data Export Modal** (in Tournament Management):
+   * **Column toggles:** Tournament Name, Tier Name, Stage (Winners / Losers / Grand Finals), Round Identifier / Number, Match ID, Player 1 Name / Seed / Match Wins, Player 2 Name / Seed / Match Wins, Winner Name, Loser Name, Game-by-Game Scores (e.g. `Game 1: 520k - 480k, Game 2: ...`), Forfeit Status, Intentional Topouts.
+   * **Column reordering:** drag-and-drop or up/down, to match existing community spreadsheet layouts.
+   * **Presets:** "CTWC Match Sheet", "Detailed Audit", "Simple Bracket Results".
+2. **Formats:**
+   * **CSV:** UTF-8 BOM encoding so Excel opens it correctly.
+   * **TSV / Copy to Clipboard:** tab-separated text for direct `Ctrl+V` into Google Sheets.
+   * **JSON:** full raw tournament dump for external tools and archives.
+* **Current state:** Not started.
+
+---
+
+### Deferred Backlog (Unscheduled)
+Items recorded as "revisit later" in other docs that were never added to this plan. Each needs a decision before it's scheduled.
+
+1. **Separate Preview Database**
+   * **Problem:** Vercel Preview deploys and PR CI runs use the **production** Neon database. Opening a PR runs `db:push:ci --force` against prod, and test data created on preview URLs lands in prod.
+   * **Planned approach:** Neon branch for previews (long-lived or per-PR); Vercel Preview `DATABASE_URL` points at it; CI pushes schema to preview on `pull_request` and to prod only on `push` to `main`; decide on a preview data refresh strategy and confirm `PIN_ENCRYPTION_KEY` works against copied data.
+   * **Done when:** the playbook's "Database Environments" section, env var table, and CI section are updated, and the "Preview Deploys Share the Production DB" rule in `CLAUDE.md` / `AGENTS.md` is removed or revised.
+   * **Priority:** Highest of the backlog items, because every schema PR currently touches prod.
+
+2. **Tournament ↔ Organization Association**
+   * **Known bugs:**
+     * No "None (Independent)" option in the Settings dropdown or `CreateTournamentModal` once any org exists.
+     * For an org-less tournament, `TournamentAdminForm` initializes `organizationId` to the *first* org, so saving any unrelated setting silently attaches the tournament to that org.
+     * Tournament Admins can change their tournament's org with no approval.
+   * **Decisions pending:** who may change a tournament's org (recommendation: System Admin only, read-only for Tournament Admins); whether "Independent" is selectable at creation and for detaching; a pre-save notice summarizing side effects (Discord webhook fallback to the org's webhook, org theme inheritance).
+   * **Note:** the silent re-attach is a data-integrity bug and could be fixed on its own before the policy decisions.
+
+3. **Double-Elimination Flat Staged: 2-Wide & Uneven Fields**
+   * **Current behavior:** `FLAT_STAGED` supports 4 or 8 wide; fields must be a multiple of W (fields ≤ 2W silently fall back to a traditional tree). Invalid setups are blocked in Settings via `getDoubleEliminationConfigError()`.
+   * **To revisit:**
+     * True 2-wide flat staged for even fields (10, 12, 14…). Needs a new endgame, because the "Top 6 cross-drop" finish assumes W ≥ 4.
+     * Whether to warn when a flat staged tier will actually render as a traditional tree (e.g. 9 players at 8 wide).
+     * Odd / uneven fields: traditional tree remains the answer unless a ragged-wave design is specified (byes are never playable matches).
+
+4. **Organization-Level Roles (RBAC)**
+   * **Current state:** access is PIN-based with two tiers, System Admin and Tournament Admin. Organizations have no members or roles.
+   * **Originally specified:** an `org_memberships` table (`organization_id`, `user_id`, `role`) with roles Org Owner (org settings, webhooks, assigning admins), Org Admin (create/manage the org's tournaments, edit org defaults, manage the player pool), and Org Judge / Tournament Admin (scoped score entry, qualifier verification, lock/unlock). Requires real user accounts, which don't exist yet.
+   * **Related:** the "who may change a tournament's org" decision in item 2.
 
 ---
 

@@ -1,124 +1,83 @@
-# Testing Strategy & Quality Assurance Architecture
+# MatchFoundry Testing Strategy
 
-## 1. Executive Summary & Core Philosophy
-
-The Tournament Manager application serves high-stakes live competitive tournaments where downtime, authorization loopholes, or broken tournament brackets disrupt real events. 
-
-To ensure stability across both active development and continuous integration (CI/CD), our testing strategy is anchored by two foundational tenets:
-
-1. **The Walking Skeleton Principle**: Isolated unit tests alone do not prove a feature works for actual humans. Before declaring any feature or milestone complete, the end-to-end "walking skeleton" of the application (navigation, authorization gates, session persistence, routing, and UI presentation) must be verified through automated golden journeys.
-2. **Deterministic Speed & Agent Ergonomics**: Test suites must run in seconds, not minutes. High-frequency tests remain 100% in-memory (using `pg-mem` and `vitest`), while end-to-end testing is reserved for a compact, ultra-fast suite of 3–5 headless Playwright journeys running against Vite's dev server in under 6 seconds.
+MatchFoundry runs live tournaments, where a broken bracket, a wrong tiebreaker, or an auth hole disrupts a real event. Tests exist to catch those before they ship, and they have to stay fast enough to run on every change.
 
 ---
 
-## 2. The 3-Tier Testing Pyramid
+## 1. Ground Rules
 
-```
-                ▲
-               / \
-              /   \
-             / E2E \       Tier 3: Golden User Journeys (Playwright CLI)
-            /-------\      3-5 high-value end-to-end user workflows (~5s)
-           /         \
-          /   Integ   \    Tier 2: Component & Relational Integration (Vitest + RTL)
-         /-------------\   State machines, drawers, forms, pg-mem schema checks (~2-4s)
-        /               \
-       /    Unit / Math  \ Tier 1: Mathematical & Algorithmic Correctness (Vitest)
-      /-------------------\ Bracket pairings, tiebreakers, crypto, rank derivation (~1-2s)
-```
-
-### Tier 1: Unit & Algorithmic Tests (`vitest run src/features/bracket`)
-- **Scope**: Bracket generation algorithms (`traditional.ts`, `flat.ts`, `double-elimination.ts`), tiebreaker math, rank derivation, round-specific best-of override resolution, cryptographic token generation (`pinCrypto.ts`).
-- **Characteristics**: Pure functions, zero network/browser mocks needed, instantaneous (<2 seconds).
-- **Execution**: Run automatically during active iteration on algorithms or bracket rules.
-
-### Tier 2: Integration & Composed Page Tests (`vitest run src/components src/features/tournament src/api`)
-- **Scope**: Multi-component interaction flows, form state dirty tracking, verification modals, drawer lifecycle, API middleware route validation with in-memory PostgreSQL (`pg-mem`).
-- **Characteristics**: Fast, isolated in-memory execution using React Testing Library and JSDOM. Tests verify that components obey the 3-Tier UI Pattern (Route Gate $\rightarrow$ Keyed Feature View $\rightarrow$ Pure Presentational Leafs).
-- **Parity Guard**: Unit tests in `pg-mem` do not replace PostgreSQL schema migration validation. Drizzle schema changes must also be validated against real Docker PostgreSQL with `npm run db:push`.
-
-### Tier 3: Golden User Journeys (`npm run test:e2e` / Playwright)
-- **Scope**: End-to-end smoke testing of complete user journeys exercising the real Vite dev server, client-side routing (`react-router-dom`), browser storage (`localStorage`), HTTP API middleware (`/api/*`), and real session headers.
-- **Constraints**:
-  - Keep this tier strictly focused on **3 to 5 mission-critical paths** (not dozens of redundant permutation tests).
-  - Use headless Playwright via CLI (`npx playwright test`).
-  - Strict rule: **Never spin up interactive browser subagents** (which burn context tokens and timeout). Headless Playwright CLI runs deterministically in ~5 seconds.
+1. **Every bug fix ships with a regression test.** Write the test so it fails on the buggy behavior, then make it pass with the fix. A fix without one isn't done.
+2. **Cover every bracket format the change touches.** Single Elimination, Traditional Double Elimination, Flat Staged Double Elimination, and Accelerated Hybrid behave differently. Also cover tier switching and stage/round filter combinations when relevant.
+3. **Edge cases belong in Vitest, not Playwright.** Playwright only proves the main paths work end to end.
+4. **Unit tests passing doesn't prove the schema works.** pg-mem is not PostgreSQL. Schema changes also need `npm run db:push` against the local Docker database.
 
 ---
 
-## 3. The Three Golden User Journeys
+## 2. The Three Tiers
 
-The golden journeys codified in [`e2e/golden-journeys.spec.ts`](file:///Users/jgrondski/src/repos/tournament-manager/e2e/golden-journeys.spec.ts) represent the primary user archetypes:
+### Tier 1: Pure Logic (Vitest)
+* **What:** Bracket generation and routing (`src/features/bracket/math/`), layout math, tiebreakers and standings, qualifier scoring, authword generation, session derivation, PIN crypto.
+* **How:** Import the function, call it, assert on the result. No database, no rendering, no mocks.
+* **Keep logic here when you can.** If a component makes a decision (what status to show, whether a button is enabled), pull that decision into a pure function and test the function. `sessionDerivation.ts` and `onlineQualsStatus.ts` are examples.
 
-### Journey 1: Public Spectator (Zero Friction)
-- **Goal**: Ensure the public broadcast experience is seamless, frictionless, and completely free of login prompts.
-- **Path**:
-  1. Unauthenticated spectator visits `/`.
-  2. Public directory displays all active tournaments.
-  3. Privileged actions ("Create New Tournament", "Simulate Tournament") are strictly hidden.
-  4. Spectator clicks "Live Brackets" on `omen-open` $\rightarrow$ lands directly on the live bracket view with zero auth prompts or blocking modals.
-  5. Spectator clicks `← All Tournaments` breadcrumb $\rightarrow$ returns smoothly to `/`.
+### Tier 2: API, Database & Component Output (Vitest)
+* **Database:** `setupTestDb()` from `src/db/testDb.ts` creates a fresh in-memory pg-mem database. Pass it to `setDb()` in `beforeEach` so each test starts clean.
+  * **`testDb.ts` defines its tables in hand-written SQL, separate from `schema.ts`.** When you add or change a column in `schema.ts`, make the same change in `testDb.ts`, or tests will run against an outdated schema.
+* **API:** Build the real middleware with `createApiMiddleware()` and call it with mock request/response objects (`createMockReq` / `createMockRes` helpers in the test file). Authenticate with `createSessionToken({ role, tournamentId })`. See `src/features/online-quals/__tests__/runLinksAndCleanup.test.ts` for a complete example.
+* **Recovery PIN in tests:** Set `process.env.SYSTEM_ADMIN_RECOVERY_PIN` to an obviously fake value (e.g. `'999999'`) in the test. Never use a real PIN.
+* **Components:** Vitest runs in a Node environment with no DOM, and React Testing Library is not installed. Render with `renderToStaticMarkup` from `react-dom/server` and assert on the HTML (text present or absent, `data-testid` attributes). Pass `vi.fn()` for callbacks. This checks what a component renders for a given state, not click behavior; test the logic behind clicks in Tier 1.
 
-### Journey 2: Security Route Gating & Emergency Recovery PIN
-- **Goal**: Guarantee that unauthorized attempts to access protected management views are caught by route guards and can be reliably recovered via the immutable `.env` recovery key.
-- **Path**:
-  1. Logged-out visitor attempts to access `/:slug/manage/settings` directly.
-  2. `RequireTournamentAdmin` route gate triggers and bounces visitor to `/admin?redirect=...`.
-  3. Visitor enters `SYSTEM_ADMIN_RECOVERY_PIN` (`!Te67Omentris69420!`).
-  4. Visitor clicks "Unlock Administration" $\rightarrow$ redirected back to the exact target settings page with full System Admin capabilities.
-  5. System Admin navigates to `/organizations` and `/` without re-prompting.
-
-### Journey 3: Delegated Tournament Admin Scoped Isolation
-- **Goal**: Confirm that tournament directors can safely delegate management of a single tournament to local organizers while strictly isolating all other tournaments and global administrative controls.
-- **Path**:
-  1. System Admin sets and encrypts a new Tournament PIN for `omen-open` in Settings.
-  2. System Admin logs out $\rightarrow$ route guard immediately secures the management screen and redirects to `/admin`.
-  3. Tournament Admin logs in with the scoped tournament PIN.
-  4. Tournament Admin accesses `omen-open` management portal.
-  5. Global admin links (`/organizations`, `/players`) are completely hidden.
-  6. On `/`, a dedicated **"Your Managed Tournament"** section displays only their tournament in admin mode.
-  7. Attempting to directly navigate to `/organizations` bounces back to `/admin` requesting System Admin authorization.
-
-### Journey 4: Multi-Tournament Shared PIN Access & Scope Unification
-- **Goal**: Confirm that when an organizer configures the same PIN across multiple tournaments, entering that single PIN once unlocks access to all matching tournaments simultaneously, populates the switcher dropdown with only those managed tournaments, and issues a shared-PIN warning modal upon collision during configuration.
-- **Path**:
-  1. Organizer assigns identical PIN (`7711`) to two separate tournaments.
-  2. Setup modal displays shared PIN confirmation modal informing user that access will be merged.
-  3. User logs out and navigates to `/admin`.
-  4. User enters single shared PIN `7711`.
-  5. Both tournaments appear under managed views, and tournament switcher dropdown contains both unlocked tournaments with seamless switching.
+### Tier 3: Golden User Journeys (Playwright)
+* **What:** A small number of end-to-end paths through a real browser, the real Vite dev server, routing, auth gates, and the API. Currently 5, all in `e2e/golden-journeys.spec.ts`. Add a journey only for a new, critical user path, not for variations of an existing one.
+* **Requirements:**
+  * Local Docker PostgreSQL running and seeded (`npm run db:up`, `npm run db:push`, `npm run db:seed`). The journeys use seeded tournaments (`omen-open`, `omen-ao3`).
+  * `.env` with `DATABASE_URL` and `SYSTEM_ADMIN_RECOVERY_PIN`. `playwright.config.ts` loads `.env`; the suite stops immediately if the PIN is missing.
+* **It writes to the database.** The suite temporarily changes tournament PINs and restores them afterward, and Journey 5 creates a real qualifier run. Only run it against the local database, never with production environment variables.
+* **Dev server:** Playwright starts `npm run dev`, or reuses one already running on port 5173.
+* **Not run in CI.** Run it locally before calling a milestone done.
+* **Headless only.** Use `npm run test:e2e`; don't use interactive browser agents.
 
 ---
 
-## 4. Verification Command Matrix
+## 3. The Golden Journeys
 
-| Command | Purpose | Target Speed | When to Run |
-| :--- | :--- | :--- | :--- |
-| `npm run test:brackets` | Math, bracket trees, tiebreakers | ~1–2s | Active bracket feature work |
-| `npm run test:api` | Relational integrity, auth endpoints | ~3–5s | API or database changes |
-| `npm run test:ui` | Components, forms, drawers, navigation | ~2–3s | UI component changes |
-| `npm run test:e2e` | Playwright 4 Golden Journeys | ~5–6s | Pre-completion milestone validation & CI |
-| `npm run typecheck` | TypeScript compilation (`tsc --noEmit`) | ~1–2s | Every code modification |
-| `npm run build` | Full production bundle compilation | ~3–4s | Pre-deployment & CI validation |
-| `npm test` | Full Vitest test suite | ~6–8s | Pre-commit / Milestone completion |
+1. **Public Spectator:** From `/` with no login, privileged actions are hidden; "Live Brackets" on `omen-open` opens the bracket with no auth prompt; the breadcrumb returns to `/`.
+2. **Route Gating & Recovery PIN:** A logged-out visit to `/:slug/manage/settings` redirects to `/admin?redirect=...`; the recovery PIN from `.env` unlocks System Admin and returns to the target page; `/organizations` and `/` work without another prompt.
+3. **Tournament Admin Isolation:** System Admin sets a tournament PIN and logs out; logging in with that PIN opens only that tournament's management pages; `/organizations` and `/players` are hidden and redirect to `/admin` if visited directly; `/` shows "Your Managed Tournament".
+4. **Shared Tournament PIN:** The same PIN set on two tournaments triggers a shared-PIN warning; logging in once with it unlocks both, and the tournament switcher lists only those two.
+5. **Online Qualifier & Review:** A competitor checks in on `/omen-ao3/qualify`, completes the pre-flight checklist, gets an Authword, submits scores and a VOD link, and appears on the leaderboard as awaiting verification; an admin verifies the run in the review queue, and the public leaderboard shows it as verified.
 
 ---
 
-## 5. CI/CD Pipeline Parity
+## 4. Where Tests Go
 
-In CI/CD environments (GitHub Actions via `.github/workflows/ci.yml`), tests run sequentially to prevent resource contention:
+Put tests in a `__tests__/` folder next to the code they cover (`src/features/<feature>/__tests__/`, `src/server/__tests__/`, `src/api/__tests__/`, `src/routes/__tests__/`, `src/components/__tests__/`). Name files after the behavior under test (e.g. `dqReversibility.test.ts`). Use `.test.tsx` only when the file renders components.
 
-```yaml
-- name: TypeScript typecheck
-  run: npm run typecheck
+---
 
-- name: Run test suite
-  run: npm test
+## 5. Commands
 
-- name: Build production bundle
-  run: npm run build
-```
+| Command | Runs | When |
+| :--- | :--- | :--- |
+| `npx vitest run <file>` | One test file | While working on a change |
+| `npm run test:brackets` | `src/features/bracket` | Bracket math or layout changes |
+| `npm run test:api` | `src/api`, `src/server` | API, auth, or database changes |
+| `npm run test:ui` | `src/components` and the tournament, qualifiers, players, organizations, and online-quals features | UI or feature changes |
+| `npm run typecheck` | `tsc --noEmit` | Every code change |
+| `npm test` | Full Vitest suite | Before finishing a milestone |
+| `npm run test:e2e` | Playwright golden journeys | Before finishing a milestone (local only) |
+| `npm run db:push` | Schema against local PostgreSQL | Any `schema.ts` change |
 
-- **Database**: Vitest tests run against `pg-mem`, which requires no active PostgreSQL server in CI.
-- **Production Bundling**: `npm run build` executes `tsc --noEmit && vite build`, guaranteeing that client-side asset graph and serverless routes build without failure prior to deployment.
-- **Playwright**: Uses Vite's built-in dev server orchestration configured in `playwright.config.ts` (`webServer.command: "npm run dev"`, `reuseExistingServer: true`).
+Documentation-only changes need no tests.
+
+---
+
+## 6. CI
+
+`.github/workflows/ci.yml` runs on pushes to `main` and on pull requests:
+1. `npm run typecheck`
+2. `npm test` (pg-mem; no database server needed)
+3. `npm run build` (client bundle and serverless API)
+4. Schema push and Vercel deploy (see [DEPLOYMENT_PLAYBOOK.md](DEPLOYMENT_PLAYBOOK.md))
+
+Playwright does not run in CI.

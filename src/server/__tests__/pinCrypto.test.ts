@@ -143,8 +143,8 @@ describe('pinCrypto - System Admin Recovery PIN', () => {
   });
 
   it('handles recovery PIN with surrounding double or single quotes gracefully', () => {
-    process.env.SYSTEM_ADMIN_RECOVERY_PIN = '"!Te67Omentris69420!"';
-    expect(isSystemRecoveryPin('!Te67Omentris69420!')).toBe(true);
+    process.env.SYSTEM_ADMIN_RECOVERY_PIN = '"!Test-Recovery-Pin!"';
+    expect(isSystemRecoveryPin('!Test-Recovery-Pin!')).toBe(true);
 
     process.env.SYSTEM_ADMIN_RECOVERY_PIN = "'single-quoted-secret'";
     expect(isSystemRecoveryPin('single-quoted-secret')).toBe(true);

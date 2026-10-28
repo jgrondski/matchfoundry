@@ -48,3 +48,4 @@
 - `npm run typecheck` — TypeScript check (`tsc --noEmit`).
 - `npm test` — Full regression test suite (run at milestone completion).
 - `npm run db:push` — Validate schema against real PostgreSQL.
+- **Before writing or planning tests**, read `docs/TESTING_STRATEGY.md` for the test tiers, where tests belong, and which commands to run.

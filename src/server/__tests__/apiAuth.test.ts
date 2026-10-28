@@ -216,7 +216,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
     });
 
     it('rejects dev fallback 0000 when SYSTEM_ADMIN_RECOVERY_PIN is explicitly set in env', async () => {
-      process.env.SYSTEM_ADMIN_RECOVERY_PIN = '!Te67Omentris69420!';
+      process.env.SYSTEM_ADMIN_RECOVERY_PIN = '!Test-Recovery-Pin!';
       const req = createMockReq({
         url: '/api/auth/pin',
         method: 'POST',
@@ -233,7 +233,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       const req2 = createMockReq({
         url: '/api/auth/pin',
         method: 'POST',
-        body: { pin: '!Te67Omentris69420!' },
+        body: { pin: '!Test-Recovery-Pin!' },
       });
       const res2 = createMockRes();
 
