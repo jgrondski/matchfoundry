@@ -57,17 +57,6 @@ What this means in practice:
 4. **Testing on a preview URL writes real production data.** Test tournaments, players, and qualifier runs created on a preview deploy are visible in prod and must be cleaned up by hand.
 5. **The schema can be ahead of the deployed code.** An abandoned PR that ran CI can leave its columns or tables in prod.
 
-### TODO: Separate Preview Database (planned)
-
-Goal: three real environments (local → preview → production), with preview deploys and PR CI runs never touching the production database.
-
-Likely approach (to be designed):
-- Use a **Neon branch** for previews: either a single long-lived `preview` branch, or one branch per PR via the Neon/Vercel integration. Neon branches are copy-on-write copies of prod, so preview gets realistic data cheaply.
-- Point Vercel's **Preview** environment `DATABASE_URL` at that branch. Keep the **Production** value on the main Neon branch.
-- In `ci.yml`, run `db:push:ci` against the preview database on `pull_request` events. Run it against prod only on `push` to `main`. For example, use separate GitHub secrets (`DATABASE_URL_PREVIEW` and `DATABASE_URL`), or the value from `vercel pull` for the matching environment.
-- Decide how preview data is refreshed (reset the branch from prod periodically or per PR), and make sure secrets like `PIN_ENCRYPTION_KEY` work against copied data.
-- Update this playbook, the environment variable table below, and the CI section once the change is done.
-
 ---
 
 ## 2. Environment Variables Inventory
@@ -214,53 +203,33 @@ jobs:
 
 ---
 
-### Step 4: Git Workflow Strategy — Moving from Solo to Teams
+### Step 4: Git Workflow (Branch & PR)
 
-#### Current Solo Pre-Release Workflow (Push to `main`)
-While working solo in pre-release, you can continue pushing directly to `main`:
-1. Make code edits locally and verify with targeted tests:
+All changes reach production through a pull request into `main`.
+
+1. **Create a feature branch:**
+   ```bash
+   git checkout -b feat/custom-bracket-theming
+   ```
+2. **Develop locally and verify with targeted tests:**
    ```bash
    npm run typecheck
    npx vitest run src/path/to/test.ts
    ```
-2. Commit and push:
-   ```bash
-   git add .
-   git commit -m "feat: enhance bracket visualizer"
-   git push origin main
-   ```
-3. **What happens automatically:**
-   - GitHub Actions CI triggers immediately, running typecheck, the test suite, and bundle build.
-   - Vercel detects the push to `main`, pulls the commit, and deploys directly to production.
-
-#### Recommended Next Phase: Branch & PR Workflow (Multi-Developer Ready)
-When expanding to multiple developers or when you want staging preview environments before touching production:
-
-1. **Create a Feature Branch:**
-   ```bash
-   git checkout -b feat/custom-bracket-theming
-   ```
-2. **Develop and Commit on Branch:**
+3. **Commit and push the branch:**
    ```bash
    git add .
    git commit -m "feat: add 5-color palette selector"
    git push -u origin feat/custom-bracket-theming
    ```
-3. **Automatic Vercel Preview Deployments:**
-   - Vercel automatically deploys every branch and pull request to an isolated Preview URL (e.g. `https://tournament-manager-git-feat-custom-bracket-theming.vercel.app`).
-   - You can test full functionality on live mobile devices and desktops before merging!
-4. **Open a Pull Request on GitHub:**
-   - Open a PR from `feat/custom-bracket-theming` into `main`.
-   - GitHub Actions CI will run and display a green checkmark when tests pass.
-   - Vercel will post a comment directly on the PR with the live preview link and deployment status.
-5. **Merge to Main:**
-   - Click **Squash and Merge** or **Rebase and Merge** on GitHub.
-   - Vercel automatically deploys the merged `main` branch to your Production URL.
-6. **(Optional) Enable GitHub Branch Protection:**
-   - In GitHub repository settings -> **Branches** -> **Add branch ruleset**:
-     - Target branch: `main`
-     - Check: **Require status checks to pass before merging** -> Add `Typecheck & Test Suite`.
-     - Check: **Require a pull request before merging** (when ready to enforce PRs).
+4. **Open a pull request into `main`:**
+   - GitHub Actions CI runs typecheck, the test suite, and the production build.
+   - CI also pushes the schema with `db:push:ci`. **This currently migrates the production database** (see "Database Environments" above), so schema changes must be additive and backward-compatible.
+   - Vercel deploys the branch to an isolated Preview URL (e.g. `https://tournament-manager-git-feat-custom-bracket-theming.vercel.app`) and comments the link on the PR. Previews also use the production database, so anything created there is real data.
+5. **Merge:**
+   - Merge the PR on GitHub once checks pass. Vercel deploys the merged `main` to production.
+6. **(Optional) Branch protection:**
+   - In GitHub repository settings -> **Branches** -> **Add branch ruleset** for `main`: require status checks (`Typecheck & Test Suite`) and require a pull request before merging.
 
 ---
 
