@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 11.0 Foundation</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 11 / 11.0</nav>
+<h1>Step 11.0: Foundation</h1>
+<p class="subtitle">Visual test harness and baselines, Tailwind v4, theme tokens, shared UI components, and the style lint config. When this step finishes, the app renders the same as before, apart from the listed fixes.</p>
+
+<div class="box"><p><strong>Executor:</strong> Claude (coordinator). Runs alone; nothing else may run in parallel. <strong>Prerequisites:</strong> none. <strong>Read first:</strong> <a href="../index.html">index.html</a>, “Rules for every executor”.</p></div>
+
+<h2>Outcome</h2>
+<ul>
+  <li><code>npm run test:visual</code> compares 18 screenshots against committed baselines taken <em>before</em> any styling change.</li>
+  <li>Tailwind v4 is installed without preflight, so existing CSS keeps winning where it should.</li>
+  <li>Theme tokens exist for every color, size, radius, shadow and animation the app uses, and the legacy CSS variable names still work.</li>
+  <li><code>src/components/ui</code> provides <code>cn</code>, <code>Button</code>/<code>buttonClasses</code>, <code>IconButton</code>, <code>Badge</code>, <code>Chip</code>, <code>Card</code>, <code>useMediaQuery</code>/<code>useIsMobile</code>.</li>
+  <li><code>npm run lint:styles -- &lt;files&gt;</code> reports static inline styles, which is the check every 11.2 batch uses.</li>
+</ul>
+
+<h2>Files</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Create</td><td><code>scripts/captureVisualFixtures.ts</code>, <code>e2e/visual/mockApi.ts</code>, <code>e2e/visual/visual.spec.ts</code>, <code>e2e/visual/fixtures/*.json</code> (generated), <code>e2e/visual/__screenshots__/**</code> (generated)</td></tr>
+  <tr><td>Create</td><td><code>src/components/ui/cn.ts</code>, <code>Button.tsx</code>, <code>IconButton.tsx</code>, <code>Badge.tsx</code>, <code>Chip.tsx</code>, <code>Card.tsx</code>, <code>useMediaQuery.ts</code>, <code>index.ts</code>, <code>__tests__/ui.test.tsx</code></td></tr>
+  <tr><td>Create</td><td><code>eslint.styles.config.js</code></td></tr>
+  <tr><td>Modify</td><td><code>playwright.config.ts</code>, <code>package.json</code>, <code>vite.config.ts</code>, <code>src/index.css</code></td></tr>
+  <tr><td>Modify (test ids only)</td><td><code>src/features/bracket/components/MatchCardFeed.tsx</code>, <code>src/features/bracket/components/MatchScoreDrawer.tsx</code>, <code>src/features/qualifiers/components/LeaderboardTable.tsx</code>, <code>src/features/qualifiers/components/QualifierEntryModal.tsx</code></td></tr>
+  <tr><td>Modify (docs)</td><td><code>docs/TESTING_STRATEGY.md</code>, <code>docs/UI_ARCHITECTURE.md</code></td></tr>
+</table>
+
+<h2>Step 1: Preconditions</h2>
+<ol class="steps">
+  <li>Run <code>git status --short</code>. The tree must be clean. If it isn't, stop and ask.</li>
+  <li>Check whether the dev server is running: request <code>http://localhost:5173/api/health</code>. If it doesn't respond, start <code>npm run dev</code> in the background. Check <code>.env</code> and <code>docker compose ps</code> first (CLAUDE.md §1).</li>
+  <li>Request <code>http://localhost:5173/api/tournaments/omen-ao3</code>. It must return a tournament with <code>isLocked: true</code> and at least one tier with a bracket. If it doesn't, stop and ask the user. Do not reseed a database that already holds tournaments.</li>
+</ol>
+
+<h2>Step 2: Add test ids (no visual change)</h2>
+<table>
+  <tr><th>File</th><th>Element</th><th>Attribute</th></tr>
+  <tr><td><code>MatchCardFeed.tsx</code></td><td>The per-match <code>&lt;div key={match.id} onClick=…&gt;</code> (around line 438)</td><td><code>data-testid="feed-match-card"</code></td></tr>
+  <tr><td><code>MatchScoreDrawer.tsx</code></td><td>The inner panel <code>&lt;div style={{...drawerStyle, …}}&gt;</code> (around line 225)</td><td><code>data-testid="match-score-drawer"</code></td></tr>
+  <tr><td><code>LeaderboardTable.tsx</code></td><td>The button with <code>onClick={() =&gt; setIsEntryModalOpen(true)}</code> (around line 116)</td><td><code>data-testid="open-qualifier-entry"</code></td></tr>
+  <tr><td><code>QualifierEntryModal.tsx</code></td><td>The modal panel, meaning the first child of the fixed backdrop (the element with <code>maxWidth: '560px'</code>)</td><td><code>data-testid="qualifier-entry-modal"</code></td></tr>
+</table>
+<p>Every later step must preserve these four test ids.</p>
+
+<h2>Step 3: Visual test harness</h2>
+<h3>3a. <code>playwright.config.ts</code></h3>
+<p>Replace the <code>projects</code> array and <code>expect</code> block, and add <code>snapshotPathTemplate</code>. Leave everything else unchanged.</p>
+<pre><code>  snapshotPathTemplate: '{testDir}/__screenshots__/{projectName}/{arg}{ext}',
+  expect: {
+    timeout: 5000,
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.01,
+      threshold: 0.2,
+      animations: 'disabled',
+      caret: 'hide',
+      scale: 'css',
+    },
+  },
+  projects: [
+    {
+      name: 'chromium',
+      testDir: './e2e',
+      testIgnore: '**/visual/**',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'visual-desktop',
+      testDir: './e2e/visual',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
+    },
+    {
+      name: 'visual-mobile',
+      testDir: './e2e/visual',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 360, height: 800 },
+        deviceScaleFactor: 1,
+        isMobile: true,
+        hasTouch: true,
+      },
+    },
+  ],</code></pre>
+
+<h3>3b. <code>package.json</code> scripts</h3>
+<pre><code>"test:e2e": "playwright test --project=chromium",
+"test:visual": "playwright test --project=visual-desktop --project=visual-mobile",
+"test:visual:update": "playwright test --project=visual-desktop --project=visual-mobile --update-snapshots",
+"visual:capture": "tsx scripts/captureVisualFixtures.ts",
+"lint:styles": "eslint -c eslint.styles.config.js"</code></pre>
+<p>Replace the existing <code>test:e2e</code> value and add the other four. Do not change any other script.</p>
+
+<h3>3c. <code>scripts/captureVisualFixtures.ts</code></h3>
+<pre><code>/**
+ * Captures frozen API responses for the visual regression suite.
+ * Requires the dev server (npm run dev) and SYSTEM_ADMIN_RECOVERY_PIN in .env.
+ * Usage: npm run visual:capture -- [slug]   (default slug: omen-ao3)
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+if (!process.env.SYSTEM_ADMIN_RECOVERY_PIN) {
+  try {
+    process.loadEnvFile();
+  } catch {
+    // No .env file; rely on the shell environment
+  }
+}
+
+const BASE_URL = process.env.VISUAL_CAPTURE_BASE_URL || 'http://localhost:5173';
+const SLUG = process.argv[2] || 'omen-ao3';
+const PIN = (process.env.SYSTEM_ADMIN_RECOVERY_PIN || '').trim();
+const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'e2e', 'visual', 'fixtures');
+const SECRET_KEY = /pin|token|secret|webhook/i;
+const EXTRA_PLAYERS = 40;
+
+function scrub(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(scrub);
+  if (value &amp;&amp; typeof value === 'object') {
+    const out: Record&lt;string, unknown&gt; = {};
+    for (const [key, val] of Object.entries(value)) {
+      if (SECRET_KEY.test(key)) continue;
+      out[key] = scrub(val);
+    }
+    return out;
+  }
+  return value;
+}
+
+async function getJson(urlPath: string, headers: Record&lt;string, string&gt; = {}): Promise&lt;any&gt; {
+  const res = await fetch(`${BASE_URL}${urlPath}`, { headers });
+  if (!res.ok) throw new Error(`GET ${urlPath} failed with ${res.status}`);
+  return res.json();
+}
+
+function write(name: string, data: unknown): void {
+  fs.writeFileSync(path.join(OUT_DIR, `${name}.json`), `${JSON.stringify(scrub(data), null, 2)}\n`);
+  console.log(`  wrote fixtures/${name}.json`);
+}
+
+async function main(): Promise&lt;void&gt; {
+  if (!PIN) throw new Error('SYSTEM_ADMIN_RECOVERY_PIN is not set.');
+  fs.mkdirSync(OUT_DIR, { recursive: true });
+
+  const tournament = await getJson(`/api/tournaments/${SLUG}`);
+  if (!tournament?.isLocked || !tournament.tiers?.some((t: any) =&gt; t.bracket)) {
+    throw new Error(`Tournament "${SLUG}" must be locked and have a generated bracket.`);
+  }
+
+  const loginRes = await fetch(`${BASE_URL}/api/auth/pin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin: PIN }),
+  });
+  const login = await loginRes.json();
+  if (!loginRes.ok || !login.token) throw new Error('System admin login failed.');
+  const auth = { Authorization: `Bearer ${login.token}` };
+
+  const tournamentJson = JSON.stringify(tournament);
+  const players: any[] = await getJson('/api/players');
+  const keptPlayers = players.filter((p, i) =&gt; i &lt; EXTRA_PLAYERS || tournamentJson.includes(p.id));
+
+  write('health', await getJson('/api/health'));
+  write('tournaments', await getJson('/api/tournaments'));
+  write('tournament', tournament);
+  write('organizations', await getJson('/api/organizations'));
+  write('players', keptPlayers);
+  write('sessions', await getJson(`/api/tournaments/${tournament.id}/qualify/sessions`, auth));
+}
+
+main().catch(err =&gt; {
+  console.error(err);
+  process.exit(1);
+});</code></pre>
+<p>Run it with <code>npm run visual:capture</code>. Then open each fixture and confirm that no PIN, token, secret or webhook value is present: search the six files for <code>pin</code>, <code>token</code>, <code>webhook</code> and <code>discord.com/api</code>.</p>
+
+<h3>3d. <code>e2e/visual/mockApi.ts</code></h3>
+<pre><code>import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import type { Page } from '@playwright/test';
+
+const FIXTURE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
+
+function load(name: string): any {
+  return JSON.parse(fs.readFileSync(path.join(FIXTURE_DIR, `${name}.json`), 'utf8'));
+}
+
+const fixtures = {
+  health: load('health'),
+  tournaments: load('tournaments'),
+  tournament: load('tournament'),
+  organizations: load('organizations'),
+  players: load('players'),
+  sessions: load('sessions'),
+};
+
+export const FIXTURE_SLUG: string = fixtures.tournament.slug;
+export const FIXTURE_TIER_SLUG: string = [...fixtures.tournament.tiers].sort(
+  (a: any, b: any) =&gt; a.priority - b.priority
+)[0].slug;
+
+export const ADMIN_SESSION = {
+  token: 'visual-test-token',
+  role: 'SYSTEM_ADMIN',
+  tournamentIds: [],
+  tournamentSlugs: [],
+  expiresAt: 4102444800000,
+};
+
+/** Routes every /api/* request to frozen fixtures. Returns a list that collects unmocked GETs. */
+export async function installApiMocks(page: Page): Promise&lt;string[]&gt; {
+  const unmocked: string[] = [];
+  await page.route(
+    url =&gt; url.pathname.startsWith('/api/'),
+    async route =&gt; {
+      const request = route.request();
+      const { pathname } = new URL(request.url());
+      if (request.method() !== 'GET') {
+        return route.fulfill({ status: 200, json: { success: true } });
+      }
+      if (pathname === '/api/health') return route.fulfill({ json: fixtures.health });
+      if (pathname === '/api/tournaments') return route.fulfill({ json: fixtures.tournaments });
+      if (pathname === '/api/players') return route.fulfill({ json: fixtures.players });
+      if (pathname === '/api/organizations') return route.fulfill({ json: fixtures.organizations });
+      if (/^\/api\/tournaments\/[^/]+\/qualify\/sessions$/.test(pathname)) {
+        return route.fulfill({ json: fixtures.sessions });
+      }
+      const single = pathname.match(/^\/api\/tournaments\/([^/]+)$/);
+      if (single &amp;&amp; (single[1] === fixtures.tournament.slug || single[1] === fixtures.tournament.id)) {
+        return route.fulfill({ json: fixtures.tournament });
+      }
+      unmocked.push(`GET ${pathname}`);
+      return route.fulfill({ status: 404, json: { error: `visual mock: unmocked GET ${pathname}` } });
+    }
+  );
+  return unmocked;
+}</code></pre>
+
+<h3>3e. <code>e2e/visual/visual.spec.ts</code></h3>
+<pre><code>import { test, expect, type Page } from '@playwright/test';
+import { installApiMocks, ADMIN_SESSION, FIXTURE_SLUG, FIXTURE_TIER_SLUG } from './mockApi';
+
+const FIXED_TIME = new Date('2026-06-01T12:00:00Z');
+
+const PAGES = [
+  { name: 'landing', path: '/', admin: false },
+  { name: 'bracket', path: `/${FIXTURE_SLUG}/${FIXTURE_TIER_SLUG}`, admin: false },
+  { name: 'leaderboard', path: `/${FIXTURE_SLUG}/leaderboard`, admin: false },
+  { name: 'standings', path: `/${FIXTURE_SLUG}/standings`, admin: false },
+  { name: 'judge', path: `/${FIXTURE_SLUG}/manage/judge`, admin: true },
+  { name: 'manage-qualifiers', path: `/${FIXTURE_SLUG}/manage/qualifiers`, admin: true },
+  { name: 'review', path: `/${FIXTURE_SLUG}/manage/review`, admin: true },
+  { name: 'settings', path: `/${FIXTURE_SLUG}/manage/settings`, admin: true },
+];
+
+async function prepare(page: Page, admin: boolean): Promise&lt;string[]&gt; {
+  const unmocked = await installApiMocks(page);
+  await page.clock.setFixedTime(FIXED_TIME);
+  if (admin) {
+    await page.addInitScript(session =&gt; {
+      window.localStorage.setItem('tm_admin_auth', JSON.stringify(session));
+    }, ADMIN_SESSION);
+  }
+  return unmocked;
+}
+
+async function settle(page: Page): Promise&lt;void&gt; {
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByText(/^Loading/)).toHaveCount(0);
+  await page.evaluate(() =&gt; document.fonts.ready);
+}
+
+for (const target of PAGES) {
+  test(`page: ${target.name}`, async ({ page }) =&gt; {
+    const unmocked = await prepare(page, target.admin);
+    await page.goto(target.path);
+    await settle(page);
+    await expect(page).toHaveScreenshot(`${target.name}.png`);
+    expect(unmocked).toEqual([]);
+  });
+}
+
+test('overlay: match score drawer', async ({ page }, testInfo) =&gt; {
+  test.skip(testInfo.project.name !== 'visual-desktop', 'Desktop only');
+  const unmocked = await prepare(page, true);
+  await page.goto(`/${FIXTURE_SLUG}/manage/judge`);
+  await settle(page);
+  await page.getByTestId('feed-match-card').first().click();
+  await expect(page.getByTestId('match-score-drawer')).toBeVisible();
+  await expect(page).toHaveScreenshot('overlay-match-score-drawer.png');
+  expect(unmocked).toEqual([]);
+});
+
+test('overlay: qualifier entry modal', async ({ page }, testInfo) =&gt; {
+  test.skip(testInfo.project.name !== 'visual-desktop', 'Desktop only');
+  const unmocked = await prepare(page, true);
+  await page.goto(`/${FIXTURE_SLUG}/manage/qualifiers`);
+  await settle(page);
+  await page.getByTestId('open-qualifier-entry').click();
+  await expect(page.getByTestId('qualifier-entry-modal')).toBeVisible();
+  await expect(page).toHaveScreenshot('overlay-qualifier-entry.png');
+  expect(unmocked).toEqual([]);
+});</code></pre>
+
+<h3>3f. Baselines</h3>
+<ol class="steps">
+  <li>Run <code>npm run test:visual:update</code>. This generates 16 page screenshots and 2 overlay screenshots (18 total; the overlay tests are skipped on mobile).</li>
+  <li>Run <code>npm run test:visual</code> twice. Both runs must pass with zero diffs. If a screenshot differs between runs, find the moving element and fix the cause: frozen time, waiting for the right element, or adding <code>mask: [locator]</code> for that one element. Record every mask in your report. Do not raise the thresholds.</li>
+  <li>If an <code>unmocked</code> list is non-empty, add that endpoint to the capture script and <code>mockApi.ts</code>, recapture, and regenerate baselines.</li>
+  <li>Look at every baseline image and confirm it shows real content, not an error page or a loading spinner.</li>
+</ol>
+
+<h2>Step 4: Install Tailwind and rewrite <code>src/index.css</code></h2>
+<pre><code>npm install -D tailwindcss@^4.1 @tailwindcss/vite@^4.1
+npm install clsx@^2.1 tailwind-merge@^3</code></pre>
+<p>In <code>vite.config.ts</code>, add <code>import tailwindcss from '@tailwindcss/vite';</code> and put <code>tailwindcss()</code> immediately after <code>react()</code> in <code>plugins</code>.</p>
+<p>Replace the full contents of <code>src/index.css</code> with the following. Every rule from the old file is preserved; only its layer changes.</p>
+<pre><code>@layer theme, base, components, utilities;
+
+/* Preflight is deliberately omitted until step 11.3. */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@source not '../docs';
+
+@theme static {
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+
+  /* Surfaces */
+  --color-canvas: #090d16;
+  --color-surface: #0f172a;
+  --color-elevated: #182238;
+  --color-highlight: #1e293b;
+  /* Lines */
+  --color-line: #24324f;
+  --color-line-subtle: #1a253a;
+  --color-line-focus: #fbbf24;
+  /* Text */
+  --color-fg: #f8fafc;
+  --color-fg-secondary: #94a3b8;
+  --color-fg-muted: #64748b;
+  /* Accents */
+  --color-gold: #f59e0b;
+  --color-gold-bright: #fbbf24;
+  --color-gold-dim: #b45309;
+  --color-gold-soft: rgba(245, 158, 11, 0.12);
+  --color-brand: #fbbf24;
+  --color-cyan: #06b6d4;
+  --color-cyan-soft: rgba(6, 182, 212, 0.12);
+  --color-green: #10b981;
+  --color-green-bright: #34d399;
+  --color-green-soft: rgba(16, 185, 129, 0.12);
+  --color-red: #ef4444;
+  --color-red-bright: #f87171;
+  --color-red-soft: rgba(239, 68, 68, 0.12);
+  /* Default tier theme */
+  --color-tier-gold: #ffc905;
+  --color-tier-gold-dim: #705b33;
+
+  /* Font sizes carry no line-height, so line-height keeps inheriting as it does today. */
+  --text-*: initial;
+  --text-3xs: 0.625rem;
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-caption: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-hero: 2.5rem;
+
+  --tracking-*: initial;
+  --tracking-tight: -0.02em;
+  --tracking-wide: 0.04em;
+  --tracking-wider: 0.06em;
+  --tracking-widest: 0.08em;
+
+  --radius-*: initial;
+  --radius-2xs: 2px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --shadow-*: initial;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.7);
+  --shadow-gold: 0 0 16px rgba(245, 158, 11, 0.25);
+  --shadow-gold-sm: 0 2px 8px rgba(245, 158, 11, 0.3);
+  --shadow-gold-hover: 0 4px 14px rgba(245, 158, 11, 0.5);
+  --shadow-gold-glow: 0 0 12px rgba(245, 158, 11, 0.2);
+
+  --blur-overlay: 6px;
+
+  --animate-fade-in: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-slide-in-right: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-pulse-border: pulseBorder 2s infinite ease-in-out;
+  --animate-match-zoom-pulse: matchZoomPulse 2.4s ease-in-out;
+}
+
+/* Legacy variable names, kept until 11.3 so unconverted inline styles still resolve. */
+:root {
+  --color-bg-base: var(--color-canvas);
+  --color-bg-surface: var(--color-surface);
+  --color-bg-surface-elevated: var(--color-elevated);
+  --color-bg-surface-highlight: var(--color-highlight);
+  --color-border: var(--color-line);
+  --color-border-subtle: var(--color-line-subtle);
+  --color-border-focus: var(--color-line-focus);
+  --color-gold-bg: var(--color-gold-soft);
+  --color-cyan-bg: var(--color-cyan-soft);
+  --color-green-bg: var(--color-green-soft);
+  --color-red-bg: var(--color-red-soft);
+  --color-text-primary: var(--color-fg);
+  --color-text-secondary: var(--color-fg-secondary);
+  --color-text-muted: var(--color-fg-muted);
+  --color-text-gold: var(--color-gold-bright);
+  --radius-full: 9999px;
+}
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { overflow-y: scroll; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--color-line) var(--color-canvas); }
+  html, body {
+    min-height: 100%;
+    font-family: var(--font-sans);
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  #root { min-height: 100vh; display: flex; flex-direction: column; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--color-canvas); }
+  ::-webkit-scrollbar-thumb { background: var(--color-line); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-gold-dim); }
+}
+
+/* Legacy component classes. Every rule below is deleted in 11.3. */
+@layer components {
+  .tabular-nums { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .animate-fade-in { animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  .animate-pulse-border { animation: pulseBorder 2s infinite ease-in-out; }
+  .glass-panel { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--color-line); }
+  /* (copy .btn, .btn-primary, .btn-secondary, .btn-danger and their :hover rules verbatim from the old file) */
+  /* (copy .badge, .badge-gold, .badge-green, .badge-blue, .badge-muted verbatim from the old file) */
+  /* (copy .bracket-side-chip and its :hover/:active rules verbatim from the old file) */
+  /* (copy the three @media blocks for .top-nav-teleport-chip, .qualifier-top-pods/.qualifier-side-by-side-pods and .obs-cards-grid verbatim) */
+}
+
+/* Unlayered on purpose: these use !important to beat inline styles. */
+select {
+  /* (copy the select rule verbatim from the old file) */
+}
+select:disabled { cursor: not-allowed; opacity: 0.6; }
+.obs-overlay-mode { background: transparent !important; background-color: transparent !important; min-height: 100vh; }
+.obs-overlay-mode #root { background: transparent !important; background-color: transparent !important; }
+
+/* (copy @keyframes fadeIn, pulseBorder, slideInRight and matchZoomPulse verbatim from the old file) */</code></pre>
+<div class="box warn"><p>The “copy verbatim” lines mean exactly that: copy the rule bodies from the previous <code>src/index.css</code> (<code>git show HEAD:src/index.css</code>) without edits. They're abbreviated here only to keep this spec readable.</p></div>
+<h4>Checks after Step 4</h4>
+<ol class="steps">
+  <li>Run <code>npm run build</code>. Open the emitted CSS in <code>dist/assets/</code> and confirm that a <code>.text-xs</code> rule, if present, sets <code>font-size</code> and that its <code>line-height</code> value refers to an undefined variable. That's what makes line-height inherit.</li>
+  <li>Run <code>npm run typecheck</code> and <code>npm test</code>. Both must pass.</li>
+  <li>Run <code>npm run test:visual</code>. The expected differences come only from variables that used to be undefined and are now defined: <code>--color-brand</code>, <code>--radius-xs</code>, <code>--shadow-xl</code>, <code>--color-green-bright</code>, <code>--color-red-bright</code>. Inspect each failing diff. If the change is only at elements that use those variables, run <code>npm run test:visual:update</code> and list the updated screenshots in your report. Any other difference is a bug in the CSS rewrite: fix it.</li>
+</ol>
+
+<h2>Step 5: Shared UI components (<code>src/components/ui</code>)</h2>
+<h3><code>cn.ts</code></h3>
+<pre><code>import { clsx, type ClassValue } from 'clsx';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: ['3xs', '2xs', 'caption', 'hero'],
+      radius: ['2xs'],
+      shadow: ['gold', 'gold-sm', 'gold-hover', 'gold-glow'],
+      blur: ['overlay'],
+    },
+  },
+});
+
+/** Joins class names and resolves Tailwind conflicts (later classes win). */
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
+}</code></pre>
+
+<h3><code>Button.tsx</code></h3>
+<pre><code>import React from 'react';
+import { cn } from './cn';
+
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
+export type ButtonSize = 'sm' | 'md';
+
+const BASE =
+  'inline-flex items-center justify-center font-sans font-semibold rounded-sm border border-transparent ' +
+  'cursor-pointer no-underline whitespace-nowrap transition-all duration-150 ease-in-out ' +
+  'disabled:cursor-not-allowed disabled:opacity-60';
+
+const VARIANTS: Record&lt;ButtonVariant, string&gt; = {
+  primary:
+    'bg-linear-135 from-gold-bright to-gold text-canvas font-bold shadow-gold-sm ' +
+    'enabled:hover:brightness-110 enabled:hover:shadow-gold-hover enabled:hover:-translate-y-px',
+  secondary: 'bg-elevated border-line text-fg enabled:hover:bg-highlight enabled:hover:border-fg-secondary',
+  danger: 'bg-red-soft border-red text-red-300 enabled:hover:bg-red enabled:hover:text-white',
+  ghost: 'bg-transparent text-fg-secondary enabled:hover:bg-white/5 enabled:hover:text-fg',
+};
+
+const SIZES: Record&lt;ButtonSize, string&gt; = {
+  sm: 'gap-1.5 px-3 py-1.5 text-xs',
+  md: 'gap-2 px-4 py-2 text-sm',
+};
+
+/** Class string for elements that must look like a button but aren't &lt;button&gt; (e.g. router &lt;Link&gt;). */
+export function buttonClasses(opts: { variant?: ButtonVariant; size?: ButtonSize; className?: string } = {}): string {
+  const { variant = 'secondary', size = 'md', className } = opts;
+  return cn(BASE, VARIANTS[variant], SIZES[size], className);
+}
+
+export interface ButtonProps extends React.ButtonHTMLAttributes&lt;HTMLButtonElement&gt; {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+}
+
+export const Button = React.forwardRef&lt;HTMLButtonElement, ButtonProps&gt;(
+  ({ variant = 'secondary', size = 'md', className, type = 'button', ...props }, ref) =&gt; (
+    &lt;button ref={ref} type={type} className={buttonClasses({ variant, size, className })} {...props} /&gt;
+  )
+);
+Button.displayName = 'Button';</code></pre>
+<p>The <code>enabled:hover:</code> modifier works on <code>&lt;button&gt;</code>. For a <code>&lt;Link&gt;</code> using <code>buttonClasses</code>, those hover styles don't apply, because a link is never <code>:enabled</code>. Pass the plain hover equivalents in <code>className</code> instead (for secondary: <code>hover:bg-highlight hover:border-fg-secondary</code>). The conversion guide lists these.</p>
+
+<h3><code>IconButton.tsx</code></h3>
+<pre><code>import React from 'react';
+import { cn } from './cn';
+
+export interface IconButtonProps extends React.ButtonHTMLAttributes&lt;HTMLButtonElement&gt; {
+  /** Required: icon-only buttons need an accessible name. */
+  'aria-label': string;
+}
+
+/** Icon-only button (close X, row actions). */
+export const IconButton = React.forwardRef&lt;HTMLButtonElement, IconButtonProps&gt;(
+  ({ className, type = 'button', ...props }, ref) =&gt; (
+    &lt;button
+      ref={ref}
+      type={type}
+      className={cn(
+        'inline-flex items-center justify-center rounded-sm border-0 bg-transparent p-1 text-fg-muted cursor-pointer',
+        'transition-colors duration-150 enabled:hover:bg-white/5 enabled:hover:text-fg disabled:cursor-not-allowed disabled:opacity-60',
+        className
+      )}
+      {...props}
+    /&gt;
+  )
+);
+IconButton.displayName = 'IconButton';</code></pre>
+
+<h3><code>Badge.tsx</code></h3>
+<pre><code>import React from 'react';
+import { cn } from './cn';
+
+export type BadgeVariant = 'gold' | 'green' | 'blue' | 'muted';
+
+const VARIANTS: Record&lt;BadgeVariant, string&gt; = {
+  gold: 'bg-gold-soft text-gold-bright border-gold/30',
+  green: 'bg-green-soft text-emerald-400 border-green/30',
+  blue: 'bg-cyan-soft text-sky-400 border-cyan/30',
+  muted: 'bg-slate-400/10 text-fg-secondary border-slate-400/20',
+};
+
+export interface BadgeProps extends React.HTMLAttributes&lt;HTMLSpanElement&gt; {
+  variant?: BadgeVariant;
+}
+
+export const Badge: React.FC&lt;BadgeProps&gt; = ({ variant = 'muted', className, ...props }) =&gt; (
+  &lt;span
+    className={cn(
+      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide',
+      VARIANTS[variant],
+      className
+    )}
+    {...props}
+  /&gt;
+);</code></pre>
+
+<h3><code>Chip.tsx</code></h3>
+<pre><code>import React from 'react';
+import { cn } from './cn';
+
+export interface ChipProps extends React.ButtonHTMLAttributes&lt;HTMLButtonElement&gt; {
+  active?: boolean;
+  /** Runtime accent (e.g. a tier color). textColor must contrast with color. */
+  accent?: { color: string; textColor: string };
+  size?: 'sm' | 'md';
+}
+
+/** Pill-shaped toggle: tier selectors, view toggles, filter pills, nav pills. */
+export const Chip = React.forwardRef&lt;HTMLButtonElement, ChipProps&gt;(
+  ({ active = false, accent, size = 'md', className, style, type = 'button', ...props }, ref) =&gt; {
+    const accentStyle = accent
+      ? ({ '--chip-accent': accent.color, '--chip-accent-fg': accent.textColor } as React.CSSProperties)
+      : undefined;
+    return (
+      &lt;button
+        ref={ref}
+        type={type}
+        aria-pressed={active}
+        style={accentStyle ? { ...accentStyle, ...style } : style}
+        className={cn(
+          'inline-flex items-center gap-2 rounded-full border font-semibold transition-all duration-150',
+          size === 'md' ? 'px-3.5 py-1.5 text-caption' : 'px-2.5 py-1 text-xs',
+          active ? 'cursor-default font-extrabold' : 'cursor-pointer bg-canvas text-fg-secondary border-line',
+          active &amp;&amp; !accent &amp;&amp; 'bg-gold-soft text-gold-bright border-gold shadow-gold-glow',
+          active &amp;&amp;
+            accent &amp;&amp;
+            'bg-(--chip-accent) text-(--chip-accent-fg) border-(--chip-accent) shadow-[0_0_10px_color-mix(in_srgb,var(--chip-accent)_25%,transparent)]',
+          className
+        )}
+        {...props}
+      /&gt;
+    );
+  }
+);
+Chip.displayName = 'Chip';</code></pre>
+
+<h3><code>Card.tsx</code></h3>
+<pre><code>import React from 'react';
+import { cn } from './cn';
+
+const PADDING = { none: 'p-0', sm: 'p-3', md: 'p-4', lg: 'p-6' } as const;
+const TONE = { surface: 'bg-surface', elevated: 'bg-elevated' } as const;
+
+export interface CardProps extends React.HTMLAttributes&lt;HTMLDivElement&gt; {
+  padding?: keyof typeof PADDING;
+  tone?: keyof typeof TONE;
+}
+
+export const Card: React.FC&lt;CardProps&gt; = ({ padding = 'md', tone = 'surface', className, ...props }) =&gt; (
+  &lt;div className={cn('rounded-md border border-line', TONE[tone], PADDING[padding], className)} {...props} /&gt;
+);</code></pre>
+
+<h3><code>useMediaQuery.ts</code></h3>
+<pre><code>import { useCallback, useSyncExternalStore } from 'react';
+
+/** Matches Tailwind's md breakpoint: anything below 768px is mobile. */
+export const MOBILE_QUERY = '(max-width: 767.98px)';
+
+export function useMediaQuery(query: string): boolean {
+  const subscribe = useCallback(
+    (onChange: () =&gt; void) =&gt; {
+      if (typeof window === 'undefined' || !window.matchMedia) return () =&gt; {};
+      const mql = window.matchMedia(query);
+      mql.addEventListener('change', onChange);
+      return () =&gt; mql.removeEventListener('change', onChange);
+    },
+    [query]
+  );
+  return useSyncExternalStore(
+    subscribe,
+    () =&gt; typeof window !== 'undefined' &amp;&amp; !!window.matchMedia &amp;&amp; window.matchMedia(query).matches,
+    () =&gt; false
+  );
+}
+
+export function useIsMobile(): boolean {
+  return useMediaQuery(MOBILE_QUERY);
+}</code></pre>
+
+<h3><code>index.ts</code></h3>
+<pre><code>export { cn } from './cn';
+export { Button, buttonClasses } from './Button';
+export type { ButtonProps, ButtonVariant, ButtonSize } from './Button';
+export { IconButton } from './IconButton';
+export { Badge } from './Badge';
+export type { BadgeVariant } from './Badge';
+export { Chip } from './Chip';
+export { Card } from './Card';
+export { useMediaQuery, useIsMobile, MOBILE_QUERY } from './useMediaQuery';</code></pre>
+
+<h3><code>__tests__/ui.test.tsx</code></h3>
+<p>Use <code>renderToStaticMarkup</code>, like the existing component tests. Required cases:</p>
+<ol>
+  <li><code>cn('text-2xs', 'text-fg')</code> contains both classes. A custom font size must not be merged away as a color.</li>
+  <li><code>cn('text-xs', 'text-2xs')</code> equals <code>'text-2xs'</code>.</li>
+  <li><code>cn('px-4', 'px-5')</code> equals <code>'px-5'</code>.</li>
+  <li><code>&lt;Button&gt;</code> renders <code>type="button"</code> by default, and <code>variant="primary"</code> includes <code>from-gold-bright</code>.</li>
+  <li><code>buttonClasses({ variant: 'danger', size: 'sm' })</code> includes <code>bg-red-soft</code> and <code>text-xs</code>.</li>
+  <li><code>&lt;Chip active accent={{ color: '#ff0000', textColor: '#000000' }}&gt;</code> renders a style containing <code>--chip-accent:#ff0000</code> and <code>aria-pressed="true"</code>.</li>
+  <li><code>&lt;Badge variant="gold"&gt;</code> includes <code>text-gold-bright</code>.</li>
+  <li><code>useMediaQuery</code> rendered in the Node test environment (no <code>window</code>) returns <code>false</code>. Render a tiny component that prints the value.</li>
+</ol>
+<p>If case 1 fails, adjust the <code>extendTailwindMerge</code> config according to the tailwind-merge v3 docs until it passes. Don't change the test.</p>
+
+<h2>Step 6: Style lint config (<code>eslint.styles.config.js</code>)</h2>
+<pre><code>import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+
+const STYLE_OBJECT = "JSXAttribute[name.name='style'] &gt; JSXExpressionContainer &gt; ObjectExpression";
+
+/**
+ * Style-migration rules (Phase 11). Run on specific files:
+ *   npm run lint:styles -- src/path/File.tsx
+ * Merged into eslint.config.js in step 11.3.
+ */
+export const styleRestrictions = [
+  { selector: `${STYLE_OBJECT} &gt; Property[value.type='Literal']`, message: 'Static inline style value. Use Tailwind classes.' },
+  { selector: `${STYLE_OBJECT} &gt; Property[value.type='TemplateLiteral'][value.expressions.length=0]`, message: 'Static inline style value. Use Tailwind classes.' },
+  { selector: `${STYLE_OBJECT} &gt; Property[value.type='UnaryExpression'][value.argument.type='Literal']`, message: 'Static inline style value. Use Tailwind classes.' },
+  { selector: `${STYLE_OBJECT} &gt; Property[value.type='ConditionalExpression'][value.consequent.type='Literal'][value.alternate.type='Literal']`, message: 'Static conditional style. Use conditional classes with cn().' },
+  { selector: "JSXAttribute[name.name='style'] &gt; JSXExpressionContainer &gt; Identifier", message: 'style={variable} is not allowed. Use classes, or an inline object holding only runtime values.' },
+  { selector: "JSXAttribute[name.name='style'] Literal[value=/^#[0-9a-fA-F]{3,8}$/]", message: 'Hex color in a style. Use a theme token class.' },
+  { selector: "VariableDeclarator[id.typeAnnotation.typeAnnotation.typeName.right.name='CSSProperties']", message: 'CSSProperties constants are not allowed. Use class strings.' },
+  { selector: "VariableDeclarator[id.typeAnnotation.typeAnnotation.typeName.name='CSSProperties']", message: 'CSSProperties constants are not allowed. Use class strings.' },
+  { selector: "JSXAttribute[name.name='className'] Literal[value=/(^|\\s)(btn|badge)(-[a-z]+)?(\\s|$)/]", message: 'Legacy btn/badge class. Use &lt;Button&gt;, &lt;Badge&gt; or buttonClasses().' },
+  { selector: "AssignmentExpression[left.object.property.name='style']", message: 'Direct style mutation. Use hover:/focus: classes or state with cn().' },
+];
+
+export default tseslint.config(
+  { ignores: ['dist', 'node_modules'] },
+  {
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: { parser: tseslint.parser, parserOptions: { ecmaFeatures: { jsx: true } } },
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    linterOptions: { reportUnusedDisableDirectives: 'off' },
+    rules: { 'no-restricted-syntax': ['error', ...styleRestrictions] },
+  }
+);</code></pre>
+<h4>Checks</h4>
+<ol class="steps">
+  <li><code>npm run lint:styles -- src/components/ui</code> reports 0 errors. (<code>Chip</code> passes because its <code>style</code> value is a <code>ConditionalExpression</code> of identifiers, not literals.)</li>
+  <li><code>npm run lint:styles -- src/components/LoadingScreen.tsx</code> reports errors. This proves the rules fire. Don't fix them; batch A1 owns that file.</li>
+</ol>
+
+<h2>Step 7: Documentation</h2>
+<ul>
+  <li><code>docs/TESTING_STRATEGY.md</code>: add a “Tier 4: Visual regression (Playwright screenshots)” section. Cover what it covers (the 18 screenshots), that it mocks the API from <code>e2e/visual/fixtures</code> and freezes the clock, the commands (<code>test:visual</code>, <code>test:visual:update</code>, <code>visual:capture</code>), that it is local-only, isn't part of <code>npm test</code> or CI, and that only the coordinator updates baselines. Update the command table and the statement that Playwright golden journeys run with <code>npm run test:e2e</code> (now <code>--project=chromium</code>).</li>
+  <li><code>docs/UI_ARCHITECTURE.md</code>: add a “Styling” section. Cover Tailwind v4 via <code>@tailwindcss/vite</code>, tokens defined in <code>src/index.css</code> <code>@theme</code>, shared components in <code>src/components/ui</code>, <code>cn()</code> for conditional classes, the rule that inline <code>style</code> is only for runtime values, and a link to the conversion guide.</li>
+</ul>
+
+<h2>Step 8: Final verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes.</li>
+  <li><code>npm test</code> passes, including the new <code>ui.test.tsx</code>.</li>
+  <li><code>npm run test:visual</code> passes, run twice in a row.</li>
+  <li><code>npm run test:e2e</code> passes (golden journeys; needs the DB and the PIN in <code>.env</code>).</li>
+  <li><code>npm run build</code> succeeds.</li>
+  <li>The report lists every re-baselined screenshot and every mask.</li>
+</ul>
+<p>After the user commits this step, 11.1 may start.</p>
+</main>
+</body>
+</html>

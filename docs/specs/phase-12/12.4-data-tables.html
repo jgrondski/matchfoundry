@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.4 Data Tables</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.4</nav>
+<h1>Step 12.4: Data tables become card lists</h1>
+<p class="subtitle">Final standings, the tournament roster and the global player directory render as card lists on phones. (The qualifiers leaderboard is done in 12.2.)</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. Can run in parallel with 12.2 and 12.3. <strong>Prerequisite:</strong> 12.1 committed. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules, <a href="12.0-mobile-foundation.html">12.0's “Conventions”</a>, and <a href="../phase-11/11.2-conversion-guide.html">the conversion guide</a>.</p></div>
+
+<h2>Pattern (applies to every table here)</h2>
+<ol class="steps">
+  <li>The card list takes the same row data the table already computes. If that computation is inline in the JSX, extract it into a function in the same file first, then use it for both.</li>
+  <li>The parent renders the card list when <code>useIsMobile()</code> is true, and the table otherwise. Tests run with <code>useIsMobile() === false</code>, so table tests stay valid.</li>
+  <li>The list is <code>&lt;ul className="flex flex-col gap-2"&gt;</code>, with each item a <code>Card padding="sm"</code>. If a table row is clickable, the whole card is one <code>&lt;button&gt;</code> doing the same thing. If a row has action buttons, they're <code>IconButton</code>s with plain-word <code>aria-label</code>s in the card's top-right corner.</li>
+  <li>Values and formatting are copied from the table cells (the same helper calls), never reimplemented.</li>
+  <li>Search, filter and sort controls above the table stack full width on mobile (<code>max-md:flex-col max-md:items-stretch</code>, with inputs <code>max-md:w-full</code>).</li>
+</ol>
+
+<h2>A. Final standings (<code>FinalStandingsTable.tsx</code>, create <code>FinalStandingsCardList.tsx</code>)</h2>
+<table>
+  <tr><th>Card line</th><th>Content</th></tr>
+  <tr><td>1</td><td>Final rank (<code>w-8 font-mono text-base font-black</code>), flag and name (truncate), and on the right the Stage Reached label.</td></tr>
+  <tr><td>2</td><td>Qual seed and delta badge (the same component or markup as the “Qual &amp; Delta” cell), then “Avg” plus the game score average.</td></tr>
+  <tr><td>Expandable</td><td>A “Details” disclosure (<code>&lt;details&gt;</code>/<code>&lt;summary&gt;</code>, summary <code>min-h-11</code>) showing Exit Match / Loss Avg, Match Rec and Game Rec as a 2-column definition grid.</td></tr>
+</table>
+<p>The overview stat cards above the table become <code>max-md:grid-cols-2</code>.</p>
+
+<h2>B. Tournament roster (<code>src/routes/ManageTournamentPlayersPage.tsx</code>)</h2>
+<p>Columns today: #, Competitor, Country, Playstyle, Personal Best, Actions. Card: line 1 is <code>#</code>, flag and name, with action IconButtons on the right (the same actions as the Actions cell); line 2 is the playstyle chip, then “PB” and the personal best (<code>font-mono</code>), plus the seed or tier assignment if the page shows it. The page's top action buttons (register, import, and so on) wrap and go full width on mobile.</p>
+
+<h2>C. Global player directory (<code>src/features/players/components/PlayerDirectorySections.tsx</code>, <code>PlayerDirectory.tsx</code>)</h2>
+<p>Columns today: #, Competitor, Country, Playstyle, Personal Best, Status, Notes, Actions. Card: line 1 is <code>#</code>, flag and name, and the actions; line 2 is the playstyle chip, PB, and the status badge; line 3, only when there are notes, is the notes text clamped to two lines (<code>line-clamp-2 text-xs text-fg-secondary</code>). Keep the header text of the desktop table identical (<code>directorySections.test.tsx</code> asserts on it).</p>
+
+<h2>D. Tests</h2>
+<ul>
+  <li>Unit tests for each card list (<code>renderToStaticMarkup</code> with a 3-row fixture): every row renders its name and primary value, and the action buttons carry their <code>aria-label</code>s.</li>
+  <li>Append overflow routes: <code>standings</code> (public), <code>manage-standings</code>, <code>manage-players</code> (admin), <code>players</code> (<code>/players</code>, admin if the route requires it).</li>
+</ul>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code>, <code>npm test</code> pass with no edits to existing tests.</li>
+  <li><code>npm run test:visual</code>: desktop unchanged; mobile <code>standings</code> changes (listed).</li>
+  <li>The overflow spec passes for the appended routes.</li>
+</ul>
+</main>
+</body>
+</html>

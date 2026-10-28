@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MatchFoundry Execution Specs</title>
+<link rel="stylesheet" href="spec.css">
+</head>
+<body>
+<main>
+<h1>MatchFoundry Execution Specs</h1>
+<p class="subtitle">Phase 11 (Tailwind migration and overlay rules) and Phase 12 (mobile-friendly app). Start here.</p>
+
+<h2>How to use these specs</h2>
+<p>Each step of each phase has its own HTML file. A step file is written so that one session, of any model, can execute it from start to finish without making design decisions. To hand a step to a session, use this prompt:</p>
+<pre><code>Read docs/specs/index.html (the "Rules for every executor" section), then execute
+docs/specs/phase-11/&lt;step file&gt;.html exactly as written. Do not start any other step.
+If the spec does not cover a situation, stop and ask instead of improvising.</code></pre>
+<p>11.2 batch files also require reading <a href="phase-11/11.2-conversion-guide.html">the conversion guide</a>; each batch file says so.</p>
+
+<h2>Rules for every executor</h2>
+<ol class="steps">
+  <li><strong>Git.</strong> Confirm the current branch with <code>git branch --show-current</code>. If it is not the branch the user named for this work, or <code>main</code>, stop and ask. Never create branches, never commit, never push. Leave all changes uncommitted.</li>
+  <li><strong>Stay in scope.</strong> Edit only the files the step lists. If a fix seems to need a file outside the list, stop and report it instead of editing it.</li>
+  <li><strong>Frozen shared files.</strong> After step 11.0 finishes, these files are frozen for every later step except 11.3 and Phase 12 steps that name them explicitly: <code>src/index.css</code>, <code>src/components/ui/*</code>, <code>src/components/overlay/*</code> (frozen after 11.1), <code>eslint.styles.config.js</code>, <code>playwright.config.ts</code>, <code>e2e/visual/*</code>. If you need a new shared component or token, write the request in your final report and continue without it.</li>
+  <li><strong>No behavior changes</strong> unless the step explicitly asks for one. In Phase 11, a conversion must render the same thing and do the same thing.</li>
+  <li><strong>Cross-platform.</strong> Scripts and npm commands must work in PowerShell and in Bash/Zsh. Normalize paths with <code>.replace(/\\/g, '/')</code> before comparing them. Never hardcode a database port.</li>
+  <li><strong>Commands.</strong> Run the narrowest check that proves the work: <code>npm run typecheck</code>, then <code>npx vitest run &lt;paths&gt;</code>. Run full <code>npm test</code> only where the step says to. Do not run <code>npm run lint</code> across the whole repo.</li>
+  <li><strong>Visual tests.</strong> <code>npm run test:visual</code> is run where the step says. Never run <code>npm run test:visual:update</code> unless the step tells you to; updating baselines is a coordinator decision.</li>
+  <li><strong>Final report.</strong> End with: files changed, commands run with pass/fail, anything skipped and why, any <code>eslint-disable</code> lines added (file, line and reason), requests for shared changes, and visual test results.</li>
+</ol>
+
+<h2>Phase 11: Styling foundation and Tailwind migration</h2>
+<p><strong>Goal:</strong> the whole app is styled with Tailwind v4 and shared UI components, with no static inline styles. The app looks the same as before, except for small differences from snapping values onto a token scale. The one behavior change is the new rule for when drawers and pop-ups may be closed.</p>
+<table>
+  <tr><th>Step</th><th>File</th><th>Depends on</th><th>Who</th><th>Summary</th></tr>
+  <tr><td>11.0</td><td><a href="phase-11/11.0-foundation.html">Foundation</a></td><td>none</td><td>Claude (coordinator)</td><td>Visual test harness and baselines, Tailwind install, theme tokens, shared UI components, style lint config.</td></tr>
+  <tr><td>11.1</td><td><a href="phase-11/11.1-overlays.html">Overlays and dismissal rules</a></td><td>11.0</td><td>Claude (coordinator)</td><td>One <code>Overlay</code> / <code>ConfirmDialog</code> / <code>DiscardChangesDialog</code> system; all 37 overlays moved onto it; unsaved-changes protection.</td></tr>
+  <tr><td>11.2</td><td><a href="phase-11/11.2-conversion-guide.html">Conversion guide</a> plus 10 batch files</td><td>11.1</td><td>Claude or agy, in parallel</td><td>Convert every component file. Two waves of five batches, with no file shared between batches.</td></tr>
+  <tr><td>11.3</td><td><a href="phase-11/11.3-cleanup.html">Cleanup and enforcement</a></td><td>all of 11.2</td><td>Claude (coordinator)</td><td>Remove legacy CSS, enable Tailwind preflight, move color data into a palette module, make the style lint rules part of the normal lint.</td></tr>
+</table>
+
+<h3>11.2 batches</h3>
+<table>
+  <tr><th>Wave</th><th>Batch</th><th>Scope</th><th>Inline style sites</th></tr>
+  <tr><td>1</td><td><a href="phase-11/11.2-B-bracket-visualizer.html">B</a></td><td>Bracket visualizer and tier bar</td><td>≈267</td></tr>
+  <tr><td>1</td><td><a href="phase-11/11.2-D-qualifiers.html">D</a></td><td>Qualifiers components</td><td>≈287</td></tr>
+  <tr><td>1</td><td><a href="phase-11/11.2-G-seeding.html">G</a></td><td>Manual seeding</td><td>≈285</td></tr>
+  <tr><td>1</td><td><a href="phase-11/11.2-H-players.html">H</a></td><td>Players</td><td>≈238</td></tr>
+  <tr><td>1</td><td><a href="phase-11/11.2-I-organizations-auth.html">I</a></td><td>Organizations and auth modal</td><td>≈233</td></tr>
+  <tr><td>2</td><td><a href="phase-11/11.2-A1-shell.html">A1</a></td><td>App shell, layouts, sidebar, top nav</td><td>≈161</td></tr>
+  <tr><td>2</td><td><a href="phase-11/11.2-A2-routes.html">A2</a></td><td>Route pages</td><td>≈323</td></tr>
+  <tr><td>2</td><td><a href="phase-11/11.2-C-bracket-entry-obs.html">C</a></td><td>Match feed, score drawer, sheet, OBS</td><td>≈362</td></tr>
+  <tr><td>2</td><td><a href="phase-11/11.2-E-online-quals.html">E</a></td><td>Online qualifiers and review queue</td><td>≈407</td></tr>
+  <tr><td>2</td><td><a href="phase-11/11.2-F-tournament-settings.html">F</a></td><td>Tournament admin form, settings, standings</td><td>≈520</td></tr>
+</table>
+<div class="box">
+<p><strong>Wave protocol.</strong> Run all five batches of a wave in parallel, in the same working tree. When all five report done:</p>
+<ol>
+<li>The coordinator runs <code>npm run typecheck</code>, <code>npm test</code> and <code>npm run test:visual</code>.</li>
+<li>The coordinator reviews each failing screenshot diff in <code>test-results/</code>. Token-snap drift (a few pixels of size or spacing change, same structure, same colors) is accepted, and the coordinator runs <code>npm run test:visual:update</code>. Anything else goes back to the batch that owns the file.</li>
+<li>The user commits the wave.</li>
+<li>Wave 2 starts.</li>
+</ol>
+<p>The heaviest batches (F, E, C, A2) are better suited to Claude, and the lighter ones (H, I, D) to agy.</p>
+</div>
+
+<h2>Phase 12: Mobile-friendly app (360×800 and up)</h2>
+<p><strong>Goal:</strong> every page works on a 360×800 phone with no sideways page scroll, tap targets of at least 44px, and readable text. Priority order: spectators navigating from the landing page, then floor judges (match scoring, qualifier entry, review queue), then the compact bracket, then everything else. The work is not done until every route passes.</p>
+<table>
+  <tr><th>Step</th><th>File</th><th>Depends on</th><th>Summary</th></tr>
+  <tr><td>12.0</td><td><a href="phase-12/12.0-mobile-foundation.html">Mobile foundation</a></td><td>Phase 11 complete</td><td>Phone presentation for overlays (bottom sheets), back-gesture handling, layout helpers, overflow test, new mobile baselines.</td></tr>
+  <tr><td>12.1</td><td><a href="phase-12/12.1-navigation-shell.html">Navigation shell</a></td><td>12.0</td><td>Spectator bottom tab bar and compact header, bracket tier bar, admin top bar and slide-out menu, landing page.</td></tr>
+  <tr><td>12.2</td><td><a href="phase-12/12.2-floor-judge.html">Floor judge tools</a></td><td>12.1</td><td>Judge feed, score sheet, qualifiers management and entry, review queue and adjudication.</td></tr>
+  <tr><td>12.3</td><td><a href="phase-12/12.3-compact-bracket.html">Compact bracket</a></td><td>12.1</td><td>New <code>compact</code> bracket view: seed, name and match wins, keeping the bracket shape.</td></tr>
+  <tr><td>12.4</td><td><a href="phase-12/12.4-data-tables.html">Data tables</a></td><td>12.1</td><td>Leaderboard, standings, roster and global player directory become card lists on phones.</td></tr>
+  <tr><td>12.5</td><td><a href="phase-12/12.5-remaining-pages.html">Remaining pages</a></td><td>12.1–12.4</td><td>Settings, seeding, sheet, OBS hub, organizations, login and competitor portal; then the full-app overflow test for every route.</td></tr>
+</table>
+<p>12.2, 12.3 and 12.4 touch disjoint files and can run in parallel after 12.1.</p>
+
+<h2>Decisions already made</h2>
+<table>
+  <tr><th>Topic</th><th>Decision</th></tr>
+  <tr><td>Styling approach</td><td>Tailwind v4 plus a small set of shared components in <code>src/components/ui</code>. Runtime values (tier colors, layout coordinates) are passed as CSS custom properties or inline styles; everything static uses classes.</td></tr>
+  <tr><td>Order</td><td>Convert the whole app to Tailwind first (Phase 11), then make it mobile (Phase 12). The phases run back to back.</td></tr>
+  <tr><td>Scope of mobile</td><td>The entire app. Priority: spectator navigation, then floor judge tools including the review queue, then compact bracket, then everything else.</td></tr>
+  <tr><td>Dismissal rule</td><td>Read-only overlays close on an outside click or tap and on Escape. A form with unsaved changes asks first: “Discard unsaved changes?” with <strong>Keep Editing</strong> and <strong>Discard Changes</strong>. An outside click or Escape on that prompt means Keep Editing.</td></tr>
+  <tr><td>Compact bracket</td><td>Shows seed, name and match wins only (for example 2–1). Brackets never show game scores.</td></tr>
+  <tr><td>Screenshot tests</td><td>Light touch: 18 screenshots, mocked API, frozen clock, their own command, never part of <code>npm test</code> or CI.</td></tr>
+  <tr><td>Spec location</td><td><code>docs/specs/</code> in the repo, one HTML file per step.</td></tr>
+</table>
+
+<h2>Definition of done for both phases</h2>
+<ul class="check">
+  <li>No file under <code>src/</code> contains a static inline style; <code>npm run lint</code> enforces this.</li>
+  <li>No legacy global component classes (<code>btn</code>, <code>badge</code>, and the others) remain; <code>src/index.css</code> holds only the theme, base styles and keyframes.</li>
+  <li>Every overlay uses <code>Overlay</code> or <code>ConfirmDialog</code> and follows the dismissal rule.</li>
+  <li>Every route passes the mobile overflow test at 360×800.</li>
+  <li><code>npm run typecheck</code>, <code>npm test</code>, <code>npm run test:e2e</code> and <code>npm run test:visual</code> all pass.</li>
+  <li><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>docs/UI_ARCHITECTURE.md</code>, <code>docs/TESTING_STRATEGY.md</code> and the product spec describe the new rules.</li>
+</ul>
+</main>
+</body>
+</html>

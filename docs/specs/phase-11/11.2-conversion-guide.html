@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tailwind Conversion Guide</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 11 / 11.2 conversion guide</nav>
+<h1>Tailwind Conversion Guide</h1>
+<p class="subtitle">The rules every 11.2 batch follows to turn inline styles into Tailwind classes and shared components. If two executors convert the same element using this guide, they should produce the same classes.</p>
+
+<h2>1. Principles</h2>
+<ol class="steps">
+  <li><strong>Same look, same behavior.</strong> Small size and spacing shifts from snapping onto the scale are expected. Changed colors, missing borders, different wrapping or overflow, and changed layout are bugs.</li>
+  <li><strong>Static values become classes.</strong> A value is static if it is a literal, or a conditional choosing between literals.</li>
+  <li><strong>Runtime values stay inline.</strong> A value is runtime if it comes from props, state, data or a function call and can't be listed as a small fixed set. Examples: tier and org theme colors (<code>primaryColor</code>, <code>cardColor</code>, <code>getAlternateShade(…)</code>), layout engine coordinates (<code>pos.x</code>, <code>pos.width</code>), and font sizes passed in as props.</li>
+  <li><strong>Use shared components</strong> from <code>src/components/ui</code> wherever they fit (section 9).</li>
+  <li><strong>Never change</strong> text, element order, event handlers, ARIA attributes, <code>data-testid</code>s, or exported names and props.</li>
+</ol>
+
+<h2>2. Per-file procedure</h2>
+<ol class="steps">
+  <li>Run <code>npm run lint:styles -- &lt;file&gt;</code> to list every violation.</li>
+  <li>Work top to bottom. For each element, delete static properties from its <code>style</code> object and add the equivalent classes to <code>className</code>, using the tables below. Merge with an existing <code>className</code>, and use <code>cn()</code> once any part is conditional.</li>
+  <li>If a <code>style</code> object ends up empty, delete the attribute. If only runtime values remain, keep it as an inline object literal holding only those values.</li>
+  <li>Delete module-level <code>CSSProperties</code> constants (<code>const overlayStyle: React.CSSProperties = …</code>). Replace each with a <code>const</code> class string (<code>const thClass = 'px-4 py-3 …';</code>), or inline the classes when it's used once. <code>style={someVariable}</code> is not allowed. If the variable holds runtime values, spread it into an inline object literal.</li>
+  <li>Replace hover workarounds (section 7).</li>
+  <li>Replace legacy classes (section 8).</li>
+  <li>Remove imports that are no longer used.</li>
+  <li>Re-run <code>npm run lint:styles -- &lt;file&gt;</code> until it reports 0 errors.</li>
+</ol>
+
+<h2>3. Spacing and sizes</h2>
+<h3>3a. Spacing: <code>padding*</code>, <code>margin*</code>, <code>gap</code>, <code>rowGap</code>, <code>columnGap</code>, <code>top/right/bottom/left</code>, <code>inset</code></h3>
+<p>Convert to px (1rem = 16px). Divide by 4, then round to the <strong>nearest multiple of 0.5</strong>; ties round up. Use that as the class step. <code>0</code> → <code>-0</code>; <code>1px</code> → <code>-px</code>; <code>auto</code> → <code>-auto</code>.</p>
+<table>
+  <tr><th>Value</th><th>Step</th><th>Value</th><th>Step</th><th>Value</th><th>Step</th></tr>
+  <tr><td>2px, 0.1rem, 0.15rem</td><td>0.5</td><td>0.55rem</td><td>2</td><td>1.15rem</td><td>4.5</td></tr>
+  <tr><td>3px, 0.2rem</td><td>1</td><td>0.6rem, 0.65rem</td><td>2.5</td><td>1.25rem</td><td>5</td></tr>
+  <tr><td>4px, 0.25rem, 0.3rem</td><td>1</td><td>0.7rem</td><td>3</td><td>1.5rem</td><td>6</td></tr>
+  <tr><td>0.35rem, 0.4rem</td><td>1.5</td><td>0.75rem, 12px</td><td>3</td><td>1.75rem</td><td>7</td></tr>
+  <tr><td>0.45rem, 0.5rem, 8px</td><td>2</td><td>0.85rem, 0.9rem</td><td>3.5</td><td>2rem</td><td>8</td></tr>
+  <tr><td>10px</td><td>2.5</td><td>0.95rem, 1rem, 16px</td><td>4</td><td>2.5rem / 3rem / 4rem</td><td>10 / 12 / 16</td></tr>
+</table>
+<p>Shorthand: <code>padding: '0.5rem 1rem'</code> → <code>py-2 px-4</code>. With four values (top right bottom left), use <code>pt- pr- pb- pl-</code>, collapsing to <code>py-</code>/<code>px-</code> when the pairs match. <code>margin: '0 auto'</code> → <code>mx-auto</code>. Negative values → <code>-m-1</code>, <code>-top-2</code>. A <code>calc()</code> or percentage offset → arbitrary value, e.g. <code>top-[calc(56px+var(--bracket-tier-bar-height,48px))]</code>, <code>left-1/2</code>.</p>
+
+<h3>3b. Sizes: <code>width</code>, <code>height</code>, <code>min*/max*</code>, icon dots</h3>
+<p>Sizes keep 1px precision. Convert to px, divide by 4, round to the <strong>nearest multiple of 0.25</strong>: <code>520px</code> → <code>max-w-130</code>; <code>460px</code> → <code>max-w-115</code>; <code>6px</code> → <code>w-1.5</code>; <code>30px</code> → <code>w-7.5</code>; <code>7px</code> → <code>w-1.75</code>. When width equals height, use <code>size-*</code>.</p>
+<table>
+  <tr><th>Value</th><th>Class</th></tr>
+  <tr><td><code>'100%'</code></td><td><code>w-full</code> / <code>h-full</code> / <code>max-w-full</code></td></tr>
+  <tr><td><code>'100vh'</code>, <code>'100vw'</code></td><td><code>h-screen</code>, <code>min-h-screen</code>, <code>max-h-screen</code>, <code>w-screen</code></td></tr>
+  <tr><td>fractions <code>'50%'</code>, <code>'33.333%'</code></td><td><code>w-1/2</code>, <code>w-1/3</code></td></tr>
+  <tr><td><code>calc(…)</code></td><td>arbitrary with no spaces: <code>h-[calc(100vh-56px)]</code></td></tr>
+  <tr><td><code>'auto'</code>, <code>'fit-content'</code>, <code>'max-content'</code></td><td><code>w-auto</code>, <code>w-fit</code>, <code>w-max</code></td></tr>
+  <tr><td><code>minWidth: 0</code></td><td><code>min-w-0</code></td></tr>
+</table>
+
+<h2>4. Typography</h2>
+<h3>Font size</h3>
+<table>
+  <tr><th>Existing value</th><th>Class</th><th>Existing value</th><th>Class</th></tr>
+  <tr><td>≤ 0.66rem (≤ 10.5px)</td><td><code>text-3xs</code></td><td>0.92–1.05rem, 15–16px</td><td><code>text-base</code></td></tr>
+  <tr><td>0.67–0.71rem</td><td><code>text-2xs</code></td><td>1.1–1.2rem</td><td><code>text-lg</code></td></tr>
+  <tr><td>0.72–0.77rem, 12px</td><td><code>text-xs</code></td><td>1.25–1.35rem</td><td><code>text-xl</code></td></tr>
+  <tr><td>0.78–0.83rem, 13px</td><td><code>text-caption</code></td><td>1.4–1.6rem</td><td><code>text-2xl</code></td></tr>
+  <tr><td>0.84–0.91rem, 14px</td><td><code>text-sm</code></td><td>1.75–2rem</td><td><code>text-3xl</code></td></tr>
+  <tr><td></td><td></td><td>2.1–2.4rem / ≥ 2.45rem</td><td><code>text-4xl</code> / <code>text-hero</code></td></tr>
+</table>
+<p>A font size that comes from a variable or prop (for example <code>nameFontSize</code>) is runtime and stays inline.</p>
+<h3>Weight, family, tracking, line height</h3>
+<table>
+  <tr><th>Property</th><th>Mapping</th></tr>
+  <tr><td><code>fontWeight</code></td><td>400 <code>font-normal</code>, 500 <code>font-medium</code>, 600 <code>font-semibold</code>, 700 <code>font-bold</code>, 800 <code>font-extrabold</code>, 900 <code>font-black</code></td></tr>
+  <tr><td><code>fontFamily</code></td><td>Anything containing <code>mono</code> or <code>monospace</code> → <code>font-mono</code>; anything else → <code>font-sans</code>; <code>'inherit'</code> → drop it</td></tr>
+  <tr><td><code>letterSpacing</code></td><td>≤ −0.01em <code>tracking-tight</code>; 0.02–0.045em <code>tracking-wide</code>; 0.05–0.07em <code>tracking-wider</code>; ≥ 0.075em <code>tracking-widest</code>; 0 or <code>'normal'</code> → drop it</td></tr>
+  <tr><td><code>lineHeight</code> (unitless)</td><td>1 <code>leading-none</code>; 1.05–1.29 <code>leading-tight</code>; 1.3–1.44 <code>leading-snug</code>; 1.45–1.55 <code>leading-normal</code>; 1.56–1.8 <code>leading-relaxed</code>; &gt; 1.8 <code>leading-loose</code>. A px value → <code>leading-[20px]</code></td></tr>
+  <tr><td><code>textTransform</code></td><td><code>uppercase</code>, <code>lowercase</code>, <code>capitalize</code></td></tr>
+  <tr><td><code>textAlign</code></td><td><code>text-left</code>, <code>text-center</code>, <code>text-right</code></td></tr>
+  <tr><td><code>whiteSpace</code></td><td><code>whitespace-nowrap</code>, <code>whitespace-pre-wrap</code>, <code>whitespace-normal</code></td></tr>
+  <tr><td>overflow hidden + nowrap + ellipsis together</td><td><code>truncate</code> (only all three together; otherwise map each one)</td></tr>
+  <tr><td><code>textOverflow: 'ellipsis'</code> alone</td><td><code>text-ellipsis</code></td></tr>
+  <tr><td><code>textDecoration: 'none'</code> / <code>'underline'</code></td><td><code>no-underline</code> / <code>underline</code></td></tr>
+  <tr><td><code>fontVariantNumeric: 'tabular-nums'</code></td><td><code>tabular-nums</code></td></tr>
+  <tr><td><code>wordBreak: 'break-all'</code> / <code>overflowWrap: 'anywhere'</code></td><td><code>break-all</code> / <code>wrap-anywhere</code></td></tr>
+</table>
+
+<h2>5. Color</h2>
+<h3>5a. CSS variables → tokens</h3>
+<p>Use the utility prefix for the property: <code>bg-</code> (background, backgroundColor), <code>text-</code> (color), <code>border-</code> (borderColor or the color in a border shorthand), <code>fill-</code>/<code>stroke-</code> (SVG), <code>from-</code>/<code>to-</code> (gradients), <code>outline-</code>, <code>ring-</code>. Ignore the fallback value in <code>var(--x, fallback)</code> when <code>--x</code> is listed here.</p>
+<table>
+  <tr><th>Variable</th><th>Token</th><th>Variable</th><th>Token</th></tr>
+  <tr><td><code>--color-bg-base</code></td><td><code>canvas</code></td><td><code>--color-text-primary</code>, <code>--color-text-main</code></td><td><code>fg</code></td></tr>
+  <tr><td><code>--color-bg-surface</code></td><td><code>surface</code></td><td><code>--color-text-secondary</code></td><td><code>fg-secondary</code></td></tr>
+  <tr><td><code>--color-bg-surface-elevated</code>, <code>--color-bg-elevated</code></td><td><code>elevated</code></td><td><code>--color-text-muted</code></td><td><code>fg-muted</code></td></tr>
+  <tr><td><code>--color-bg-surface-highlight</code></td><td><code>highlight</code></td><td><code>--color-text-gold</code>, <code>--color-gold-bright</code></td><td><code>gold-bright</code></td></tr>
+  <tr><td><code>--color-border</code></td><td><code>line</code></td><td><code>--color-gold</code> / <code>--color-gold-dim</code></td><td><code>gold</code> / <code>gold-dim</code></td></tr>
+  <tr><td><code>--color-border-subtle</code></td><td><code>line-subtle</code></td><td><code>--color-gold-bg</code></td><td><code>gold-soft</code></td></tr>
+  <tr><td><code>--color-border-focus</code></td><td><code>line-focus</code></td><td><code>--color-brand</code></td><td><code>brand</code></td></tr>
+  <tr><td><code>--color-cyan</code> / <code>--color-cyan-bg</code></td><td><code>cyan</code> / <code>cyan-soft</code></td><td><code>--color-green</code> / <code>-bright</code> / <code>-bg</code></td><td><code>green</code> / <code>green-bright</code> / <code>green-soft</code></td></tr>
+  <tr><td><code>--color-red</code> / <code>-bright</code> / <code>-bg</code></td><td><code>red</code> / <code>red-bright</code> / <code>red-soft</code></td><td><code>--color-primary-dark</code></td><td><code>blue-500</code></td></tr>
+</table>
+
+<h3>5b. Hex literals in static styles</h3>
+<p>First, if the hex matches a token value exactly, use the token: <code>#090d16</code> canvas, <code>#0f172a</code> surface, <code>#182238</code> elevated, <code>#1e293b</code> highlight, <code>#64748b</code> fg-muted, <code>#94a3b8</code> fg-secondary, <code>#f8fafc</code> fg, <code>#f59e0b</code> gold, <code>#fbbf24</code> gold-bright, <code>#b45309</code> gold-dim, <code>#10b981</code> green, <code>#34d399</code> green-bright, <code>#ef4444</code> red, <code>#f87171</code> red-bright, <code>#06b6d4</code> cyan, <code>#ffc905</code> tier-gold, <code>#705b33</code> tier-gold-dim. Lowercase the hex before comparing.</p>
+<p>Next, if it matches a Tailwind default palette color exactly, use that name:</p>
+<table>
+  <tr><th>Hex</th><th>Class color</th><th>Hex</th><th>Class color</th><th>Hex</th><th>Class color</th></tr>
+  <tr><td>#ffffff, #fff</td><td>white</td><td>#4ade80</td><td>green-400</td><td>#c084fc</td><td>purple-400</td></tr>
+  <tr><td>#000000, #000</td><td>black</td><td>#22c55e</td><td>green-500</td><td>#a855f7</td><td>purple-500</td></tr>
+  <tr><td>#fca5a5</td><td>red-300</td><td>#86efac</td><td>green-300</td><td>#a78bfa</td><td>violet-400</td></tr>
+  <tr><td>#dc2626</td><td>red-600</td><td>#38bdf8</td><td>sky-400</td><td>#fb923c</td><td>orange-400</td></tr>
+  <tr><td>#991b1b</td><td>red-800</td><td>#0284c7</td><td>sky-600</td><td>#ea580c</td><td>orange-600</td></tr>
+  <tr><td>#fb7185</td><td>rose-400</td><td>#60a5fa</td><td>blue-400</td><td>#c2410c</td><td>orange-700</td></tr>
+  <tr><td>#e2e8f0</td><td>slate-200</td><td>#3b82f6</td><td>blue-500</td><td>#334155</td><td>slate-700</td></tr>
+  <tr><td>#cbd5e1</td><td>slate-300</td><td>#2563eb</td><td>blue-600</td><td>#059669</td><td>emerald-600</td></tr>
+</table>
+<p>Then the near-black backgrounds, which snap to a token: <code>#020203</code> → black; <code>#0b0e14 #0c0d12 #0d1117 #090d13 #090c12</code> → canvas; <code>#0e1420 #141824</code> → surface; <code>#161922 #182232 #1a222d</code> → elevated; <code>#e6edf3 #f0f6fc</code> → fg. Any other hex in a static style: use an arbitrary class (<code>text-[#db5f00]</code>) and list it in the batch report so 11.3 can add a token.</p>
+<div class="box warn"><p><strong>Theme data is not a style.</strong> Hex values used as data stay exactly where they are. That covers object values for keys like <code>primaryColor</code>, <code>secondaryColor</code>, <code>cardColor</code>, <code>backgroundColor</code>, <code>textColor</code>, <code>lowerBracketColor</code>, palette maps, defaults, and arguments to color helpers such as <code>getAlternateShade</code>/<code>colorWithAlpha</code>. 11.3 consolidates them into a palette module. The lint rule only flags hex values inside <code>style</code> attributes.</p></div>
+
+<h3>5c. <code>rgba()</code> and alpha</h3>
+<p>Express the color in RGB, find it as a token or palette color, and use the alpha as an integer percent: <code>rgba(255,255,255,0.05)</code> → <code>white/5</code>; <code>rgba(0,0,0,0.4)</code> → <code>black/40</code>; <code>rgba(245,158,11,0.15)</code> → <code>gold/15</code>; <code>rgba(239,68,68,0.3)</code> → <code>red/30</code>; <code>rgba(148,163,184,0.1)</code> → <code>slate-400/10</code>; <code>rgba(16,185,129,0.12)</code> → <code>green/12</code>; <code>rgba(255,201,5,0.08)</code> → <code>tier-gold/8</code>. Round the percent to the nearest integer. RGB values that are neither a token nor a palette color → arbitrary <code>bg-[rgba(11,14,20,0.94)]</code>, listed in the report.</p>
+<p>Runtime color strings built from data, such as <code>`${tierColor}40`</code> or <code>colorWithAlpha(primaryColor, 0.2)</code>, stay inline.</p>
+
+<h2>6. Borders, radius, effects, layout</h2>
+<table>
+  <tr><th>Property</th><th>Mapping</th></tr>
+  <tr><td><code>border: '1px solid X'</code></td><td><code>border border-X</code>. 2px → <code>border-2</code>. Dashed → add <code>border-dashed</code>. <code>'none'</code> or <code>0</code> → <code>border-0</code></td></tr>
+  <tr><td><code>borderBottom/Top/Left/Right</code></td><td><code>border-b</code>/<code>-t</code>/<code>-l</code>/<code>-r</code> plus a color class. With different colors per side, use <code>border-b-line</code> and similar</td></tr>
+  <tr><td><code>borderColor</code> alone</td><td><code>border-X</code>. If no width is set anywhere and you're converting <code>border: '1px solid'</code>, still use <code>border</code></td></tr>
+  <tr><td><code>borderRadius</code></td><td><code>var(--radius-xs)</code>, 3–4px → <code>rounded-xs</code>; ≤ 2px → <code>rounded-2xs</code>; <code>var(--radius-sm…)</code>, 5–7px → <code>rounded-sm</code>; <code>var(--radius-md…)</code>, 8–12px → <code>rounded-md</code>; <code>var(--radius-lg…)</code>, 13–20px → <code>rounded-lg</code>; <code>var(--radius-full…)</code>, 9999px, 999px, <code>'50%'</code> on a square element → <code>rounded-full</code>; <code>'50%'</code> on a non-square element → <code>rounded-[50%]</code>. Per-corner values → <code>rounded-t-md</code> and similar</td></tr>
+  <tr><td><code>boxShadow</code></td><td><code>var(--shadow-sm|md|lg|xl|gold)</code> → <code>shadow-sm</code> …; <code>'none'</code> → <code>shadow-none</code>. Any other static shadow → arbitrary with underscores for spaces: <code>shadow-[0_8px_24px_rgba(0,0,0,0.5)]</code>. A shadow built from runtime colors stays inline</td></tr>
+  <tr><td><code>backdropFilter: blur(N)</code></td><td>4px <code>backdrop-blur-xs</code>; 5–6px <code>backdrop-blur-overlay</code>; 8px <code>backdrop-blur-sm</code>; 10–12px <code>backdrop-blur-md</code>; 16px <code>backdrop-blur-lg</code>. Drop any duplicate <code>WebkitBackdropFilter</code></td></tr>
+  <tr><td><code>opacity</code></td><td><code>opacity-N</code>, where N = value × 100 rounded to the nearest 5</td></tr>
+  <tr><td><code>display</code></td><td><code>flex</code>, <code>inline-flex</code>, <code>grid</code>, <code>block</code>, <code>inline-block</code>, <code>inline</code>, <code>hidden</code> (for <code>'none'</code>)</td></tr>
+  <tr><td>flex</td><td><code>flexDirection: column</code> <code>flex-col</code>; <code>flexWrap: wrap</code> <code>flex-wrap</code>; <code>flex: 1</code> <code>flex-1</code>; <code>flex: 2</code> <code>flex-2</code>; <code>flex: '0 0 auto'</code> <code>flex-none</code>; <code>flexShrink: 0</code> <code>shrink-0</code>; <code>flexGrow: 1</code> <code>grow</code></td></tr>
+  <tr><td>alignment</td><td><code>alignItems</code> → <code>items-center|start|end|stretch|baseline</code>; <code>justifyContent</code> → <code>justify-center|between|start|end|around</code>; <code>alignSelf</code> → <code>self-*</code></td></tr>
+  <tr><td>grid</td><td><code>gridTemplateColumns: 'repeat(3, 1fr)'</code> → <code>grid-cols-3</code>; any other static template → arbitrary with underscores: <code>grid-cols-[repeat(auto-fill,minmax(480px,1fr))]</code>, <code>grid-cols-[48px_1fr_auto]</code>. A template built from runtime values stays inline</td></tr>
+  <tr><td><code>position</code>, <code>inset: 0</code></td><td><code>relative</code>, <code>absolute</code>, <code>fixed</code>, <code>sticky</code>; <code>inset-0</code></td></tr>
+  <tr><td><code>zIndex: N</code></td><td><code>z-N</code> (any integer, for example <code>z-42</code>, <code>z-9999</code>)</td></tr>
+  <tr><td><code>overflow</code>, <code>overflowX/Y</code></td><td><code>overflow-hidden|auto|visible</code>, <code>overflow-x-auto</code>, <code>overflow-y-auto</code></td></tr>
+  <tr><td><code>cursor</code></td><td><code>cursor-pointer|default|not-allowed|grab|col-resize</code></td></tr>
+  <tr><td><code>userSelect: 'none'</code>, <code>pointerEvents: 'none'</code></td><td><code>select-none</code>, <code>pointer-events-none</code></td></tr>
+  <tr><td><code>boxSizing: 'border-box'</code></td><td>Drop it; the global reset already applies it</td></tr>
+  <tr><td><code>outline: 'none'</code></td><td><code>outline-none</code></td></tr>
+  <tr><td><code>transform</code> (static)</td><td><code>translate-x-*</code>, <code>-translate-y-1/2</code>, <code>rotate-90</code>, <code>scale-95</code>; complex → arbitrary property <code>[transform:…]</code></td></tr>
+  <tr><td><code>transition</code></td><td><code>'all …'</code> → <code>transition-all</code>; <code>'color …'</code> → <code>transition-colors</code>; <code>'background …'</code> → <code>transition-colors</code>; <code>'transform …'</code> → <code>transition-transform</code>; <code>'opacity …'</code> → <code>transition-opacity</code>. Duration in ms → <code>duration-150</code>, <code>duration-200</code>, … (nearest of 75/100/150/200/300/500/700). Drop the easing</td></tr>
+  <tr><td><code>animation</code></td><td><code>fadeIn …</code> → <code>animate-fade-in</code>; <code>slideInRight …</code> → <code>animate-slide-in-right</code>; <code>pulseBorder …</code> → <code>animate-pulse-border</code>; <code>matchZoomPulse …</code> → <code>animate-match-zoom-pulse</code>; <code>spin …</code> → <code>animate-spin</code>; <code>scaleUp …</code> → drop it (that keyframe doesn't exist). A runtime condition becomes a conditional class</td></tr>
+  <tr><td>gradients</td><td><code>linear-gradient(135deg, A 0%, B 100%)</code> with static colors → <code>bg-linear-135 from-A to-B</code>; with runtime colors → inline</td></tr>
+</table>
+
+<h2>7. Hover, focus and pressed workarounds</h2>
+<ul>
+  <li>Handlers that only mutate the element's own style (<code>e.currentTarget.style.background = …</code>) → delete both handlers and add <code>hover:</code> classes with the same values. If the handler mirrors a focus state, use <code>focus-visible:</code>.</li>
+  <li>Handlers that set React state used elsewhere (for example <code>setHoveredMatchId</code>) stay. Only the style mutations inside them go.</li>
+  <li>A hover color that is a runtime value: set it as a CSS variable inline and reference it in a class. <code>style={{ '--row-hover': hoverTint }}</code> plus <code>hover:bg-(--row-hover)</code>.</li>
+  <li>A parent hover that styles a child → <code>group</code> on the parent and <code>group-hover:</code> on the child.</li>
+</ul>
+
+<h2>8. Legacy global classes</h2>
+<table>
+  <tr><th>Legacy</th><th>Replacement</th></tr>
+  <tr><td><code>className="btn btn-primary|secondary|danger"</code> on <code>&lt;button&gt;</code></td><td><code>&lt;Button variant="…"&gt;</code>. Overrides: padding <code>0.35rem 0.75rem</code> with font size 0.75rem → <code>size="sm"</code>; any other padding or font override → pass it in <code>className</code> (it wins through <code>cn</code>). Drop inline <code>cursor</code>/<code>opacity</code> tied to <code>disabled</code>, since Button handles both. Keep <code>type</code> if it is <code>submit</code></td></tr>
+  <tr><td>same classes on <code>&lt;Link&gt;</code> or <code>&lt;a&gt;</code></td><td><code>className={buttonClasses({ variant, size, className: '…' })}</code>, adding the plain <code>hover:</code> equivalents of the variant: primary <code>hover:brightness-110 hover:shadow-gold-hover hover:-translate-y-px</code>; secondary <code>hover:bg-highlight hover:border-fg-secondary</code>; danger <code>hover:bg-red hover:text-white</code></td></tr>
+  <tr><td><code>badge badge-gold|green|blue|muted</code></td><td><code>&lt;Badge variant="gold|green|blue|muted"&gt;</code></td></tr>
+  <tr><td><code>tabular-nums</code> (legacy class)</td><td><code>font-mono tabular-nums tracking-tight</code></td></tr>
+  <tr><td><code>glass-panel</code></td><td><code>bg-surface/75 backdrop-blur-md border border-line</code></td></tr>
+  <tr><td><code>animate-fade-in</code>, <code>animate-pulse-border</code></td><td>Keep the same names. They're now theme utilities</td></tr>
+  <tr><td><code>bracket-side-chip</code></td><td><code>cursor-pointer transition-[transform,filter,box-shadow] duration-150 hover:z-35 hover:scale-[1.18] hover:brightness-[1.28] active:scale-95</code></td></tr>
+  <tr><td><code>qualifier-top-pods</code>, <code>qualifier-side-by-side-pods</code></td><td>Remove the class and the inline <code>gridTemplateColumns</code>. Use <code>grid-cols-1 min-[1025px]:grid-cols-[…the old inline template…]</code></td></tr>
+  <tr><td><code>obs-cards-grid</code></td><td><code>grid grid-cols-1 gap-4.5 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3</code></td></tr>
+  <tr><td><code>top-nav-teleport-chip</code></td><td><code>max-[860px]:hidden</code></td></tr>
+  <tr><td><code>hidden-mobile</code></td><td>Delete it. It was never defined; Phase 12 adds real mobile hiding</td></tr>
+  <tr><td><code>obs-mode-canvas</code>, <code>obs-bracket-container</code>, <code>obs-overlay-mode</code></td><td>Leave unchanged; they're runtime markers</td></tr>
+</table>
+
+<h2>9. Shared components to use</h2>
+<table>
+  <tr><th>Pattern in the code</th><th>Use</th></tr>
+  <tr><td>Icon-only button (close X, row action) styled transparent and muted</td><td><code>&lt;IconButton aria-label="…"&gt;</code>. Give the label in plain words (“Close”, “Delete player”)</td></tr>
+  <tr><td>Pill toggles: tier selectors, view-mode toggles, filter pills, spectator nav pills</td><td><code>&lt;Chip active={…} accent={tierColor ? { color, textColor } : undefined}&gt;</code>. Keep any extra content (dots, counts) as children</td></tr>
+  <tr><td>A panel with surface background, line border and rounded corners</td><td><code>&lt;Card padding tone&gt;</code>, when its padding matches 0, 3, 4 or 6 steps after snapping; otherwise plain classes</td></tr>
+  <tr><td>Modals, drawers, confirmations</td><td>Already converted in 11.1. Convert only their interior content</td></tr>
+</table>
+<p>Don't create new shared components in a batch. If a pattern repeats 5 or more times in your batch and none of these fit, note it in the report.</p>
+
+<h2>10. Allowed exceptions</h2>
+<p>When a rule can't be satisfied without changing behavior, add <code>// eslint-disable-next-line no-restricted-syntax -- runtime: &lt;reason&gt;</code> on the line above, and list it in the report. Valid reasons: a style object assembled in a helper and returned to the caller (for example the bracket canvas positioning), or a third-party component that only accepts a <code>style</code> prop. “Too many classes” is not a valid reason.</p>
+
+<h2>11. Tests</h2>
+<ul>
+  <li>Change a test only when it asserts rendered inline styles from a file in your batch. The batch file lists these. Rewrite the assertion to check the equivalent class (for example <code>toContain('rounded-full')</code>) and keep the intent of the test.</li>
+  <li>Tests that check data returned by helpers (for example <code>routingChips</code> colors) must not change.</li>
+  <li>Never delete or skip a test.</li>
+</ul>
+
+<h2>12. Worked example</h2>
+<pre><code>// Before
+&lt;div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.35rem 0.85rem',
+  borderRadius: 'var(--radius-full)', fontSize: '0.78rem', fontWeight: isActive ? 800 : 600,
+  background: isActive ? tierColor : 'var(--color-bg-base)',
+  color: isActive ? contrastColor : 'var(--color-text-secondary)',
+  border: isActive ? `1px solid ${tierColor}` : '1px solid var(--color-border)',
+  cursor: isActive ? 'default' : 'pointer', transition: 'all 0.15s ease' }}&gt;
+
+// After: this is a tier chip, so use Chip
+&lt;Chip active={isActive} accent={{ color: tierColor, textColor: contrastColor }} onClick={…}&gt;</code></pre>
+<pre><code>// Before
+&lt;span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
+  letterSpacing: '0.08em', color: 'var(--color-gold-bright)' }}&gt;
+
+// After
+&lt;span className="text-2xs font-bold uppercase tracking-widest text-gold-bright"&gt;</code></pre>
+<pre><code>// Before (runtime theme color plus static layout)
+&lt;div style={{ background: cardColor, borderRadius: '8px', padding: '0.75rem 1rem', border: '1px solid var(--color-border)' }}&gt;
+
+// After
+&lt;div className="rounded-md border border-line px-4 py-3" style={{ background: cardColor }}&gt;</code></pre>
+</main>
+</body>
+</html>

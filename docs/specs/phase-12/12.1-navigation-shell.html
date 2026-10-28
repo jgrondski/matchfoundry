@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.1 Navigation Shell</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.1</nav>
+<h1>Step 12.1: Navigation shell</h1>
+<p class="subtitle">Spectators can reach every public page from the landing page on a phone, and admins can reach every manage page through a menu. This step fixes the stacked-controls problem on the bracket page.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. Runs alone. <strong>Prerequisite:</strong> 12.0 committed. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules, <a href="12.0-mobile-foundation.html">12.0's “Conventions”</a>, and <a href="../phase-11/11.2-conversion-guide.html">the conversion guide</a>.</p></div>
+
+<h2>Files</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Create</td><td><code>src/components/SpectatorBottomNav.tsx</code>, <code>src/components/AdminMobileTopBar.tsx</code></td></tr>
+  <tr><td>Modify</td><td><code>src/components/SpectatorLayout.tsx</code>, <code>TournamentLayout.tsx</code>, <code>TournamentSidebar.tsx</code>, <code>TopNavSwitcher.tsx</code>, <code>TournamentPageHeader.tsx</code></td></tr>
+  <tr><td>Modify</td><td><code>src/features/bracket/components/BracketTierBar.tsx</code>, <code>src/routes/TournamentSwitcherPage.tsx</code>, <code>src/features/tournament/components/TournamentCard.tsx</code></td></tr>
+  <tr><td>Modify</td><td><code>e2e/visual/mobileOverflow.spec.ts</code> (append routes)</td></tr>
+</table>
+
+<h2>A. Spectator header (<code>SpectatorLayout.tsx</code>)</h2>
+<ol class="steps">
+  <li>Extract the <code>navItems</code> array into an exported function in the same file: <code>getSpectatorNavItems(tournament: Tournament, activeTierSlug?: string)</code>. It returns the same objects. Both the header and the bottom nav use it.</li>
+  <li>Header on mobile: <code>max-md:h-12 max-md:px-3 max-md:gap-2</code>.
+    <ul>
+      <li>The “All Tournaments” link shows only its arrow icon on mobile: wrap the label in <code>&lt;span className="max-md:sr-only"&gt;</code> and add <code>aria-label="All tournaments"</code>.</li>
+      <li>The tournament name block gets <code>min-w-0 flex-1</code>. Its name span gets <code>truncate</code>, replacing the fixed <code>max-w-[220px]</code> on mobile (<code>max-md:max-w-none</code>). Hide the org line on mobile (<code>max-md:hidden</code>).</li>
+      <li>The center <code>&lt;nav&gt;</code> pills get <code>max-md:hidden</code>.</li>
+      <li>The Share button label becomes <code>max-md:sr-only</code>. The Manage / Staff Login label becomes <code>max-md:sr-only</code>, with <code>aria-label="Manage tournament"</code> / <code>aria-label="Staff login"</code>.</li>
+    </ul>
+  </li>
+  <li>Render <code>&lt;SpectatorBottomNav items={…} activeView={activeView} /&gt;</code> after the content wrapper. Give the content wrapper <code>max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom))]</code>.</li>
+  <li>The <code>fit</code>-mode height <code>calc(100vh - 56px)</code> is only reachable on desktop (see section C), so leave it.</li>
+</ol>
+
+<h2>B. <code>SpectatorBottomNav.tsx</code></h2>
+<pre><code>interface SpectatorBottomNavProps {
+  items: Array&lt;{ id: SpectatorNavView; label: string; icon: LucideIcon; to: string }&gt;;
+  activeView: SpectatorNavView;
+}</code></pre>
+<ul>
+  <li>Root: <code>&lt;nav aria-label="Tournament sections" className="fixed inset-x-0 bottom-0 z-50 grid border-t border-line bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"&gt;</code>, with a runtime column count: <code>style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}</code>.</li>
+  <li>Each item is a <code>&lt;Link to={item.to}&gt;</code> (not a button) with <code>aria-current={active ? 'page' : undefined}</code> and classes <code>flex h-14 flex-col items-center justify-center gap-0.5 text-2xs font-semibold no-underline</code>, plus <code>text-gold-bright</code> when active or <code>text-fg-muted</code> otherwise. Icon <code>size={20}</code>. Label: <code>item.label</code>.</li>
+</ul>
+
+<h2>C. Bracket tier bar (<code>BracketTierBar.tsx</code>)</h2>
+<ol class="steps">
+  <li>Root on mobile: <code>max-md:flex-col max-md:items-stretch max-md:gap-2 max-md:px-3 max-md:py-2</code>. The sticky offset on mobile: <code>max-md:top-12</code> for both public (under the 48px spectator header) and manage (under the 48px admin top bar).</li>
+  <li>Left group (tier chips): on mobile, <code>max-md:-mx-3 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3 max-md:[scrollbar-width:none]</code>. Hide the “Tier:” label and the “Add Tier” link on mobile (<code>max-md:hidden</code>). Chips get <code>shrink-0</code>.</li>
+  <li>Right group on mobile: <code>max-md:justify-between</code>.
+    <ul>
+      <li>Player search: <code>max-md:hidden</code>.</li>
+      <li>Share button: <code>max-md:hidden</code> (the spectator header has Share on mobile).</li>
+      <li>View-mode toggle: on mobile, hide the Standard, Fit and Split chips (<code>max-md:hidden</code>) and show only <strong>List</strong> (<code>feed</code>) and, after 12.3, <strong>Bracket</strong> (<code>compact</code>). The feed chip's label is “Card Feed” on desktop and “List” on mobile: render both spans with <code>max-md:hidden</code> / <code>md:hidden</code>.</li>
+      <li>Timer HUD: unchanged, and wraps to its own line.</li>
+    </ul>
+  </li>
+</ol>
+
+<h2>D. Admin shell</h2>
+<h3><code>AdminMobileTopBar.tsx</code></h3>
+<pre><code>interface AdminMobileTopBarProps {
+  title: string;          // tournament name, or "MatchFoundry" when none
+  publicUrl?: string;     // public view of the current page, when one exists
+  onOpenMenu: () =&gt; void;
+}</code></pre>
+<p>Root: <code>&lt;header className="sticky top-0 z-90 flex h-12 items-center gap-2 border-b border-line bg-surface px-2 md:hidden"&gt;</code>. Children: <code>&lt;IconButton aria-label="Open menu" onClick={onOpenMenu}&gt;&lt;Menu size={20} /&gt;&lt;/IconButton&gt;</code>; the title (<code>min-w-0 flex-1 truncate text-sm font-bold text-fg</code>); and, when <code>publicUrl</code> is set, a <code>&lt;Link&gt;</code> styled with <code>buttonClasses({ variant: 'ghost', size: 'sm' })</code> holding an <code>Eye</code> icon and the text “Public”.</p>
+
+<h3><code>TournamentLayout.tsx</code></h3>
+<ol class="steps">
+  <li>Add <code>const [menuOpen, setMenuOpen] = useState(false); const isMobile = useIsMobile();</code>.</li>
+  <li>The root gets <code>max-md:flex-col</code>.</li>
+  <li>On desktop (<code>!isMobile</code>), render <code>TournamentSidebar</code> exactly as today.</li>
+  <li>On mobile, render <code>&lt;AdminMobileTopBar title={tournament?.name ?? 'MatchFoundry'} publicUrl={…} onOpenMenu={() =&gt; setMenuOpen(true)} /&gt;</code>, followed by <code>&lt;Overlay open={menuOpen} onClose={() =&gt; setMenuOpen(false)} variant="navigation" aria-label="Tournament menu" panelClassName="bg-surface border-r border-line"&gt;</code> containing <code>&lt;TournamentSidebar … variant="drawer" onNavigate={handleMenuNavigate} /&gt;</code>.</li>
+  <li><code>handleMenuNavigate(url)</code> calls the incoming <code>onNavigate?.(url)</code>. If that result is not <code>false</code>, it calls <code>setMenuOpen(false)</code>. It returns the same result, so the settings unsaved-changes guard keeps working.</li>
+  <li><code>publicUrl</code> is the public equivalent of the current admin view: use the sidebar's existing “Public View” target logic. Export the helper that computes it from <code>TournamentSidebar.tsx</code> if it's inline.</li>
+</ol>
+
+<h3><code>TournamentSidebar.tsx</code></h3>
+<ol class="steps">
+  <li>Add the prop <code>variant?: 'rail' | 'drawer'</code> (default <code>'rail'</code>). In <code>drawer</code> mode: it's always expanded (ignore the collapsed state and hide the collapse toggle), with <code>w-full min-w-0 h-full static</code> instead of the sticky rail widths, and no outer border-right (the Overlay panel has it).</li>
+  <li>Route the two direct <code>navigate(…)</code> calls (around line 1128 and line 1224) through the existing internal navigate helper (the function around lines 198–216 that consults <code>onNavigate</code>), so that every navigation closes the drawer.</li>
+  <li>Nav item rows in drawer mode: <code>min-h-11</code>.</li>
+</ol>
+<p>Pages with their own sticky bars at <code>top-0</code> under the admin shell (<code>BracketTierBar</code> with <code>canManage</code> in this step; <code>ManageJudgePage</code> in 12.2) need <code>max-md:top-12</code>.</p>
+
+<h2>E. Global top nav and landing page</h2>
+<ol class="steps">
+  <li><code>TopNavSwitcher.tsx</code>: on mobile, the header wraps into two rows. Row 1 holds the logo (scaled down with <code>max-md:text-base</code>) and the right-side actions as icon-only buttons (labels <code>max-md:sr-only</code> plus <code>aria-label</code>). Row 2 holds the tab grid at full width: <code>max-md:order-last max-md:w-full max-md:max-w-none</code>. Tabs get <code>max-md:min-h-11 max-md:text-xs</code>. The teleport chip is already hidden at 860px and below.</li>
+  <li><code>TournamentSwitcherPage.tsx</code>: tournament grids change from <code>grid-cols-[repeat(auto-fill,minmax(480px,1fr))]</code> to <code>grid-cols-1 md:grid-cols-[repeat(auto-fill,minmax(480px,1fr))]</code>. Page padding on mobile: <code>max-md:px-4</code>. Hero and title sizes: one step smaller on mobile (for example <code>max-md:text-2xl</code>). Action buttons stack full width (<code>max-md:w-full</code>).</li>
+  <li><code>TournamentCard.tsx</code>: at a content width of 328px, nothing may overflow. Any horizontal row of stats or buttons gets <code>flex-wrap</code>; long names get <code>truncate</code> or <code>break-words</code>. The whole card stays one tap target, as today.</li>
+  <li><code>TournamentPageHeader.tsx</code> (used by the leaderboard and standings): the title row wraps; the action slot goes below the title at full width on mobile (<code>max-md:w-full</code>); the search input is full width.</li>
+</ol>
+
+<h2>F. Overflow routes to append</h2>
+<pre><code>{ name: 'landing', path: '/', admin: false },
+{ name: 'public-bracket', path: `/${FIXTURE_SLUG}/${FIXTURE_TIER_SLUG}`, admin: false },
+{ name: 'manage-bracket', path: `/${FIXTURE_SLUG}/manage/bracket/${FIXTURE_TIER_SLUG}`, admin: true },</code></pre>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code>, <code>npm test</code> pass. Existing sidebar and spectator-link tests (<code>src/components/__tests__</code>) pass unchanged.</li>
+  <li><code>npm run test:visual</code>: desktop is unchanged. Mobile diffs are listed for coordinator re-baselining.</li>
+  <li><code>npx playwright test e2e/visual/mobileOverflow.spec.ts --project=visual-mobile</code> passes for the three routes.</li>
+  <li><code>npm run test:e2e</code> passes. The golden journeys run on desktop, where nothing changed.</li>
+  <li>Manual check at 360×800:
+    <ul>
+      <li>From <code>/</code>, open a tournament.</li>
+      <li>Reach Brackets, Qualifiers and Standings through the bottom bar.</li>
+      <li>Switch tiers by scrolling the chip strip.</li>
+      <li>As an admin, open ☰ and reach Floor Judge, Qual Review and Settings.</li>
+      <li>With unsaved settings changes, a menu link still shows the Discard prompt.</li>
+    </ul>
+  </li>
+</ul>
+</main>
+</body>
+</html>

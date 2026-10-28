@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batch F Conversion</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 11 / 11.2 batch F</nav>
+<h1>Batch F: Tournament admin form, settings sections, standings</h1>
+<p class="subtitle">Convert every file below from inline styles to Tailwind classes and shared components, with no behavior change. Wave 2; runs in parallel with batches A1, A2, C, E.</p>
+
+<div class="box"><p><strong>Read first, fully:</strong> <a href="../index.html">index.html</a> (“Rules for every executor”) and <a href="11.2-conversion-guide.html">the conversion guide</a>. The guide's rules decide every mapping; this file only adds batch-specific notes.</p>
+<p><strong>Prerequisites:</strong> 11.0 and 11.1 committed, and wave 1 committed. Confirm that <code>src/components/ui/index.ts</code> and <code>src/components/overlay/index.ts</code> exist; if they don't, stop.</p></div>
+
+<h2>Files in scope (18 files, ≈527 style sites)</h2>
+<p>Edit only these files, plus the tests listed under “Style-coupled tests”. Columns: lines, <code>style=</code> sites, hover handlers, legacy class uses, <code>CSSProperties</code> constants. The counts are from when this spec was written and are only a guide.</p>
+<table>
+  <tr><th>File</th><th>Lines</th><th>Styles</th><th>Hover</th><th>Legacy</th><th>Consts</th></tr>
+  <tr><td><code>src/features/tournament/components/CreateTournamentModal.tsx</code></td><td>361</td><td>30</td><td>0</td><td>2</td><td>2</td></tr>
+  <tr><td><code>src/features/tournament/components/FinalStandingsTable.tsx</code></td><td>885</td><td>82</td><td>2</td><td>19</td><td>2</td></tr>
+  <tr><td><code>src/features/tournament/components/PointsThresholdsDrawer.tsx</code></td><td>261</td><td>27</td><td>0</td><td>2</td><td>6</td></tr>
+  <tr><td><code>src/features/tournament/components/QualFormatEditor.tsx</code></td><td>178</td><td>14</td><td>0</td><td>1</td><td>2</td></tr>
+  <tr><td><code>src/features/tournament/components/RoundOverridesEditor.tsx</code></td><td>393</td><td>19</td><td>2</td><td>1</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/TournamentAdminForm.tsx</code></td><td>990</td><td>22</td><td>0</td><td>5</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/TournamentCard.tsx</code></td><td>339</td><td>30</td><td>0</td><td>15</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/VerifyBracketModal.tsx</code></td><td>257</td><td>27</td><td>0</td><td>3</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/settings/AdminFormModals.tsx</code></td><td>261</td><td>25</td><td>0</td><td>4</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/settings/DataSimulationSection.tsx</code></td><td>274</td><td>27</td><td>0</td><td>5</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/settings/OrgBrandPaletteSection.tsx</code></td><td>248</td><td>39</td><td>0</td><td>2</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/settings/SharedPinWarningModal.tsx</code></td><td>285</td><td>22</td><td>0</td><td>2</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/settings/TierManagementSection.tsx</code></td><td>591</td><td>75</td><td>2</td><td>5</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/settings/TournamentInfoSection.tsx</code></td><td>353</td><td>54</td><td>0</td><td>5</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/settings/TournamentRosterSection.tsx</code></td><td>63</td><td>7</td><td>0</td><td>1</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/settings/TournamentSecuritySection.tsx</code></td><td>294</td><td>20</td><td>0</td><td>2</td><td>0</td></tr>
+  <tr><td><code>src/features/tournament/components/settings/types.ts</code></td><td>22</td><td>0</td><td>0</td><td>0</td><td>2</td></tr>
+  <tr><td><code>src/features/tournament/store.tsx</code></td><td>2152</td><td>7</td><td>0</td><td>0</td><td>0</td></tr>
+</table>
+<div class="box stop"><p><strong>Out of scope:</strong> every other file, including <code>src/index.css</code>, <code>src/components/ui/*</code>, <code>src/components/overlay/*</code>, the ESLint configs and the Playwright files. If a change seems to require one of them, stop and report it.</p></div>
+
+<h2>Batch-specific notes</h2>
+<ul>
+  <li><code>FinalStandingsTable.tsx</code> (≈79 sites) has delta badges whose colors depend on the delta sign. Those are static conditionals, so use <code>cn()</code>.</li>
+  <li><code>TierManagementSection.tsx</code> and <code>OrgBrandPaletteSection.tsx</code> edit theme colors: swatches render runtime colors inline; picker defaults are data.</li>
+  <li><code>settings/types.ts</code> exports <code>labelStyle</code> and <code>inputStyle</code> (<code>CSSProperties</code>), imported by the four settings sections in this batch. Replace them with exported <code>labelClass</code> and <code>inputClass</code> strings and update those four importers. Other files with a local <code>labelStyle</code>/<code>inputStyle</code> of their own are unrelated.</li>
+  <li><code>store.tsx</code> renders one toast element (≈7 sites). Convert only that JSX.</li>
+  <li><code>RoundOverridesEditor.tsx</code> has hover handlers (guide §7).</li>
+  <li>The <code>PointsThresholdsDrawer</code>, <code>CreateTournamentModal</code>, <code>VerifyBracketModal</code>, <code>SharedPinWarningModal</code> and <code>AdminFormModals</code> shells were done in 11.1.</li>
+</ul>
+
+<h2>Style-coupled tests</h2>
+<p>None. No test in this batch's area asserts on rendered inline styles. Every test must pass unchanged.</p>
+
+<h2>Procedure</h2>
+<ol class="steps">
+  <li>Confirm the branch (index rule 1) and that <code>git status --short</code> shows no changes to files in this batch.</li>
+  <li>Convert one file at a time with the guide's per-file procedure (§2). After each file, run <code>npm run lint:styles -- &lt;that file&gt;</code> until it shows 0 errors, then run <code>npm run typecheck</code>.</li>
+  <li>After every 3 files, and at the end, run <code>npx vitest run src/features/tournament</code>.</li>
+  <li>Update the style-coupled tests, if any, as described above.</li>
+</ol>
+
+<h2>Acceptance</h2>
+<ul class="check">
+  <li><code>npm run lint:styles -- src/features/tournament/components/CreateTournamentModal.tsx src/features/tournament/components/FinalStandingsTable.tsx src/features/tournament/components/PointsThresholdsDrawer.tsx src/features/tournament/components/QualFormatEditor.tsx src/features/tournament/components/RoundOverridesEditor.tsx src/features/tournament/components/TournamentAdminForm.tsx src/features/tournament/components/TournamentCard.tsx src/features/tournament/components/VerifyBracketModal.tsx src/features/tournament/components/settings/AdminFormModals.tsx src/features/tournament/components/settings/DataSimulationSection.tsx src/features/tournament/components/settings/OrgBrandPaletteSection.tsx src/features/tournament/components/settings/SharedPinWarningModal.tsx src/features/tournament/components/settings/TierManagementSection.tsx src/features/tournament/components/settings/TournamentInfoSection.tsx src/features/tournament/components/settings/TournamentRosterSection.tsx src/features/tournament/components/settings/TournamentSecuritySection.tsx src/features/tournament/components/settings/types.ts src/features/tournament/store.tsx</code> reports 0 errors. Every <code>eslint-disable</code> carries a <code>-- runtime:</code> reason.</li>
+  <li><code>grep</code> finds no <code>className="btn</code>, <code>badge badge-</code>, <code>onMouseEnter</code>/<code>onMouseLeave</code> that only change styles, or <code>CSSProperties</code> constants in these files.</li>
+  <li><code>npm run typecheck</code> passes.</li>
+  <li><code>npx vitest run src/features/tournament</code> passes with no deleted or skipped tests.</li>
+  <li>All <code>data-testid</code> attributes are unchanged.</li>
+  <li><code>npm run test:visual</code> has been run once and its result recorded. A failure isn't a blocker for this batch; the coordinator reviews diffs at the end of the wave. Do <strong>not</strong> run <code>test:visual:update</code>.</li>
+</ul>
+
+<h2>Report template</h2>
+<pre><code>Batch F report
+- Files converted: N/18
+- lint:styles: 0 errors (command above)
+- typecheck: pass/fail
+- vitest (src/features/tournament): pass/fail, counts
+- test:visual: pass / failed screenshots: [names]
+- eslint-disable added: [file:line — reason]
+- Arbitrary colors left for 11.3 tokens: [value — file:line]
+- Requests for shared components/tokens: [...]
+- Anything skipped and why: [...]</code></pre>
+</main>
+</body>
+</html>

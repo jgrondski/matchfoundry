@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batch H Conversion</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 11 / 11.2 batch H</nav>
+<h1>Batch H: Players</h1>
+<p class="subtitle">Convert every file below from inline styles to Tailwind classes and shared components, with no behavior change. Wave 1; runs in parallel with batches B, D, G, I.</p>
+
+<div class="box"><p><strong>Read first, fully:</strong> <a href="../index.html">index.html</a> (“Rules for every executor”) and <a href="11.2-conversion-guide.html">the conversion guide</a>. The guide's rules decide every mapping; this file only adds batch-specific notes.</p>
+<p><strong>Prerequisites:</strong> 11.0 and 11.1 committed. Confirm that <code>src/components/ui/index.ts</code> and <code>src/components/overlay/index.ts</code> exist; if they don't, stop.</p></div>
+
+<h2>Files in scope (9 files, ≈238 style sites)</h2>
+<p>Edit only these files, plus the tests listed under “Style-coupled tests”. Columns: lines, <code>style=</code> sites, hover handlers, legacy class uses, <code>CSSProperties</code> constants. The counts are from when this spec was written and are only a guide.</p>
+<table>
+  <tr><th>File</th><th>Lines</th><th>Styles</th><th>Hover</th><th>Legacy</th><th>Consts</th></tr>
+  <tr><td><code>src/features/players/components/CountrySelect.tsx</code></td><td>266</td><td>18</td><td>2</td><td>0</td><td>0</td></tr>
+  <tr><td><code>src/features/players/components/GenerateFakePlayersModal.tsx</code></td><td>248</td><td>24</td><td>0</td><td>3</td><td>0</td></tr>
+  <tr><td><code>src/features/players/components/ImportFromGlobalModal.tsx</code></td><td>339</td><td>31</td><td>0</td><td>5</td><td>0</td></tr>
+  <tr><td><code>src/features/players/components/PlayerAvatar.tsx</code></td><td>116</td><td>5</td><td>0</td><td>0</td><td>0</td></tr>
+  <tr><td><code>src/features/players/components/PlayerDirectory.tsx</code></td><td>521</td><td>32</td><td>0</td><td>7</td><td>0</td></tr>
+  <tr><td><code>src/features/players/components/PlayerDirectorySections.tsx</code></td><td>684</td><td>80</td><td>0</td><td>4</td><td>0</td></tr>
+  <tr><td><code>src/features/players/components/PlayerEditModal.tsx</code></td><td>552</td><td>47</td><td>0</td><td>2</td><td>0</td></tr>
+  <tr><td><code>src/features/players/components/PlaystyleChip.tsx</code></td><td>94</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+  <tr><td><code>src/features/players/flagUtils.ts</code></td><td>191</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+</table>
+<div class="box stop"><p><strong>Out of scope:</strong> every other file, including <code>src/index.css</code>, <code>src/components/ui/*</code>, <code>src/components/overlay/*</code>, the ESLint configs and the Playwright files. If a change seems to require one of them, stop and report it.</p></div>
+
+<h2>Batch-specific notes</h2>
+<ul>
+  <li><code>flagUtils.ts</code> returns <code>CSSProperties</code> for flag rendering. Convert it to return a class string, keeping any runtime sizes inline, and update its callers inside this batch. If a caller is outside this batch, keep a backward-compatible export and report it.</li>
+  <li><code>PlaystyleChip.tsx</code> holds a playstyle → color map (13 hex values). That map is data: keep it, and apply the colors through CSS variables.</li>
+  <li><code>CountrySelect.tsx</code> has hover handlers (guide §7).</li>
+  <li><code>PlayerDirectorySections.tsx</code> (≈79 sites) contains the directory table. <code>directorySections.test.tsx</code> asserts text such as <code>#&lt;/th&gt;</code>, so keep header text identical.</li>
+</ul>
+
+<h2>Style-coupled tests</h2>
+<ul>
+  <li><code>src/features/players/__tests__/flagUtils.test.tsx</code>: line ≈112 expects <code>'font-size:1.5rem'</code>. Change it to assert the class that replaces it (for example <code>text-2xl</code>).</li>
+  <li><code>src/api/__tests__/phase7PersistenceAndAvatars.test.tsx</code>: line ≈246 expects <code>'border-radius:50%'</code> (avatar). Change it to <code>rounded-full</code>.</li>
+</ul>
+
+<h2>Procedure</h2>
+<ol class="steps">
+  <li>Confirm the branch (index rule 1) and that <code>git status --short</code> shows no changes to files in this batch.</li>
+  <li>Convert one file at a time with the guide's per-file procedure (§2). After each file, run <code>npm run lint:styles -- &lt;that file&gt;</code> until it shows 0 errors, then run <code>npm run typecheck</code>.</li>
+  <li>After every 3 files, and at the end, run <code>npx vitest run src/features/players src/api/__tests__/phase7PersistenceAndAvatars.test.tsx</code>.</li>
+  <li>Update the style-coupled tests, if any, as described above.</li>
+</ol>
+
+<h2>Acceptance</h2>
+<ul class="check">
+  <li><code>npm run lint:styles -- src/features/players/components/CountrySelect.tsx src/features/players/components/GenerateFakePlayersModal.tsx src/features/players/components/ImportFromGlobalModal.tsx src/features/players/components/PlayerAvatar.tsx src/features/players/components/PlayerDirectory.tsx src/features/players/components/PlayerDirectorySections.tsx src/features/players/components/PlayerEditModal.tsx src/features/players/components/PlaystyleChip.tsx src/features/players/flagUtils.ts</code> reports 0 errors. Every <code>eslint-disable</code> carries a <code>-- runtime:</code> reason.</li>
+  <li><code>grep</code> finds no <code>className="btn</code>, <code>badge badge-</code>, <code>onMouseEnter</code>/<code>onMouseLeave</code> that only change styles, or <code>CSSProperties</code> constants in these files.</li>
+  <li><code>npm run typecheck</code> passes.</li>
+  <li><code>npx vitest run src/features/players src/api/__tests__/phase7PersistenceAndAvatars.test.tsx</code> passes with no deleted or skipped tests.</li>
+  <li>All <code>data-testid</code> attributes are unchanged.</li>
+  <li><code>npm run test:visual</code> has been run once and its result recorded. A failure isn't a blocker for this batch; the coordinator reviews diffs at the end of the wave. Do <strong>not</strong> run <code>test:visual:update</code>.</li>
+</ul>
+
+<h2>Report template</h2>
+<pre><code>Batch H report
+- Files converted: N/9
+- lint:styles: 0 errors (command above)
+- typecheck: pass/fail
+- vitest (src/features/players src/api/__tests__/phase7PersistenceAndAvatars.test.tsx): pass/fail, counts
+- test:visual: pass / failed screenshots: [names]
+- eslint-disable added: [file:line — reason]
+- Arbitrary colors left for 11.3 tokens: [value — file:line]
+- Requests for shared components/tokens: [...]
+- Anything skipped and why: [...]</code></pre>
+</main>
+</body>
+</html>

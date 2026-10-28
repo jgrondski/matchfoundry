@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batch E Conversion</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 11 / 11.2 batch E</nav>
+<h1>Batch E: Online qualifiers, competitor portal, review queue</h1>
+<p class="subtitle">Convert every file below from inline styles to Tailwind classes and shared components, with no behavior change. Wave 2; runs in parallel with batches A1, A2, C, F.</p>
+
+<div class="box"><p><strong>Read first, fully:</strong> <a href="../index.html">index.html</a> (“Rules for every executor”) and <a href="11.2-conversion-guide.html">the conversion guide</a>. The guide's rules decide every mapping; this file only adds batch-specific notes.</p>
+<p><strong>Prerequisites:</strong> 11.0 and 11.1 committed, and wave 1 committed. Confirm that <code>src/components/ui/index.ts</code> and <code>src/components/overlay/index.ts</code> exist; if they don't, stop.</p></div>
+
+<h2>Files in scope (11 files, ≈408 style sites)</h2>
+<p>Edit only these files, plus the tests listed under “Style-coupled tests”. Columns: lines, <code>style=</code> sites, hover handlers, legacy class uses, <code>CSSProperties</code> constants. The counts are from when this spec was written and are only a guide.</p>
+<table>
+  <tr><th>File</th><th>Lines</th><th>Styles</th><th>Hover</th><th>Legacy</th><th>Consts</th></tr>
+  <tr><td><code>src/features/online-quals/components/AdjudicationModal.tsx</code></td><td>619</td><td>55</td><td>0</td><td>8</td><td>0</td></tr>
+  <tr><td><code>src/features/online-quals/components/AuthwordHudCard.tsx</code></td><td>88</td><td>10</td><td>0</td><td>0</td><td>0</td></tr>
+  <tr><td><code>src/features/online-quals/components/AwaitingVerificationCard.tsx</code></td><td>218</td><td>21</td><td>0</td><td>1</td><td>0</td></tr>
+  <tr><td><code>src/features/online-quals/components/CompetitorPortalView.tsx</code></td><td>1057</td><td>62</td><td>0</td><td>1</td><td>0</td></tr>
+  <tr><td><code>src/features/online-quals/components/IdentityClaimModal.tsx</code></td><td>482</td><td>38</td><td>0</td><td>0</td><td>0</td></tr>
+  <tr><td><code>src/features/online-quals/components/IdentityResolutionModal.tsx</code></td><td>549</td><td>46</td><td>0</td><td>4</td><td>0</td></tr>
+  <tr><td><code>src/features/online-quals/components/OpenQualsCard.tsx</code></td><td>107</td><td>10</td><td>0</td><td>1</td><td>0</td></tr>
+  <tr><td><code>src/features/online-quals/components/PreFlightModal.tsx</code></td><td>325</td><td>33</td><td>0</td><td>0</td><td>0</td></tr>
+  <tr><td><code>src/features/online-quals/components/ReviewQueueTable.tsx</code></td><td>583</td><td>59</td><td>0</td><td>3</td><td>0</td></tr>
+  <tr><td><code>src/features/online-quals/components/ReviewQueueView.tsx</code></td><td>685</td><td>41</td><td>0</td><td>3</td><td>0</td></tr>
+  <tr><td><code>src/features/online-quals/components/SubmissionFormCard.tsx</code></td><td>424</td><td>33</td><td>0</td><td>0</td><td>3</td></tr>
+</table>
+<div class="box stop"><p><strong>Out of scope:</strong> every other file, including <code>src/index.css</code>, <code>src/components/ui/*</code>, <code>src/components/overlay/*</code>, the ESLint configs and the Playwright files. If a change seems to require one of them, stop and report it.</p></div>
+
+<h2>Batch-specific notes</h2>
+<ul>
+  <li>The overlay shells (<code>AdjudicationModal</code>, <code>IdentityResolutionModal</code>, <code>IdentityClaimModal</code>, <code>PreFlightModal</code>, and the ConfirmDialogs in <code>ReviewQueueView</code> and <code>CompetitorPortalView</code>) were done in 11.1.</li>
+  <li><code>ReviewQueueTable.tsx</code> and <code>AdjudicationModal.tsx</code> each carry ≈24 status hex values. Map them with guide §5b. Status-to-color maps used as data (objects keyed by status) stay as data.</li>
+  <li><code>CompetitorPortalView.tsx</code> is public and competitor-facing. Be especially careful to keep every text string and button label identical.</li>
+</ul>
+
+<h2>Style-coupled tests</h2>
+<p>None. No test in this batch's area asserts on rendered inline styles. Every test must pass unchanged.</p>
+
+<h2>Procedure</h2>
+<ol class="steps">
+  <li>Confirm the branch (index rule 1) and that <code>git status --short</code> shows no changes to files in this batch.</li>
+  <li>Convert one file at a time with the guide's per-file procedure (§2). After each file, run <code>npm run lint:styles -- &lt;that file&gt;</code> until it shows 0 errors, then run <code>npm run typecheck</code>.</li>
+  <li>After every 3 files, and at the end, run <code>npx vitest run src/features/online-quals</code>.</li>
+  <li>Update the style-coupled tests, if any, as described above.</li>
+</ol>
+
+<h2>Acceptance</h2>
+<ul class="check">
+  <li><code>npm run lint:styles -- src/features/online-quals/components/AdjudicationModal.tsx src/features/online-quals/components/AuthwordHudCard.tsx src/features/online-quals/components/AwaitingVerificationCard.tsx src/features/online-quals/components/CompetitorPortalView.tsx src/features/online-quals/components/IdentityClaimModal.tsx src/features/online-quals/components/IdentityResolutionModal.tsx src/features/online-quals/components/OpenQualsCard.tsx src/features/online-quals/components/PreFlightModal.tsx src/features/online-quals/components/ReviewQueueTable.tsx src/features/online-quals/components/ReviewQueueView.tsx src/features/online-quals/components/SubmissionFormCard.tsx</code> reports 0 errors. Every <code>eslint-disable</code> carries a <code>-- runtime:</code> reason.</li>
+  <li><code>grep</code> finds no <code>className="btn</code>, <code>badge badge-</code>, <code>onMouseEnter</code>/<code>onMouseLeave</code> that only change styles, or <code>CSSProperties</code> constants in these files.</li>
+  <li><code>npm run typecheck</code> passes.</li>
+  <li><code>npx vitest run src/features/online-quals</code> passes with no deleted or skipped tests.</li>
+  <li>All <code>data-testid</code> attributes are unchanged.</li>
+  <li><code>npm run test:visual</code> has been run once and its result recorded. A failure isn't a blocker for this batch; the coordinator reviews diffs at the end of the wave. Do <strong>not</strong> run <code>test:visual:update</code>.</li>
+</ul>
+
+<h2>Report template</h2>
+<pre><code>Batch E report
+- Files converted: N/11
+- lint:styles: 0 errors (command above)
+- typecheck: pass/fail
+- vitest (src/features/online-quals): pass/fail, counts
+- test:visual: pass / failed screenshots: [names]
+- eslint-disable added: [file:line — reason]
+- Arbitrary colors left for 11.3 tokens: [value — file:line]
+- Requests for shared components/tokens: [...]
+- Anything skipped and why: [...]</code></pre>
+</main>
+</body>
+</html>
