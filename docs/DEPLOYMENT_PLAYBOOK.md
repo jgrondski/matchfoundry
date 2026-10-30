@@ -7,55 +7,54 @@ This playbook provides a complete, step-by-step operational guide for connecting
 ## 1. Architecture Overview
 
 ```
-                                  +------------------------------------+
-                                  |         GitHub Repository          |
-                                  |  (Triggers CI & Vercel Webhook)    |
-                                  +-----------------+------------------+
-                                                    |
-                         +--------------------------+--------------------------+
-                         | (on push / PR)                                      | (on push to main)
-                         v                                                     v
-        +----------------------------------+                  +----------------------------------+
-        |        GitHub Actions CI         |                  |        Vercel Production         |
-        |  1. npm run typecheck            |                  |  • Vite SPA (Static Edge CDN)    |
-        |  2. npm test (Vitest 540+ tests) |                  |  • /api/* (Serverless Functions) |
-        |  3. npm run build (Bundle Check) |                  |  • Auto-Detects Neon Cloud DB    |
-        |  4. npm run db:push:ci (Schema)  |                  +-----------------+----------------+
-        +----------------------------------+                                    |
-                                                                                v
-                                                              +----------------------------------+
-                                                              |      Neon Cloud PostgreSQL       |
-                                                              |  • Auto HTTP Serverless Driver   |
-                                                              |  • Connection-pooling resilient  |
-                                                              +----------------------------------+
+  Pull request into main                         Merge (push) to main
+  ----------------------                         --------------------
+  GitHub Actions, in parallel:                   GitHub Actions:
+   • Typecheck & Test Suite                       • Deploy to Vercel (no re-test;
+       npm run typecheck, npm test                  the PR already passed)
+   • Golden Journeys (Playwright)                     npm run build
+       throwaway Postgres in the job                  db:push:ci -> PRODUCTION Neon
+   • Deploy to Vercel (after the tests pass)          vercel deploy --prod
+       npm run build                                         |
+       db:push:ci -> PREVIEW Neon branch                     v
+       vercel deploy (Preview URL)                 matchfoundry.gg + production Neon
+              |
+              v
+  Preview URL + Neon "preview" branch
 ```
 
 ### Core Architecture Components:
 1. **Frontend**: Vite Single-Page Application (SPA) compiled to `dist/`, served via Vercel Edge Network at `https://www.matchfoundry.gg`.
 2. **Backend API**: Node.js Serverless Function bundled on-the-fly in GitHub Actions CI/CD (`npm run build`) from TypeScript source `src/server/serverless.ts` into `api/index.js`, and deployed directly to Vercel via `vercel deploy --prebuilt`. Zero runtime artifacts are committed to Git (`api/*.js` in `.gitignore`), routed via `vercel.json` (`/api/(.*)` -> `/api`).
 3. **Database**: Neon Serverless PostgreSQL. In `src/db/index.ts`, connection strings containing `neon.tech` automatically switch to the `@neondatabase/serverless` connectionless HTTP driver (`drizzle-orm/neon-http`), eliminating connection pool exhaustion on serverless lambdas.
-4. **CI/CD Quality Gate & Schema Migration**: GitHub Actions (`.github/workflows/ci.yml`) automatically executes static typecheck, unit and integration tests, production bundle builds, and non-interactive database schema synchronization (`npm run db:push:ci`) against the pulled Vercel/Neon environment before deploying on all pull requests and pushes to `main`.
+4. **CI/CD Quality Gate & Schema Migration**: GitHub Actions (`.github/workflows/ci.yml`). On pull requests it runs the typecheck, the Vitest suite and the Playwright golden journeys, then pushes the schema to the Neon **preview** branch and deploys a preview. On merge to `main` it skips the tests (the PR already passed them on the same code), pushes the schema to **production** Neon, and deploys to production.
 5. **Continuous Deployment**: Feature branch PRs generate preview deployment URLs for testing; verified PR merges to `main` deploy to production `matchfoundry.gg`.
 
 ---
 
-## ⚠️ Database Environments: Preview Deploys Share the PRODUCTION Database
+## Database Environments
 
-**Current state (as of 2026-10-27):** there are only **two** databases, even though there are three deploy targets.
+There are three databases, one per deploy target:
 
-| Deploy target | Database it uses |
-| :--- | :--- |
-| Local dev (`npm run dev`) | Local Docker PostgreSQL (`.env`) |
-| Vercel **Preview** (feature branch / PR deploys) | **Production Neon** |
-| Vercel **Production** (`main` → `matchfoundry.gg`) | **Production Neon** |
+| Deploy target | Database | Schema pushed by |
+| :--- | :--- | :--- |
+| Local dev (`npm run dev`) | Local Docker PostgreSQL (`.env`) | You (`npm run db:push`) |
+| CI golden journeys | Throwaway PostgreSQL service container, created and destroyed with the job | The e2e job (`db:push:ci`) |
+| Vercel **Preview** (PR deploys) | Neon branch `preview` | The deploy job on every PR run, using the `PREVIEW_DATABASE_URL` GitHub secret |
+| Vercel **Production** (`main` → `matchfoundry.gg`) | Neon production branch | The deploy job on merge to `main`, using the `DATABASE_URL` GitHub secret |
 
-What this means in practice:
+### One-time setup
 
-1. **Opening or updating a PR migrates the production schema.** The CI "Push Database Schema to Neon" step (`npm run db:push:ci`, which runs `drizzle-kit push --force`) runs on `pull_request` events too, using the same `secrets.DATABASE_URL`. A schema change hits prod before the PR is merged, while prod is still running the old code. Until this is fixed, every schema change must be **additive and backward-compatible**: nullable or defaulted columns, new tables, and new indexes. No drops, renames, or type changes.
-2. **`--force` applies data-loss statements without asking.** Read the verbose SQL in the PR's CI log. If it shows anything other than the change you expected, prod has drifted from the schema. Stop and investigate before merging.
+1. **Neon: create the preview branch.** In the Neon console, open the project → **Branches** → **New branch**. Name it `preview`, parent: the production branch, auto-delete: **never**. It is permanent infrastructure: Vercel and the GitHub secret point at it, so an expired branch breaks every PR deploy. To clean it up, use **Reset from parent** instead; that keeps the same connection string. Including data gives previews realistic tournaments; choose schema-only if you would rather not copy production data. Copy its connection string (the same kind, pooled or direct, as your production `DATABASE_URL`).
+2. **Vercel: give Preview its own `DATABASE_URL`.** Project → **Settings** → **Environment Variables**. Edit the existing `DATABASE_URL` so it applies to **Production** only, then add a second `DATABASE_URL` for **Preview** with the preview branch's connection string. Keep `PIN_ENCRYPTION_KEY` identical for Production and Preview if the preview branch was created with data; otherwise tournament PINs copied from production can't be decrypted. If the Neon integration for Vercel is installed with automatic per-preview branches, turn that off so it doesn't replace this variable. Also add `DISCORD_WEBHOOK_OVERRIDE_URL` for **Preview** only, set to a webhook in a private test channel: the preview branch holds real tournament and organization webhook URLs, and this redirects every post to the test channel. A preview with no valid override posts nothing to Discord.
+3. **GitHub: add the `PREVIEW_DATABASE_URL` secret.** Repository → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**, with the same preview connection string. Until this exists, the PR deploy job stops with an error rather than falling back to production.
+
+### Rules that still apply
+
+1. **Production is migrated on merge, just before the new code deploys.** For that short window the old code runs against the new schema, so schema changes must stay **additive and backward-compatible**: nullable or defaulted columns, new tables, and new indexes. No drops, renames, or type changes.
+2. **`--force` applies data-loss statements without asking.** Read the verbose SQL in the PR's CI log (preview) before merging; production will get the same statements. If it shows anything other than the change you expected, a database has drifted from the schema. Stop and investigate.
 3. **drizzle-kit still prompts in some cases, even with `--force`.** One example is adding a unique *constraint* to a table that already has rows: it asks whether to truncate the table, and CI has no terminal, so the step crashes. Use `uniqueIndex(...)` instead of `.unique()`.
-4. **Testing on a preview URL writes real production data.** Test tournaments, players, and qualifier runs created on a preview deploy are visible in prod and must be cleaned up by hand.
-5. **The schema can be ahead of the deployed code.** An abandoned PR that ran CI can leave its columns or tables in prod.
+4. **The preview branch is shared by all open PRs.** Two PRs with conflicting schema changes will fight over it, and an abandoned PR can leave columns or tables there. To start fresh, use **Reset from parent** on the `preview` branch in Neon, then rerun CI on any open PR.
 
 ---
 
@@ -65,10 +64,13 @@ Before deploying, ensure you have values for the following four environment vari
 
 | Variable | Description | Example / Default | Required In |
 | :--- | :--- | :--- | :--- |
-| `DATABASE_URL` | Neon PostgreSQL pooled or direct connection string with SSL | `postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require` | Local & Vercel |
+| `DATABASE_URL` | Neon PostgreSQL pooled or direct connection string with SSL. In Vercel, set it twice: Production → production branch, Preview → `preview` branch | `postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require` | Local & Vercel |
 | `SYSTEM_ADMIN_RECOVERY_PIN` | Permanent emergency recovery PIN for Master/System Admin access | `849201` (choose any secure 6-8 digit code) | Local & Vercel |
 | `PIN_ENCRYPTION_KEY` | 32+ character secret key for AES-256-GCM encryption of tournament PINs at rest | Generated 32-byte hex string (see Step 2) | Local & Vercel |
 | `NODE_ENV` | Runtime environment mode | `production` | Vercel |
+| `DISCORD_WEBHOOK_OVERRIDE_URL` | Sends every Discord announcement and webhook test to this test-channel webhook instead of the tournament's or organization's. Set it for **Preview only**; never for Production | `https://discord.com/api/webhooks/<id>/<token>` | Vercel Preview (optional locally) |
+
+GitHub Actions also needs these repository secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `DATABASE_URL` (production Neon, used on merge to `main`) and `PREVIEW_DATABASE_URL` (the Neon `preview` branch, used on PRs).
 
 ---
 
@@ -158,48 +160,21 @@ Vercel provides native Git integration: linking your GitHub repository once enab
 
 ### Step 3: CI/CD Automation (GitHub Actions Quality Gate)
 
-The repository includes `.github/workflows/ci.yml` which automatically executes on every push to `main` and on all pull requests.
+`.github/workflows/ci.yml` has three jobs:
 
-```yaml
-name: CI
+| Job | Runs on | What it does |
+| :--- | :--- | :--- |
+| `Typecheck & Test Suite` | Pull requests | `npm run typecheck` and `npm test` (Vitest on in-memory `pg-mem`). |
+| `Golden Journeys (Playwright)` | Pull requests | Starts a throwaway PostgreSQL service, pushes the schema to it, installs Chromium and runs `npm run test:e2e`. The suite builds and deletes its own data (see `docs/TESTING_STRATEGY.md`, Tier 3). Uses a fake recovery PIN and never sees a real database secret. On failure, the Playwright report and traces are uploaded as the `playwright-results` artifact. |
+| `Deploy to Vercel` | Pull requests (after `Typecheck & Test Suite` passes) and pushes to `main` | `npm run build`, schema push (preview branch for PRs, production for `main`), `vercel build` and `vercel deploy`. Comments the preview URL on PRs. |
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+A push to `main` runs only the deploy job: the merged code is the code the PR's checks already passed, as long as the "require branches to be up to date" rule below is on. A newer push to a PR cancels that PR's older run; production deploys always run to completion, one at a time.
 
-jobs:
-  test:
-    name: Typecheck & Test Suite
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: TypeScript typecheck
-        run: npm run typecheck
-
-      - name: Run test suite
-        run: npm test
-
-      - name: Build production bundle
-        run: npm run build
-```
-
-#### How the CI Pipeline Protects Production:
-1. **Zero-Flake Fast Feedback**: Vitest runs all 480+ unit and integration tests in an in-memory database (`pg-mem`) in under 3 seconds.
-2. **Production Bundle Verification**: `npm run build` guarantees that all assets, routes, and CSS compile cleanly before code is deployed.
-3. **Blocked Builds**: If any test or typecheck fails, GitHub Actions marks the commit with a red ❌ and notifies you.
+#### Required GitHub settings
+Repository → **Settings** → **Rules** → **Rulesets** → ruleset for `main`:
+- Require a pull request before merging.
+- Require status checks to pass: `Typecheck & Test Suite`. Add `Golden Journeys (Playwright)` once it has been reliable for a few PRs.
+- **Require branches to be up to date before merging.** This is what makes skipping tests on `main` safe: without it, a PR tested against an older `main` could merge into a newer one untested.
 
 ---
 
@@ -223,13 +198,10 @@ All changes reach production through a pull request into `main`.
    git push -u origin feat/custom-bracket-theming
    ```
 4. **Open a pull request into `main`:**
-   - GitHub Actions CI runs typecheck, the test suite, and the production build.
-   - CI also pushes the schema with `db:push:ci`. **This currently migrates the production database** (see "Database Environments" above), so schema changes must be additive and backward-compatible.
-   - Vercel deploys the branch to an isolated Preview URL (e.g. `https://tournament-manager-git-feat-custom-bracket-theming.vercel.app`) and comments the link on the PR. Previews also use the production database, so anything created there is real data.
+   - GitHub Actions runs the typecheck, the test suite and the golden journeys.
+   - Once the typecheck and tests pass, CI pushes the schema to the Neon `preview` branch, deploys a Preview URL and comments the link on the PR. Data created on a preview stays in the preview branch.
 5. **Merge:**
-   - Merge the PR on GitHub once checks pass. Vercel deploys the merged `main` to production.
-6. **(Optional) Branch protection:**
-   - In GitHub repository settings -> **Branches** -> **Add branch ruleset** for `main`: require status checks (`Typecheck & Test Suite`) and require a pull request before merging.
+   - Merge the PR on GitHub once checks pass. CI pushes the schema to production and deploys `main` to production, without rerunning the tests.
 
 ---
 

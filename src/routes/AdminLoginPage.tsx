@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { usePinAuth } from '../features/auth/AuthContext';
 import { useTournament } from '../features/tournament/store';
@@ -20,6 +20,12 @@ export const AdminLoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // A post-login redirect must not fire after the user has already navigated away.
+  useEffect(() => () => {
+    if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+  }, []);
 
   const availableTournaments = tournaments.filter(
     t => !(session?.role === 'TOURNAMENT_ADMIN' && (canManage(t.slug) || canManage(t.id)))
@@ -57,7 +63,7 @@ export const AdminLoginPage: React.FC = () => {
       const redirectSlug = redirectUrl.split('/')[1] || '';
       const redirectFitsLogin =
         !selectedTourneySlug || !redirectUrl.includes('/manage') || redirectSlug === selectedTourneySlug;
-      setTimeout(() => {
+      redirectTimerRef.current = setTimeout(() => {
         if (redirectUrl && redirectFitsLogin) {
           navigate(redirectUrl, { replace: true });
         } else if (selectedTourneySlug) {

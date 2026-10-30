@@ -139,7 +139,7 @@ flowchart TD
     end
 
     subgraph Backlog["Deferred Backlog (Unscheduled)"]
-        B1["• Separate Preview Database (Neon branch)<br>• Tournament ↔ Organization Association Fixes<br>• Double-Elim Flat Staged 2-Wide & Uneven Fields<br>• Organization-Level Roles (RBAC)"]
+        B1["• Tournament ↔ Organization Association Fixes<br>• Double-Elim Flat Staged 2-Wide & Uneven Fields<br>• Organization-Level Roles (RBAC)"]
     end
 
     Historic --> Phase11 --> Phase12
@@ -349,13 +349,7 @@ flowchart TD
 ### Deferred Backlog (Unscheduled)
 Items recorded as "revisit later" in other docs that were never added to this plan. Each needs a decision before it's scheduled.
 
-1. **Separate Preview Database**
-   * **Problem:** Vercel Preview deploys and PR CI runs use the **production** Neon database. Opening a PR runs `db:push:ci --force` against prod, and test data created on preview URLs lands in prod.
-   * **Planned approach:** Neon branch for previews (long-lived or per-PR); Vercel Preview `DATABASE_URL` points at it; CI pushes schema to preview on `pull_request` and to prod only on `push` to `main`; decide on a preview data refresh strategy and confirm `PIN_ENCRYPTION_KEY` works against copied data.
-   * **Done when:** the playbook's "Database Environments" section, env var table, and CI section are updated, and the "Preview Deploys Share the Production DB" rule in `CLAUDE.md` / `AGENTS.md` is removed or revised.
-   * **Priority:** Highest of the backlog items, because every schema PR currently touches prod.
-
-2. **Tournament ↔ Organization Association**
+1. **Tournament ↔ Organization Association**
    * **Known bugs:**
      * No "None (Independent)" option in the Settings dropdown or `CreateTournamentModal` once any org exists.
      * For an org-less tournament, `TournamentAdminForm` initializes `organizationId` to the *first* org, so saving any unrelated setting silently attaches the tournament to that org.
@@ -363,14 +357,14 @@ Items recorded as "revisit later" in other docs that were never added to this pl
    * **Decisions pending:** who may change a tournament's org (recommendation: System Admin only, read-only for Tournament Admins); whether "Independent" is selectable at creation and for detaching; a pre-save notice summarizing side effects (Discord webhook fallback to the org's webhook, org theme inheritance).
    * **Note:** the silent re-attach is a data-integrity bug and could be fixed on its own before the policy decisions.
 
-3. **Double-Elimination Flat Staged: 2-Wide & Uneven Fields**
+2. **Double-Elimination Flat Staged: 2-Wide & Uneven Fields**
    * **Current behavior:** `FLAT_STAGED` supports 4 or 8 wide; fields must be a multiple of W (fields ≤ 2W silently fall back to a traditional tree). Invalid setups are blocked in Settings via `getDoubleEliminationConfigError()`.
    * **To revisit:**
      * True 2-wide flat staged for even fields (10, 12, 14…). Needs a new endgame, because the "Top 6 cross-drop" finish assumes W ≥ 4.
      * Whether to warn when a flat staged tier will actually render as a traditional tree (e.g. 9 players at 8 wide).
      * Odd / uneven fields: traditional tree remains the answer unless a ragged-wave design is specified (byes are never playable matches).
 
-4. **Organization-Level Roles (RBAC)**
+3. **Organization-Level Roles (RBAC)**
    * **Current state:** access is PIN-based with two tiers, System Admin and Tournament Admin. Organizations have no members or roles.
    * **Originally specified:** an `org_memberships` table (`organization_id`, `user_id`, `role`) with roles Org Owner (org settings, webhooks, assigning admins), Org Admin (create/manage the org's tournaments, edit org defaults, manage the player pool), and Org Judge / Tournament Admin (scoped score entry, qualifier verification, lock/unlock). Requires real user accounts, which don't exist yet.
    * **Related:** the "who may change a tournament's org" decision in item 2.

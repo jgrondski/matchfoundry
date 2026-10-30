@@ -616,10 +616,27 @@ async function resolveDiscordWebhook(
   return null;
 }
 
+const PREVIEW_DISCORD_DISABLED =
+  'Discord posting is disabled on preview deploys. Set DISCORD_WEBHOOK_OVERRIDE_URL to post to a test channel.';
+
+/**
+ * Where a Discord post is actually delivered. DISCORD_WEBHOOK_OVERRIDE_URL (set for Vercel Preview,
+ * optionally in a local .env) redirects every post to a test channel. A preview deploy without a valid
+ * override posts nothing, so production data copied into the preview database never reaches real channels.
+ */
+export function resolveDiscordDeliveryUrl(url: string): string | null {
+  const override = (process.env.DISCORD_WEBHOOK_OVERRIDE_URL || '').trim();
+  if (override) return isDiscordWebhookUrl(override) ? override : null;
+  if (process.env.VERCEL_ENV === 'preview') return null;
+  return url;
+}
+
 async function postToDiscord(url: string, content: string): Promise<boolean> {
   if (typeof fetch === 'undefined') return false;
+  const deliveryUrl = resolveDiscordDeliveryUrl(url);
+  if (!deliveryUrl) return false;
   try {
-    const res = await fetch(url, {
+    const res = await fetch(deliveryUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       // Never let player-supplied text ping @everyone, roles, or users.
@@ -678,7 +695,7 @@ export async function dispatchDiscordWebhook(
 export async function sendTestDiscordWebhook(
   tournamentIdOrSlug: string,
   overrideUrl?: string
-): Promise<{ success: boolean; source?: 'tournament' | 'organization'; error?: string }> {
+): Promise<{ success: boolean; source?: 'tournament' | 'organization'; redirected?: boolean; error?: string }> {
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
   let target: { url: string; source: 'tournament' | 'organization' } | null;
   if (overrideUrl?.trim()) {
@@ -693,11 +710,20 @@ export async function sendTestDiscordWebhook(
     }
   }
 
+  const deliveryUrl = resolveDiscordDeliveryUrl(target.url);
+  if (!deliveryUrl) {
+    return { success: false, source: target.source, error: PREVIEW_DISCORD_DISABLED };
+  }
+  const redirected = deliveryUrl !== target.url;
+
   const name = escapeDiscordMarkdown(tourney.name || 'Tournament');
-  const ok = await postToDiscord(target.url, `🔔 Test from MatchFoundry: qual announcements for **${name}** will post here.`);
+  const content = redirected
+    ? `🔔 Test from MatchFoundry for **${name}**, redirected here by DISCORD_WEBHOOK_OVERRIDE_URL. It was meant for the ${target.source} webhook; on this deploy every announcement posts to this channel instead.`
+    : `🔔 Test from MatchFoundry: qual announcements for **${name}** will post here.`;
+  const ok = await postToDiscord(target.url, content);
   return ok
-    ? { success: true, source: target.source }
-    : { success: false, source: target.source, error: 'Discord rejected the message or did not respond' };
+    ? { success: true, source: target.source, redirected }
+    : { success: false, source: target.source, redirected, error: 'Discord rejected the message or did not respond' };
 }
 
 /**

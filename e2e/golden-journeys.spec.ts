@@ -1,47 +1,37 @@
-import { test, expect } from '@playwright/test';
-import { getDb } from '../src/db';
-import { tournaments } from '../src/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { test, expect, type APIRequestContext } from '@playwright/test';
+import {
+  createJourneyTournaments,
+  deleteTestData,
+  E2E_PLAYER_PREFIX,
+  loginSystemAdmin,
+  type JourneyTournaments,
+} from './support/testTournaments';
 
 const SYSTEM_ADMIN_PIN = (process.env.SYSTEM_ADMIN_RECOVERY_PIN || '').trim();
 if (!SYSTEM_ADMIN_PIN) {
   throw new Error('SYSTEM_ADMIN_RECOVERY_PIN is not set. Add it to .env before running e2e tests.');
 }
 const generateTestPin = () => String(Math.floor(100000 + Math.random() * 900000));
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 test.describe('Golden User Journeys: Security & Access Control', () => {
-  const originalPins: Record<string, string | null> = {};
+  // Each run builds its own tournaments through the API and deletes them afterwards,
+  // so the journeys never depend on (or alter) seeded data.
+  let api: APIRequestContext;
+  let adminToken: string;
+  let primary: JourneyTournaments['primary'];
+  let secondary: JourneyTournaments['secondary'];
+  let online: JourneyTournaments['online'];
 
-  test.beforeAll(async () => {
-    try {
-      process.loadEnvFile?.();
-    } catch {}
-    try {
-      const db = getDb();
-      const rows = await db
-        .select({ slug: tournaments.slug, adminPinEncrypted: tournaments.adminPinEncrypted })
-        .from(tournaments)
-        .where(inArray(tournaments.slug, ['omen-open', 'omen-d']));
-      for (const r of rows) {
-        originalPins[r.slug] = r.adminPinEncrypted;
-      }
-    } catch (err) {
-      console.warn('[E2E Setup] Failed to snapshot original tournament PINs:', err);
-    }
+  test.beforeAll(async ({ playwright }, testInfo) => {
+    api = await playwright.request.newContext({ baseURL: testInfo.project.use.baseURL });
+    adminToken = await loginSystemAdmin(api, SYSTEM_ADMIN_PIN);
+    ({ primary, secondary, online } = await createJourneyTournaments(api, adminToken));
   });
 
   test.afterAll(async () => {
-    try {
-      const db = getDb();
-      for (const [slug, pin] of Object.entries(originalPins)) {
-        await db
-          .update(tournaments)
-          .set({ adminPinEncrypted: pin })
-          .where(eq(tournaments.slug, slug));
-      }
-    } catch (err) {
-      console.warn('[E2E Teardown] Failed to restore original tournament PINs:', err);
-    }
+    await deleteTestData(api, adminToken);
+    await api.dispose();
   });
 
   test('Journey 1: Public Spectator Friction-Zero Journey', async ({ page, context }) => {
@@ -51,7 +41,7 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
 
     // 1. Spectator sees the public directory and no privileged organizer buttons
     await expect(page.getByRole('heading', { name: 'Tournaments', exact: true })).toBeVisible();
-    await expect(page.getByText('Public Tournaments Directory')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Active Tournaments', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: /create new tournament/i })).not.toBeVisible();
     await expect(page.getByRole('button', { name: /simulate sample tournament/i })).not.toBeVisible();
 
@@ -60,16 +50,16 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await expect(page.getByRole('link', { name: /^organizations$/i })).not.toBeVisible();
     await expect(page.getByRole('link', { name: /^players$/i })).not.toBeVisible();
 
-    // 2. Spectator clicks "Live Brackets" on Omen Open card using data-testid
-    const omenOpenCard = page.getByTestId('tournament-card-omen-open');
-    await expect(omenOpenCard).toBeVisible();
+    // 2. Spectator clicks "Live Brackets" on the primary tournament card using data-testid
+    const primaryCard = page.getByTestId(`tournament-card-${primary.slug}`);
+    await expect(primaryCard).toBeVisible();
 
-    const liveBracketsBtn = omenOpenCard.getByRole('link', { name: /live brackets/i });
+    const liveBracketsBtn = primaryCard.getByRole('link', { name: /live brackets/i });
     await expect(liveBracketsBtn).toBeVisible();
     await liveBracketsBtn.click();
 
     // 3. Arrive on spectator bracket page without any login prompt or modal blocking
-    await expect(page).toHaveURL(/\/omen-open\//);
+    await expect(page).toHaveURL(new RegExp(`/${primary.slug}/`));
     await expect(page.getByRole('heading', { name: /staff & admin login/i })).not.toBeVisible();
     await expect(page.getByPlaceholder('Enter PIN or Key')).not.toBeVisible();
 
@@ -81,7 +71,7 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     // 4. Return to all tournaments directory
     await backToAllLink.click();
     await expect(page).toHaveURL('/');
-    await expect(page.getByText('Public Tournaments Directory')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Active Tournaments', exact: true })).toBeVisible();
   });
 
   test('Journey 2: Route Gating & System Admin Emergency Recovery PIN', async ({ page, context }) => {
@@ -90,10 +80,10 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await page.evaluate(() => localStorage.clear());
 
     // 1. Unauthenticated spectator attempts to access protected settings directly
-    await page.goto('/omen-open/manage/settings');
+    await page.goto(`/${primary.slug}/manage/settings`);
 
     // 2. Route gate triggers and redirects to admin login preserving redirect URL
-    await expect(page).toHaveURL(/\/admin\?.*redirect=%2Fomen-open%2Fmanage%2Fsettings/);
+    await expect(page).toHaveURL(new RegExp(`/admin\\?.*redirect=%2F${primary.slug}%2Fmanage%2Fsettings`));
     await expect(page.getByRole('heading', { name: /staff & admin login/i })).toBeVisible();
 
     // 3. Enter System Admin Emergency Recovery PIN
@@ -105,7 +95,7 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await unlockBtn.click();
 
     // 4. Redirects to original destination with System Admin authorization
-    await expect(page).toHaveURL(/\/omen-open\/manage\/settings/);
+    await expect(page).toHaveURL(new RegExp(`/${primary.slug}/manage/settings`));
     await expect(page.getByText('Access Security & PIN Management')).toBeVisible();
     await expect(page.getByText('System Admin Scope')).toBeVisible();
 
@@ -137,8 +127,8 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await page.getByRole('button', { name: /unlock administration/i }).click();
     await expect(page).toHaveURL('/');
 
-    // Navigate to Omen Open settings
-    await page.goto('/omen-open/manage/settings');
+    // Navigate to the primary tournament's settings
+    await page.goto(`/${primary.slug}/manage/settings`);
     await expect(page.getByText('Access Security & PIN Management')).toBeVisible();
 
     // Update Tournament PIN to delegated key
@@ -162,15 +152,15 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await expect(page).toHaveURL(/\/admin/);
 
     // Step C: Log in as Tournament Admin with scoped key
-    // The scope dropdown already has Omen Open pre-selected or select it
+    // Select the primary tournament in the scope dropdown
     const scopeSelect = page.locator('select');
-    await scopeSelect.selectOption({ label: 'Omen Open (omen-open)' });
+    await scopeSelect.selectOption({ label: `${primary.name} (${primary.slug})` });
 
     await page.getByPlaceholder('Enter PIN or Key').fill(DELEGATED_TOURNAMENT_PIN);
     await page.getByRole('button', { name: /unlock administration/i }).click();
 
-    // Should authenticate and land on Omen Open manage page
-    await expect(page).toHaveURL(/\/omen-open\/manage\//);
+    // Should authenticate and land on the primary tournament's manage page
+    await expect(page).toHaveURL(new RegExp(`/${primary.slug}/manage/`));
 
     // Sidebar displays Tournament Admin status, reveals Global Players, and isolates organizations
     await expect(page.getByRole('button', { name: /log out \(admin\)/i })).toBeVisible();
@@ -186,9 +176,9 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
 
     // Step D: Verify scoped presentation on '/'
     await page.goto('/');
-    await expect(page.getByText('Admin: omen-open')).toBeVisible();
+    await expect(page.getByText(`Admin: ${primary.slug}`)).toBeVisible();
     await expect(page.getByText('Your Managed Tournament')).toBeVisible();
-    await expect(page.getByText('Public Tournaments Directory')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Active Tournaments', exact: true })).toBeVisible();
 
     // Cannot create or simulate tournaments (System Admin only)
     await expect(page.getByRole('button', { name: /create new tournament/i })).not.toBeVisible();
@@ -206,30 +196,30 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
 
     const SHARED_PIN = generateTestPin();
 
-    // Step A: Log in as System Admin to configure shared PIN across omen-open and omen-d
+    // Step A: Log in as System Admin to configure a shared PIN across the primary and secondary tournaments
     await page.goto('/admin');
     await page.getByPlaceholder('Enter PIN or Key').fill(SYSTEM_ADMIN_PIN);
     await page.getByRole('button', { name: /unlock administration/i }).click();
     await expect(page).toHaveURL('/');
 
-    // Configure SHARED_PIN on omen-open
-    await page.goto('/omen-open/manage/settings');
+    // Configure SHARED_PIN on the primary tournament
+    await page.goto(`/${primary.slug}/manage/settings`);
     await expect(page.getByText('Access Security & PIN Management')).toBeVisible();
     await page.getByPlaceholder('Enter new 4-8 digit PIN').fill(SHARED_PIN);
     await page.getByRole('button', { name: 'Update PIN', exact: true }).click();
     await expect(page.getByText('Tournament PIN successfully updated!')).toBeVisible();
 
-    // Configure SHARED_PIN on omen-d (triggers shared PIN warning popup)
-    await page.goto('/omen-d/manage/settings');
+    // Configure SHARED_PIN on the secondary tournament (triggers shared PIN warning popup)
+    await page.goto(`/${secondary.slug}/manage/settings`);
     await expect(page.getByText('Access Security & PIN Management')).toBeVisible();
     await page.getByPlaceholder('Enter new 4-8 digit PIN').fill(SHARED_PIN);
     await page.getByRole('button', { name: 'Update PIN', exact: true }).click();
 
-    // 1. Shared PIN warning popup appears listing Omen Open
+    // 1. Shared PIN warning popup appears listing the primary tournament
     const warningModal = page.getByTestId('shared-pin-warning-modal');
     await expect(warningModal).toBeVisible();
     await expect(warningModal.getByText('Shared Tournament PIN Warning')).toBeVisible();
-    await expect(warningModal.getByText('Omen Open')).toBeVisible();
+    await expect(warningModal.getByText(primary.name)).toBeVisible();
 
     // 2. Test Cancel: modal closes and PIN is NOT saved yet
     await page.getByTestId('shared-pin-cancel-btn').click();
@@ -246,16 +236,16 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await page.getByRole('button', { name: /log out/i }).click();
     await expect(page).toHaveURL(/\/admin/);
 
-    // Step C: Log in with shared PIN '555555' once
+    // Step C: Log in with the shared PIN once
     await page.getByPlaceholder('Enter PIN or Key').fill(SHARED_PIN);
     await page.getByRole('button', { name: /unlock administration/i }).click();
 
     // Redirects to first matching tournament or /
     await expect(page).not.toHaveURL(/\/admin/);
 
-    // Step D: Navigate to omen-open manage view and verify manager sidebar dropdown
-    await page.goto('/omen-open/manage/qualifiers');
-    await expect(page).toHaveURL(/\/omen-open\/manage\/qualifiers/);
+    // Step D: Navigate to the primary tournament's manage view and verify manager sidebar dropdown
+    await page.goto(`/${primary.slug}/manage/qualifiers`);
+    await expect(page).toHaveURL(new RegExp(`/${primary.slug}/manage/qualifiers`));
 
     // Click the tournament selector dropdown button
     const switcherContainer = page.locator('[data-tournament-menu]');
@@ -267,14 +257,14 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     const dropdownMenu = page.getByTestId('tournament-dropdown-menu');
     await expect(dropdownMenu).toBeVisible();
     await expect(dropdownMenu.getByText('Tournaments (2)')).toBeVisible();
-    await expect(dropdownMenu.getByRole('button', { name: /omen open/i })).toBeVisible();
-    await expect(dropdownMenu.getByRole('button', { name: /omen d/i })).toBeVisible();
-    // omen-ao3 has a different/unset PIN and MUST NOT be in the manager dropdown
-    await expect(dropdownMenu.getByRole('button', { name: /omen ao3/i })).not.toBeVisible();
+    await expect(dropdownMenu.getByRole('button', { name: new RegExp(escapeRegExp(primary.name), 'i') })).toBeVisible();
+    await expect(dropdownMenu.getByRole('button', { name: new RegExp(escapeRegExp(secondary.name), 'i') })).toBeVisible();
+    // The online tournament has no PIN and MUST NOT be in the manager dropdown
+    await expect(dropdownMenu.getByRole('button', { name: new RegExp(escapeRegExp(online.name), 'i') })).not.toBeVisible();
 
-    // Step E: Switch to omen-d via the dropdown - seamless entry without login prompt
-    await dropdownMenu.getByRole('button', { name: /omen d/i }).click();
-    await expect(page).toHaveURL(/\/omen-d\/manage\/qualifiers/);
+    // Step E: Switch to the secondary tournament via the dropdown - seamless entry without login prompt
+    await dropdownMenu.getByRole('button', { name: new RegExp(escapeRegExp(secondary.name), 'i') }).click();
+    await expect(page).toHaveURL(new RegExp(`/${secondary.slug}/manage/qualifiers`));
     await expect(page.getByRole('heading', { name: /staff & admin login/i })).not.toBeVisible();
 
     // Step F: Verify '/' shows both under "Your Managed Tournaments (2)"
@@ -282,21 +272,21 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await expect(page.getByText('Admin: 2 Tournaments')).toBeVisible();
     const managedSection = page.locator('section', { hasText: 'Your Managed Tournaments' });
     await expect(managedSection).toBeVisible();
-    await expect(managedSection.getByTestId('tournament-card-omen-open')).toBeVisible();
-    await expect(managedSection.getByTestId('tournament-card-omen-d')).toBeVisible();
-    await expect(managedSection.getByTestId('tournament-card-omen-ao3')).not.toBeVisible();
+    await expect(managedSection.getByTestId(`tournament-card-${primary.slug}`)).toBeVisible();
+    await expect(managedSection.getByTestId(`tournament-card-${secondary.slug}`)).toBeVisible();
+    await expect(managedSection.getByTestId(`tournament-card-${online.slug}`)).not.toBeVisible();
 
-    // Step G: Unauthorized access to omen-ao3 redirects to /admin
-    await page.goto('/omen-ao3/manage/settings');
+    // Step G: Unauthorized access to the online tournament redirects to /admin
+    await page.goto(`/${online.slug}/manage/settings`);
     await expect(page).toHaveURL(/\/admin/);
   });
 
   test('Journey 5: Remote Competitor Online Qualification & Judge Adjudication (Phase 10 Golden Journey 4)', async ({ page, context }) => {
     await context.clearCookies();
-    const runnerHandle = `Runner_${Math.floor(10000 + Math.random() * 90000)}`;
+    const runnerHandle = `${E2E_PLAYER_PREFIX}Runner_${Math.floor(10000 + Math.random() * 90000)}`;
 
-    // 1. Remote competitor navigates directly to the public competitor portal for omen-ao3
-    await page.goto('/omen-ao3/qualify');
+    // 1. Remote competitor navigates directly to the public competitor portal for the online tournament
+    await page.goto(`/${online.slug}/qualify`);
     await expect(page.getByTestId('competitor-portal')).toBeVisible();
     await expect(page.getByTestId('competitor-checkin-card')).toBeVisible();
 
@@ -351,19 +341,19 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await expect(page.getByText('1,124,500')).toBeVisible();
 
     // 8. Public Leaderboard reflects provisional standing [⏳ Awaiting Verification]
-    await page.goto('/omen-ao3/leaderboard');
+    await page.goto(`/${online.slug}/leaderboard`);
     const competitorRow = page.locator('tr', { hasText: runnerHandle });
     await expect(competitorRow).toBeVisible();
     await expect(competitorRow.getByText('Awaiting Verification')).toBeVisible();
 
     // 9. Staff Admin navigates to Qual Review
-    await page.goto('/omen-ao3/manage/review');
-    await expect(page).toHaveURL(/\/admin\?.*redirect=%2Fomen-ao3%2Fmanage%2Freview/);
+    await page.goto(`/${online.slug}/manage/review`);
+    await expect(page).toHaveURL(new RegExp(`/admin\\?.*redirect=%2F${online.slug}%2Fmanage%2Freview`));
     await page.getByPlaceholder('Enter PIN or Key').fill(SYSTEM_ADMIN_PIN);
     await page.getByRole('button', { name: /unlock administration/i }).click();
 
     // Lands on Qual Review view
-    await expect(page).toHaveURL(/\/omen-ao3\/manage\/review/);
+    await expect(page).toHaveURL(new RegExp(`/${online.slug}/manage/review`));
     await expect(page.getByRole('heading', { name: 'Qual Review' })).toBeVisible();
 
     // Find submission row in ReviewQueueTable
@@ -382,7 +372,7 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await expect(adjDialog).not.toBeVisible();
 
     // 11. Public Leaderboard updates to official "✓ Verified" status
-    await page.goto('/omen-ao3/leaderboard');
+    await page.goto(`/${online.slug}/leaderboard`);
     const verifiedRow = page.locator('tr', { hasText: runnerHandle });
     await expect(verifiedRow).toBeVisible();
     await expect(verifiedRow.getByText(/verified/i)).toBeVisible();
