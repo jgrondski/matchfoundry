@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.5 Remaining Pages</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.5</nav>
+<h1>Step 12.5: Remaining pages and full-app sign-off</h1>
+<p class="subtitle">Everything not covered by 12.1–12.4, then the overflow test across every route. Phase 12 is done when this step passes.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model; the sub-steps below can be split between sessions because their files don't overlap. <strong>Prerequisite:</strong> 12.2, 12.3 and 12.4 committed. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules, <a href="12.0-mobile-foundation.html">12.0's “Conventions”</a>, and <a href="../phase-11/11.2-conversion-guide.html">the conversion guide</a>.</p></div>
+
+<h2>Out of scope</h2>
+<p>OBS overlay routes (<code>/:slug/obs/bracket…</code>, <code>/:slug/obs/match/…</code>, <code>/obs/…</code>, and any page with <code>?obs=true</code>). These are fixed-size broadcast surfaces rendered by OBS, not phones. The OBS <em>hub</em> (<code>/:slug/obs</code>) is in scope.</p>
+
+<h2>General rules for this step</h2>
+<ul>
+  <li>Multi-column form grids become one column on mobile (<code>max-md:grid-cols-1</code>). Side-by-side field rows stack (<code>max-md:flex-col max-md:items-stretch</code>).</li>
+  <li>Form inputs are <code>max-md:w-full max-md:text-base</code> (16px avoids iOS zoom).</li>
+  <li>Page containers use <code>max-md:px-4 max-md:py-4</code>. Page titles drop one size step on mobile.</li>
+  <li>Toolbars with several buttons wrap (<code>flex-wrap</code>). Primary page actions are full width on mobile.</li>
+</ul>
+
+<h2>12.5a: Settings (<code>/manage/settings</code>)</h2>
+<p>Files: <code>src/routes/ManageTournamentSettingsPage.tsx</code>, <code>src/features/tournament/components/TournamentAdminForm.tsx</code>, <code>QualFormatEditor.tsx</code>, <code>RoundOverridesEditor.tsx</code>, <code>PointsThresholdsDrawer.tsx</code>, <code>settings/*</code>, <code>src/features/bracket/components/BracketThemeEditor.tsx</code>.</p>
+<ul>
+  <li>Apply the general rules.</li>
+  <li>The “Save Configuration” bar becomes <code>sticky bottom-0</code> on mobile with a full-width button.</li>
+  <li><code>TierManagementSection</code>: each tier row becomes a stacked card; color swatches and pickers sit in a 2-column grid.</li>
+  <li><code>RoundOverridesEditor</code>: the per-round grid scrolls sideways inside its container, with the first column sticky (<code>sticky left-0 bg-surface</code>).</li>
+  <li><code>BracketThemeEditor</code>: the preview stacks below the controls.</li>
+</ul>
+
+<h2>12.5b: Seeding (<code>/manage/seeding</code>)</h2>
+<p>Files: <code>src/features/tournament/components/seeding/*</code> and the seeding route component.</p>
+<ul>
+  <li><strong>Touch reordering:</strong> HTML5 drag and drop doesn't work with touch. On mobile (<code>useIsMobile()</code>):
+    <ul>
+      <li>Hide drag handles.</li>
+      <li>Show two <code>IconButton</code>s per row, “Move up” (<code>ChevronUp</code>) and “Move down” (<code>ChevronDown</code>), that call the same reorder function the drop handler calls, with <code>(index, index - 1)</code> and <code>(index, index + 1)</code>. Disable them at the ends and when <code>isLocked</code>.</li>
+      <li>The existing “Jump to Seed” action stays available on each row.</li>
+    </ul>
+  </li>
+  <li>The sticky toolbar wraps, and on mobile it sits below the admin top bar (<code>max-md:top-12</code>).</li>
+  <li><code>DualListSeedingModal</code> (bottom sheet): the two lists become two tabs on mobile, “Available” and “Seeded (N)”, built with <code>Chip</code>s. The move buttons (→ / ←) become full-width “Add to seeding” / “Remove” buttons under the active list.</li>
+  <li><code>BulkSeedImportModal</code>: the textarea is full width with <code>min-h-[40dvh]</code>, and the destination options stack.</li>
+</ul>
+
+<h2>12.5c: Organizer sheet (<code>/manage/sheet</code>)</h2>
+<p>Files: <code>src/routes/ManageSheetPage.tsx</code>, <code>OrganizerSheetMatrix.tsx</code>, <code>sheet/*</code>.</p>
+<p>The matrix stays a matrix, since its whole point is density. It scrolls sideways inside <code>overflow-x-auto</code> with the match/player identity column sticky (<code>sticky left-0 z-10</code> plus the row background). The telemetry bar wraps. The page itself must not overflow.</p>
+
+<h2>12.5d: OBS hub, organizations, players, login, competitor portal</h2>
+<table>
+  <tr><th>Route</th><th>Files</th><th>Changes</th></tr>
+  <tr><td><code>/:slug/obs</code></td><td><code>src/routes/OBSHubPage.tsx</code></td><td>The card grid is already one column below 681px. Copy-URL rows: URLs <code>truncate</code>, with the copy button as a 44px <code>IconButton</code>.</td></tr>
+  <tr><td><code>/organizations</code>, <code>/org/:orgSlug</code></td><td><code>src/features/organizations/components/*</code></td><td>Directory grid <code>grid-cols-1</code> on mobile. <code>OrgHeaderBanner</code>: the banner height scales down (<code>max-md:h-32</code>) and the logo overlaps less. Dashboard tabs scroll sideways. Settings and branding tabs follow the general rules.</td></tr>
+  <tr><td><code>/players</code></td><td><code>PlayerDirectory.tsx</code> (outside the table, which 12.4 did)</td><td>Header actions wrap; filters are full width.</td></tr>
+  <tr><td><code>/admin</code></td><td><code>src/routes/AdminLoginPage.tsx</code>, <code>src/features/auth/AdminLoginModal.tsx</code></td><td>The card is full width with <code>max-md:px-4</code>. The PIN input is <code>inputMode="numeric"</code> and <code>text-base</code>.</td></tr>
+  <tr><td><code>/:slug/qualify</code></td><td><code>src/routes/PublicQualifyPage.tsx</code>, <code>src/features/online-quals/components/CompetitorPortalView.tsx</code>, <code>AuthwordHudCard.tsx</code>, <code>AwaitingVerificationCard.tsx</code>, <code>OpenQualsCard.tsx</code>, <code>SubmissionFormCard.tsx</code>, <code>PreFlightModal.tsx</code>, <code>IdentityClaimModal.tsx</code></td><td>The Authword HUD stays readable at 328px (<code>font-mono</code>, <code>break-all</code> if needed). Score inputs are <code>inputMode="numeric"</code>. The VOD URL input is <code>inputMode="url"</code>. Submit is full width. Checklist items in <code>PreFlightModal</code> are <code>min-h-11</code> labels.</td></tr>
+</table>
+<p><code>/:slug/standings</code> and the manage standings route were done in 12.4. <code>/:slug/leaderboard</code> was done in 12.2.</p>
+
+<h2>12.5e: Full-app sign-off</h2>
+<ol class="steps">
+  <li>Make the <code>ROUTES</code> list in <code>mobileOverflow.spec.ts</code> cover every non-OBS route in <code>src/App.tsx</code>, using the fixture slug, tier and organization. Use an admin session for routes behind <code>RequireTournamentAdmin</code>, <code>RequireAnyAdmin</code> or <code>RequireMasterAdmin</code>. Alias routes that only redirect (<code>/:slug/quals</code>, <code>/:slug/view</code>, <code>/:slug/bracket</code>, <code>/:slug/seeding</code>, <code>/login</code>) are covered by their targets.</li>
+  <li>If a route needs an API endpoint that <code>mockApi.ts</code> doesn't serve, add it to the capture script and the mock, recapture, and ask the coordinator to regenerate baselines.</li>
+  <li>Add mobile screenshots for <code>settings</code> and <code>seeding</code> to <code>visual.spec.ts</code> (<code>settings</code> already exists for both projects; add <code>seeding</code>).</li>
+  <li>Update <code>docs/UI_ARCHITECTURE.md</code> with a “Mobile” section covering the conventions from 12.0, the shell components from 12.1, and the compact view. Update <code>docs/TESTING_STRATEGY.md</code> to mention the overflow spec. Mark Phase 12 Complete in <code>docs/implementation_plan.md</code>.</li>
+</ol>
+
+<h2>Verification (Phase 12 definition of done)</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code>, <code>npm test</code>, <code>npx eslint src</code> (0 errors) pass.</li>
+  <li><code>npx playwright test e2e/visual/mobileOverflow.spec.ts --project=visual-mobile</code> passes for every route.</li>
+  <li><code>npm run test:visual</code> passes after reviewed re-baselining. Desktop screenshots never changed during Phase 12.</li>
+  <li><code>npm run test:e2e</code> and <code>npx playwright test e2e/overlays.spec.ts --project=chromium</code> pass.</li>
+  <li>Manual pass at 360×800 through every route in the overflow list: no control needs pinch-zoom, and every action on the page can be reached.</li>
+</ul>
+</main>
+</body>
+</html>

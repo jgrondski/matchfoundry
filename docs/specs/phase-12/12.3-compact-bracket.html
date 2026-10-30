@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.3 Compact Bracket</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.3</nav>
+<h1>Step 12.3: Compact bracket view</h1>
+<p class="subtitle">A new <code>compact</code> view that keeps the bracket's shape (rounds, connectors, champion) but shows only seed, name and match wins, so a whole bracket reads on a phone.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. Can run in parallel with 12.2 and 12.4. <strong>Prerequisite:</strong> 12.1 committed. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules, <a href="12.0-mobile-foundation.html">12.0's “Conventions”</a>, and <a href="../phase-11/11.2-conversion-guide.html">the conversion guide</a>.</p></div>
+
+<h2>Design</h2>
+<table>
+  <tr><th>Aspect</th><th>Decision</th></tr>
+  <tr><td>What a match shows</td><td>Two rows. Each row: seed (muted), name (truncated), match wins (for example <code>2</code>, or <code>2 (t)</code> with a tiebreaker). No game scores, no header strip, no routing chips.</td></tr>
+  <tr><td>Winner and loser</td><td>The winner row is bold, <code>text-fg</code>. The loser row is <code>text-fg-muted</code> and <code>opacity-70</code>. While in progress, the leading player's wins are <code>text-gold-bright</code>. Placeholders (“TBD”, “Winner of M#…”) are italic <code>text-fg-muted</code> with no seed.</td></tr>
+  <tr><td>Geometry</td><td>Uses the existing layout engine with a compact <code>LayoutConfig</code>, so pairing, bye and double-elim drop invariants come from the same code as the full view.</td></tr>
+  <tr><td>Scrolling</td><td>The bracket scrolls sideways inside its own container and snaps to round columns. Round headers stay visible while scrolling down.</td></tr>
+  <tr><td>Supported brackets</td><td>Single elimination, and double elimination with traditional routing. Accelerated Hybrid and Flat Staged don't offer compact: the toggle is hidden and they fall back to the feed on mobile.</td></tr>
+  <tr><td>Tapping a match</td><td>The same handler as the full view (<code>onSelectMatch</code>): judges get the score sheet, spectators get whatever the full view gives them today.</td></tr>
+  <tr><td>Default view on phones</td><td>Public bracket pages: <code>compact</code> when supported, otherwise <code>feed</code>. Manage bracket pages: <code>feed</code> (judges score from the list). <code>?view=</code> in the URL always wins. On desktop, compact is available from the toggle and is never the default.</td></tr>
+</table>
+
+<h2>Files</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>src/features/bracket/layout/types.ts</code>, <code>src/features/bracket/layout/index.ts</code></td></tr>
+  <tr><td>Create</td><td><code>src/features/bracket/matchCardModel.ts</code>, <code>src/features/bracket/components/visualizer/CompactMatchCard.tsx</code></td></tr>
+  <tr><td>Modify</td><td><code>visualizer/BracketMatchCard.tsx</code> (use the extracted model), <code>visualizer/BracketCanvas.tsx</code>, <code>visualizer/BracketChampionNode.tsx</code>, <code>visualizer/BracketStageNavBar.tsx</code>, <code>BracketVisualizer.tsx</code>, <code>BracketTierBar.tsx</code>, <code>src/routes/PublicTierBracketPage.tsx</code></td></tr>
+  <tr><td>Tests</td><td><code>src/features/bracket/__tests__/compactBracket.test.ts</code>; <code>e2e/visual/visual.spec.ts</code> and <code>mobileOverflow.spec.ts</code> (append)</td></tr>
+</table>
+
+<h2>Step 1: Layout</h2>
+<ol class="steps">
+  <li>In <code>layout/types.ts</code>: <code>export type BracketViewMode = 'standard' | 'fit' | 'split' | 'feed' | 'compact';</code> and add:
+<pre><code>export const COMPACT_LAYOUT_CONFIG: LayoutConfig = {
+  matchWidth: 136,
+  matchHeight: 44,
+  baseRowHeight: 56,
+  roundGap: 20,
+  headerHeight: 36,
+  paddingTop: 8,
+  paddingLeft: 12,
+  paddingRight: 16,
+  paddingBottom: 16,
+  championWidth: 140,
+  championHeight: 44,
+};</code></pre></li>
+  <li>In <code>calculateBracketLayout</code>, when <code>viewMode === 'compact'</code>, merge <code>COMPACT_LAYOUT_CONFIG</code> under <code>customConfig</code> and call the same engine as <code>'standard'</code> (pass <code>'standard'</code> as the engine's view mode). Return <code>viewMode: 'compact'</code> in the metadata.</li>
+  <li>Add and export <code>supportsCompactView(bracket: BracketStructure): boolean</code>. It returns <code>false</code> when <code>bracket.bracketRouting === 'ACCELERATED_HYBRID'</code> or when the bracket uses Flat Staged routing (reuse the exact check the visualizer uses to choose the flat staged layout; extract it into <code>layout/index.ts</code> if it's inline). Otherwise it returns <code>true</code>. Support both <code>'TRADITIONAL'</code> and <code>'TRADITIONAL_TREE'</code> (CLAUDE.md §3).</li>
+</ol>
+
+<h2>Step 2: Match card model</h2>
+<p>Move the per-match derivation in <code>BracketMatchCard.tsx</code> into <code>matchCardModel.ts</code> as a pure function. That covers effective player names, slot placeholders, <code>p1Wins</code>/<code>p2Wins</code>, <code>hasTiebreaker</code>, the score display strings, <code>isComplete</code>, <code>inProgress</code>, <code>p1Won</code>/<code>p2Won</code>, and the leading flags (currently around lines 120–225):</p>
+<pre><code>export interface MatchSideModel {
+  name: string;          // effective name or placeholder text
+  isPlaceholder: boolean;
+  seed: number | null;
+  winsDisplay: string;   // e.g. "2" or "2 (t)"
+  won: boolean;
+  leading: boolean;
+}
+export interface MatchCardModel {
+  p1: MatchSideModel;
+  p2: MatchSideModel;
+  isComplete: boolean;
+  inProgress: boolean;
+  isPlayable: boolean;
+}
+export function getMatchCardModel(args: {
+  match: BracketMatch;
+  mIdx: number;
+  bracket: BracketStructure;
+  tier: TournamentTier;
+  record: MatchScoreRecord | undefined;
+}): MatchCardModel;</code></pre>
+<p><code>BracketMatchCard</code> then calls <code>getMatchCardModel</code> and renders exactly as before. Existing bracket tests and visual screenshots must not change.</p>
+
+<h2>Step 3: <code>CompactMatchCard.tsx</code></h2>
+<pre><code>interface CompactMatchCardProps {
+  model: MatchCardModel;
+  pos: { x: number; y: number; width: number; height: number };
+  accentColor: string;      // primaryColor, or lowerBracketColor for losers-bracket matches (same rule as BracketMatchCard)
+  cardBg: string;           // effectiveCardBg
+  matchDomId: string;       // `bracket-match-${match.id}`, so scroll-to-match keeps working
+  onSelect?: () =&gt; void;    // undefined when the full view would not be clickable
+}</code></pre>
+<ul>
+  <li>Root: <code>absolute flex flex-col overflow-hidden rounded-sm border border-line border-l-2</code>, with runtime <code>style={{ left: pos.x, top: pos.y, width: pos.width, height: pos.height, background: cardBg, borderLeftColor: accentColor }}</code>. When <code>onSelect</code> is set: <code>role="button"</code>, <code>tabIndex={0}</code>, Enter and Space call it, plus <code>cursor-pointer</code>.</li>
+  <li>Each row: <code>flex h-1/2 items-center gap-1.5 px-1.5 text-2xs</code>. Seed: <code>w-4 shrink-0 text-right font-mono text-3xs text-fg-muted</code> (empty for placeholders). Name: <code>min-w-0 flex-1 truncate</code>. Wins: <code>shrink-0 font-mono font-bold</code>. The row divider is <code>border-t border-line-subtle</code> on the second row.</li>
+  <li>Row state classes follow the Design table.</li>
+  <li>Tap target: the card is 44px tall (the row height set in the config). Don't add hover ancestry highlighting in compact mode.</li>
+</ul>
+
+<h2>Step 4: Wire it into the visualizer</h2>
+<ol class="steps">
+  <li><code>BracketCanvas</code>: new prop <code>compact?: boolean</code>. When true, render <code>CompactMatchCard</code> for each match (building the model with <code>getMatchCardModel</code>) instead of <code>BracketMatchCard</code>. Pass <code>onSelect</code> only when <code>BracketMatchCard</code>'s own click condition would allow a click (reuse that condition through the model's <code>isPlayable</code> and the same props). Connectors (<code>BracketSvgConnectors</code>) render unchanged from <code>layout.paths</code>, with a 1.5px stroke in compact mode. Round headers in compact mode: <code>text-2xs font-bold uppercase tracking-wider</code>, using the layout's header positions.</li>
+  <li><code>BracketChampionNode</code>: new prop <code>compact?: boolean</code> that renders a 44px-high card with a trophy icon (size 14) and the champion's name, truncated.</li>
+  <li><code>BracketVisualizer</code>: when <code>effectiveObsView === 'compact'</code>, pass <code>compact</code> to <code>BracketCanvas</code> and <code>BracketChampionNode</code>. Hide the player-search highlight. Wrap the canvas in <code>overflow-x-auto overscroll-x-contain snap-x snap-proximity</code>. Render one zero-width <code>snap-start</code> marker per round header at <code>left: header.x - 12</code>. If the bracket doesn't support compact, treat <code>compact</code> as <code>feed</code> (the page handles this, see Step 5).</li>
+  <li><code>BracketStageNavBar</code> (double-elim stage jump bar): on mobile, its buttons scroll sideways (<code>max-md:overflow-x-auto max-md:flex-nowrap</code>).</li>
+</ol>
+
+<h2>Step 5: Page and toggle</h2>
+<ol class="steps">
+  <li><code>BracketTierBar</code>: add a “Compact” chip to the view toggle (label “Bracket” on mobile, “Compact” on desktop). Show it only when <code>supportsCompactView(activeTier.bracket)</code>. On mobile the toggle shows exactly List and Bracket.</li>
+  <li><code>PublicTierBracketPage</code>, in the <code>localViewMode</code> initializer: if <code>urlView</code> is set, use it. Else if OBS, use <code>'fit'</code>. Else if <code>window.innerWidth &lt; 768</code>: on manage routes use <code>'feed'</code>, on public routes use <code>supportsCompactView(tier.bracket) ? 'compact' : 'feed'</code>. Else use <code>'standard'</code>.</li>
+  <li>If <code>localViewMode === 'compact'</code> and the bracket doesn't support it, render the feed branch.</li>
+  <li>Compact renders through the existing non-feed <code>&lt;main&gt;</code> branch with <code>BracketVisualizer obsView="compact"</code>.</li>
+</ol>
+
+<h2>Step 6: Tests</h2>
+<ul>
+  <li><code>compactBracket.test.ts</code>:
+    <ol>
+      <li>For generated single-elim brackets of 8, 13 and 16 players, and a double-elim bracket of 16, the compact layout has no two overlapping match rectangles, and every match position has <code>width === 136</code> and <code>height === 44</code>.</li>
+      <li>Byes never get a position (the match count equals N−1 for single elimination).</li>
+      <li><code>supportsCompactView</code> returns false for <code>ACCELERATED_HYBRID</code>, true for <code>TRADITIONAL</code> and <code>TRADITIONAL_TREE</code>.</li>
+      <li><code>getMatchCardModel</code>: a decided match marks exactly one side <code>won</code>; a tiebreaker produces <code>"N (t)"</code>; an empty slot produces <code>isPlaceholder: true</code> with seed <code>null</code>.</li>
+    </ol>
+  </li>
+  <li>Visual: add <code>bracket-compact</code> (<code>/${FIXTURE_SLUG}/${FIXTURE_TIER_SLUG}?view=compact</code>) to <code>PAGES</code> for both projects. These are new baselines; the coordinator reviews and generates them.</li>
+  <li>Overflow: append <code>public-bracket-compact</code> with the same path.</li>
+</ul>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code>, <code>npm test</code> pass, including every existing bracket test with no edits.</li>
+  <li><code>npm run test:visual</code>: existing desktop screenshots unchanged (proving the <code>BracketMatchCard</code> refactor didn't change anything). Mobile <code>bracket</code> changes, because the default view is now compact. <code>bracket-compact</code> is new.</li>
+  <li>Manual check at 360×800 on the fixture tournament (16-player double elim):
+    <ul>
+      <li>The bracket opens in compact view.</li>
+      <li>Swiping sideways snaps by round.</li>
+      <li>The winners and losers brackets are both reachable.</li>
+      <li>The champion is visible at the end.</li>
+      <li>On a manage route, tapping a playable match opens the score sheet.</li>
+    </ul>
+  </li>
+</ul>
+</main>
+</body>
+</html>

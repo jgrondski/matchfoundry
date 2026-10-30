@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 11.1 Overlays</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 11 / 11.1</nav>
+<h1>Step 11.1: Overlays and dismissal rules</h1>
+<p class="subtitle">Build one overlay system, move all 37 modals, drawers and confirmation dialogs onto it, and apply the new dismissal rule everywhere.</p>
+
+<div class="box"><p><strong>Executor:</strong> Claude (coordinator). Runs alone. <strong>Prerequisite:</strong> 11.0 committed. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules, and <a href="11.2-conversion-guide.html">the conversion guide</a> (for the panel classes in Part C).</p></div>
+
+<h2>The rule being implemented</h2>
+<table>
+  <tr><th>Overlay state</th><th>Click or tap outside</th><th>Escape</th><th>X or Cancel</th></tr>
+  <tr><td>Not dirty (read-only, confirmation, or form without changes)</td><td>Closes</td><td>Closes</td><td>Closes</td></tr>
+  <tr><td>Dirty (form with unsaved changes)</td><td>Opens Discard prompt</td><td>Opens Discard prompt</td><td>Opens Discard prompt</td></tr>
+  <tr><td>Busy (request in flight)</td><td>Ignored</td><td>Ignored</td><td>Ignored (buttons disabled)</td></tr>
+  <tr><td><code>dismissible={false}</code></td><td>Ignored</td><td>Ignored</td><td>Follows the dirty rule</td></tr>
+</table>
+<p><strong>Discard prompt:</strong> title “Discard unsaved changes?”, body “You have changes that haven't been saved. If you leave now, they'll be lost.”, buttons <strong>Keep Editing</strong> (secondary, focused) and <strong>Discard Changes</strong> (danger). Clicking outside the prompt or pressing Escape counts as Keep Editing.</p>
+<p>A successful Save or Confirm closes the overlay directly, with no prompt.</p>
+
+<h2>Part A: Overlay system (<code>src/components/overlay/</code>)</h2>
+<h3><code>dismissal.ts</code></h3>
+<pre><code>export type DismissReason = 'backdrop' | 'escape' | 'button';
+export type DismissResult = 'close' | 'confirm' | 'ignore';
+
+export interface DismissState {
+  dirty: boolean;
+  busy: boolean;
+  dismissible: boolean;
+}
+
+/** Pure decision table for every overlay close attempt. */
+export function resolveDismissal(reason: DismissReason, state: DismissState): DismissResult {
+  if (state.busy) return 'ignore';
+  if (reason !== 'button' &amp;&amp; !state.dismissible) return 'ignore';
+  return state.dirty ? 'confirm' : 'close';
+}</code></pre>
+
+<h3><code>overlayStack.ts</code></h3>
+<pre><code>/** Tracks open overlays so only the topmost reacts to Escape, and locks page scroll while any is open. */
+const stack: string[] = [];
+let previousOverflow = '';
+
+export function pushOverlay(id: string): void {
+  if (stack.length === 0 &amp;&amp; typeof document !== 'undefined') {
+    previousOverflow = document.documentElement.style.overflow;
+    // eslint-disable-next-line no-restricted-syntax -- runtime: page scroll lock
+    document.documentElement.style.overflow = 'hidden';
+  }
+  stack.push(id);
+}
+
+export function removeOverlay(id: string): void {
+  const index = stack.lastIndexOf(id);
+  if (index &gt;= 0) stack.splice(index, 1);
+  if (stack.length === 0 &amp;&amp; typeof document !== 'undefined') {
+    // eslint-disable-next-line no-restricted-syntax -- runtime: page scroll lock
+    document.documentElement.style.overflow = previousOverflow;
+  }
+}
+
+export function isTopOverlay(id: string): boolean {
+  return stack[stack.length - 1] === id;
+}</code></pre>
+
+<h3><code>Overlay.tsx</code></h3>
+<pre><code>import React, { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { cn } from '../ui';
+import { resolveDismissal, type DismissReason } from './dismissal';
+import { pushOverlay, removeOverlay, isTopOverlay } from './overlayStack';
+import { DiscardChangesDialog } from './DiscardChangesDialog';
+
+export interface OverlayRenderApi {
+  /** Use for every X and Cancel button. Applies the dirty/busy rules. */
+  requestClose: () =&gt; void;
+}
+
+export interface OverlayProps {
+  open: boolean;
+  /** Actually closes the overlay (parent sets its open state to false). */
+  onClose: () =&gt; void;
+  variant?: 'modal' | 'drawer';
+  dirty?: boolean;
+  busy?: boolean;
+  dismissible?: boolean;
+  'aria-label'?: string;
+  'aria-labelledby'?: string;
+  panelClassName?: string;
+  /** Runtime-only styles (e.g. tier-themed gradients). Never static values. */
+  panelStyle?: React.CSSProperties;
+  panelTestId?: string;
+  children: React.ReactNode | ((api: OverlayRenderApi) =&gt; React.ReactNode);
+}
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+export const Overlay: React.FC&lt;OverlayProps&gt; = props =&gt; (props.open ? &lt;OverlayInner {...props} /&gt; : null);
+
+const OverlayInner: React.FC&lt;OverlayProps&gt; = ({
+  onClose,
+  variant = 'modal',
+  dirty = false,
+  busy = false,
+  dismissible = true,
+  panelClassName,
+  panelStyle,
+  panelTestId,
+  children,
+  ...aria
+}) =&gt; {
+  const id = useId();
+  const panelRef = useRef&lt;HTMLDivElement&gt;(null);
+  const pressStartedOnBackdrop = useRef(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const requestClose = (reason: DismissReason) =&gt; {
+    const result = resolveDismissal(reason, { dirty, busy, dismissible });
+    if (result === 'close') onClose();
+    if (result === 'confirm') setConfirmOpen(true);
+  };
+  const requestCloseRef = useRef(requestClose);
+  requestCloseRef.current = requestClose;
+
+  // Stack registration, focus capture/restore.
+  useEffect(() =&gt; {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    pushOverlay(id);
+    const panel = panelRef.current;
+    const target = panel?.querySelector&lt;HTMLElement&gt;('[data-autofocus]') ?? panel;
+    target?.focus();
+    return () =&gt; {
+      removeOverlay(id);
+      previouslyFocused?.focus?.();
+    };
+  }, [id]);
+
+  // Escape: only the topmost overlay reacts.
+  useEffect(() =&gt; {
+    const onKeyDown = (e: KeyboardEvent) =&gt; {
+      if (e.key !== 'Escape' || !isTopOverlay(id)) return;
+      e.preventDefault();
+      requestCloseRef.current('escape');
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () =&gt; document.removeEventListener('keydown', onKeyDown);
+  }, [id]);
+
+  // Warn before tab close or reload while there are unsaved changes.
+  useEffect(() =&gt; {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) =&gt; {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () =&gt; window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dirty]);
+
+  const trapTab = (e: React.KeyboardEvent) =&gt; {
+    if (e.key !== 'Tab' || !panelRef.current) return;
+    const items = Array.from(panelRef.current.querySelectorAll&lt;HTMLElement&gt;(FOCUSABLE));
+    if (items.length === 0) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey &amp;&amp; document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey &amp;&amp; document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  const content = (
+    &lt;div
+      className={cn(
+        'fixed inset-0 z-1000 flex bg-black/75 backdrop-blur-overlay animate-fade-in',
+        variant === 'drawer' ? 'justify-end' : 'items-center justify-center p-4'
+      )}
+      onMouseDown={e =&gt; {
+        pressStartedOnBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={e =&gt; {
+        if (pressStartedOnBackdrop.current &amp;&amp; e.target === e.currentTarget) requestClose('backdrop');
+        pressStartedOnBackdrop.current = false;
+      }}
+    &gt;
+      &lt;div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        {...aria}
+        tabIndex={-1}
+        data-testid={panelTestId}
+        onKeyDown={trapTab}
+        // eslint-disable-next-line no-restricted-syntax -- runtime: caller-supplied themed panel styles
+        style={panelStyle}
+        className={cn(
+          'relative outline-none',
+          variant === 'drawer'
+            ? 'flex h-full w-full max-w-[520px] flex-col overflow-hidden animate-slide-in-right'
+            : 'max-h-[calc(100vh-2rem)] w-full overflow-y-auto animate-fade-in',
+          panelClassName
+        )}
+      &gt;
+        {typeof children === 'function' ? children({ requestClose: () =&gt; requestClose('button') }) : children}
+      &lt;/div&gt;
+      &lt;DiscardChangesDialog
+        open={confirmOpen}
+        onKeepEditing={() =&gt; setConfirmOpen(false)}
+        onDiscard={() =&gt; {
+          setConfirmOpen(false);
+          onClose();
+        }}
+      /&gt;
+    &lt;/div&gt;
+  );
+
+  return typeof document === 'undefined' ? content : createPortal(content, document.body);
+};</code></pre>
+<p>The <code>typeof document === 'undefined'</code> branch keeps <code>renderToStaticMarkup</code> tests working, since they run in Node without a DOM.</p>
+
+<h3><code>ConfirmDialog.tsx</code></h3>
+<pre><code>import React, { useId } from 'react';
+import { AlertTriangle, Info, X } from 'lucide-react';
+import { Button, IconButton, cn } from '../ui';
+import { Overlay } from './Overlay';
+
+export interface ConfirmDialogProps {
+  open: boolean;
+  title: string;
+  body: React.ReactNode;
+  tone?: 'danger' | 'warning' | 'info';
+  confirmLabel: string;
+  confirmVariant?: 'danger' | 'primary';
+  cancelLabel?: string;
+  onConfirm: () =&gt; void;
+  onCancel: () =&gt; void;
+  busy?: boolean;
+  confirmDisabled?: boolean;
+  /** Extra buttons rendered between Cancel and Confirm. */
+  extraActions?: React.ReactNode;
+}
+
+const TONE = {
+  danger: { border: 'border-red/50', icon: 'text-red' },
+  warning: { border: 'border-gold', icon: 'text-gold-bright' },
+  info: { border: 'border-line', icon: 'text-cyan' },
+} as const;
+
+export const ConfirmDialog: React.FC&lt;ConfirmDialogProps&gt; = ({
+  open,
+  title,
+  body,
+  tone = 'danger',
+  confirmLabel,
+  confirmVariant = 'danger',
+  cancelLabel = 'Cancel',
+  onConfirm,
+  onCancel,
+  busy = false,
+  confirmDisabled = false,
+  extraActions,
+}) =&gt; {
+  const titleId = useId();
+  const Icon = tone === 'info' ? Info : AlertTriangle;
+  return (
+    &lt;Overlay
+      open={open}
+      onClose={onCancel}
+      busy={busy}
+      aria-labelledby={titleId}
+      panelClassName={cn('max-w-[460px] overflow-hidden rounded-lg border bg-surface shadow-lg', TONE[tone].border)}
+    &gt;
+      {({ requestClose }) =&gt; (
+        &lt;&gt;
+          &lt;div className="flex items-center justify-between gap-3 border-b border-line bg-elevated px-6 py-5"&gt;
+            &lt;div className="flex items-center gap-2.5"&gt;
+              &lt;Icon size={20} className={TONE[tone].icon} /&gt;
+              &lt;h3 id={titleId} className="text-lg font-bold text-fg"&gt;{title}&lt;/h3&gt;
+            &lt;/div&gt;
+            &lt;IconButton aria-label="Close" onClick={requestClose} disabled={busy}&gt;
+              &lt;X size={18} /&gt;
+            &lt;/IconButton&gt;
+          &lt;/div&gt;
+          &lt;div className="flex flex-col gap-4 p-6 text-sm text-fg"&gt;{body}&lt;/div&gt;
+          &lt;div className="flex flex-wrap justify-end gap-3 border-t border-line bg-elevated px-6 py-4"&gt;
+            &lt;Button variant="secondary" onClick={requestClose} disabled={busy} data-autofocus&gt;
+              {cancelLabel}
+            &lt;/Button&gt;
+            {extraActions}
+            &lt;Button variant={confirmVariant} onClick={onConfirm} disabled={busy || confirmDisabled}&gt;
+              {confirmLabel}
+            &lt;/Button&gt;
+          &lt;/div&gt;
+        &lt;/&gt;
+      )}
+    &lt;/Overlay&gt;
+  );
+};</code></pre>
+
+<h3><code>DiscardChangesDialog.tsx</code></h3>
+<pre><code>import React from 'react';
+import { ConfirmDialog } from './ConfirmDialog';
+
+export const DISCARD_TITLE = 'Discard unsaved changes?';
+export const DISCARD_BODY = "You have changes that haven't been saved. If you leave now, they'll be lost.";
+
+export interface DiscardChangesDialogProps {
+  open: boolean;
+  onKeepEditing: () =&gt; void;
+  onDiscard: () =&gt; void;
+}
+
+export const DiscardChangesDialog: React.FC&lt;DiscardChangesDialogProps&gt; = ({ open, onKeepEditing, onDiscard }) =&gt; (
+  &lt;ConfirmDialog
+    open={open}
+    tone="warning"
+    title={DISCARD_TITLE}
+    body={&lt;p&gt;{DISCARD_BODY}&lt;/p&gt;}
+    cancelLabel="Keep Editing"
+    confirmLabel="Discard Changes"
+    confirmVariant="danger"
+    onCancel={onKeepEditing}
+    onConfirm={onDiscard}
+  /&gt;
+);</code></pre>
+<p>There is a circular import: <code>Overlay</code> imports <code>DiscardChangesDialog</code>, which imports <code>ConfirmDialog</code>, which imports <code>Overlay</code>. This is safe with ES modules because every use happens at render time, not at module load. Keep the files as specified.</p>
+
+<h3><code>index.ts</code></h3>
+<pre><code>export { Overlay } from './Overlay';
+export type { OverlayProps, OverlayRenderApi } from './Overlay';
+export { ConfirmDialog } from './ConfirmDialog';
+export type { ConfirmDialogProps } from './ConfirmDialog';
+export { DiscardChangesDialog, DISCARD_TITLE, DISCARD_BODY } from './DiscardChangesDialog';
+export { resolveDismissal } from './dismissal';
+export type { DismissReason, DismissResult } from './dismissal';</code></pre>
+
+<h3>Unit tests: <code>src/components/overlay/__tests__/overlay.test.tsx</code></h3>
+<ol>
+  <li><code>resolveDismissal</code>: test all 24 combinations of reason × dirty × busy × dismissible against the rule table above.</li>
+  <li><code>renderToStaticMarkup(&lt;Overlay open={false} onClose={noop}&gt;x&lt;/Overlay&gt;)</code> returns <code>''</code>.</li>
+  <li>An open <code>Overlay</code> renders <code>role="dialog"</code>, <code>aria-modal="true"</code>, and its <code>panelTestId</code>.</li>
+  <li>An open <code>ConfirmDialog</code> renders the title, body, cancel label and confirm label.</li>
+  <li>An open <code>DiscardChangesDialog</code> renders “Discard unsaved changes?”, “Keep Editing” and “Discard Changes”.</li>
+</ol>
+
+<h2>Part B: Overlay inventory</h2>
+<p>Every row must be converted. <strong>Dirty</strong> is the exact expression to pass as <code>dirty</code>; “—” means none (not dirty). <strong>Busy</strong> is the prop to pass as <code>busy</code>.</p>
+
+<h3>B1. Component overlays (own file)</h3>
+<table>
+  <tr><th>#</th><th>File (under <code>src/</code>)</th><th>Variant</th><th>Dirty</th><th>Busy</th><th>Notes</th></tr>
+  <tr><td>1</td><td><code>features/auth/AdminLoginModal.tsx</code></td><td>modal</td><td><code>pin !== ''</code></td><td><code>isSubmitting</code></td><td></td></tr>
+  <tr><td>2</td><td><code>features/bracket/components/MatchScoreDrawer.tsx</code></td><td>drawer</td><td><code>!gamesEqual(games, baselineGames)</code> (see B3)</td><td><code>isSaving</code></td><td>Pass the existing themed gradient, border and box-shadow as <code>panelStyle</code>. Keep <code>panelTestId="match-score-drawer"</code>. Delete the Escape <code>useEffect</code>.</td></tr>
+  <tr><td>3</td><td><code>features/bracket/components/MatchTelemetryModal.tsx</code></td><td>modal</td><td>—</td><td>—</td><td>Read-only. Delete the Escape <code>useEffect</code>.</td></tr>
+  <tr><td>4</td><td><code>features/bracket/components/ShareBracketModal.tsx</code></td><td>modal</td><td>—</td><td>—</td><td>Read-only. Delete the Escape <code>useEffect</code>.</td></tr>
+  <tr><td>5</td><td><code>features/online-quals/components/AdjudicationModal.tsx</code></td><td>modal</td><td><code>scoresChanged || judgeNotes !== (session?.judgeNotes || '') || confirmDQ</code>, where <code>scoresChanged</code> compares <code>scores</code> with the same initializer expression used in its <code>useState</code></td><td><code>isSubmitting</code></td><td></td></tr>
+  <tr><td>6</td><td><code>features/online-quals/components/IdentityResolutionModal.tsx</code></td><td>modal</td><td><code>selectedTargetId !== null || newName !== (session?.playerName || '') || newCountry !== (session?.country || '') || newPlaystyle !== 'DAS'</code></td><td><code>isSubmitting</code></td><td></td></tr>
+  <tr><td>7</td><td><code>features/online-quals/components/IdentityClaimModal.tsx</code></td><td>modal</td><td><code>name !== (twitchUser.displayName || '') || country !== 'US' || playstyle !== 'DAS' || selectedPlayerId !== initialSelectedPlayerId</code> (capture the <code>useState</code> initializer value in a <code>useRef</code>)</td><td><code>isSubmitting</code></td><td><code>onClose={onCancel}</code>.</td></tr>
+  <tr><td>8</td><td><code>features/online-quals/components/PreFlightModal.tsx</code></td><td>modal</td><td><code>checkLive || checkVodStorage || checkAuthwordRule || checkTimeLimit || checkStreamTimer</code></td><td><code>isStarting</code></td><td><code>onClose={onCancel}</code>.</td></tr>
+  <tr><td>9</td><td><code>features/organizations/components/OrgMetadataModal.tsx</code></td><td>modal</td><td>New prop <code>isDirty: boolean</code>, computed by the caller (see B3)</td><td>—</td><td></td></tr>
+  <tr><td>10</td><td><code>features/players/components/GenerateFakePlayersModal.tsx</code></td><td>modal</td><td><code>count !== 16</code></td><td>—</td><td></td></tr>
+  <tr><td>11</td><td><code>features/players/components/ImportFromGlobalModal.tsx</code></td><td>modal</td><td><code>selectedIds.size &gt; 0</code></td><td>—</td><td></td></tr>
+  <tr><td>12</td><td><code>features/players/components/PlayerEditModal.tsx</code></td><td>modal</td><td>Snapshot comparison (see B3)</td><td>—</td><td>Opens on top of <code>PlayerDetailDrawer</code>; stacking is handled by DOM order.</td></tr>
+  <tr><td>13</td><td><code>features/qualifiers/components/PlayerDetailDrawer.tsx</code></td><td>drawer</td><td><code>scoreInput.trim() !== ''</code></td><td>—</td><td>Pass the themed gradient, border and shadow as <code>panelStyle</code>. Delete the Escape <code>useEffect</code>.</td></tr>
+  <tr><td>14</td><td><code>features/qualifiers/components/QualifierEntryModal.tsx</code></td><td>modal</td><td><code>selectedPlayer !== null || scoreInput.trim() !== ''</code></td><td><code>isSubmitting</code></td><td>Keep <code>panelTestId="qualifier-entry-modal"</code>.</td></tr>
+  <tr><td>15</td><td><code>features/tournament/components/CreateTournamentModal.tsx</code></td><td>modal</td><td><code>newTourneyName !== '' || newTourneySlug !== '' || newTourneyDate !== '' || newTourneyLocation !== '' || newTourneyMode !== 'HYBRID' || newTourneyWindowMinutes !== 90 || newTourneyFormat !== 'AVERAGE_OF_X' || newTourneyAvgCount !== 2 || newTourneyOrgId !== initialOrgId</code></td><td><code>isCreating</code></td><td></td></tr>
+  <tr><td>16</td><td><code>features/tournament/components/PointsThresholdsDrawer.tsx</code></td><td>drawer</td><td>—</td><td>—</td><td>Edits go live to the parent form, which has its own unsaved-changes guard.</td></tr>
+  <tr><td>17</td><td><code>features/tournament/components/VerifyBracketModal.tsx</code></td><td>modal</td><td>—</td><td><code>isLocking</code></td><td></td></tr>
+  <tr><td>18</td><td><code>features/tournament/components/settings/SharedPinWarningModal.tsx</code></td><td>modal</td><td>—</td><td><code>isSubmitting</code></td><td>Keep its custom layout (it lists the tournaments that share the PIN), so use <code>Overlay</code>, not <code>ConfirmDialog</code>.</td></tr>
+  <tr><td>19–20</td><td><code>features/tournament/components/settings/AdminFormModals.tsx</code></td><td>2 × <code>ConfirmDialog</code></td><td>—</td><td>Delete tier: none. Data action: <code>isExecutingAction</code></td><td>Delete tier: <code>open={tierToDelete !== null}</code>, <code>onCancel={onCancelDeleteTier}</code>, <code>onConfirm={() =&gt; onConfirmDeleteTier(tierToDelete.index)}</code>. Data action: <code>open={dataActionToConfirm !== null}</code>, <code>onCancel={onCancelDataAction}</code>, <code>onConfirm={onConfirmDataAction}</code>. Move the existing body content and button labels unchanged.</td></tr>
+  <tr><td>21</td><td><code>features/tournament/components/seeding/BulkSeedImportModal.tsx</code></td><td>modal</td><td><code>rawText.trim() !== ''</code></td><td>—</td><td></td></tr>
+  <tr><td>22</td><td><code>features/tournament/components/seeding/DualListSeedingModal.tsx</code></td><td>modal</td><td>Snapshot comparison of <code>stagedSeeds</code> (see B3)</td><td>—</td><td></td></tr>
+</table>
+
+<h3>B2. Inline overlays (inside a larger file)</h3>
+<p>Each becomes a <code>ConfirmDialog</code> (or an <code>Overlay</code> where noted). Keep the existing state variable that controls it; move the body JSX into <code>body</code>; keep the button labels exactly.</p>
+<table>
+  <tr><th>#</th><th>File (under <code>src/</code>)</th><th>Comment marker in the file</th><th>Becomes</th><th>Dirty</th><th>Busy</th></tr>
+  <tr><td>23</td><td><code>features/organizations/components/OrganizationDashboard.tsx</code></td><td><code>Delete Tournament Confirmation Modal</code></td><td>ConfirmDialog (danger)</td><td>—</td><td>existing deleting flag, if any</td></tr>
+  <tr><td>24</td><td><code>features/organizations/components/OrganizationDirectory.tsx</code></td><td><code>Create Organization Modal</code></td><td>Overlay (modal)</td><td>Any create-form field differs from its <code>useState</code> initial value (list every create field explicitly in the expression)</td><td><code>isSubmitting</code></td></tr>
+  <tr><td>25</td><td><code>features/players/components/PlayerDirectory.tsx</code></td><td><code>Delete Single Player Speedbump Modal</code></td><td>ConfirmDialog (danger)</td><td>—</td><td>existing flag, if any</td></tr>
+  <tr><td>26</td><td><code>features/players/components/PlayerDirectory.tsx</code></td><td><code>Clear All Players Speedbump Modal</code></td><td>ConfirmDialog (danger)</td><td>—</td><td>existing flag, if any</td></tr>
+  <tr><td>27</td><td><code>features/tournament/components/seeding/ManualSeedingManager.tsx</code></td><td><code>Jump to Seed Modal</code></td><td>Overlay (modal)</td><td>its input state <code>!== ''</code></td><td>—</td></tr>
+  <tr><td>28</td><td>same</td><td><code>Shuffle Confirmation Modal</code></td><td>ConfirmDialog (warning)</td><td>—</td><td>—</td></tr>
+  <tr><td>29</td><td>same</td><td><code>Reverse Confirmation Modal</code></td><td>ConfirmDialog (warning)</td><td>—</td><td>—</td></tr>
+  <tr><td>30</td><td>same</td><td><code>Batch Jump to Seed Modal</code></td><td>Overlay (modal)</td><td>its input state <code>!== ''</code></td><td>—</td></tr>
+  <tr><td>31</td><td>same</td><td><code>Batch Removal Confirmation Modal</code></td><td>ConfirmDialog (danger)</td><td>—</td><td>—</td></tr>
+  <tr><td>32</td><td><code>features/online-quals/components/ReviewQueueView.tsx</code></td><td><code>Discard Unfinished Run Speedbump Modal</code></td><td>ConfirmDialog (danger)</td><td>—</td><td>existing flag, if any</td></tr>
+  <tr><td>33</td><td>same</td><td><code>Verify All Speedbump Modal</code></td><td>ConfirmDialog (warning, <code>confirmVariant="primary"</code>)</td><td>—</td><td>existing flag, if any</td></tr>
+  <tr><td>34</td><td><code>features/online-quals/components/CompetitorPortalView.tsx</code></td><td><code>Switch Competitor Confirmation Speedbump Modal</code></td><td>ConfirmDialog (warning)</td><td>—</td><td>—</td></tr>
+  <tr><td>35</td><td><code>routes/ManageTournamentPlayersPage.tsx</code></td><td><code>Delete Confirmation Modal</code></td><td>ConfirmDialog (danger)</td><td>—</td><td>existing flag, if any</td></tr>
+  <tr><td>36</td><td><code>routes/ManageTournamentSettingsPage.tsx</code></td><td><code>Unsaved Changes Speedbump Modal</code></td><td><code>&lt;DiscardChangesDialog open={pendingNavigation !== null} onKeepEditing={handleStay} onDiscard={handleConfirmLeave} /&gt;</code></td><td>—</td><td>—</td></tr>
+  <tr><td>37</td><td><code>routes/TournamentSwitcherPage.tsx</code></td><td><code>Delete Confirmation Modal</code></td><td>ConfirmDialog (danger)</td><td>—</td><td>existing flag, if any</td></tr>
+</table>
+<p>“Existing flag, if any” means: if the component already has a boolean that is true while that confirmation's request runs, pass it as <code>busy</code>. If not, omit <code>busy</code>. Don't add new state.</p>
+<p><strong>Not overlays; leave alone:</strong> the save toast in <code>OrganizationDashboard.tsx</code>, the unlock error toast in <code>TournamentSidebar.tsx</code>, the fixed elements in <code>ObsOverlayPage.tsx</code> and <code>ObsBracketView.tsx</code>, and the sticky bar in <code>ManualSeedingManager.tsx</code>.</p>
+
+<h3>B3. Dirty expressions that need a little code</h3>
+<h4>MatchScoreDrawer</h4>
+<p>Extract the body of the existing init <code>useEffect</code> that builds <code>initialGames</code> into a module-level pure function in the same file:</p>
+<pre><code>type GameDraft = { p1: string; p2: string; winner: string | null };
+
+function deriveInitialGames(match: BracketMatch, liveRecord: MatchRecord | undefined): GameDraft[] { /* existing loop, unchanged */ }
+
+/** Equal if identical after dropping trailing empty games (Best-of changes pad with empties). */
+function gamesEqual(a: GameDraft[], b: GameDraft[]): boolean {
+  const trim = (list: GameDraft[]) =&gt; {
+    const out = [...list];
+    while (out.length &amp;&amp; !out[out.length - 1].p1 &amp;&amp; !out[out.length - 1].p2 &amp;&amp; !out[out.length - 1].winner) out.pop();
+    return out;
+  };
+  return JSON.stringify(trim(a)) === JSON.stringify(trim(b));
+}</code></pre>
+<p>Use the real type names from the file's imports for <code>match</code> and <code>liveRecord</code>. The effect calls <code>setGames(deriveInitialGames(match, liveRecord))</code>, and the component computes <code>const baselineGames = useMemo(() =&gt; (match ? deriveInitialGames(match, liveRecord) : []), [match, liveRecord]);</code>. Add a unit test for <code>gamesEqual</code> in <code>src/features/bracket/__tests__/</code> (export it for testing).</p>
+
+<h4>PlayerEditModal</h4>
+<p>In the existing reset <code>useEffect</code> (the one ending <code>}, [initialPlayer, isOpen]);</code>), after all the setters run, store the same values in <code>initialRef.current = { name, displayName, nickname, twitchUsername, country, avatarType, avatarUrl, avatarThumbnailUrl, personalBest, playstyle, notes }</code>, using the values passed to the setters rather than state. <code>dirty</code> is <code>JSON.stringify(currentValues) !== JSON.stringify(initialRef.current)</code>, where <code>currentValues</code> has the same 11 keys read from state.</p>
+
+<h4>DualListSeedingModal</h4>
+<p>In the <code>useEffect</code> that runs when <code>isOpen</code> becomes true and sets <code>stagedSeeds</code>, also set <code>initialSeedsRef.current</code> to the same array. <code>dirty</code> is <code>JSON.stringify(stagedSeeds) !== JSON.stringify(initialSeedsRef.current)</code>.</p>
+
+<h4>OrgMetadataModal (computed in <code>OrganizationDashboard.tsx</code>)</h4>
+<p>Pass <code>isDirty</code>: compare each <code>edit*</code> state value (<code>editName</code>, <code>editSlug</code>, <code>editDescription</code>, <code>editWebsite</code>, <code>editLogoUrl</code>, <code>editBannerUrl</code>) with the value it was initialized from when the modal opened. Find the handler that opens the modal and sets these fields. Mirror the same values into an <code>editInitialRef</code> there and compare against it.</p>
+
+<h2>Part C: How to convert one overlay</h2>
+<ol class="steps">
+  <li>Keep the component's exported props unchanged. The only exception is <code>OrgMetadataModal</code>'s new <code>isDirty</code>.</li>
+  <li>Keep the existing null guard (for example <code>if (!isOpen || !match) return null;</code>) exactly as it is, and render <code>&lt;Overlay open …&gt;</code>. The guard already handles closed state.</li>
+  <li>Delete the outer fixed backdrop <code>&lt;div&gt;</code>. The panel <code>&lt;div&gt;</code> (its first child) becomes the Overlay panel: convert its static styles into <code>panelClassName</code> using the conversion guide. Width, background, border, radius, shadow and overflow go there. Runtime-themed values go in <code>panelStyle</code>.</li>
+  <li>Delete <code>onClick={e =&gt; e.stopPropagation()}</code> from the panel.</li>
+  <li>Use the render-prop form <code>{({ requestClose }) =&gt; (…)}</code>. Change every X button and every Cancel/Close/Back-out button from <code>onClose</code> (or <code>onCancel</code>) to <code>requestClose</code>. Save, Confirm and other action buttons keep their handlers.</li>
+  <li>Give the title element an <code>id</code> from <code>useId()</code> and pass <code>aria-labelledby</code>.</li>
+  <li>Delete any Escape-key <code>useEffect</code> in the component.</li>
+  <li>Leave the interior content's inline styles alone. The 11.2 batches convert them. Exception: <code>ConfirmDialog</code> bodies are new JSX, so write them with Tailwind classes.</li>
+</ol>
+
+<h2>Part D: Browser tests (<code>e2e/overlays.spec.ts</code>, chromium project)</h2>
+<p>Reuse <code>installApiMocks</code>, <code>ADMIN_SESSION</code> and <code>FIXTURE_SLUG</code> from <code>./visual/mockApi</code>, and the <code>prepare</code>/<code>settle</code> pattern from <code>visual.spec.ts</code>. Click the backdrop with <code>page.mouse.click(10, 10)</code> for modals and <code>page.mouse.click(10, 360)</code> for drawers.</p>
+<ol>
+  <li><strong>Read-only closes on backdrop and Escape.</strong> On the public bracket page, click the Share button, expect <code>getByRole('dialog')</code> to be visible, click the backdrop, and expect the dialog to be gone. Open it again, press Escape, and expect it to be gone.</li>
+  <li><strong>Clean form closes.</strong> On <code>/manage/qualifiers</code>, open the qualifier entry modal, press Escape, and expect <code>qualifier-entry-modal</code> to be hidden.</li>
+  <li><strong>Dirty drawer prompts.</strong> On <code>/manage/judge</code>, click the first <code>feed-match-card</code>. Fill the first <code>input</code> inside <code>match-score-drawer</code> with <code>123456</code>, then click the backdrop. Expect a dialog named “Discard unsaved changes?”. Click <strong>Keep Editing</strong>: the prompt disappears, the drawer stays open, and the input still holds <code>123456</code>. Press Escape: the prompt appears again. Click <strong>Discard Changes</strong>: the drawer is gone.</li>
+  <li><strong>Escape on the prompt keeps editing.</strong> Repeat the dirty setup, open the prompt, press Escape, and expect the prompt gone and the drawer still open.</li>
+</ol>
+
+<h2>Part E: Documentation</h2>
+<p>Replace the “Modals &amp; Drawers” bullet in <code>CLAUDE.md</code> §5 and <code>AGENTS.md</code> with:</p>
+<pre><code>- **Overlays (modals, drawers, sheets)**: Always use `Overlay` or `ConfirmDialog` from `src/components/overlay`; never hand-roll a fixed backdrop. Read-only overlays and confirmations close on backdrop click/tap and Escape. Forms pass `dirty`; when dirty, backdrop, Escape, X and Cancel open the Discard prompt ("Keep Editing" / "Discard Changes"). Pass `busy` while a request is in flight so nothing dismisses mid-save.</code></pre>
+<p>In <code>docs/MatchFoundry-Product-Spec.md</code>, replace the bullet “Modals and drawers never dismiss on backdrop/scrim click…” with the same rule in product language. In <code>docs/UI_ARCHITECTURE.md</code>, add an “Overlays” subsection under Styling that documents the <code>Overlay</code> props and the dirty rule.</p>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>grep -rn "position: 'fixed'" src</code> lists only the non-overlay exceptions in Part B2.</li>
+  <li><code>grep -rn "e.key === 'Escape'" src --include=*.tsx</code> lists only <code>src/components/overlay/Overlay.tsx</code> plus any non-overlay keyboard handlers (for example the seeding inputs' Enter/Escape handling); justify each in the report.</li>
+  <li><code>npm run typecheck</code> passes.</li>
+  <li><code>npm test</code> passes, including <code>overlay.test.tsx</code> and the <code>gamesEqual</code> test.</li>
+  <li><code>npx playwright test e2e/overlays.spec.ts --project=chromium</code> passes.</li>
+  <li><code>npm run test:visual</code> passes for the 16 page shots. The 2 overlay shots are expected to change (the backdrop is normalized). Inspect them, then run <code>npm run test:visual:update</code> and list both in the report.</li>
+  <li><code>npm run test:e2e</code> passes.</li>
+</ul>
+</main>
+</body>
+</html>

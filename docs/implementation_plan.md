@@ -4,7 +4,7 @@ This document is the single source of truth for MatchFoundry's roadmap: complete
 
 ---
 
-## 1. Master Roadmap & Global Status (Phases 1–12)
+## 1. Master Roadmap & Global Status (Phases 1–13)
 
 | Phase | Title | Status | Description |
 | :--- | :--- | :--- | :--- |
@@ -18,8 +18,9 @@ This document is the single source of truth for MatchFoundry's roadmap: complete
 | **Phase 8** | Architectural Hardening & Tournament Rules | **Complete** | Decoupled domain hooks, canonical defaults, CLI seeder, 415 automated tests, bye seed alternation (1 vs N), points qual 0-pt tiebreaker, OBS draft overlays. |
 | **Phase 9** | **Production Cloud Deployment, MatchFoundry™ Brand Launch & CI/CD** | **Complete** | Vercel Serverless runtime (`api/index.ts`), Neon cloud PostgreSQL migration, MatchFoundry™ rebrand & strategic trademark rollout, zero runtime git artifacts, and Branch/PR CI/CD deployment gating. |
 | **Phase 10**| **Live & Online Qualifiers Engine** | **Complete** | Competitor self-service portal (`/:slug/qualify`), Twitch OAuth 2.0 on production HTTPS, 6–8 char NES Authwords, qual window telemetry, review queue (`/:slug/manage/review`), Discord webhooks, tokened run links & draft recovery. |
-| **Phase 11**| **Mobile-Responsive Viewport Overhaul (360×800)** | **Next Up** | Handheld 360×800 dense table card views (Leaderboard, Standings, Roster, Global Players), collapsed mobile nav & breadcrumbs. |
-| **Phase 12**| **Universal Match Data Export & Custom Analytics** | **Upcoming** | Universal match data export (CSV with UTF-8 BOM, Google Sheets TSV clipboard copy, JSON) with custom column selection and reordering. |
+| **Phase 11**| **Styling Foundation & Tailwind Migration** | **Next Up** | Tailwind v4 theme tokens and shared UI components, one overlay system with dirty-aware dismissal, every component converted off inline styles, lint-enforced. |
+| **Phase 12**| **Mobile-Friendly App (360×800)** | **Upcoming** | Spectator bottom nav and admin menu, floor judge scoring / qualifier entry / review queue on phones, compact visual bracket, card lists for tables, every route overflow-free. |
+| **Phase 13**| **Universal Match Data Export & Custom Analytics** | **Upcoming** | Universal match data export (CSV with UTF-8 BOM, Google Sheets TSV clipboard copy, JSON) with custom column selection and reordering. |
 
 ---
 
@@ -130,20 +131,24 @@ flowchart TD
         H2["Phase 10: Online Qualifiers Portal, Twitch OAuth, NES Authwords, Review Queue (/:slug/manage/review), Discord Webhooks, Run Links & Draft Recovery"]
     end
 
-    subgraph Phase11["Phase 11: Mobile-Responsive Viewport Overhaul (360×800) [NEXT UP]"]
-        P11["• Qualifiers Leaderboard Handheld Card View<br>• Final Standings Mobile Card Rows<br>• Tournament Roster & Global Players Handheld Cards<br>• Mobile Navigation Bar & Collapsed Breadcrumbs"]
+    subgraph Phase11["Phase 11: Styling Foundation & Tailwind Migration [NEXT UP]"]
+        P11["• Visual Regression Harness & Tailwind v4 Theme Tokens<br>• Shared UI Components & Overlay System (Dirty-Aware Dismissal)<br>• Full Component Conversion (10 Parallel Batches)<br>• Preflight, Palette Module & Lint Enforcement"]
     end
 
-    subgraph Phase12["Phase 12: Universal Match Data Export & Custom Analytics"]
-        P12["• Universal Match Data Export Modal<br>• Formats: CSV (UTF-8 BOM), Sheets TSV (Clipboard), JSON<br>• Column Selection, Reordering & Preset Layouts"]
+    subgraph Phase12["Phase 12: Mobile-Friendly App (360×800)"]
+        P12["• Bottom Sheets & Back-Gesture Handling<br>• Spectator Bottom Nav & Admin Menu<br>• Floor Judge Scoring, Qualifier Entry & Review Queue<br>• Compact Visual Bracket & Table Card Lists"]
+    end
+
+    subgraph Phase13["Phase 13: Universal Match Data Export & Custom Analytics"]
+        P13["• Universal Match Data Export Modal<br>• Formats: CSV (UTF-8 BOM), Sheets TSV (Clipboard), JSON<br>• Column Selection, Reordering & Preset Layouts"]
     end
 
     subgraph Backlog["Deferred Backlog (Unscheduled)"]
         B1["• Tournament ↔ Organization Association Fixes<br>• Double-Elim Flat Staged 2-Wide & Uneven Fields<br>• Organization-Level Roles (RBAC)"]
     end
 
-    Historic --> Phase11 --> Phase12
-    Backlog -.-> Phase12
+    Historic --> Phase11 --> Phase12 --> Phase13
+    Backlog -.-> Phase13
 ```
 
 ---
@@ -320,19 +325,23 @@ flowchart TD
 
 ---
 
-### Phase 11: Mobile-Responsive Viewport Overhaul (360×800 Viewport) [NEXT UP]
-* **Current state:** Not started. `src/index.css` has only four desktop/tablet breakpoints (680–1040px) and no mobile card layouts or mobile nav. The bracket Card Feed view is already mobile-friendly and is not part of this phase.
-* **Goal:** Guarantee all data-dense views are fully readable and operational on smartphone screens without horizontal scroll clipping.
-1. **Qualifiers Leaderboard (`/:slug/leaderboard`, `/:slug/manage/qualifiers`):** Replace wide table overflow with compact competitor cards/accordions. Rank, Player Name, Playstyle, Status, and Scores (High Score, Maxout count, Kicker, or Average of X attempt chips) must stay visible without horizontal clipping.
-2. **Final Standings:** Mobile card rows preserving Final Rank, Competitor, Qual Seed + Delta badge, Stage Reached, and Game Score Average.
-3. **Tournament Roster (`/:slug/manage/players`):** Stacked list keeping name, playstyle, PB, seed/tier assignment, and action buttons.
-4. **Global Players Directory (`/players`):** Cards with PB, playstyle, active tournament participation, and search/filter controls without squished headers.
-5. **Global Navigation & Header:** The header (`Tournaments | Organizations | Players`), active tournament chip, and breadcrumbs currently exceed 360px and wrap. Hamburger menu / mobile bottom tab bar and collapsed breadcrumbs on viewports $< 768\text{px}$. Truncate or iconify the active tournament return chip.
-6. **Other Pages:** General responsive polish across the remaining admin, organization, and settings pages .
+### Phase 11: Styling Foundation & Tailwind Migration [NEXT UP]
+* **Goal:** Every component styled with Tailwind v4 classes and shared UI components instead of inline styles (about 3,000 sites today), with no visual change beyond token snapping, and one overlay system that applies the dismissal rule everywhere.
+* **Dismissal rule:** read-only overlays and confirmations close on backdrop click/tap and Escape; forms with unsaved changes show "Discard unsaved changes?" (Keep Editing / Discard Changes).
+* **Steps:** 11.0 foundation (visual regression harness, Tailwind, tokens, `src/components/ui`); 11.1 overlay system (37 overlays); 11.2 conversion in 10 batches across two parallel waves; 11.3 cleanup (preflight, palette module, lint enforcement).
+* **Execution specs:** [`docs/specs/index.html`](specs/index.html), one HTML file per step.
 
 ---
 
-### Phase 12: Universal Match Data Export & Custom Analytics [UPCOMING]
+### Phase 12: Mobile-Friendly App (360×800) [UPCOMING]
+* **Goal:** Every route usable on a 360×800 phone with no page-level horizontal scroll and 44px tap targets. Runs immediately after Phase 11; styling and mobile work is done only when both phases are complete.
+* **Priority order:** (1) spectator navigation from the landing page (bottom tab bar, tier chip strip, landing grid) and the admin menu; (2) floor judge tools: score sheet, qualifier entry, review queue and adjudication; (3) compact visual bracket (seed, name, match wins, keeping the bracket shape); (4) card lists for standings, roster and the player directory; (5) every remaining page.
+* **Steps:** 12.0 mobile foundation (bottom sheets, back gesture, overflow test); 12.1 navigation shell; 12.2 floor judge; 12.3 compact bracket; 12.4 data tables; 12.5 remaining pages and full-app sign-off.
+* **Execution specs:** [`docs/specs/index.html`](specs/index.html).
+
+---
+
+### Phase 13: Universal Match Data Export & Custom Analytics [UPCOMING]
 * **Goal:** Finalize export pipelines and reporting tools.
 1. **Universal Match Data Export Modal** (in Tournament Management):
    * **Column toggles:** Tournament Name, Tier Name, Stage (Winners / Losers / Grand Finals), Round Identifier / Number, Match ID, Player 1 Name / Seed / Match Wins, Player 2 Name / Seed / Match Wins, Winner Name, Loser Name, Game-by-Game Scores (e.g. `Game 1: 520k - 480k, Game 2: ...`), Forfeit Status, Intentional Topouts.
