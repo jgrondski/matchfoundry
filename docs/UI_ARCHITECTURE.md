@@ -83,3 +83,14 @@ Tier 3: Pure Presentational Leaf Components (Tables, Forms, Cards, Chips)
 3. **Navigation & Active Tabs**:
    - Always use **URL paths or query parameters** (`/:slug/gold` or `?tier=gold`).
    - Do not use `sessionStorage` to mirror or remember tab navigation.
+
+---
+
+## 4. Styling
+
+1. **Tailwind v4** is loaded through the `@tailwindcss/vite` plugin. Preflight is off until the Phase 11 cleanup step, so existing global rules still apply.
+2. **Theme tokens live in `src/index.css`** inside `@theme`: colors (`bg-surface`, `text-fg-secondary`, `border-line`, `text-gold-bright`, ...), font sizes (`text-3xs` to `text-hero`), radii, shadows and animations. Use a token class instead of a raw value. The old `--color-bg-*` / `--color-text-*` variable names still resolve until the cleanup step.
+3. **Shared components live in `src/components/ui`**: `Button` / `buttonClasses()`, `IconButton`, `Badge`, `Chip`, `Card`, and `useMediaQuery` / `useIsMobile`. Use them before writing a one-off styled element.
+4. **Conditional classes go through `cn()`** (`src/components/ui/cn.ts`), which joins class names and resolves Tailwind conflicts so later classes win.
+5. **Inline `style` is only for runtime values**, such as tier colors or layout coordinates computed at render time. Pass them as plain values or CSS custom properties; everything static is a class. `npm run lint:styles -- <files>` reports static inline styles.
+6. Converting an existing component: follow the [conversion guide](specs/phase-11/11.2-conversion-guide.html).

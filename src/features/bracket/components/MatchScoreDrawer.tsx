@@ -223,6 +223,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div
+        data-testid="match-score-drawer"
         style={{
           ...drawerStyle,
           background: `linear-gradient(180deg, ${getAlternateShade(cardColor, 2)} 0%, ${backgroundColor} 100%)`,
