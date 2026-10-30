@@ -55,19 +55,18 @@
 <ul class="check">
   <li><code>npm run lint:styles -- src/features/online-quals/components/AdjudicationModal.tsx src/features/online-quals/components/AuthwordHudCard.tsx src/features/online-quals/components/AwaitingVerificationCard.tsx src/features/online-quals/components/CompetitorPortalView.tsx src/features/online-quals/components/IdentityClaimModal.tsx src/features/online-quals/components/IdentityResolutionModal.tsx src/features/online-quals/components/OpenQualsCard.tsx src/features/online-quals/components/PreFlightModal.tsx src/features/online-quals/components/ReviewQueueTable.tsx src/features/online-quals/components/ReviewQueueView.tsx src/features/online-quals/components/SubmissionFormCard.tsx</code> reports 0 errors. Every <code>eslint-disable</code> carries a <code>-- runtime:</code> reason.</li>
   <li><code>grep</code> finds no <code>className="btn</code>, <code>badge badge-</code>, <code>onMouseEnter</code>/<code>onMouseLeave</code> that only change styles, or <code>CSSProperties</code> constants in these files.</li>
-  <li><code>npm run typecheck</code> passes.</li>
+  <li><code>npm run typecheck</code> reports no errors in this batch's files. Errors in other batches' files are listed in the report, not fixed (index rule 8).</li>
   <li><code>npx vitest run src/features/online-quals</code> passes with no deleted or skipped tests.</li>
   <li>All <code>data-testid</code> attributes are unchanged.</li>
-  <li><code>npm run test:visual</code> has been run once and its result recorded. A failure isn't a blocker for this batch; the coordinator reviews diffs at the end of the wave. Do <strong>not</strong> run <code>test:visual:update</code>.</li>
+  <li><code>npm run test:visual</code> and <code>test:visual:update</code> have <strong>not</strong> been run. The coordinator runs the visual suite once, after every batch in the wave is done (index rule 8).</li>
 </ul>
 
 <h2>Report template</h2>
 <pre><code>Batch E report
 - Files converted: N/11
 - lint:styles: 0 errors (command above)
-- typecheck: pass/fail
+- typecheck: no errors in this batch's files: yes/no; errors seen in other batches' files: [file:line, or none]
 - vitest (src/features/online-quals): pass/fail, counts
-- test:visual: pass / failed screenshots: [names]
 - eslint-disable added: [file:line — reason]
 - Arbitrary colors left for 11.3 tokens: [value — file:line]
 - Requests for shared components/tokens: [...]
