@@ -27,6 +27,7 @@ If the spec does not cover a situation, stop and ask instead of improvising.</co
   <li><strong>Cross-platform.</strong> Scripts and npm commands must work in PowerShell and in Bash/Zsh. Normalize paths with <code>.replace(/\\/g, '/')</code> before comparing them. Never hardcode a database port.</li>
   <li><strong>Commands.</strong> Run the narrowest check that proves the work: <code>npm run typecheck</code>, then <code>npx vitest run &lt;paths&gt;</code>. Run full <code>npm test</code> only where the step says to. Do not run <code>npm run lint</code> across the whole repo.</li>
   <li><strong>Visual tests.</strong> <code>npm run test:visual</code> is run where the step says. Never run <code>npm run test:visual:update</code> unless the step tells you to; updating baselines is a coordinator decision.</li>
+  <li><strong>Parallel batches.</strong> In an 11.2 wave, five batches edit the same working tree at the same time. <code>npm run typecheck</code> and some Vitest runs cover more than your batch, so they can show errors from another batch's half-converted file. If every error is in a file outside your batch, list each one (file and line) in your report and keep working; never edit another batch's file to make it pass. Errors in your own files must be fixed. Do not run <code>npm run test:visual</code> or <code>test:visual:update</code> during a wave: five runs at once collide on the dev server, and screenshots taken before every batch finishes mean nothing. The coordinator runs the visual suite once at the end.</li>
   <li><strong>Final report.</strong> End with: files changed, commands run with pass/fail, anything skipped and why, any <code>eslint-disable</code> lines added (file, line and reason), requests for shared changes, and visual test results.</li>
 </ol>
 
@@ -55,7 +56,14 @@ If the spec does not cover a situation, stop and ask instead of improvising.</co
   <tr><td>2</td><td><a href="phase-11/11.2-F-tournament-settings.html">F</a></td><td>Tournament admin form, settings, standings</td><td>≈520</td></tr>
 </table>
 <div class="box">
-<p><strong>Wave protocol.</strong> Run all five batches of a wave in parallel, in the same working tree. When all five report done:</p>
+<p><strong>Wave protocol.</strong> Run all five batches of a wave in parallel, in the same working tree, each in its own Claude Code session: open five terminals in the repository, run <code>claude</code> in each, and give each session the prompt from “How to use these specs” with its batch file. Each session stays interactive, so a batch that has to stop and ask can ask you directly. When all five report done, open a sixth session as the coordinator with:</p>
+<pre><code>Read docs/specs/index.html, then act as the coordinator for 11.2 wave &lt;1 or 2&gt; on branch
+&lt;branch&gt;. All five batch sessions have finished; their reports are below. Run the wave protocol
+steps 1 and 2 exactly as written. For any problem, name the batch that owns the file and stop;
+do not edit batch files yourself.
+
+&lt;paste the five batch reports&gt;</code></pre>
+<p>The coordinator:</p>
 <ol>
 <li>The coordinator runs <code>npm run typecheck</code>, <code>npm test</code> and <code>npm run test:visual</code>.</li>
 <li>The coordinator reviews each failing screenshot diff in <code>test-results/</code>. Token-snap drift (a few pixels of size or spacing change, same structure, same colors) is accepted, and the coordinator runs <code>npm run test:visual:update</code>. Anything else goes back to the batch that owns the file.</li>
