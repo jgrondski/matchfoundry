@@ -113,6 +113,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
             )}
             {canManage && (
               <button
+                data-testid="open-qualifier-entry"
                 onClick={() => setIsEntryModalOpen(true)}
                 className="btn btn-primary"
                 style={{

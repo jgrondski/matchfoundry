@@ -101,6 +101,7 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
       }}
     >
       <div
+        data-testid="qualifier-entry-modal"
         style={{
           background: 'var(--color-bg-surface)',
           borderRadius: 'var(--radius-lg)',

@@ -437,6 +437,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
             return (
               <div
                 key={match.id}
+                data-testid="feed-match-card"
                 onClick={() => {
                   if (tournament.isLocked && isPlayable) {
                     setActiveMatch(match);
