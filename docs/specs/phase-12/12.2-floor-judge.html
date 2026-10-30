@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.2 Floor Judge Tools</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.2</nav>
+<h1>Step 12.2: Floor judge tools</h1>
+<p class="subtitle">A judge can run the event from a phone: score matches, record qualifier scores, and work the review queue.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. Can run in parallel with 12.3 and 12.4. <strong>Prerequisite:</strong> 12.1 committed. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules, <a href="12.0-mobile-foundation.html">12.0's “Conventions”</a>, and <a href="../phase-11/11.2-conversion-guide.html">the conversion guide</a>.</p></div>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Area</th><th>Files</th></tr>
+  <tr><td>Match scoring</td><td><code>src/routes/ManageJudgePage.tsx</code>, <code>src/features/bracket/components/MatchCardFeed.tsx</code>, <code>MatchScoreDrawer.tsx</code>, <code>drawer/GameScoreCard.tsx</code>, <code>drawer/MatchupBanner.tsx</code>, <code>drawer/ManualSlotOverrideSection.tsx</code>, <code>BestOfSelect.tsx</code>, <code>src/components/ClearableNumberInput.tsx</code></td></tr>
+  <tr><td>Qualifiers</td><td><code>src/routes/PublicLeaderboardPage.tsx</code>, <code>src/features/qualifiers/components/LeaderboardTable.tsx</code>, <code>QualifierEntryModal.tsx</code>, <code>CreatablePlayerSelect.tsx</code>, <code>PlayerDetailDrawer.tsx</code>, <code>TournamentQualTimerHud.tsx</code>; create <code>LeaderboardCardList.tsx</code></td></tr>
+  <tr><td>Review queue</td><td><code>src/routes/ManageReviewPage.tsx</code>, <code>src/features/online-quals/components/ReviewQueueView.tsx</code>, <code>ReviewQueueTable.tsx</code>, <code>AdjudicationModal.tsx</code>, <code>IdentityResolutionModal.tsx</code>; create <code>ReviewQueueCardList.tsx</code></td></tr>
+  <tr><td>Tests</td><td><code>e2e/visual/mobileOverflow.spec.ts</code> (append), new unit tests listed below</td></tr>
+</table>
+
+<h2>A. Match scoring</h2>
+<ol class="steps">
+  <li><strong><code>ManageJudgePage</code> tier selector:</strong> sticky <code>max-md:top-12</code>; the chip row scrolls sideways on mobile (same classes as the 12.1 tier bar); hide the “Tier:” label on mobile. Tier buttons become <code>&lt;Chip accent&gt;</code> if they aren't already.</li>
+  <li><strong><code>MatchCardFeed</code> filters:</strong> the stage filter and round filter rows each become one sideways-scrolling row on mobile (<code>max-md:flex-nowrap max-md:overflow-x-auto</code>, with <code>shrink-0</code> chips).</li>
+  <li><strong>Feed cards:</strong> the clickable card <code>&lt;div&gt;</code> (with <code>data-testid="feed-match-card"</code>) gets <code>role="button"</code> and <code>tabIndex={0}</code> when it is clickable (<code>tournament.isLocked &amp;&amp; isPlayable</code>), plus an <code>onKeyDown</code> that runs the same handler on Enter and Space. Player rows inside: <code>max-md:min-h-11</code>. Keep the outer element a <code>div</code>, since it contains other buttons.</li>
+  <li><strong><code>ClearableNumberInput</code>:</strong> add <code>inputMode="numeric"</code> and <code>pattern="[0-9]*"</code> to the input, and make the clear button an <code>IconButton</code> (44px on mobile from 12.0).</li>
+  <li><strong>Score sheet (<code>MatchScoreDrawer</code> and <code>GameScoreCard</code>), which is a bottom sheet from 12.0:</strong>
+    <ul>
+      <li><code>GameScoreCard</code> on mobile: <code>max-md:grid max-md:grid-cols-[1fr_auto]</code>. Each player's row is score input then winner toggle. Score inputs are <code>max-md:w-full max-md:text-base</code> (16px prevents iOS zoom on focus). Winner toggles are at least 44×44.</li>
+      <li>The footer containing the Save button becomes <code>sticky bottom-0</code> inside the sheet with the panel background, so Save is always reachable. The Save button is <code>max-md:w-full</code>.</li>
+      <li><code>MatchupBanner</code>: names truncate, seeds stay visible, and the layout wraps rather than overflowing.</li>
+      <li><code>BestOfSelect</code> and <code>ManualSlotOverrideSection</code>: controls are full width on mobile, and any side-by-side selects stack (<code>max-md:flex-col</code>).</li>
+    </ul>
+  </li>
+</ol>
+
+<h2>B. Qualifiers (public leaderboard and <code>/manage/qualifiers</code>)</h2>
+<h3><code>LeaderboardCardList.tsx</code></h3>
+<p>This takes the same rows <code>LeaderboardTable</code> already computes. Extract the row-model computation into a function in <code>LeaderboardTable.tsx</code> if it's inline, and pass the result to both. <code>LeaderboardTable</code> renders <code>&lt;LeaderboardCardList&gt;</code> instead of <code>&lt;table&gt;</code> when <code>useIsMobile()</code> is true. Each row is an <code>&lt;li&gt;</code> card, and the whole card is a <code>&lt;button&gt;</code> that triggers the same row action the table row triggers (opening <code>PlayerDetailDrawer</code>).</p>
+<table>
+  <tr><th>Card line</th><th>Content (by qual format)</th></tr>
+  <tr><td>Line 1</td><td>Rank (<code>w-8 font-mono text-sm font-bold</code>), flag and name (<code>min-w-0 flex-1 truncate font-semibold</code>), primary metric right-aligned (<code>font-mono font-bold</code>): AVERAGE_OF_X → average score; HIGH_SCORE → top score; POINTS → total points. Use the same values and formatting as the table cells.</td></tr>
+  <tr><td>Line 2</td><td>Status badge (the same states as the Verified column), playstyle chip, bracket seed if the table shows it.</td></tr>
+  <tr><td>Line 3 (only when the table has the column)</td><td>AVERAGE_OF_X: the top-score chips. HIGH_SCORE: maxes and kicker as “Maxes 3 · Kicker 812,340”. POINTS: the points breakdown in its existing compact form.</td></tr>
+</table>
+<p>Tier dividers or cutoff lines that the table renders between rows render between cards as full-width labeled separators.</p>
+<p><strong>Record score action (admins):</strong> on mobile, the button with <code>data-testid="open-qualifier-entry"</code> moves into a bar at the bottom of the page, <code>fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:static md:…</code>, as a full-width primary <code>Button</code>. Keep a single element: don't duplicate it. The list gets bottom padding so the bar never covers the last card.</p>
+<h3>Entry and detail overlays</h3>
+<ul>
+  <li><code>QualifierEntryModal</code> (bottom sheet): the score input gets <code>inputMode="numeric"</code> and <code>max-md:text-base</code>. The submit/cancel footer is <code>sticky bottom-0</code> with full-width buttons on mobile. The <code>CreatablePlayerSelect</code> dropdown list gets <code>max-h-[40dvh] overflow-y-auto</code> and full width, and its options are <code>min-h-11</code>.</li>
+  <li><code>PlayerDetailDrawer</code> (bottom sheet): sections stack; any two-column stat grids become <code>max-md:grid-cols-2</code> (not 3–4); its score input gets <code>inputMode="numeric"</code>.</li>
+  <li><code>TournamentQualTimerHud</code>: the compact variant fits in 328px; wrap rather than overflow.</li>
+</ul>
+
+<h2>C. Review queue (<code>/manage/review</code>)</h2>
+<h3><code>ReviewQueueCardList.tsx</code></h3>
+<p>Same props as <code>ReviewQueueTable</code> (<code>ReviewQueueTableProps</code>). <code>ReviewQueueTable</code> renders it instead of the table when <code>useIsMobile()</code> is true. One card per session:</p>
+<table>
+  <tr><th>Area</th><th>Content (same data and formatting as the table cells)</th></tr>
+  <tr><td>Header</td><td>Competitor name and identity status badge (left); review status badge (right).</td></tr>
+  <tr><td>Meta row</td><td>Source badge (Online / In-person), NES Authword (<code>font-mono</code>), qual total time.</td></tr>
+  <tr><td>Scores</td><td>Submitted scores as chips that wrap.</td></tr>
+  <tr><td>Actions</td><td>Full-width primary <code>Button</code> “Review” → <code>onOpenAdjudicate(session)</code>. Then a row of secondary buttons: “VOD” (a link opening the VOD URL in a new tab, <code>rel="noopener noreferrer"</code>, only when there is one), “Identity” → <code>onOpenIdentityModal(session)</code> (only when the table shows that action for the row), and “Discard” (danger, ghost-styled) → <code>onDiscardRun(session)</code> (only when the table shows it). Use the same conditions the table uses.</td></tr>
+</table>
+<ul>
+  <li><code>ReviewQueueView</code>: the filter chips (<code>ReviewFilter</code>) scroll sideways on mobile. “Verify All” becomes a full-width button on mobile. The header stats wrap.</li>
+  <li><code>AdjudicationModal</code> (bottom sheet): the VOD link is a full-width secondary button near the top; score inputs get <code>inputMode="numeric"</code>; the four decision buttons (Verify, Edit &amp; Verify, DNQ, DQ) stack full width in the existing order, with destructive ones last; the judge notes textarea is full width.</li>
+  <li><code>IdentityResolutionModal</code> (bottom sheet): tabs scroll sideways; the search input and result list are full width; result rows are <code>min-h-11</code>.</li>
+</ul>
+
+<h2>D. Tests</h2>
+<ul>
+  <li>Unit tests (Node, <code>renderToStaticMarkup</code>): <code>LeaderboardCardList</code> renders rank, name and primary metric for each of the three qual formats from a small fixture; <code>ReviewQueueCardList</code> renders the Review button for every session and hides Discard when <code>onDiscardRun</code> is undefined.</li>
+  <li>Append overflow routes: <code>leaderboard</code> (<code>/${FIXTURE_SLUG}/leaderboard</code>, public), <code>manage-qualifiers</code>, <code>judge</code>, <code>review</code> (admin).</li>
+  <li>New mobile-only screenshot in <code>visual.spec.ts</code>: <code>overlay-score-sheet-mobile</code>, which is the score drawer opened on the judge page in the <code>visual-mobile</code> project.</li>
+</ul>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code>, <code>npm test</code> pass.</li>
+  <li><code>npx playwright test e2e/overlays.spec.ts --project=chromium</code> still passes.</li>
+  <li><code>npm run test:visual</code>: desktop unchanged. Mobile diffs listed.</li>
+  <li>The overflow spec passes for every appended route.</li>
+  <li>Manual check at 360×800, using an admin session:
+    <ul>
+      <li>Score a match end to end: open the sheet, enter both scores, pick the winner, Save &amp; Advance.</li>
+      <li>Record a qualifier score.</li>
+      <li>Open a review item, then verify it.</li>
+      <li>Throughout, the numeric keypad appears for score inputs and no control needs pinch-zoom.</li>
+    </ul>
+  </li>
+</ul>
+</main>
+</body>
+</html>

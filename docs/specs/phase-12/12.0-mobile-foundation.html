@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.0 Mobile Foundation</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.0</nav>
+<h1>Step 12.0: Mobile foundation</h1>
+<p class="subtitle">The shared pieces every Phase 12 step builds on: phone presentation for overlays, back-gesture handling, touch-sized controls, and the mobile overflow test.</p>
+
+<div class="box"><p><strong>Executor:</strong> Claude (coordinator). Runs alone. <strong>Prerequisite:</strong> Phase 11 complete and committed. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and <a href="../phase-11/11.2-conversion-guide.html">the conversion guide</a> (it still governs every class choice).</p></div>
+
+<h2>Conventions for all of Phase 12</h2>
+<ul>
+  <li><strong>Mobile</strong> means below Tailwind's <code>md</code> breakpoint (768px). Phone-only styles use the <code>max-md:</code> variant layered on top of the existing desktop classes. Desktop classes are not rewritten.</li>
+  <li>Use <code>useIsMobile()</code> only when the <em>structure</em> differs (a table becomes a card list, or a sidebar becomes a menu). Use <code>max-md:</code> classes for everything else. In tests, <code>useIsMobile()</code> returns <code>false</code>, so existing desktop assertions keep working.</li>
+  <li><strong>Targets:</strong> a 360×800 viewport has no page-level horizontal scroll; interactive controls in phone layouts are at least 44×44px; body text is at least <code>text-xs</code>.</li>
+  <li>Wide content that has to stay wide (the organizer sheet, the full bracket views) scrolls inside its own container (<code>overflow-x-auto</code>), never the page.</li>
+  <li><strong>Visual tests:</strong> desktop screenshots must not change in any Phase 12 step. Mobile screenshots are expected to change; list them in the report, and the coordinator re-baselines them after review.</li>
+</ul>
+
+<h2>Part A: Touch-size the shared components</h2>
+<p>The shared component files are unfrozen for this step only.</p>
+<table>
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>src/components/ui/Button.tsx</code></td><td>Add <code>max-md:min-h-11</code> to <code>BASE</code>.</td></tr>
+  <tr><td><code>src/components/ui/IconButton.tsx</code></td><td>Add <code>max-md:min-h-11 max-md:min-w-11</code>.</td></tr>
+  <tr><td><code>src/components/ui/Chip.tsx</code></td><td>Add <code>max-md:min-h-11</code> for both sizes.</td></tr>
+  <tr><td><code>index.html</code></td><td>Change the viewport meta to <code>width=device-width, initial-scale=1.0, viewport-fit=cover</code>.</td></tr>
+  <tr><td><code>src/index.css</code> <code>@layer base</code></td><td>Add <code>html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }</code> and <code>button, a, [role='button'] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }</code>.</td></tr>
+  <tr><td><code>src/index.css</code> <code>@theme</code></td><td>Add <code>--animate-slide-in-up: slideInUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);</code>, plus the global <code>@keyframes slideInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }</code>.</td></tr>
+</table>
+
+<h2>Part B: Overlay phone presentation</h2>
+<p>Add two props to <code>Overlay</code>:</p>
+<pre><code>  /** Phone presentation. 'sheet' = bottom sheet (default for modal and drawer). 'center' = stays a centered dialog. */
+  mobile?: 'sheet' | 'center';
+  /** New variant: left-side navigation panel (admin menu). Never becomes a sheet. */
+  variant?: 'modal' | 'drawer' | 'navigation';</code></pre>
+<table>
+  <tr><th>Variant</th><th>Backdrop classes (added)</th><th>Panel classes (added)</th></tr>
+  <tr><td><code>modal</code> or <code>drawer</code> with <code>mobile="sheet"</code></td><td><code>max-md:items-end max-md:justify-stretch max-md:p-0</code></td><td><code>max-md:mt-auto max-md:h-auto max-md:max-h-[92dvh] max-md:w-full max-md:max-w-none max-md:overflow-y-auto max-md:rounded-b-none max-md:rounded-t-lg max-md:animate-slide-in-up max-md:pb-[env(safe-area-inset-bottom)]</code></td></tr>
+  <tr><td><code>mobile="center"</code></td><td>no change</td><td><code>max-md:max-h-[85dvh]</code></td></tr>
+  <tr><td><code>navigation</code></td><td><code>justify-start</code></td><td><code>flex h-full w-[280px] max-w-[85vw] flex-col overflow-y-auto animate-[slideInLeft_0.25s_cubic-bezier(0.16,1,0.3,1)]</code> (add <code>@keyframes slideInLeft</code> from <code>translateX(-100%)</code>)</td></tr>
+</table>
+<p>For sheets, render a decorative drag handle as the first child of the panel on mobile only: <code>&lt;div aria-hidden className="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-white/20 md:hidden" /&gt;</code>. There is no swipe-to-dismiss.</p>
+<p><code>ConfirmDialog</code> passes <code>mobile="center"</code>. Every other existing overlay keeps the default (<code>sheet</code>).</p>
+
+<h2>Part C: Back gesture and back button</h2>
+<p>Pressing the browser Back button or swiping back on a phone while an overlay is open should act like any other close attempt, and must not leave the page. Create <code>src/components/overlay/useOverlayHistory.ts</code> and call it from <code>OverlayInner</code>.</p>
+<pre><code>import { useEffect, useRef } from 'react';
+
+const pendingBack = new Map&lt;string, ReturnType&lt;typeof setTimeout&gt;&gt;();
+
+/**
+ * Pushes a same-URL history entry while an overlay is open, so Back closes the overlay
+ * instead of leaving the page. onBack returns true when the overlay is closing, or false
+ * when it stays open (dirty prompt or busy); in that case the entry is pushed again.
+ */
+export function useOverlayHistory(id: string, isTop: () =&gt; boolean, onBack: () =&gt; boolean): void {
+  const onBackRef = useRef(onBack);
+  onBackRef.current = onBack;
+  const closedByBack = useRef(false);
+
+  useEffect(() =&gt; {
+    const hrefAtOpen = window.location.href;
+    const scheduled = pendingBack.get(id);
+    if (scheduled) {
+      // StrictMode remount: the previous entry is still in place.
+      clearTimeout(scheduled);
+      pendingBack.delete(id);
+    } else {
+      window.history.pushState({ ...window.history.state, overlay: id }, '');
+    }
+
+    const onPopState = () =&gt; {
+      if (!isTop()) return;
+      if (onBackRef.current()) {
+        closedByBack.current = true;
+      } else {
+        window.history.pushState({ ...window.history.state, overlay: id }, '');
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+
+    return () =&gt; {
+      window.removeEventListener('popstate', onPopState);
+      if (closedByBack.current) return;
+      // Closed by a button, the backdrop or Escape: remove our entry, unless the app navigated away.
+      pendingBack.set(
+        id,
+        setTimeout(() =&gt; {
+          pendingBack.delete(id);
+          if (window.location.href === hrefAtOpen &amp;&amp; window.history.state?.overlay === id) {
+            window.history.back();
+          }
+        }, 0)
+      );
+    };
+  }, [id, isTop]);
+}</code></pre>
+<p>In <code>OverlayInner</code>, add the reason <code>'back'</code> to <code>DismissReason</code> and treat it like <code>'escape'</code> in <code>resolveDismissal</code> (update the decision-table test to 32 cases). Then call:</p>
+<pre><code>useOverlayHistory(id, useCallback(() =&gt; isTopOverlay(id), [id]), () =&gt; {
+  const result = resolveDismissal('back', { dirty, busy, dismissible });
+  if (result === 'close') { onClose(); return true; }
+  if (result === 'confirm') setConfirmOpen(true);
+  return false;
+});</code></pre>
+<p>React Router's <code>BrowserRouter</code> keeps working because the pushed entry carries the router's existing <code>history.state</code> (<code>usr</code>, <code>key</code>, <code>idx</code>) plus our <code>overlay</code> key, and the URL doesn't change.</p>
+<h4>Browser tests (add to <code>e2e/overlays.spec.ts</code>)</h4>
+<ol>
+  <li>Open the score drawer and call <code>page.goBack()</code>. The drawer closes and <code>page.url()</code> is unchanged.</li>
+  <li>Make it dirty, then <code>page.goBack()</code>. The Discard prompt appears, the drawer is still open, and the URL is unchanged. Click Keep Editing, then <code>page.goBack()</code> again: the prompt appears again.</li>
+  <li>Close the drawer with its X, then <code>page.goBack()</code>. The browser goes to the previous page (no stale overlay entry left behind).</li>
+</ol>
+
+<h2>Part D: Mobile overflow test</h2>
+<p>Create <code>e2e/visual/mobileOverflow.spec.ts</code>, running in the <code>visual-mobile</code> project only (<code>test.skip</code> for others). Reuse <code>installApiMocks</code>, <code>ADMIN_SESSION</code>, <code>FIXTURE_SLUG</code> and <code>FIXTURE_TIER_SLUG</code>.</p>
+<pre><code>// Each Phase 12 step appends the routes it makes mobile-ready. 12.5 adds the rest.
+const ROUTES: Array&lt;{ name: string; path: string; admin: boolean }&gt; = [];
+
+for (const r of ROUTES) {
+  test(`no horizontal overflow: ${r.name}`, async ({ page }) =&gt; {
+    // prepare + goto + settle as in visual.spec.ts
+    const overflow = await page.evaluate(() =&gt; document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+}</code></pre>
+<p>Move <code>prepare</code> and <code>settle</code> from <code>visual.spec.ts</code> into <code>mockApi.ts</code> as exports, and import them in both specs.</p>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code>, <code>npm test</code> pass (including the 32-case dismissal table).</li>
+  <li><code>npx playwright test e2e/overlays.spec.ts --project=chromium</code> passes, including the back-button tests.</li>
+  <li><code>npm run test:visual</code>: desktop passes unchanged. Mobile diffs only where buttons and chips grew to 44px; the coordinator reviews and re-baselines them.</li>
+  <li>Manual check at 360×800 in Chrome DevTools: the score drawer opens as a bottom sheet, and ConfirmDialog stays centered.</li>
+</ul>
+</main>
+</body>
+</html>
