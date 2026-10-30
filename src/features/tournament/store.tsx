@@ -916,6 +916,12 @@ export const TournamentProvider: React.FC<{
         body: JSON.stringify({ url }),
       });
       const target = result?.source === 'organization' ? "the organization's webhook" : 'the webhook';
+      if (result?.redirected) {
+        return {
+          ok: true,
+          message: `Test message redirected to the test channel set by DISCORD_WEBHOOK_OVERRIDE_URL instead of ${target}. This deploy sends all Discord posts there.`,
+        };
+      }
       return { ok: true, message: `Test message sent to ${target}. Check the Discord channel.` };
     } catch (err: any) {
       return { ok: false, message: err.message || 'Webhook test failed' };

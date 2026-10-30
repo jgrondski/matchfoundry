@@ -30,22 +30,23 @@ MatchFoundry runs live tournaments, where a broken bracket, a wrong tiebreaker, 
 ### Tier 3: Golden User Journeys (Playwright)
 * **What:** A small number of end-to-end paths through a real browser, the real Vite dev server, routing, auth gates, and the API. Currently 5, all in `e2e/golden-journeys.spec.ts`. Add a journey only for a new, critical user path, not for variations of an existing one.
 * **Requirements:**
-  * Local Docker PostgreSQL running and seeded (`npm run db:up`, `npm run db:push`, `npm run db:seed`). The journeys use seeded tournaments (`omen-open`, `omen-ao3`).
+  * Local Docker PostgreSQL running with the current schema (`npm run db:up`, `npm run db:push`). No seed data is needed.
   * `.env` with `DATABASE_URL` and `SYSTEM_ADMIN_RECOVERY_PIN`. `playwright.config.ts` loads `.env`; the suite stops immediately if the PIN is missing.
-* **It writes to the database.** The suite temporarily changes tournament PINs and restores them afterward, and Journey 5 creates a real qualifier run. Only run it against the local database, never with production environment variables.
+* **It builds its own data.** Before the journeys run, `e2e/support/testTournaments.ts` logs in through the API with the recovery PIN, deletes every tournament whose slug starts with `e2e-` and every player whose name starts with `E2E_` (leftovers from an aborted run), creates one `E2E_` player so the player directory isn't empty, and creates three fresh tournaments: `e2e-alpha-<run>` and `e2e-bravo-<run>` (unlocked, one Gold tier) and `e2e-charlie-<run>` (unlocked, HYBRID, online qualifying open). Afterwards it deletes them again. The journeys never read or change any other tournament, so they pass on any local database in any state. New journeys must follow the same rule: create what they need through the API and use the slugs the helper returns, never a hardcoded seeded slug.
+* **It writes to the database.** Only run it against the local database, never with production environment variables.
 * **Dev server:** Playwright starts `npm run dev`, or reuses one already running on port 5173.
-* **Not run in CI.** Run it locally before calling a milestone done.
+* **CI:** the `Golden Journeys (Playwright)` job runs it on every pull request against a throwaway PostgreSQL service container that starts empty. Run it locally too before calling a milestone done.
 * **Headless only.** Use `npm run test:e2e`; don't use interactive browser agents.
 
 ---
 
 ## 3. The Golden Journeys
 
-1. **Public Spectator:** From `/` with no login, privileged actions are hidden; "Live Brackets" on `omen-open` opens the bracket with no auth prompt; the breadcrumb returns to `/`.
+1. **Public Spectator:** From `/` with no login, privileged actions are hidden; "Live Brackets" on the alpha tournament opens the bracket with no auth prompt; the breadcrumb returns to `/`.
 2. **Route Gating & Recovery PIN:** A logged-out visit to `/:slug/manage/settings` redirects to `/admin?redirect=...`; the recovery PIN from `.env` unlocks System Admin and returns to the target page; `/organizations` and `/` work without another prompt.
 3. **Tournament Admin Isolation:** System Admin sets a tournament PIN and logs out; logging in with that PIN opens only that tournament's management pages; `/organizations` and `/players` are hidden and redirect to `/admin` if visited directly; `/` shows "Your Managed Tournament".
 4. **Shared Tournament PIN:** The same PIN set on two tournaments triggers a shared-PIN warning; logging in once with it unlocks both, and the tournament switcher lists only those two.
-5. **Online Qualifier & Review:** A competitor checks in on `/omen-ao3/qualify`, completes the pre-flight checklist, gets an Authword, submits scores and a VOD link, and appears on the leaderboard as awaiting verification; an admin verifies the run in the review queue, and the public leaderboard shows it as verified.
+5. **Online Qualifier & Review:** A competitor checks in on the charlie tournament's `/:slug/qualify`, completes the pre-flight checklist, gets an Authword, submits scores and a VOD link, and appears on the leaderboard as awaiting verification; an admin verifies the run in the review queue, and the public leaderboard shows it as verified.
 
 ---
 
@@ -74,10 +75,9 @@ Documentation-only changes need no tests.
 
 ## 6. CI
 
-`.github/workflows/ci.yml` runs on pushes to `main` and on pull requests:
-1. `npm run typecheck`
-2. `npm test` (pg-mem; no database server needed)
-3. `npm run build` (client bundle and serverless API)
-4. Schema push and Vercel deploy (see [DEPLOYMENT_PLAYBOOK.md](DEPLOYMENT_PLAYBOOK.md))
+`.github/workflows/ci.yml` on pull requests:
+1. `Typecheck & Test Suite`: `npm run typecheck` and `npm test` (pg-mem; no database server needed).
+2. `Golden Journeys (Playwright)`: `npm run test:e2e` against a throwaway PostgreSQL service container (Tier 3).
+3. `Deploy to Vercel`, after job 1 passes: build, schema push to the Neon preview branch, preview deploy.
 
-Playwright does not run in CI.
+On merge to `main` only the deploy job runs (production schema push and deploy); the tests already passed on the PR. See [DEPLOYMENT_PLAYBOOK.md](DEPLOYMENT_PLAYBOOK.md).

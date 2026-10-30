@@ -5,7 +5,7 @@ import { setDb } from '../../../db';
 import { createApiMiddleware } from '../../../server/api';
 import { createSessionToken } from '../../../server/pinCrypto';
 import { saveFullTournament, getFullTournament } from '../../../api/tournaments';
-import { setOnlineQualsOpen } from '../../../api/qualifiers';
+import { setOnlineQualsOpen, resolveDiscordDeliveryUrl } from '../../../api/qualifiers';
 import { seedDefaultOrganizations, updateOrganization } from '../../../api/organizations';
 import { createPlayer } from '../../../api/players';
 import { createEmptyTournament, createDefaultTier } from '../../tournament/defaults';
@@ -19,6 +19,7 @@ import { runToken } from './runToken';
 
 const TOURNEY_HOOK = 'https://discord.com/api/webhooks/111/tourney-token';
 const ORG_HOOK = 'https://discord.com/api/webhooks/222/org-token';
+const TEST_CHANNEL_HOOK = 'https://discord.com/api/webhooks/333/test-channel-token';
 
 describe('formatQualResult', () => {
   it('# of Maxes: max count with kicker, maxes alone, or kicker alone with no maxes', () => {
@@ -153,6 +154,9 @@ describe('Discord webhook (server)', () => {
 
   beforeEach(async () => {
     process.env.SYSTEM_ADMIN_RECOVERY_PIN = '999999';
+    // A developer's .env may set these; every test starts from production-like behavior.
+    vi.stubEnv('DISCORD_WEBHOOK_OVERRIDE_URL', '');
+    vi.stubEnv('VERCEL_ENV', '');
     const { db } = setupTestDb();
     setDb(db);
     await seedDefaultOrganizations();
@@ -163,6 +167,7 @@ describe('Discord webhook (server)', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   async function call(url: string, opts: { method?: string; body?: any; token?: string } = {}) {
@@ -316,7 +321,65 @@ describe('Discord webhook (server)', () => {
 
     const ok = await call(url, { body: { url: TOURNEY_HOOK }, token });
     expect(ok.getStatusCode()).toBe(200);
+    expect(ok.getBody().redirected).toBe(false);
     expect(discordPosts()[0].url).toBe(TOURNEY_HOOK);
-    expect(discordPosts()[0].body.content).toContain('Test from MatchFoundry');
+    expect(discordPosts()[0].body.content).toContain('will post here');
+  });
+
+  it('DISCORD_WEBHOOK_OVERRIDE_URL redirects announcements and tests to the test channel', async () => {
+    vi.stubEnv('DISCORD_WEBHOOK_OVERRIDE_URL', TEST_CHANNEL_HOOK);
+    const t = await createTournament({ discordWebhookUrl: TOURNEY_HOOK });
+    const player = await createPlayer({ name: 'Redirected', country: 'US' } as any);
+    const token = createSessionToken({ role: 'TOURNAMENT_ADMIN', tournamentId: t.id });
+
+    await call(`/api/tournaments/${t.id}/qualify/start`, { body: { playerId: player.id } });
+    const ok = await call(`/api/tournaments/${t.id}/discord-webhook/test`, { body: { url: ORG_HOOK }, token });
+
+    expect(ok.getStatusCode()).toBe(200);
+    expect(ok.getBody().redirected).toBe(true);
+    expect(discordPosts().map(p => p.url)).toEqual([TEST_CHANNEL_HOOK, TEST_CHANNEL_HOOK]);
+    expect(discordPosts()[1].body.content).toContain('redirected here by DISCORD_WEBHOOK_OVERRIDE_URL');
+  });
+
+  it('a preview deploy without an override posts nothing, and the test endpoint says why', async () => {
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    const t = await createTournament({ discordWebhookUrl: TOURNEY_HOOK });
+    const player = await createPlayer({ name: 'Previewer', country: 'US' } as any);
+    const token = createSessionToken({ role: 'TOURNAMENT_ADMIN', tournamentId: t.id });
+
+    await call(`/api/tournaments/${t.id}/qualify/start`, { body: { playerId: player.id } });
+    const test = await call(`/api/tournaments/${t.id}/discord-webhook/test`, { body: {}, token });
+
+    expect(test.getStatusCode()).toBe(400);
+    expect(test.getBody().error).toMatch(/disabled on preview/i);
+    expect(discordPosts()).toHaveLength(0);
+  });
+});
+
+describe('resolveDiscordDeliveryUrl', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('delivers to the real URL in production and local dev without an override', () => {
+    vi.stubEnv('DISCORD_WEBHOOK_OVERRIDE_URL', '');
+    vi.stubEnv('VERCEL_ENV', 'production');
+    expect(resolveDiscordDeliveryUrl(TOURNEY_HOOK)).toBe(TOURNEY_HOOK);
+    vi.stubEnv('VERCEL_ENV', '');
+    expect(resolveDiscordDeliveryUrl(TOURNEY_HOOK)).toBe(TOURNEY_HOOK);
+  });
+
+  it('uses a valid override everywhere, and posts nothing when the override is not a Discord webhook', () => {
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    vi.stubEnv('DISCORD_WEBHOOK_OVERRIDE_URL', ` ${TEST_CHANNEL_HOOK} `);
+    expect(resolveDiscordDeliveryUrl(TOURNEY_HOOK)).toBe(TEST_CHANNEL_HOOK);
+    vi.stubEnv('DISCORD_WEBHOOK_OVERRIDE_URL', 'https://example.com/not-discord');
+    expect(resolveDiscordDeliveryUrl(TOURNEY_HOOK)).toBeNull();
+  });
+
+  it('posts nothing on a preview deploy without an override', () => {
+    vi.stubEnv('DISCORD_WEBHOOK_OVERRIDE_URL', '');
+    vi.stubEnv('VERCEL_ENV', 'preview');
+    expect(resolveDiscordDeliveryUrl(TOURNEY_HOOK)).toBeNull();
   });
 });

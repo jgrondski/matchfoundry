@@ -10,9 +10,17 @@ permissions:
   contents: read
   pull-requests: write
 
+# A newer push to the same PR cancels its stale run. Production deploys on main always finish, in order.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # Pull requests only. A merge to main deploys the commit these checks already passed on,
+  # so it doesn't run them again (see "Required GitHub settings" in docs/DEPLOYMENT_PLAYBOOK.md).
   test:
     name: Typecheck & Test Suite
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -33,6 +41,89 @@ jobs:
       - name: Run test suite
         run: npm test
 
+  # Golden journeys against a throwaway PostgreSQL that exists only for this job.
+  # The suite creates and deletes its own data, so the database starts empty.
+  # Never give this job a real DATABASE_URL secret.
+  e2e:
+    name: Golden Journeys (Playwright)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tournament_manager
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tournament_manager
+      # Throwaway value: it only unlocks the job's own disposable database.
+      SYSTEM_ADMIN_RECOVERY_PIN: '424242'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create schema in the job database
+        run: npm run db:push:ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run golden journeys
+        run: npm run test:e2e
+
+      - name: Upload Playwright results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Vercel
+    needs: test
+    # PRs deploy a preview only after the test job passes; pushes to main skip the test job and deploy directly.
+    if: >-
+      always() &&
+      (needs.test.result == 'success' ||
+       (github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.test.result == 'skipped'))
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      IS_PRODUCTION: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Build client & serverless API bundle
         run: npm run build
 
@@ -41,47 +132,47 @@ jobs:
 
       - name: Pull Vercel Environment Information
         run: |
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          if [ "$IS_PRODUCTION" = "true" ]; then
             vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
           else
             vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
           fi
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
+      # Production schema changes happen only on merge to main. PRs migrate the preview database.
       - name: Push Database Schema to Neon
-        run: npm run db:push:ci
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            if [ "$IS_PRODUCTION" = "true" ]; then
+              echo "::error::The DATABASE_URL secret is not set."
+            else
+              echo "::error::The PREVIEW_DATABASE_URL secret is not set. PR deploys must use the Neon preview branch, never production. See 'Database Environments' in docs/DEPLOYMENT_PLAYBOOK.md."
+            fi
+            exit 1
+          fi
+          npm run db:push:ci
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && secrets.DATABASE_URL || secrets.PREVIEW_DATABASE_URL }}
 
       - name: Build Project Artifacts for Vercel
         run: |
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          if [ "$IS_PRODUCTION" = "true" ]; then
             vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
           else
             vercel build --token=${{ secrets.VERCEL_TOKEN }}
           fi
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy Prebuilt Artifact to Vercel
         id: deploy
         run: |
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          if [ "$IS_PRODUCTION" = "true" ]; then
             DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
           else
             DEPLOY_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
           fi
           echo "deploy_url=$DEPLOY_URL" >> $GITHUB_OUTPUT
-          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
           echo "### 🚀 Vercel Deployment Successful" >> $GITHUB_STEP_SUMMARY
           echo "Target: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') && 'Production (matchfoundry.gg)' || 'Preview' }}" >> $GITHUB_STEP_SUMMARY
           echo "URL: $DEPLOY_URL" >> $GITHUB_STEP_SUMMARY
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Comment Preview URL on Pull Request
         if: github.event_name == 'pull_request'
@@ -89,7 +180,7 @@ jobs:
         with:
           script: |
             const url = '${{ steps.deploy.outputs.deploy_url }}';
-            const body = `### 🚀 MatchFoundry Preview Deployed!\n\n**Preview URL:** ${url}\n\n*Verified by automated typecheck and full Vitest regression test suite.*`;
+            const body = `### 🚀 MatchFoundry Preview Deployed!\n\n**Preview URL:** ${url}\n\n*Verified by automated typecheck and full Vitest regression test suite. Uses the Neon preview database, not production.*`;
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
