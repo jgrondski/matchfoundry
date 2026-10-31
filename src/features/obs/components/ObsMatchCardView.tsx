@@ -6,6 +6,7 @@ import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { Trophy } from 'lucide-react';
 import { colorWithAlpha } from '../../bracket/colorUtils';
 import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
+import { CHROMA_KEY_COLORS, DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
 export interface ObsMatchCardViewProps {
   tournament: Tournament;
@@ -57,16 +58,16 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
     ? chroma.startsWith('#')
       ? chroma
       : chroma.toLowerCase() === 'green'
-      ? '#00ff00'
+      ? CHROMA_KEY_COLORS.green
       : chroma.toLowerCase() === 'magenta'
-      ? '#ff00ff'
+      ? CHROMA_KEY_COLORS.magenta
       : chroma.toLowerCase() === 'blue'
-      ? '#0000ff'
+      ? CHROMA_KEY_COLORS.blue
       : `#${chroma}`
     : 'transparent';
 
-  const primaryColor = resolvedTier?.primaryColor || '#ffc905';
-  const cardColor = resolvedTier?.cardColor || '#141824';
+  const primaryColor = resolvedTier?.primaryColor || DEFAULT_TIER_THEME.primaryColor;
+  const cardColor = resolvedTier?.cardColor || THEME_FALLBACK.obsCardColor;
 
   const p1 = targetMatch?.player1?.player;
   const p2 = targetMatch?.player2?.player;

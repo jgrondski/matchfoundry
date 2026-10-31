@@ -40,7 +40,7 @@ export const ObsOverlayPage: React.FC = () => {
   if (notFound || !tournament) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-transparent text-red">
-        <h3>Tournament Not Found</h3>
+        <h3 className="text-lg font-bold">Tournament Not Found</h3>
       </div>
     );
   }
@@ -59,7 +59,7 @@ export const ObsOverlayPage: React.FC = () => {
   if (!tier) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-transparent text-fg-secondary">
-        <h3>No Tier Bracket Configured</h3>
+        <h3 className="text-lg font-bold">No Tier Bracket Configured</h3>
       </div>
     );
   }

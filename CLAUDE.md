@@ -38,6 +38,7 @@
   - Clearing qualifiers is forbidden if match scores exist (require "Clear Matches" first).
 
 ## 5. UI & State Hygiene
+- **Styling**: Tailwind classes only. Inline `style` is allowed only for runtime values (theme colors from data, layout-engine coordinates), passed as CSS variables when hover/focus variants need them. Use `src/components/ui` (Button, IconButton, Badge, Chip, Card) and `src/components/overlay`. Tokens live in `src/index.css` `@theme`; hex color data lives only in `src/theme/palette.ts`. `npm run lint` enforces this.
 - **Overlays (modals, drawers, sheets)**: Always use `Overlay` or `ConfirmDialog` from `src/components/overlay`; never hand-roll a fixed backdrop. Read-only overlays and confirmations close on backdrop click/tap and Escape. Forms pass `dirty`; when dirty, backdrop, Escape, X and Cancel open the Discard prompt ("Keep Editing" / "Discard Changes"). Pass `busy` while a request is in flight so nothing dismisses mid-save.
 - **Country Flags**: Country codes MUST be 2-letter uppercase ISO 3166-1 alpha-2 strings. Always provide a safe fallback icon for null or unknown countries.
 - **Tier Switching**: Multi-tier feeds (`MatchCardFeed`) must use `key={tier.id}` to guarantee clean remounting without stale state.

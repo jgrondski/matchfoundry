@@ -214,7 +214,7 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
                 className={cn(
                   'flex flex-col gap-2 rounded-sm border bg-canvas py-2.5 px-3 transition-all duration-300',
                   row.isDirty
-                    ? 'border-gold-bright shadow-[0_0_0_1px_rgba(234,179,8,0.2)]'
+                    ? 'border-gold-bright ring-1 ring-warn/20'
                     : 'border-line-subtle shadow-none'
                 )}
               >

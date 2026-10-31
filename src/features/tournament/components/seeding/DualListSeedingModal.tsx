@@ -311,7 +311,7 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-line bg-elevated px-6 py-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-md bg-[rgba(99,102,241,0.15)] text-brand">
+              <div className="flex size-9 items-center justify-center rounded-md bg-seed-indigo/15 text-brand">
                 <Users size={20} />
               </div>
               <div>
@@ -351,7 +351,7 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
                     className={cn(
                       'flex-1 cursor-pointer rounded-sm border px-2.5 py-1.5 text-caption',
                       availableSourceTab === 'roster'
-                        ? 'border-brand bg-[rgba(99,102,241,0.15)] font-bold text-brand'
+                        ? 'border-brand bg-seed-indigo/15 font-bold text-brand'
                         : 'border-line bg-surface font-medium text-fg-secondary'
                     )}
                   >
@@ -433,7 +433,7 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
                           onClick={e => handleToggleAvailable(player.id, idx, e.shiftKey)}
                           className={cn(
                             'flex cursor-pointer select-none items-center justify-between rounded-sm border px-2.5 py-2 transition-colors duration-100',
-                            isSelected ? 'border-brand bg-[rgba(99,102,241,0.12)]' : 'border-line-subtle bg-elevated'
+                            isSelected ? 'border-brand bg-seed-indigo/12' : 'border-line-subtle bg-elevated'
                           )}
                         >
                           <div className="flex min-w-0 items-center gap-2">
@@ -446,7 +446,7 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
                                 {orderNumber}
                               </div>
                             ) : (
-                              <Square size={16} color="var(--color-text-muted)" className="shrink-0" />
+                              <Square size={16} color="var(--color-fg-muted)" className="shrink-0" />
                             )}
 
                             <span className="truncate text-sm font-semibold text-fg">
@@ -652,7 +652,7 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
                               {isSelected ? (
                                 <CheckSquare size={16} color="var(--color-red)" className="shrink-0" />
                               ) : (
-                                <Square size={16} color="var(--color-text-muted)" className="shrink-0" />
+                                <Square size={16} color="var(--color-fg-muted)" className="shrink-0" />
                               )}
 
                               <span className="min-w-8 text-caption font-extrabold text-gold-bright">

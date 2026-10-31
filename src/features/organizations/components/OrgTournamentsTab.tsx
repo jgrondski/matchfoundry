@@ -3,6 +3,7 @@ import { Search, Plus, Trophy } from 'lucide-react';
 import { Button } from '../../../components/ui';
 import { Tournament } from '../../../features/tournament/types';
 import { TournamentCard } from '../../tournament/components/TournamentCard';
+import { DEFAULT_TIER_THEME } from '../../../theme/palette';
 
 interface OrgTournamentsTabProps {
   orgName: string;
@@ -21,7 +22,7 @@ export const OrgTournamentsTab: React.FC<OrgTournamentsTabProps> = ({
   onSearchChange,
   onCreateTourneyOpen,
   onDeleteTournament,
-  primaryColor = '#ffc905',
+  primaryColor = DEFAULT_TIER_THEME.primaryColor,
 }) => {
   const filteredTournaments = tournaments.filter(t =>
     t.name.toLowerCase().includes(tourneySearch.toLowerCase())
@@ -31,7 +32,7 @@ export const OrgTournamentsTab: React.FC<OrgTournamentsTabProps> = ({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="relative w-full max-w-95">
-          <Search size={16} color="var(--color-text-muted)" className="absolute top-1/2 left-3.5 -translate-y-1/2" />
+          <Search size={16} color="var(--color-fg-muted)" className="absolute top-1/2 left-3.5 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Filter hosted tournaments..."

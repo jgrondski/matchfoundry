@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '../../../components/ui';
 import { Playstyle } from '../../tournament/types';
+import { PLAYSTYLE_COLORS } from '../../../theme/palette';
 
 interface PlaystyleChipProps {
   style?: string | Playstyle;
@@ -14,45 +15,35 @@ export function getPlaystyleTheme(style?: string | Playstyle) {
   if (norm === 'roll' || norm === 'rolling') {
     return {
       label: 'Roll',
-      color: '#ffffff',
-      background: '#a855f7',
-      borderColor: '#c084fc',
+      ...PLAYSTYLE_COLORS.roll,
     };
   }
 
   if (norm === 'das') {
     return {
       label: 'DAS',
-      color: '#fde047',
-      background: '#dc2626',
-      borderColor: '#ef4444',
+      ...PLAYSTYLE_COLORS.das,
     };
   }
 
   if (norm === 'hybrid') {
     return {
       label: 'Hybrid',
-      color: '#e9d5ff',
-      background: '#4c1d95',
-      borderColor: '#6b21a8',
+      ...PLAYSTYLE_COLORS.hybrid,
     };
   }
 
   if (norm === 'tap' || norm === 'hypertap') {
     return {
       label: 'Tap',
-      color: '#bae6fd',
-      background: '#0c4a6e',
-      borderColor: '#0284c7',
+      ...PLAYSTYLE_COLORS.tap,
     };
   }
 
   // Fallback
   return {
     label: style || 'Unknown',
-    color: '#e2e8f0',
-    background: 'rgba(255, 255, 255, 0.1)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    ...PLAYSTYLE_COLORS.unknown,
   };
 }
 

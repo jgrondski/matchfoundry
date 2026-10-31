@@ -373,11 +373,11 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
           <Link
             to="/"
             onClick={e => handleLinkClick(e, '/')}
-            className="flex items-center gap-2 overflow-hidden no-underline"
+            className="flex items-center gap-2 overflow-hidden text-gold-bright no-underline"
             title="MatchFoundry™ Home"
           >
             <div className="flex size-7 shrink-0 items-center justify-center rounded-sm bg-gold shadow-gold">
-              <Layers size={16} color="#090d16" />
+              <Layers size={16} className="text-canvas" />
             </div>
             {!isCollapsed && (
               <span className="text-sm leading-tight font-extrabold tracking-tight whitespace-nowrap text-fg">
@@ -415,7 +415,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                 <Link
                   to={`/org/${currentOrg.slug}`}
                   onClick={e => handleLinkClick(e, `/org/${currentOrg.slug}`)}
-                  className="inline-flex min-w-0 items-center gap-1.5 no-underline"
+                  className="inline-flex min-w-0 items-center gap-1.5 text-gold-bright no-underline"
                   title={`View Organization: ${currentOrg.name}`}
                 >
                   <Building2 size={11} color="var(--color-gold-bright, #ffc905)" />
@@ -450,7 +450,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                   {activeTourney.name.substring(0, 2).toUpperCase()}
                 </span>
               ) : (
-                <ChevronDown size={13} color="var(--color-text-muted)" className="ml-1 shrink-0" />
+                <ChevronDown size={13} color="var(--color-fg-muted)" className="ml-1 shrink-0" />
               )}
             </button>
 
@@ -495,7 +495,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                 {/* Search input field */}
                 <div className="px-2.5 pt-1 pb-2">
                   <div className="flex items-center gap-1.5 rounded-sm border border-line bg-black/35 px-2 py-1">
-                    <Search size={12} color="var(--color-text-muted, #94a3b8)" className="shrink-0" />
+                    <Search size={12} color="var(--color-fg-muted, #94a3b8)" className="shrink-0" />
                     <input
                       type="text"
                       value={tournamentSearchQuery}
@@ -626,7 +626,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                   {isUnlocking ? (
                     <div className="size-2.5 shrink-0 animate-spin rounded-full border-[1.5px] border-sky-400/30 border-t-sky-400" />
                   ) : (
-                    <ShieldCheck size={11} color="#38bdf8" className="shrink-0" />
+                    <ShieldCheck size={11} className="text-sky-400 shrink-0" />
                   )}
                   {!isCollapsed && (
                     <span className="truncate">{isUnlocking ? 'Unlocking...' : 'Match Play (Unlock)'}</span>

@@ -1,3 +1,5 @@
+import { CONTRAST_TEXT, DEFAULT_TIER_THEME, THEME_FALLBACK, TIER_THEMES } from '../../theme/palette';
+
 /**
  * Utility to generate RGBA color strings with custom alpha transparency
  * from hex color codes (e.g. #3b82f6 or #f59e0b), with a safe fallback.
@@ -27,7 +29,7 @@ export function colorWithAlpha(
  * Returns high-contrast text color ('#000000' or '#ffffff')
  * based on the luminance of the provided background color.
  */
-export function getContrastingTextColor(hexColor: string | undefined, fallback: string = '#000000'): string {
+export function getContrastingTextColor(hexColor: string | undefined, fallback: string = CONTRAST_TEXT.dark): string {
   if (!hexColor || !hexColor.startsWith('#')) return fallback;
   let hex = hexColor.slice(1);
   if (hex.length === 3) {
@@ -39,7 +41,7 @@ export function getContrastingTextColor(hexColor: string | undefined, fallback: 
   const b = parseInt(hex.substring(4, 6), 16);
   // Standard perceptual luminance formula
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.5 ? '#000000' : '#ffffff';
+  return luminance > 0.5 ? CONTRAST_TEXT.dark : CONTRAST_TEXT.light;
 }
 
 /**
@@ -48,7 +50,7 @@ export function getContrastingTextColor(hexColor: string | undefined, fallback: 
 export function getTierCanvasBackground(
   backgroundColor: string | undefined,
   _primaryColor?: string | undefined,
-  fallback: string = '#0c0d12'
+  fallback: string = THEME_FALLBACK.backgroundColor
 ): string {
   if (backgroundColor && (backgroundColor.startsWith('#') || backgroundColor.startsWith('rgb'))) {
     return backgroundColor;
@@ -62,7 +64,7 @@ export function getTierCanvasBackground(
 export function getTierCardBackground(
   cardColor: string | undefined,
   _primaryColor?: string | undefined,
-  fallback: string = '#161922'
+  fallback: string = THEME_FALLBACK.cardColor
 ): string {
   if (cardColor && (cardColor.startsWith('#') || cardColor.startsWith('rgb'))) {
     return cardColor;
@@ -75,12 +77,12 @@ export function getTierCardBackground(
  * from a base hex color by shifting perceptual luminance slightly.
  */
 export function getAlternateShade(hexColor: string | undefined, deltaPercent: number = 7): string {
-  if (!hexColor || !hexColor.startsWith('#')) return '#182232';
+  if (!hexColor || !hexColor.startsWith('#')) return THEME_FALLBACK.alternateShade;
   let hex = hexColor.slice(1);
   if (hex.length === 3) {
     hex = hex.split('').map(c => c + c).join('');
   }
-  if (hex.length !== 6) return '#182232';
+  if (hex.length !== 6) return THEME_FALLBACK.alternateShade;
   let r = parseInt(hex.substring(0, 2), 16);
   let g = parseInt(hex.substring(2, 4), 16);
   let b = parseInt(hex.substring(4, 6), 16);
@@ -140,40 +142,40 @@ export function getDefaultTierColors(tier: { id?: string; slug?: string; priorit
 
   if (isGold) {
     return {
-      primaryColor: '#ffc905',
-      secondaryColor: '#705b33',
-      cardColor: '#1b1c1d',
-      textColor: '#94A3B8',
-      backgroundColor: '#020203',
-      lowerBracketColor: '#c2410c',
+      primaryColor: DEFAULT_TIER_THEME.primaryColor,
+      secondaryColor: DEFAULT_TIER_THEME.secondaryColor,
+      cardColor: DEFAULT_TIER_THEME.cardColor,
+      textColor: DEFAULT_TIER_THEME.textColor,
+      backgroundColor: DEFAULT_TIER_THEME.backgroundColor,
+      lowerBracketColor: DEFAULT_TIER_THEME.lowerBracketColor,
     };
   }
   if (isSilver) {
     return {
-      primaryColor: '#CBD5E1',
-      secondaryColor: '#3d4652',
-      cardColor: '#0E1420',
-      textColor: '#4f5c6d',
-      backgroundColor: '#0B0E14',
-      lowerBracketColor: '#c2410c',
+      primaryColor: TIER_THEMES.silver.primaryColor,
+      secondaryColor: TIER_THEMES.silver.secondaryColor,
+      cardColor: TIER_THEMES.silver.cardColor,
+      textColor: TIER_THEMES.silver.textColor,
+      backgroundColor: TIER_THEMES.silver.backgroundColor,
+      lowerBracketColor: TIER_THEMES.silver.lowerBracketColor,
     };
   }
   if (isBronze) {
     return {
-      primaryColor: '#db5f00',
-      secondaryColor: '#4e310e',
-      cardColor: '#181410',
-      textColor: '#5e6f87',
-      backgroundColor: '#0B0E14',
-      lowerBracketColor: '#c2410c',
+      primaryColor: TIER_THEMES.bronze.primaryColor,
+      secondaryColor: TIER_THEMES.bronze.secondaryColor,
+      cardColor: TIER_THEMES.bronze.cardColor,
+      textColor: TIER_THEMES.bronze.textColor,
+      backgroundColor: TIER_THEMES.bronze.backgroundColor,
+      lowerBracketColor: TIER_THEMES.bronze.lowerBracketColor,
     };
   }
   return {
-    primaryColor: '#eab308',
-    secondaryColor: '#ca8a04',
-    cardColor: '#161922',
-    textColor: '#94A3B8',
-    backgroundColor: '#0B0E14',
-    lowerBracketColor: '#c2410c',
+    primaryColor: TIER_THEMES.yellow.primaryColor,
+    secondaryColor: TIER_THEMES.yellow.secondaryColor,
+    cardColor: TIER_THEMES.yellow.cardColor,
+    textColor: TIER_THEMES.yellow.textColor,
+    backgroundColor: TIER_THEMES.yellow.backgroundColor,
+    lowerBracketColor: TIER_THEMES.yellow.lowerBracketColor,
   };
 }

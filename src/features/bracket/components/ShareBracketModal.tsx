@@ -15,6 +15,7 @@ import {
   Sparkles,
   Layers,
 } from 'lucide-react';
+import { DEFAULT_TIER_THEME, QR_COLORS, THEME_FALLBACK } from '../../../theme/palette';
 
 interface ShareBracketModalProps {
   isOpen: boolean;
@@ -36,15 +37,15 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
   const defaults = resolvedTier
     ? getDefaultTierColors(resolvedTier)
     : {
-        primaryColor: '#ffc905',
-        secondaryColor: '#705b33',
-        cardColor: '#161922',
-        textColor: '#94A3B8',
-        backgroundColor: '#020203',
+        primaryColor: DEFAULT_TIER_THEME.primaryColor,
+        secondaryColor: DEFAULT_TIER_THEME.secondaryColor,
+        cardColor: THEME_FALLBACK.cardColor,
+        textColor: DEFAULT_TIER_THEME.textColor,
+        backgroundColor: DEFAULT_TIER_THEME.backgroundColor,
       };
-  const primaryColor = resolvedTier?.primaryColor || defaults.primaryColor || '#f59e0b';
-  const secondaryColor = resolvedTier?.secondaryColor || defaults.secondaryColor || '#705b33';
-  const cardColor = resolvedTier?.cardColor || defaults.cardColor || '#161922';
+  const primaryColor = resolvedTier?.primaryColor || defaults.primaryColor || THEME_FALLBACK.primaryColor;
+  const secondaryColor = resolvedTier?.secondaryColor || defaults.secondaryColor || DEFAULT_TIER_THEME.secondaryColor;
+  const cardColor = resolvedTier?.cardColor || defaults.cardColor || THEME_FALLBACK.cardColor;
 
   // Construct canonical public spectator URL
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -63,8 +64,8 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
       width: 280,
       margin: 2,
       color: {
-        dark: '#090d16',
-        light: '#ffffff',
+        dark: QR_COLORS.dark,
+        light: QR_COLORS.light,
       },
     })
       .then(url => setQrDataUrl(url))
@@ -100,7 +101,7 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
       panelClassName="flex max-w-130 max-h-[92vh] flex-col overflow-hidden rounded-lg"
       panelStyle={{
         background: cardColor,
-        border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}`,
+        border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-line)')}`,
         boxShadow: `0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px ${colorWithAlpha(primaryColor, 0.15)}`,
       }}
     >
@@ -214,14 +215,14 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
                   className={snippetBtnClass}
                 >
                   <div className="flex items-center gap-2">
-                    <MessageSquare size={14} color="#a855f7" />
+                    <MessageSquare size={14} className="text-purple-500" />
                     <span className="text-caption font-bold text-fg">
                       Twitch Chat Command
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-fg-muted">
                     <span>{copiedKey === 'twitch-cmd' ? 'Copied to clipboard!' : twitchCommandText}</span>
-                    {copiedKey === 'twitch-cmd' ? <Check size={12} color="#4ade80" /> : <Copy size={12} />}
+                    {copiedKey === 'twitch-cmd' ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
                   </div>
                 </button>
 
@@ -232,14 +233,14 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
                   className={snippetBtnClass}
                 >
                   <div className="flex items-center gap-2">
-                    <Sparkles size={14} color="#38bdf8" />
+                    <Sparkles size={14} className="text-sky-400" />
                     <span className="text-caption font-bold text-fg">
                       Discord Markdown Link
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-fg-muted">
                     <span>{copiedKey === 'discord-md' ? 'Copied to clipboard!' : '[Tournament] Link'}</span>
-                    {copiedKey === 'discord-md' ? <Check size={12} color="#4ade80" /> : <Copy size={12} />}
+                    {copiedKey === 'discord-md' ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
                   </div>
                 </button>
               </div>

@@ -4,6 +4,7 @@ import { getDb } from '../db';
 import { Organization } from '../features/tournament/types';
 import { CreateOrganizationInput } from '../features/organizations/types';
 import { DEFAULT_ORGANIZATIONS } from '../features/organizations/store';
+import { DEFAULT_TIER_THEME } from '../theme/palette';
 
 export async function seedDefaultOrganizations(): Promise<void> {
   const db = getDb();
@@ -74,11 +75,11 @@ export async function createOrganization(input: CreateOrganizationInput): Promis
   const slug = input.slug.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-');
   const shortName = input.shortName || input.name;
   const theme = input.themeColors || input.branding?.themeColors || {
-    primaryColor: input.brandColor || '#ffc905',
-    secondaryColor: '#705b33',
-    cardColor: '#1b1c1d',
-    textColor: '#94A3B8',
-    backgroundColor: '#020203',
+    primaryColor: input.brandColor || DEFAULT_TIER_THEME.primaryColor,
+    secondaryColor: DEFAULT_TIER_THEME.secondaryColor,
+    cardColor: DEFAULT_TIER_THEME.cardColor,
+    textColor: DEFAULT_TIER_THEME.textColor,
+    backgroundColor: DEFAULT_TIER_THEME.backgroundColor,
   };
   const tierThemes = input.tierThemes && input.tierThemes.length > 0 ? input.tierThemes : [
     {

@@ -9,6 +9,7 @@ import { RoundOverridesEditor } from '../RoundOverridesEditor';
 import { ClearableNumberInput } from '../../../../components/ClearableNumberInput';
 import { labelClass, inputClass } from './types';
 import { Button, cn } from '../../../../components/ui';
+import { DEFAULT_TIER_THEME, LOWER_BRACKET_COLOR } from '../../../../theme/palette';
 
 const tierLabelClass = cn(labelClass, 'mb-1.5 flex h-6.5 items-end');
 const tierLabelTruncateClass = cn(tierLabelClass, 'truncate');
@@ -62,17 +63,17 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
           tiers.map((tier, idx) => {
             const badge = tierThresholdBadges[idx];
             const defaults = getDefaultTierColors(tier);
-            const priColor = tier.primaryColor || defaults.primaryColor || '#ffc905';
-            const secColor = tier.secondaryColor || defaults.secondaryColor || '#705b33';
-            const cardBg = tier.cardColor || defaults.cardColor || '#1b1c1d';
-            const txtColor = tier.textColor || defaults.textColor || '#94A3B8';
+            const priColor = tier.primaryColor || defaults.primaryColor || DEFAULT_TIER_THEME.primaryColor;
+            const secColor = tier.secondaryColor || defaults.secondaryColor || DEFAULT_TIER_THEME.secondaryColor;
+            const cardBg = tier.cardColor || defaults.cardColor || DEFAULT_TIER_THEME.cardColor;
+            const txtColor = tier.textColor || defaults.textColor || DEFAULT_TIER_THEME.textColor;
 
             return (
               <div
                 key={tier.id}
                 className="flex flex-col gap-3.5 rounded-md py-4 px-4.5 shadow-sm"
                 style={{
-                  background: `linear-gradient(135deg, var(--color-bg-surface-elevated) 0%, ${colorWithAlpha(priColor, 0.05)} 100%)`,
+                  background: `linear-gradient(135deg, var(--color-elevated) 0%, ${colorWithAlpha(priColor, 0.05)} 100%)`,
                   border: `1px solid ${colorWithAlpha(priColor, 0.28)}`,
                   borderLeft: `5px solid ${priColor}`,
                 }}
@@ -313,7 +314,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                   const cardBg = tier.cardColor || defaults.cardColor;
                   const txtColor = tier.textColor || defaults.textColor;
                   const canvasBg = tier.backgroundColor || defaults.backgroundColor;
-                  const lowerColor = tier.lowerBracketColor || defaults.lowerBracketColor || '#c2410c';
+                  const lowerColor = tier.lowerBracketColor || defaults.lowerBracketColor || LOWER_BRACKET_COLOR;
                   const isThemeOpen = Boolean(openThemes[tier.id]);
 
                   return (
@@ -366,7 +367,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                           </span>
                           <ChevronDown
                             size={16}
-                            color="var(--color-text-muted)"
+                            color="var(--color-fg-muted)"
                             className={cn('transition-transform duration-200', isThemeOpen ? 'rotate-180' : 'rotate-0')}
                           />
                         </div>

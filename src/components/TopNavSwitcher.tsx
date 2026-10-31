@@ -90,7 +90,7 @@ export const TopNavSwitcher: React.FC = () => {
                       : 'bg-transparent font-medium text-fg-secondary shadow-none'
                   )}
                 >
-                  <Icon size={16} color={tab.isActive ? '#090d16' : 'currentColor'} className="shrink-0" />
+                  <Icon size={16} className="shrink-0" />
                   <span>{tab.label}</span>
                   {tab.count !== null && (
                     <span

@@ -79,6 +79,7 @@ import type {
   GameScoreEntry,
   Organization,
 } from '../features/tournament/types';
+import { DEFAULT_TIER_THEME, TIER_THEMES } from '../theme/palette';
 
 /**
  * Loads the global player supply for a qualifier simulation, first creating real player rows if
@@ -1752,11 +1753,11 @@ export async function simulateSampleTournament(): Promise<Tournament> {
         bracketType: 'TRADITIONAL',
         playerCount: 16,
         bestOf: 5,
-        primaryColor: '#ffc905',
-        secondaryColor: '#705b33',
-        cardColor: '#1b1c1d',
-        textColor: '#94A3B8',
-        backgroundColor: '#020203',
+        primaryColor: DEFAULT_TIER_THEME.primaryColor,
+        secondaryColor: DEFAULT_TIER_THEME.secondaryColor,
+        cardColor: DEFAULT_TIER_THEME.cardColor,
+        textColor: DEFAULT_TIER_THEME.textColor,
+        backgroundColor: DEFAULT_TIER_THEME.backgroundColor,
         isLocked: false,
         bracket: generateTraditionalBracket(
           globalProfiles.slice(0, 16).map((p, idx) => ({ id: p.id, name: p.name, seed: idx + 1 })),
@@ -1772,11 +1773,11 @@ export async function simulateSampleTournament(): Promise<Tournament> {
         flatWidth: 2,
         playerCount: 16,
         bestOf: 3,
-        primaryColor: '#CBD5E1',
-        secondaryColor: '#3d4652',
-        cardColor: '#0E1420',
-        textColor: '#4f5c6d',
-        backgroundColor: '#0B0E14',
+        primaryColor: TIER_THEMES.silver.primaryColor,
+        secondaryColor: TIER_THEMES.silver.secondaryColor,
+        cardColor: TIER_THEMES.silver.cardColor,
+        textColor: TIER_THEMES.silver.textColor,
+        backgroundColor: TIER_THEMES.silver.backgroundColor,
         isLocked: false,
         bracket: generateFlatBracket(
           globalProfiles.slice(16, 32).map((p, idx) => ({ id: p.id, name: p.name, seed: idx + 1 })),

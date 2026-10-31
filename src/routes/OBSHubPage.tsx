@@ -20,6 +20,7 @@ import {
   LayoutGrid,
 } from 'lucide-react';
 import { Button, cn } from '../components/ui';
+import { CHROMA_KEY_COLORS, THEME_FALLBACK } from '../theme/palette';
 
 export const OBSHubPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -33,7 +34,7 @@ export const OBSHubPage: React.FC = () => {
   if (!tournament) {
     return (
       <div className="p-12 text-center text-fg-secondary">
-        <h2>Tournament Not Found</h2>
+        <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
         </Button>
@@ -83,9 +84,9 @@ export const OBSHubPage: React.FC = () => {
             <div className="flex items-center gap-1.5">
               {[
                 { id: 'none' as const, label: 'Transparent', color: 'transparent' },
-                { id: 'green' as const, label: 'Green', color: '#00ff00' },
-                { id: 'magenta' as const, label: 'Magenta', color: '#ff00ff' },
-                { id: 'blue' as const, label: 'Blue', color: '#0000ff' },
+                { id: 'green' as const, label: 'Green', color: CHROMA_KEY_COLORS.green },
+                { id: 'magenta' as const, label: 'Magenta', color: CHROMA_KEY_COLORS.magenta },
+                { id: 'blue' as const, label: 'Blue', color: CHROMA_KEY_COLORS.blue },
               ].map(opt => {
                 const isSelected = selectedChroma === opt.id;
                 return (
@@ -174,7 +175,7 @@ export const OBSHubPage: React.FC = () => {
                 <div className={neutralCardClass}>
                   {/* Title Row */}
                   <div className="flex items-center gap-2.5">
-                    <BarChart3 size={18} color="#38bdf8" className="shrink-0" />
+                    <BarChart3 size={18} className="text-sky-400 shrink-0" />
                     <h3 className="m-0 text-base leading-snug font-bold text-white">
                       Tournament Standings
                     </h3>
@@ -222,8 +223,8 @@ export const OBSHubPage: React.FC = () => {
 
           {tournament.tiers.map(tier => {
             const tierPalette = getDefaultTierColors(tier);
-            const primaryColor = tier.primaryColor || tierPalette.primaryColor || '#f59e0b';
-            const cardBg = tier.cardColor || tierPalette.cardColor || '#141824';
+            const primaryColor = tier.primaryColor || tierPalette.primaryColor || THEME_FALLBACK.primaryColor;
+            const cardBg = tier.cardColor || tierPalette.cardColor || THEME_FALLBACK.obsCardColor;
             const isAcceleratedHybrid = tier.bracket?.bracketRouting === 'ACCELERATED_HYBRID';
             const finalsCutoff = tier.bracket?.finalsCutoff || 16;
 

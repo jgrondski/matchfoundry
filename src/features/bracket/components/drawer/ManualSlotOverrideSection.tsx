@@ -74,7 +74,7 @@ export const ManualSlotOverrideSection: React.FC<ManualSlotOverrideSectionProps>
         )}
       >
         <div className="flex items-center gap-2">
-          <ArrowLeftRight size={14} color={showOverridePanel ? '#ea580c' : 'currentColor'} />
+          <ArrowLeftRight size={14} className={showOverridePanel ? 'text-orange-600' : undefined} />
           <span>Override / Swap Round Placement</span>
         </div>
         <span className="text-2xs text-fg-muted">

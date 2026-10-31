@@ -33,6 +33,7 @@ import { TournamentSecuritySection } from './settings/TournamentSecuritySection'
 import { AdminFormModals } from './settings/AdminFormModals';
 import { usePinAuth } from '../../auth/AuthContext';
 import { Button, cn } from '../../../components/ui';
+import { LOWER_BRACKET_COLOR } from '../../../theme/palette';
 
 interface TournamentAdminFormProps {
   tournament: Tournament;
@@ -179,7 +180,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       return val.trim().toLowerCase();
     }
     const defaults = getDefaultTierColors(tier);
-    return (defaults[field] || '#c2410c').toLowerCase();
+    return (defaults[field] || LOWER_BRACKET_COLOR).toLowerCase();
   };
 
   // Track dirty state
@@ -709,7 +710,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           data-testid="online-quals-toggle-bar"
         >
           <div className="flex items-center gap-2.5">
-            <Globe size={18} color={tournament.onlineQualsOpen ? '#34d399' : 'var(--color-text-muted)'} className="shrink-0" />
+            <Globe size={18} className={cn('shrink-0', tournament.onlineQualsOpen ? 'text-green-bright' : 'text-fg-muted')} />
             <div>
               <span className={cn('mr-2 text-sm font-bold', tournament.onlineQualsOpen ? 'text-green-bright' : 'text-fg')}>
                 {tournament.onlineQualsOpen ? 'ONLINE QUALIFYING OPEN' : 'ONLINE QUALIFYING CLOSED'}

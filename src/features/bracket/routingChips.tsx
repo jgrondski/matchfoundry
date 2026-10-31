@@ -1,5 +1,12 @@
 import { BracketStructure, BracketMatch } from './types';
 import { cn } from '../../components/ui';
+import {
+  ACCELERATED_HYBRID_POD_PALETTE,
+  DEFAULT_TIER_THEME,
+  LOWER_BRACKET_CHIP_TEXT,
+  LOWER_BRACKET_COLOR,
+  THEME_FALLBACK,
+} from '../../theme/palette';
 
 export interface MicroChipData {
   text: string;
@@ -13,29 +20,7 @@ export interface MicroChipData {
   targetMatchId?: string;
 }
 
-export const ACCELERATED_HYBRID_POD_PALETTE = {
-  AR: {
-    border: '#9333EA',
-    text: '#C084FC',
-    bgTranslucent: 'rgba(147, 51, 234, 0.2)',
-    badgeBg: 'rgba(147, 51, 234, 0.25)',
-    glow: 'rgba(147, 51, 234, 0.6)',
-  },
-  UB: {
-    border: '#0284C7',
-    text: '#38BDF8',
-    bgTranslucent: 'rgba(2, 132, 199, 0.2)',
-    badgeBg: 'rgba(2, 132, 199, 0.25)',
-    glow: 'rgba(2, 132, 199, 0.6)',
-  },
-  LB: {
-    border: '#c2410c',
-    text: '#fb923c',
-    bgTranslucent: 'rgba(194, 65, 12, 0.2)',
-    badgeBg: 'rgba(194, 65, 12, 0.25)',
-    glow: 'rgba(194, 65, 12, 0.6)',
-  },
-} as const;
+export { ACCELERATED_HYBRID_POD_PALETTE };
 
 export function getMatchBranchColor(match: BracketMatch, lowerBracketColor?: string): string | null {
   // Top 16 Championship: Neutral / Default tier theme (remove any pod-specific accent colors)
@@ -71,8 +56,8 @@ export const getInboundChip = (
   bracket: BracketStructure,
   mIdx: number,
   isPhase2OpeningRound: boolean,
-  primaryColor = '#ffc905',
-  lowerBracketColor = '#c2410c'
+  primaryColor = DEFAULT_TIER_THEME.primaryColor,
+  lowerBracketColor = LOWER_BRACKET_COLOR
 ): MicroChipData | null => {
   // Finals Rule: Suppress all incoming and outgoing routing chips for Grand Finals,
   // Grand Finals Reset, and Finals (connecting lines already represent these paths).
@@ -106,7 +91,7 @@ export const getInboundChip = (
     const palette = isLb
       ? {
           border: effectiveLbColor,
-          text: '#fb923c',
+          text: LOWER_BRACKET_CHIP_TEXT,
           bgTranslucent: `${effectiveLbColor}26`,
           badgeBg: `${effectiveLbColor}33`,
           glow: `${effectiveLbColor}88`,
@@ -238,9 +223,9 @@ export const getOutboundChip = (
   p2Won: boolean,
   finalsCutoff: number,
   bracket?: BracketStructure,
-  primaryColor = '#ffc905',
-  _secondaryColor = '#f59e0b',
-  lowerBracketColor = '#c2410c'
+  primaryColor = DEFAULT_TIER_THEME.primaryColor,
+  _secondaryColor = THEME_FALLBACK.primaryColor,
+  lowerBracketColor = LOWER_BRACKET_COLOR
 ): MicroChipData | null => {
   // Finals Rule: Suppress all incoming and outgoing routing chips for Grand Finals,
   // Grand Finals Reset, and Finals (connecting lines already represent these paths).
@@ -373,7 +358,7 @@ export const getOutboundChip = (
           const effectiveLbColor = lowerBracketColor || ACCELERATED_HYBRID_POD_PALETTE.LB.border;
           const lbPalette = {
             border: effectiveLbColor,
-            text: '#fb923c',
+            text: LOWER_BRACKET_CHIP_TEXT,
             bgTranslucent: `${effectiveLbColor}26`,
             badgeBg: `${effectiveLbColor}33`,
             glow: `${effectiveLbColor}88`,
@@ -395,7 +380,7 @@ export const getOutboundChip = (
         const effectiveLbColor = lowerBracketColor || ACCELERATED_HYBRID_POD_PALETTE.LB.border;
         const lbPalette = {
           border: effectiveLbColor,
-          text: '#fb923c',
+          text: LOWER_BRACKET_CHIP_TEXT,
           bgTranslucent: `${effectiveLbColor}26`,
           badgeBg: `${effectiveLbColor}33`,
           glow: `${effectiveLbColor}88`,
@@ -424,7 +409,7 @@ export const getOutboundChip = (
           const effectiveLbColor = lowerBracketColor || ACCELERATED_HYBRID_POD_PALETTE.LB.border;
           const lbPalette = {
             border: effectiveLbColor,
-            text: '#fb923c',
+            text: LOWER_BRACKET_CHIP_TEXT,
             bgTranslucent: `${effectiveLbColor}26`,
             badgeBg: `${effectiveLbColor}33`,
             glow: `${effectiveLbColor}88`,
@@ -446,7 +431,7 @@ export const getOutboundChip = (
         const effectiveLbColor = lowerBracketColor || ACCELERATED_HYBRID_POD_PALETTE.LB.border;
         const lbPalette = {
           border: effectiveLbColor,
-          text: '#fb923c',
+          text: LOWER_BRACKET_CHIP_TEXT,
           bgTranslucent: `${effectiveLbColor}26`,
           badgeBg: `${effectiveLbColor}33`,
           glow: `${effectiveLbColor}88`,
@@ -474,7 +459,7 @@ export const getOutboundChip = (
         const effectiveLbColor = lowerBracketColor || ACCELERATED_HYBRID_POD_PALETTE.LB.border;
         const lbPalette = {
           border: effectiveLbColor,
-          text: '#fb923c',
+          text: LOWER_BRACKET_CHIP_TEXT,
           bgTranslucent: `${effectiveLbColor}26`,
           badgeBg: `${effectiveLbColor}33`,
           glow: `${effectiveLbColor}88`,
@@ -590,9 +575,9 @@ export const getOutcomeChip = (
   match: BracketMatch,
   finalsCutoff: number,
   bracket?: BracketStructure,
-  primaryColor = '#ffc905',
-  secondaryColor = '#f59e0b',
-  lowerBracketColor = '#c2410c'
+  primaryColor = DEFAULT_TIER_THEME.primaryColor,
+  secondaryColor = THEME_FALLBACK.primaryColor,
+  lowerBracketColor = LOWER_BRACKET_COLOR
 ): MicroChipData | null => {
   return getOutboundChip(
     1,

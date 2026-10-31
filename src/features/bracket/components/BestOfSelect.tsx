@@ -146,7 +146,7 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
         >
           {/* Search / Type Input */}
           <div className="mb-2 flex items-center gap-1.5 rounded-sm border border-line bg-canvas py-1.5 px-2">
-            <Search size={14} color="var(--color-text-muted)" className="shrink-0" />
+            <Search size={14} color="var(--color-fg-muted)" className="shrink-0" />
             <input
               ref={inputRef}
               type="text"

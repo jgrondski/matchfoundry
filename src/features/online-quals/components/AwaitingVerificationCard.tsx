@@ -44,7 +44,7 @@ export const AwaitingVerificationCard: React.FC<AwaitingVerificationCardProps> =
 
       {/* Provisional Leaderboard Status Pill */}
       <div className="flex items-center gap-3 rounded-md border border-gold/35 bg-gold/10 px-5 py-4">
-        <Clock size={20} color="#fbbf24" className="shrink-0" />
+        <Clock size={20} className="text-gold-bright shrink-0" />
         <div className="text-sm leading-normal text-[#fef3c7]">
           <strong>Provisional Placement:</strong> Your run is displayed on the public leaderboard marked{' '}
           <span className="rounded-xs border border-gold/40 bg-canvas px-2 py-0.5 font-mono text-caption font-bold text-gold-bright">

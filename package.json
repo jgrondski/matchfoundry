@@ -18,7 +18,6 @@
     "test:visual": "npm run visual:fixtures && playwright test --project=visual-desktop --project=visual-mobile",
     "test:visual:update": "npm run visual:fixtures && playwright test --project=visual-desktop --project=visual-mobile --update-snapshots",
     "visual:fixtures": "tsx scripts/generateVisualFixtures.ts",
-    "lint:styles": "eslint -c eslint.styles.config.js",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:push": "drizzle-kit push",

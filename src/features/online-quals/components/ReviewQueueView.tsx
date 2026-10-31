@@ -269,7 +269,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
               {pendingUnverifiedCount}
             </div>
           </div>
-          <Clock size={32} color={pendingUnverifiedCount > 0 ? 'var(--color-gold-bright)' : 'var(--color-text-muted)'} />
+          <Clock size={32} color={pendingUnverifiedCount > 0 ? 'var(--color-gold-bright)' : 'var(--color-fg-muted)'} />
         </div>
 
         {/* Qualifiers Status Metric */}
@@ -304,7 +304,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
             className={cn(
               'inline-flex items-center gap-2 whitespace-nowrap rounded-md border px-4 py-2 text-caption font-bold transition-all duration-150',
               pendingUnverifiedCount > 0
-                ? 'border-[rgba(234,179,8,0.45)] bg-[rgba(234,179,8,0.15)] text-gold-bright'
+                ? 'border-warn/45 bg-warn/15 text-gold-bright'
                 : 'border-line bg-white/5 text-fg-muted',
               pendingUnverifiedCount > 0 && !isSubmitting ? 'cursor-pointer' : 'cursor-not-allowed'
             )}
@@ -407,7 +407,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         title="Verify All Qualifiers?"
         body={
           <>
-            <div className="rounded-md border border-[rgba(234,179,8,0.35)] bg-[rgba(234,179,8,0.12)] px-4 py-3.5 text-sm leading-normal font-semibold text-gold-bright">
+            <div className="rounded-md border border-warn/35 bg-warn/12 px-4 py-3.5 text-sm leading-normal font-semibold text-gold-bright">
               ⚠️ Are you sure you want to verify all {pendingUnverifiedCount} pending qualifier run{pendingUnverifiedCount === 1 ? '' : 's'}?
             </div>
             <p className="leading-normal text-fg-secondary">

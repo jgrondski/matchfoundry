@@ -84,7 +84,7 @@ export const SharedPinWarningModal: React.FC<SharedPinWarningModalProps> = ({
                   className="flex items-center justify-between rounded-sm border border-white/4 bg-white/3 py-2 px-3"
                 >
                   <div className="flex items-center gap-2">
-                    <KeyRound size={13} color="#f59e0b" />
+                    <KeyRound size={13} className="text-gold" />
                     <span className="text-caption font-semibold text-white">
                       {t.name}
                     </span>

@@ -2,6 +2,7 @@ import React from 'react';
 import { TierThemeColors, getTextScale, getAlternateShade } from '../colorUtils';
 import { Palette, Type, RefreshCw } from 'lucide-react';
 import { Button, cn } from '../../../components/ui';
+import { DEFAULT_TIER_THEME, LOWER_BRACKET_COLOR } from '../../../theme/palette';
 
 interface BracketThemeEditorProps {
   themeColors: TierThemeColors;
@@ -22,12 +23,12 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
   onTextSizeChange,
   onReset,
 }) => {
-  const priColor = themeColors.primaryColor || '#ffc905';
-  const secColor = themeColors.secondaryColor || '#705b33';
-  const cardBg = themeColors.cardColor || '#1b1c1d';
-  const txtColor = themeColors.textColor || '#94A3B8';
-  const canvasBg = themeColors.backgroundColor || '#020203';
-  const lowerColor = themeColors.lowerBracketColor || '#c2410c';
+  const priColor = themeColors.primaryColor || DEFAULT_TIER_THEME.primaryColor;
+  const secColor = themeColors.secondaryColor || DEFAULT_TIER_THEME.secondaryColor;
+  const cardBg = themeColors.cardColor || DEFAULT_TIER_THEME.cardColor;
+  const txtColor = themeColors.textColor || DEFAULT_TIER_THEME.textColor;
+  const canvasBg = themeColors.backgroundColor || DEFAULT_TIER_THEME.backgroundColor;
+  const lowerColor = themeColors.lowerBracketColor || LOWER_BRACKET_COLOR;
 
   const p1ZebraBg = getAlternateShade(cardBg, -0.06);
 
@@ -92,7 +93,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
               value={priColor}
               onChange={e => handleColorChange('primaryColor', e.target.value)}
               className={hexTextInputCls}
-              placeholder="#ffc905"
+              placeholder={DEFAULT_TIER_THEME.primaryColor}
             />
           </div>
         </div>
@@ -114,7 +115,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
               value={secColor}
               onChange={e => handleColorChange('secondaryColor', e.target.value)}
               className={hexTextInputCls}
-              placeholder="#705b33"
+              placeholder={DEFAULT_TIER_THEME.secondaryColor}
             />
           </div>
         </div>
@@ -136,7 +137,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
               value={cardBg}
               onChange={e => handleColorChange('cardColor', e.target.value)}
               className={hexTextInputCls}
-              placeholder="#1b1c1d"
+              placeholder={DEFAULT_TIER_THEME.cardColor}
             />
           </div>
         </div>
@@ -158,7 +159,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
               value={txtColor}
               onChange={e => handleColorChange('textColor', e.target.value)}
               className={hexTextInputCls}
-              placeholder="#94A3B8"
+              placeholder={DEFAULT_TIER_THEME.textColor}
             />
           </div>
         </div>
@@ -180,7 +181,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
               value={canvasBg}
               onChange={e => handleColorChange('backgroundColor', e.target.value)}
               className={hexTextInputCls}
-              placeholder="#020203"
+              placeholder={DEFAULT_TIER_THEME.backgroundColor}
             />
           </div>
         </div>
@@ -202,7 +203,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
               value={lowerColor}
               onChange={e => handleColorChange('lowerBracketColor', e.target.value)}
               className={hexTextInputCls}
-              placeholder="#c2410c"
+              placeholder={LOWER_BRACKET_COLOR}
             />
           </div>
         </div>

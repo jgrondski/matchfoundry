@@ -43,7 +43,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
       className="flex items-center py-5 px-6 gap-4"
       style={{
         background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.10)} 0%, rgba(0, 0, 0, 0.35) 100%)`,
-        borderBottom: `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-border)')}`,
+        borderBottom: `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-line)')}`,
       }}
     >
       {/* Player 1 Section */}

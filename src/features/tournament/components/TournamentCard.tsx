@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { usePinAuth } from '../../auth/AuthContext';
 import { Badge, Button, buttonClasses, cn } from '../../../components/ui';
+import { DEFAULT_TIER_THEME } from '../../../theme/palette';
 
 const PRIMARY_LINK_HOVER = 'hover:brightness-110 hover:shadow-gold-hover hover:-translate-y-px';
 const SECONDARY_LINK_HOVER = 'hover:bg-highlight hover:border-fg-secondary';
@@ -155,7 +156,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             </span>
             <div className="flex flex-wrap gap-2">
               {tournament.tiers.map(tier => {
-                const tierColor = tier.primaryColor || '#ffc905';
+                const tierColor = tier.primaryColor || DEFAULT_TIER_THEME.primaryColor;
                 const tierLink = variant === 'admin'
                   ? `/${tournament.slug}/manage/bracket/${tier.slug}`
                   : `/${tournament.slug}/${tier.slug}`;

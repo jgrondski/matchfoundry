@@ -21,6 +21,7 @@ import {
   Swords,
   Layers,
 } from 'lucide-react';
+import { DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
 interface MatchTelemetryModalProps {
   isOpen: boolean;
@@ -48,9 +49,9 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
   if (!isOpen || !match) return null;
 
   const defaults = getDefaultTierColors(tier);
-  const primaryColor = tier.primaryColor || defaults.primaryColor || '#f59e0b';
-  const secondaryColor = tier.secondaryColor || defaults.secondaryColor || '#705b33';
-  const cardColor = tier.cardColor || defaults.cardColor || '#161922';
+  const primaryColor = tier.primaryColor || defaults.primaryColor || THEME_FALLBACK.primaryColor;
+  const secondaryColor = tier.secondaryColor || defaults.secondaryColor || DEFAULT_TIER_THEME.secondaryColor;
+  const cardColor = tier.cardColor || defaults.cardColor || THEME_FALLBACK.cardColor;
 
   const p1 = match.player1.player;
   const p2 = match.player2.player;
@@ -88,7 +89,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
       panelClassName="flex max-w-140 max-h-[90vh] flex-col overflow-hidden rounded-lg"
       panelStyle={{
         background: cardColor,
-        border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}`,
+        border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-line)')}`,
         boxShadow: `0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px ${colorWithAlpha(primaryColor, 0.15)}`,
       }}
     >
@@ -177,7 +178,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
               className="flex items-center py-5 px-6 gap-4 rounded-md"
               style={{
                 background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.08)} 0%, rgba(0, 0, 0, 0.35) 100%)`,
-                border: `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-border)')}`,
+                border: `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-line)')}`,
               }}
             >
               {/* Player 1 Card */}
@@ -405,7 +406,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                           background: getAlternateShade(cardColor, 3),
                           border: isTiebreakerGame
                             ? `1px solid ${colorWithAlpha(primaryColor, 0.45)}`
-                            : `1px solid ${colorWithAlpha(primaryColor, 0.22, 'var(--color-border)')}`,
+                            : `1px solid ${colorWithAlpha(primaryColor, 0.22, 'var(--color-line)')}`,
                         }}
                       >
                         {/* Game card top bar */}
@@ -461,7 +462,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                               )}
                               <span
                                 className={cn('text-caption truncate', p1WonGame ? 'font-bold' : 'font-medium')}
-                                style={{ color: p1WonGame ? primaryColor : 'var(--color-text-secondary)' }}
+                                style={{ color: p1WonGame ? primaryColor : 'var(--color-fg-secondary)' }}
                               >
                                 {p1?.name || 'Player 1'}
                               </span>
@@ -478,10 +479,10 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                                   : 'rgba(0, 0, 0, 0.45)',
                                 border: p1WonGame
                                   ? `1px solid ${colorWithAlpha(primaryColor, 0.55)}`
-                                  : '1px solid var(--color-border)',
+                                  : '1px solid var(--color-line)',
                                 color: p1WonGame
                                   ? primaryColor
-                                  : 'var(--color-text-primary)',
+                                  : 'var(--color-fg)',
                               }}
                             >
                               {num1 !== null ? num1.toLocaleString() : '—'}
@@ -498,7 +499,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                             <div className="flex items-center justify-end gap-1.5 mb-1">
                               <span
                                 className={cn('text-caption truncate', p2WonGame ? 'font-bold' : 'font-medium')}
-                                style={{ color: p2WonGame ? primaryColor : 'var(--color-text-secondary)' }}
+                                style={{ color: p2WonGame ? primaryColor : 'var(--color-fg-secondary)' }}
                               >
                                 {p2?.name || 'Player 2'}
                               </span>
@@ -526,10 +527,10 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                                   : 'rgba(0, 0, 0, 0.45)',
                                 border: p2WonGame
                                   ? `1px solid ${colorWithAlpha(primaryColor, 0.55)}`
-                                  : '1px solid var(--color-border)',
+                                  : '1px solid var(--color-line)',
                                 color: p2WonGame
                                   ? primaryColor
-                                  : 'var(--color-text-primary)',
+                                  : 'var(--color-fg)',
                               }}
                             >
                               {num2 !== null ? num2.toLocaleString() : '—'}
@@ -542,7 +543,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                 </div>
               ) : (
                 <div className="py-7 px-4 rounded-md bg-white/2 border border-dashed border-line text-center flex flex-col items-center gap-2">
-                  <Clock size={24} color="var(--color-text-muted)" />
+                  <Clock size={24} color="var(--color-fg-muted)" />
                   <span className="text-sm font-semibold text-fg-secondary">
                     No Game Scores Logged Yet
                   </span>

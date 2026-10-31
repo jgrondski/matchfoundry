@@ -29,6 +29,7 @@ import { PlaystyleChip } from '../../players/components/PlaystyleChip';
 import { PlayerEditModal } from '../../players/components/PlayerEditModal';
 import { Overlay } from '../../../components/overlay';
 import { cn } from '../../../components/ui';
+import { DEFAULT_TIER_THEME, STATUS_COLORS, THEME_FALLBACK } from '../../../theme/palette';
 
 const sectionTitleClass = 'text-sm font-extrabold text-white uppercase tracking-wide m-0';
 const statBoxClass = 'py-2.5 px-3 rounded-sm flex flex-col gap-1 border';
@@ -117,27 +118,27 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
   // 5-color Bracket Palette Integration
   const primaryColor = useMemo(() => {
-    if (isDQ) return '#ef4444';
-    if (isDNQ) return '#64748b';
-    return resolvedTier?.primaryColor || defaults.primaryColor || '#f59e0b';
+    if (isDQ) return STATUS_COLORS.dq;
+    if (isDNQ) return STATUS_COLORS.dnq;
+    return resolvedTier?.primaryColor || defaults.primaryColor || THEME_FALLBACK.primaryColor;
   }, [isDQ, isDNQ, resolvedTier, defaults]);
 
   const secondaryColor = useMemo(() => {
-    if (isDQ) return '#7f1d1d';
-    if (isDNQ) return '#334155';
-    return resolvedTier?.secondaryColor || defaults.secondaryColor || '#705b33';
+    if (isDQ) return STATUS_COLORS.dqSecondary;
+    if (isDNQ) return STATUS_COLORS.dnqSecondary;
+    return resolvedTier?.secondaryColor || defaults.secondaryColor || DEFAULT_TIER_THEME.secondaryColor;
   }, [isDQ, isDNQ, resolvedTier, defaults]);
 
   const cardColor = useMemo(() => {
-    return resolvedTier?.cardColor || defaults.cardColor || '#161922';
+    return resolvedTier?.cardColor || defaults.cardColor || THEME_FALLBACK.cardColor;
   }, [resolvedTier, defaults]);
 
   const textColor = useMemo(() => {
-    return resolvedTier?.textColor || defaults.textColor || '#94A3B8';
+    return resolvedTier?.textColor || defaults.textColor || DEFAULT_TIER_THEME.textColor;
   }, [resolvedTier, defaults]);
 
   const backgroundColor = useMemo(() => {
-    return resolvedTier?.backgroundColor || defaults.backgroundColor || '#0c0d12';
+    return resolvedTier?.backgroundColor || defaults.backgroundColor || THEME_FALLBACK.backgroundColor;
   }, [resolvedTier, defaults]);
 
   const primaryContrast = useMemo(() => {
@@ -246,7 +247,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
   let gamesWithPointsCount = 0;
 
   for (const t of tournament.tiers) {
-    const tColor = t.primaryColor || '#f59e0b';
+    const tColor = t.primaryColor || THEME_FALLBACK.primaryColor;
     for (const round of t.bracket.rounds) {
       for (const match of round.matches) {
         if (match.isBye) continue;
@@ -317,7 +318,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
       className="border rounded-md p-4.5 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
       style={{
         background: getAlternateShade(cardColor, 2),
-        borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)'),
+        borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-line)'),
       }}
       data-testid="qual-submissions-card"
     >
@@ -374,7 +375,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     ? 'rgba(56, 189, 248, 0.35)'
                     : isBest
                     ? 'rgba(16, 185, 129, 0.35)'
-                    : colorWithAlpha(primaryColor, 0.15, 'var(--color-border-subtle)'),
+                    : colorWithAlpha(primaryColor, 0.15, 'var(--color-line-subtle)'),
                   boxShadow: isMaxout ? `0 2px 10px ${colorWithAlpha(primaryColor, 0.12)}` : undefined,
                 }}
               >
@@ -493,7 +494,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
         panelClassName="max-w-135"
         panelStyle={{
           background: `linear-gradient(180deg, ${getAlternateShade(cardColor, 2)} 0%, ${backgroundColor} 100%)`,
-          borderLeft: `1px solid ${colorWithAlpha(primaryColor, 0.45, 'var(--color-border)')}`,
+          borderLeft: `1px solid ${colorWithAlpha(primaryColor, 0.45, 'var(--color-line)')}`,
           boxShadow: `-12px 0 36px rgba(0, 0, 0, 0.7), -1px 0 16px ${colorWithAlpha(primaryColor, 0.2)}, inset 1px 0 0 ${colorWithAlpha(primaryColor, 0.25)}`,
         }}
       >
@@ -512,7 +513,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
             <div
               className="py-5 px-6 border-b flex justify-between items-start shadow-[0_4px_20px_rgba(0,0,0,0.35)] gap-4"
               style={{
-                borderBottomColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
+                borderBottomColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
                 background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.14)} 0%, ${getAlternateShade(cardColor, 4)} 100%)`,
               }}
             >
@@ -676,7 +677,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     aria-label="Edit competitor profile"
                     className="bg-white/5 border border-(--btn-border) cursor-pointer py-2 px-3 rounded-md flex items-center gap-1.5 text-caption font-bold transition-all duration-150 hover:bg-(--btn-hover-bg) hover:border-(--btn-hover-border)"
                     style={{
-                      '--btn-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
+                      '--btn-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
                       '--btn-hover-bg': colorWithAlpha(primaryColor, 0.18),
                       '--btn-hover-border': primaryColor,
                       color: primaryColor,
@@ -693,7 +694,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   aria-label="Close drawer"
                   className="bg-white/4 border border-(--btn-border) text-fg-muted cursor-pointer p-2 rounded-md flex items-center justify-center transition-all duration-150 shrink-0 hover:text-white hover:border-(--btn-hover-border) hover:bg-(--btn-hover-bg) hover:shadow-(--btn-hover-shadow)"
                   style={{
-                    '--btn-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
+                    '--btn-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
                     '--btn-hover-bg': colorWithAlpha(primaryColor, 0.18),
                     '--btn-hover-border': primaryColor,
                     '--btn-hover-shadow': `0 0 10px ${colorWithAlpha(primaryColor, 0.3)}`,
@@ -771,7 +772,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                       className="flex gap-2 p-2 rounded-sm border"
                       style={{
                         background: getAlternateShade(cardColor, 6),
-                        borderColor: colorWithAlpha(primaryColor, 0.25, 'var(--color-border-subtle)'),
+                        borderColor: colorWithAlpha(primaryColor, 0.25, 'var(--color-line-subtle)'),
                       }}
                     >
                       <input
@@ -781,7 +782,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                         placeholder="Enter score (e.g. 1,050,000)..."
                         className="flex-1 py-2 px-3 rounded-sm border text-white text-sm font-bold"
                         style={{
-                          borderColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
+                          borderColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
                           background: backgroundColor,
                         }}
                       />
@@ -815,7 +816,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 className="border rounded-md p-4.5 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
                 style={{
                   background: getAlternateShade(cardColor, 2),
-                  borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)'),
+                  borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-line)'),
                 }}
               >
                 <div className="flex items-center gap-2 mb-3.5">
@@ -828,7 +829,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     className={statBoxClass}
                     style={{
                       background: getAlternateShade(cardColor, 5),
-                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-line-subtle)'),
                     }}
                   >
                     <span className={statLabelClass} style={{ color: textColor }}>Personal Best</span>
@@ -841,7 +842,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     className={statBoxClass}
                     style={{
                       background: getAlternateShade(cardColor, 5),
-                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-line-subtle)'),
                     }}
                   >
                     <span className={statLabelClass} style={{ color: textColor }}>Playstyle</span>
@@ -854,7 +855,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     className={statBoxClass}
                     style={{
                       background: getAlternateShade(cardColor, 5),
-                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-line-subtle)'),
                     }}
                   >
                     <span className={statLabelClass} style={{ color: textColor }}>Assigned Tier</span>
@@ -867,7 +868,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     className={statBoxClass}
                     style={{
                       background: getAlternateShade(cardColor, 5),
-                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-line-subtle)'),
                     }}
                   >
                     <span className={statLabelClass} style={{ color: textColor }}>Overall Qual Seed</span>
@@ -885,7 +886,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     className={statBoxClass}
                     style={{
                       background: getAlternateShade(cardColor, 5),
-                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-line-subtle)'),
                     }}
                   >
                     <span className={statLabelClass} style={{ color: textColor }}>Bracket Seed</span>
@@ -901,7 +902,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     className={statBoxClass}
                     style={{
                       background: getAlternateShade(cardColor, 5),
-                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-line-subtle)'),
                     }}
                   >
                     <span className={statLabelClass} style={{ color: textColor }}>Final Place</span>
@@ -935,7 +936,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 className="border rounded-md p-4.5 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
                 style={{
                   background: getAlternateShade(cardColor, 2),
-                  borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)'),
+                  borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-line)'),
                 }}
               >
                 <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
@@ -993,7 +994,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 ) : (
                   <div className="flex flex-col gap-3">
                     {playerMatches.map((m, idx) => {
-                      const matchBorderColor = m.isWinner ? '#10b981' : m.isComplete ? '#f43f5e' : (m.tierColor || primaryColor);
+                      const matchBorderColor = m.isWinner ? STATUS_COLORS.matchWin : m.isComplete ? STATUS_COLORS.matchLoss : (m.tierColor || primaryColor);
 
                       return (
                         <div
@@ -1001,7 +1002,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                           className="rounded-sm border border-l-4 overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.2)] transition-all duration-150"
                           style={{
                             background: getAlternateShade(cardColor, 4),
-                            borderColor: colorWithAlpha(m.tierColor || primaryColor, 0.25, 'var(--color-border-subtle)'),
+                            borderColor: colorWithAlpha(m.tierColor || primaryColor, 0.25, 'var(--color-line-subtle)'),
                             borderLeftColor: matchBorderColor,
                           }}
                         >
@@ -1010,7 +1011,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                             className="py-2 px-3.5 flex items-center justify-between border-b"
                             style={{
                               background: getAlternateShade(cardColor, 6),
-                              borderBottomColor: colorWithAlpha(m.tierColor || primaryColor, 0.15, 'var(--color-border-subtle)'),
+                              borderBottomColor: colorWithAlpha(m.tierColor || primaryColor, 0.15, 'var(--color-line-subtle)'),
                             }}
                           >
                             <div className="flex items-center gap-2">
@@ -1136,7 +1137,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
             <div
               className="py-4 px-6 border-t flex gap-3"
               style={{
-                borderTopColor: colorWithAlpha(primaryColor, 0.25, 'var(--color-border)'),
+                borderTopColor: colorWithAlpha(primaryColor, 0.25, 'var(--color-line)'),
                 background: getAlternateShade(cardColor, 3),
               }}
             >
@@ -1144,7 +1145,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 onClick={requestClose}
                 className="w-full p-2.5 text-sm font-bold rounded-sm bg-white/5 border border-(--btn-border) text-white cursor-pointer transition-all duration-150 hover:bg-(--btn-hover-bg) hover:border-(--btn-hover-border)"
                 style={{
-                  '--btn-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
+                  '--btn-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
                   '--btn-hover-bg': colorWithAlpha(primaryColor, 0.15),
                   '--btn-hover-border': primaryColor,
                 } as React.CSSProperties}

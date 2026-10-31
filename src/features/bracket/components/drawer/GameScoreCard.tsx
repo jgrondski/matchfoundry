@@ -47,7 +47,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
         background: gameCardBg,
         border: isTiebreakerGame
           ? `1px solid ${colorWithAlpha(primaryColor, 0.45)}`
-          : `1px solid ${colorWithAlpha(primaryColor, 0.22, 'var(--color-border)')}`,
+          : `1px solid ${colorWithAlpha(primaryColor, 0.22, 'var(--color-line)')}`,
       }}
     >
       {/* Game card top bar */}
@@ -109,7 +109,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
               title="Set winner"
               className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0"
               style={{
-                border: game.winner === p1?.id ? `2px solid ${primaryColor}` : '1px solid var(--color-border)',
+                border: game.winner === p1?.id ? `2px solid ${primaryColor}` : '1px solid var(--color-line)',
                 background: game.winner === p1?.id ? primaryColor : 'transparent',
                 color: getContrastingTextColor(primaryColor),
               }}
@@ -118,7 +118,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
             </button>
             <span
               className={cn('text-xs truncate', game.winner === p1?.id ? 'font-bold' : 'font-medium')}
-              style={{ color: game.winner === p1?.id ? primaryColor : 'var(--color-text-secondary)' }}
+              style={{ color: game.winner === p1?.id ? primaryColor : 'var(--color-fg-secondary)' }}
             >
               {p1Name}
             </span>
@@ -131,7 +131,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
             onChange={e => onScoreChange(idx, 1, e.target.value)}
             className="font-mono tabular-nums tracking-tight w-full py-2 px-2.5 bg-black/45 rounded-sm text-white text-base font-bold text-center outline-none"
             style={{
-              border: game.winner === p1?.id ? `1px solid ${colorWithAlpha(primaryColor, 0.65)}` : '1px solid var(--color-border)',
+              border: game.winner === p1?.id ? `1px solid ${colorWithAlpha(primaryColor, 0.65)}` : '1px solid var(--color-line)',
               boxShadow: game.winner === p1?.id ? `0 0 10px ${colorWithAlpha(primaryColor, 0.2)}` : 'none',
             }}
           />
@@ -157,7 +157,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
           <div className="flex items-center justify-end gap-1.5 mb-1">
             <span
               className={cn('text-xs truncate', game.winner === p2?.id ? 'font-bold' : 'font-medium')}
-              style={{ color: game.winner === p2?.id ? primaryColor : 'var(--color-text-secondary)' }}
+              style={{ color: game.winner === p2?.id ? primaryColor : 'var(--color-fg-secondary)' }}
             >
               {p2Name}
             </span>
@@ -167,7 +167,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
               title="Set winner"
               className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0"
               style={{
-                border: game.winner === p2?.id ? `2px solid ${primaryColor}` : '1px solid var(--color-border)',
+                border: game.winner === p2?.id ? `2px solid ${primaryColor}` : '1px solid var(--color-line)',
                 background: game.winner === p2?.id ? primaryColor : 'transparent',
                 color: getContrastingTextColor(primaryColor),
               }}
@@ -183,7 +183,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
             onChange={e => onScoreChange(idx, 2, e.target.value)}
             className="font-mono tabular-nums tracking-tight w-full py-2 px-2.5 bg-black/45 rounded-sm text-white text-base font-bold text-center outline-none"
             style={{
-              border: game.winner === p2?.id ? `1px solid ${colorWithAlpha(primaryColor, 0.65)}` : '1px solid var(--color-border)',
+              border: game.winner === p2?.id ? `1px solid ${colorWithAlpha(primaryColor, 0.65)}` : '1px solid var(--color-line)',
               boxShadow: game.winner === p2?.id ? `0 0 10px ${colorWithAlpha(primaryColor, 0.2)}` : 'none',
             }}
           />

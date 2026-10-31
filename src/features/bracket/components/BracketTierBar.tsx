@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
 import { Button, buttonClasses, Chip, cn, IconButton } from '../../../components/ui';
+import { THEME_FALLBACK } from '../../../theme/palette';
 
 interface BracketTierBarProps {
   tournament: Tournament;
@@ -78,7 +79,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
 
         {sortedTiers.map(tier => {
           const isActive = tier.id === activeTier.id;
-          const tierColor = tier.primaryColor || '#f59e0b';
+          const tierColor = tier.primaryColor || THEME_FALLBACK.primaryColor;
           const contrastColor = getContrastingTextColor(tierColor);
 
           return (
@@ -132,7 +133,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
           <div className="relative flex w-46.25 max-w-full items-center">
             <Search
               size={13}
-              color={highlightedPlayerName ? 'var(--color-gold-bright)' : 'var(--color-text-muted)'}
+              color={highlightedPlayerName ? 'var(--color-gold-bright)' : 'var(--color-fg-muted)'}
               className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2"
             />
             <input

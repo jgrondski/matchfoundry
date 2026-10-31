@@ -128,7 +128,7 @@ export const ImportFromGlobalModal: React.FC<ImportFromGlobalModalProps> = ({
               />
               <Search
                 size={15}
-                color="var(--color-text-muted)"
+                color="var(--color-fg-muted)"
                 className="absolute top-1/2 left-2.5 -translate-y-1/2"
               />
             </div>

@@ -145,7 +145,7 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
 
             {!selectedPlayer && tournament.playersPool.length > 0 && (
               <div className="mt-2 py-8 px-6 rounded-md bg-canvas border border-dashed border-line text-center flex flex-col items-center gap-2.5">
-                <User size={28} color="var(--color-text-muted)" />
+                <User size={28} color="var(--color-fg-muted)" />
                 <div className="text-sm font-semibold text-fg-secondary">
                   Select a Competitor
                 </div>

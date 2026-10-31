@@ -37,7 +37,7 @@ export const BracketStageNavBar: React.FC<BracketStageNavBarProps> = ({
     <div
       id="bracket-stage-nav-bar"
       className={cn(
-        'z-41 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-line bg-[rgba(15,18,26,0.88)] py-2 px-5 backdrop-blur-md',
+        'z-41 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-line bg-header/88 py-2 px-5 backdrop-blur-md',
         effectiveObsView === 'fit' ? 'relative top-0' : 'sticky'
       )}
       style={{

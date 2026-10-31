@@ -18,7 +18,7 @@ This document is the single source of truth for MatchFoundry's roadmap: complete
 | **Phase 8** | Architectural Hardening & Tournament Rules | **Complete** | Decoupled domain hooks, canonical defaults, CLI seeder, 415 automated tests, bye seed alternation (1 vs N), points qual 0-pt tiebreaker, OBS draft overlays. |
 | **Phase 9** | **Production Cloud Deployment, MatchFoundry™ Brand Launch & CI/CD** | **Complete** | Vercel Serverless runtime (`api/index.ts`), Neon cloud PostgreSQL migration, MatchFoundry™ rebrand & strategic trademark rollout, zero runtime git artifacts, and Branch/PR CI/CD deployment gating. |
 | **Phase 10**| **Live & Online Qualifiers Engine** | **Complete** | Competitor self-service portal (`/:slug/qualify`), Twitch OAuth 2.0 on production HTTPS, 6–8 char NES Authwords, qual window telemetry, review queue (`/:slug/manage/review`), Discord webhooks, tokened run links & draft recovery. |
-| **Phase 11**| **Styling Foundation & Tailwind Migration** | **Next Up** | Tailwind v4 theme tokens and shared UI components, one overlay system with dirty-aware dismissal, every component converted off inline styles, lint-enforced. |
+| **Phase 11**| **Styling Foundation & Tailwind Migration** | **Complete** | Tailwind v4 theme tokens and shared UI components, one overlay system with dirty-aware dismissal, every component converted off inline styles, lint-enforced. |
 | **Phase 12**| **Mobile-Friendly App (360×800)** | **Upcoming** | Spectator bottom nav and admin menu, floor judge scoring / qualifier entry / review queue on phones, compact visual bracket, card lists for tables, every route overflow-free. |
 | **Phase 13**| **Universal Match Data Export & Custom Analytics** | **Upcoming** | Universal match data export (CSV with UTF-8 BOM, Google Sheets TSV clipboard copy, JSON) with custom column selection and reordering. |
 
@@ -131,7 +131,7 @@ flowchart TD
         H2["Phase 10: Online Qualifiers Portal, Twitch OAuth, NES Authwords, Review Queue (/:slug/manage/review), Discord Webhooks, Run Links & Draft Recovery"]
     end
 
-    subgraph Phase11["Phase 11: Styling Foundation & Tailwind Migration [NEXT UP]"]
+    subgraph Phase11["Phase 11: Styling Foundation & Tailwind Migration [COMPLETE]"]
         P11["• Visual Regression Harness & Tailwind v4 Theme Tokens<br>• Shared UI Components & Overlay System (Dirty-Aware Dismissal)<br>• Full Component Conversion (10 Parallel Batches)<br>• Preflight, Palette Module & Lint Enforcement"]
     end
 
@@ -325,11 +325,10 @@ flowchart TD
 
 ---
 
-### Phase 11: Styling Foundation & Tailwind Migration [NEXT UP]
+### Phase 11: Styling Foundation & Tailwind Migration [COMPLETE]
 * **Goal:** Every component styled with Tailwind v4 classes and shared UI components instead of inline styles (about 3,000 sites today), with no visual change beyond token snapping, and one overlay system that applies the dismissal rule everywhere.
 * **Dismissal rule:** read-only overlays and confirmations close on backdrop click/tap and Escape; forms with unsaved changes show "Discard unsaved changes?" (Keep Editing / Discard Changes).
 * **Steps:** 11.0 foundation (visual regression harness, Tailwind, tokens, `src/components/ui`); 11.1 overlay system (37 overlays); 11.2 conversion in 10 batches across two parallel waves; 11.3 cleanup (preflight, palette module, lint enforcement).
-* **Execution specs:** [`docs/specs/index.html`](specs/index.html), one HTML file per step.
 
 ---
 
