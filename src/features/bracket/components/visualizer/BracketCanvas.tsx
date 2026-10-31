@@ -11,6 +11,7 @@ import { ACCELERATED_HYBRID_POD_PALETTE, getMatchBranchColor } from '../../routi
 import { BracketSvgConnectors } from './BracketSvgConnectors';
 import { BracketMatchCard } from './BracketMatchCard';
 import { BracketChampionNode } from './BracketChampionNode';
+import { cn } from '../../../../components/ui';
 
 interface BracketCanvasProps {
   targetLayout: BracketLayoutMetadata;
@@ -105,8 +106,8 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
 
   return (
     <div
+      className="relative"
       style={{
-        position: 'relative',
         width: `${targetLayout.totalWidth}px`,
         height: `${targetLayout.totalHeight}px`,
         minWidth: `${targetLayout.totalWidth}px`,
@@ -135,26 +136,16 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
         return (
           <div
             key={sh.id}
+            className={cn(
+              'absolute z-10 inline-flex items-center py-1 px-2.5 text-xs font-black uppercase tracking-widest rounded-sm border-[1.5px] shadow-[0_2px_8px_rgba(0,0,0,0.3)]',
+              badgeAccentColor && 'border-x-4'
+            )}
             style={{
-              position: 'absolute',
               left: `${sh.x}px`,
               top: `${sh.y}px`,
-              display: 'inline-flex',
-              alignItems: 'center',
-              padding: '0.2rem 0.65rem',
-              fontSize: '0.72rem',
-              fontWeight: 900,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
               color: primaryColor,
               background: effectiveCardBg,
-              borderTop: `1.5px solid ${secondaryColor}`,
-              borderBottom: `1.5px solid ${secondaryColor}`,
-              borderLeft: badgeAccentColor ? `4px solid ${badgeAccentColor}` : `1.5px solid ${secondaryColor}`,
-              borderRight: badgeAccentColor ? `4px solid ${badgeAccentColor}` : `1.5px solid ${secondaryColor}`,
-              borderRadius: 'var(--radius-sm)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-              zIndex: 10,
+              borderColor: badgeAccentColor ? `${secondaryColor} ${badgeAccentColor}` : secondaryColor,
             }}
           >
             {sh.title}
@@ -189,30 +180,25 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
         return (
           <div
             key={header.roundNumber}
+            className={cn(
+              'absolute z-10 flex items-center justify-center uppercase tracking-widest rounded-sm',
+              isFinals
+                ? 'h-11 text-base font-black border-2'
+                : 'h-8.5 text-caption font-extrabold border-[1.5px] shadow-[0_2px_8px_rgba(0,0,0,0.4)]',
+              roundAccentColor && 'border-x-4'
+            )}
             style={{
-              position: 'absolute',
               left: `${header.x}px`,
               top: `${header.y}px`,
               width: `${header.width}px`,
-              height: isFinals ? '44px' : '34px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: isFinals ? '1.02rem' : '0.82rem',
-              fontWeight: isFinals ? 900 : 800,
               color: primaryColor,
-              textTransform: 'uppercase',
-              letterSpacing: isFinals ? '0.1em' : '0.08em',
               background: effectiveCardBg,
-              borderRadius: 'var(--radius-sm)',
-              borderTop: isFinals ? `2px solid ${primaryColor}` : `1.5px solid ${secondaryColor}`,
-              borderBottom: isFinals ? `2px solid ${primaryColor}` : `1.5px solid ${secondaryColor}`,
-              borderLeft: roundAccentColor ? `4px solid ${roundAccentColor}` : isFinals ? `2px solid ${primaryColor}` : `1.5px solid ${secondaryColor}`,
-              borderRight: roundAccentColor ? `4px solid ${roundAccentColor}` : isFinals ? `2px solid ${primaryColor}` : `1.5px solid ${secondaryColor}`,
-              boxShadow: isFinals
-                ? `0 0 16px ${primaryColor}44, 0 4px 12px rgba(0, 0, 0, 0.45)`
-                : '0 2px 8px rgba(0, 0, 0, 0.4)',
-              zIndex: 10,
+              borderColor: roundAccentColor
+                ? `${isFinals ? primaryColor : secondaryColor} ${roundAccentColor}`
+                : isFinals
+                ? primaryColor
+                : secondaryColor,
+              boxShadow: isFinals ? `0 0 16px ${primaryColor}44, 0 4px 12px rgba(0, 0, 0, 0.45)` : undefined,
             }}
           >
             {header.name}

@@ -104,13 +104,12 @@ describe('flagUtils and CountryFlag vector SVG rendering (Windows compatibility)
       const html = renderToStaticMarkup(
         <CountryFlag
           country="IS"
-          className="custom-flag-class"
-          style={{ fontSize: '1.5rem', opacity: 0.8 }}
+          className="custom-flag-class text-2xl opacity-80"
         />
       );
-      expect(html).toContain('class="custom-flag-class"');
-      expect(html).toContain('font-size:1.5rem');
-      expect(html).toContain('opacity:0.8');
+      expect(html).toContain('custom-flag-class');
+      expect(html).toContain('text-2xl');
+      expect(html).toContain('opacity-80');
     });
 
     it('returns null when country is undefined or empty', () => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trophy } from 'lucide-react';
 import { colorWithAlpha } from '../../colorUtils';
+import { cn } from '../../../../components/ui';
 
 import { HybridStageTab } from './BracketStageNavBar';
 
@@ -52,97 +53,52 @@ export const BracketBroadcastHeader: React.FC<BracketBroadcastHeaderProps> = ({
     }
   };
 
+  const isChroma = isObsMode && !!chromaHex;
+
   return (
     <div
       id="bracket-broadcast-header"
+      className={cn(
+        'flex w-full shrink-0 flex-wrap items-center justify-between gap-3 z-35',
+        isObsMode ? 'py-2.5 px-5' : 'py-3 px-6',
+        isChroma ? 'bg-transparent' : 'border-b bg-[rgba(15,18,26,0.82)] backdrop-blur-md'
+      )}
       style={{
-        width: '100%',
-        padding: isObsMode ? '0.65rem 1.25rem' : '0.75rem 1.5rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.75rem',
-        zIndex: 35,
-        borderBottom: isObsMode && chromaHex ? 'none' : `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-border)')}`,
-        background: isObsMode && chromaHex ? 'transparent' : 'rgba(15, 18, 26, 0.82)',
-        backdropFilter: isObsMode && chromaHex ? 'none' : 'blur(10px)',
-        WebkitBackdropFilter: isObsMode && chromaHex ? 'none' : 'blur(10px)',
-        boxSizing: 'border-box',
-        flexShrink: 0,
+        borderBottomColor: isChroma ? undefined : colorWithAlpha(primaryColor, 0.25, 'var(--color-border)'),
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
           <Trophy size={isObsMode ? 18 : 20} color="var(--color-gold-bright)" />
           <span
-            style={{
-              fontSize: isObsMode ? '1.3rem' : '1.45rem',
-              fontWeight: 800,
-              color: '#ffffff',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.2,
-            }}
+            className={cn(
+              'font-extrabold text-white tracking-tight leading-tight',
+              isObsMode ? 'text-xl' : 'text-2xl'
+            )}
           >
             {tournamentName}
           </span>
         </div>
 
         <span
+          className="text-caption font-extrabold uppercase tracking-wider py-0.5 px-2.5 rounded-full border"
           style={{
-            fontSize: '0.78rem',
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            padding: '0.18rem 0.65rem',
-            borderRadius: 'var(--radius-full)',
             background: colorWithAlpha(primaryColor, 0.22),
             color: primaryColor,
-            border: `1px solid ${colorWithAlpha(primaryColor, 0.5)}`,
+            borderColor: colorWithAlpha(primaryColor, 0.5),
           }}
         >
           {tierName}
         </span>
 
         {isDraft && (
-          <span
-            style={{
-              fontSize: '0.72rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              padding: '0.18rem 0.65rem',
-              borderRadius: 'var(--radius-full)',
-              background: 'rgba(245, 158, 11, 0.22)',
-              color: 'var(--color-gold-bright)',
-              border: '1px solid rgba(245, 158, 11, 0.55)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: 'var(--color-gold-bright)',
-                boxShadow: '0 0 6px var(--color-gold-bright)',
-              }}
-            />
+          <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider py-0.5 px-2.5 rounded-full bg-gold/22 text-gold-bright border border-gold/55">
+            <span className="size-1.5 rounded-full bg-gold-bright shadow-[0_0_6px_var(--color-gold-bright)]" />
             Draft Preview
           </span>
         )}
 
-        <span
-          style={{
-            fontSize: '0.78rem',
-            fontWeight: 600,
-            color: 'var(--color-text-muted)',
-          }}
-        >
-          {getStageLabel()}
-        </span>
+        <span className="text-caption font-semibold text-fg-muted">{getStageLabel()}</span>
       </div>
     </div>
   );

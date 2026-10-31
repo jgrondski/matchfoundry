@@ -3,6 +3,7 @@ import { ACCELERATED_HYBRID_POD_PALETTE } from '../../routingChips';
 import { BracketLayoutMetadata } from '../../bracketLayout';
 import { BracketRound, SeededPlayer } from '../../types';
 import { BracketViewMode } from '../../layout/types';
+import { cn } from '../../../../components/ui';
 
 interface BracketQualifierPodGridProps {
   effectiveCardBg: string;
@@ -42,61 +43,43 @@ export const BracketQualifierPodGrid: React.FC<BracketQualifierPodGridProps> = (
   const isSideBySide = effectiveObsView === 'fit' || effectiveObsView === 'split';
   const effectiveLbColor = lowerBracketColor || ACCELERATED_HYBRID_POD_PALETTE.LB.border;
 
+  const podCls =
+    'flex flex-col overflow-hidden rounded-md border-[1.5px] border-x-4 shadow-[0_2px_8px_rgba(0,0,0,0.4)]';
+  const upperPodMinWidth = `${(layoutPreMergeUpper?.totalWidth || 1168) + 24}px`;
+  const lowerPodMinWidth = `${(layoutLowerBracket?.totalWidth || 1172) + 24}px`;
+
   const renderPod1 = () => (
     <div
+      className={podCls}
       style={{
         background: effectiveCardBg,
-        borderTop: `1.5px solid ${secondaryColor}`,
-        borderBottom: `1.5px solid ${secondaryColor}`,
-        borderLeft: `4px solid ${ACCELERATED_HYBRID_POD_PALETTE.AR.border}`,
-        borderRight: `4px solid ${ACCELERATED_HYBRID_POD_PALETTE.AR.border}`,
-        borderRadius: 'var(--radius-md)',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
+        borderColor: `${secondaryColor} ${ACCELERATED_HYBRID_POD_PALETTE.AR.border}`,
       }}
     >
       <div
-        style={{
-          padding: '0.65rem 0.85rem',
-          background: effectiveCardBg,
-          borderBottom: `1.5px solid ${secondaryColor}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.5rem',
-        }}
+        className="flex items-center justify-between gap-2 border-b-[1.5px] py-2.5 px-3.5"
+        style={{ background: effectiveCardBg, borderBottomColor: secondaryColor }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-2">
           <span
-            style={{
-              fontSize: '0.82rem',
-              fontWeight: 900,
-              color: primaryColor,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              whiteSpace: 'nowrap',
-            }}
+            className="text-caption font-black uppercase tracking-wider whitespace-nowrap"
+            style={{ color: primaryColor }}
           >
             Pod 1: Accelerated Round
           </span>
           <span
+            className="rounded-xs border py-0.5 px-2 text-3xs font-extrabold"
             style={{
-              fontSize: '0.65rem',
-              fontWeight: 800,
-              padding: '0.15rem 0.45rem',
-              borderRadius: '3px',
               background: ACCELERATED_HYBRID_POD_PALETTE.AR.badgeBg,
               color: ACCELERATED_HYBRID_POD_PALETTE.AR.text,
-              border: `1px solid ${ACCELERATED_HYBRID_POD_PALETTE.AR.border}88`,
+              borderColor: `${ACCELERATED_HYBRID_POD_PALETTE.AR.border}88`,
             }}
           >
             AR
           </span>
         </div>
       </div>
-      <div style={{ padding: '0.5rem 0.375rem', display: 'flex', justifyContent: 'center' }}>
+      <div className="flex justify-center py-2 px-1.5">
         {renderCanvas(layoutAccel, accelRounds, true, false, null)}
       </div>
     </div>
@@ -104,52 +87,30 @@ export const BracketQualifierPodGrid: React.FC<BracketQualifierPodGridProps> = (
 
   const renderPod2 = () => (
     <div
+      className={podCls}
       style={{
         background: effectiveCardBg,
-        borderTop: `1.5px solid ${secondaryColor}`,
-        borderBottom: `1.5px solid ${secondaryColor}`,
-        borderLeft: `4px solid ${ACCELERATED_HYBRID_POD_PALETTE.UB.border}`,
-        borderRight: `4px solid ${ACCELERATED_HYBRID_POD_PALETTE.UB.border}`,
-        borderRadius: 'var(--radius-md)',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        minWidth: `${(layoutPreMergeUpper?.totalWidth || 1168) + 24}px`,
+        borderColor: `${secondaryColor} ${ACCELERATED_HYBRID_POD_PALETTE.UB.border}`,
+        minWidth: upperPodMinWidth,
       }}
     >
       <div
-        style={{
-          padding: '0.65rem 1rem',
-          background: effectiveCardBg,
-          borderBottom: `1.5px solid ${secondaryColor}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.5rem',
-        }}
+        className="flex items-center justify-between gap-2 border-b-[1.5px] py-2.5 px-4"
+        style={{ background: effectiveCardBg, borderBottomColor: secondaryColor }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-2">
           <span
-            style={{
-              fontSize: '0.82rem',
-              fontWeight: 900,
-              color: primaryColor,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}
+            className="text-caption font-black uppercase tracking-wider"
+            style={{ color: primaryColor }}
           >
             Pod 2: Upper Bracket
           </span>
           <span
+            className="rounded-xs border py-0.5 px-2 text-3xs font-extrabold"
             style={{
-              fontSize: '0.65rem',
-              fontWeight: 800,
-              padding: '0.15rem 0.45rem',
-              borderRadius: '3px',
               background: ACCELERATED_HYBRID_POD_PALETTE.UB.badgeBg,
               color: ACCELERATED_HYBRID_POD_PALETTE.UB.text,
-              border: `1px solid ${ACCELERATED_HYBRID_POD_PALETTE.UB.border}88`,
+              borderColor: `${ACCELERATED_HYBRID_POD_PALETTE.UB.border}88`,
             }}
           >
             UB
@@ -157,15 +118,12 @@ export const BracketQualifierPodGrid: React.FC<BracketQualifierPodGridProps> = (
         </div>
       </div>
       <div
-        style={{
-          padding: '0.5rem 0.25rem',
-          overflowX: effectiveObsView === 'fit' ? 'hidden' : 'auto',
-          overflowY: 'hidden',
-          maxWidth: '100%',
-          boxSizing: 'border-box',
-        }}
+        className={cn(
+          'max-w-full overflow-y-hidden py-2 px-1',
+          effectiveObsView === 'fit' ? 'overflow-x-hidden' : 'overflow-x-auto'
+        )}
       >
-        <div style={{ width: 'fit-content', minWidth: 'max-content', margin: '0 auto' }}>
+        <div className="mx-auto w-fit min-w-max">
           {renderCanvas(layoutPreMergeUpper, preUpperRounds, true, false, null)}
         </div>
       </div>
@@ -174,53 +132,30 @@ export const BracketQualifierPodGrid: React.FC<BracketQualifierPodGridProps> = (
 
   const renderPod3 = () => (
     <div
+      className={cn(podCls, !isSideBySide && 'w-full')}
       style={{
         background: effectiveCardBg,
-        borderTop: `1.5px solid ${secondaryColor}`,
-        borderBottom: `1.5px solid ${secondaryColor}`,
-        borderLeft: `4px solid ${effectiveLbColor}`,
-        borderRight: `4px solid ${effectiveLbColor}`,
-        borderRadius: 'var(--radius-md)',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        width: isSideBySide ? undefined : '100%',
-        minWidth: isSideBySide ? `${(layoutLowerBracket?.totalWidth || 1172) + 24}px` : undefined,
+        borderColor: `${secondaryColor} ${effectiveLbColor}`,
+        minWidth: isSideBySide ? lowerPodMinWidth : undefined,
       }}
     >
       <div
-        style={{
-          padding: '0.65rem 1rem',
-          background: effectiveCardBg,
-          borderBottom: `1.5px solid ${secondaryColor}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.5rem',
-        }}
+        className="flex items-center justify-between gap-2 border-b-[1.5px] py-2.5 px-4"
+        style={{ background: effectiveCardBg, borderBottomColor: secondaryColor }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-2">
           <span
-            style={{
-              fontSize: '0.82rem',
-              fontWeight: 900,
-              color: primaryColor,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}
+            className="text-caption font-black uppercase tracking-wider"
+            style={{ color: primaryColor }}
           >
             Pod 3: Lower Bracket
           </span>
           <span
+            className="rounded-xs border py-0.5 px-2 text-3xs font-extrabold"
             style={{
-              fontSize: '0.65rem',
-              fontWeight: 800,
-              padding: '0.15rem 0.45rem',
-              borderRadius: '3px',
               background: ACCELERATED_HYBRID_POD_PALETTE.LB.badgeBg,
               color: ACCELERATED_HYBRID_POD_PALETTE.LB.text,
-              border: `1px solid ${ACCELERATED_HYBRID_POD_PALETTE.LB.border}88`,
+              borderColor: `${ACCELERATED_HYBRID_POD_PALETTE.LB.border}88`,
             }}
           >
             LB
@@ -228,33 +163,24 @@ export const BracketQualifierPodGrid: React.FC<BracketQualifierPodGridProps> = (
         </div>
       </div>
       <div
-        style={{
-          padding: '0.5rem 0.25rem',
-          overflowX: effectiveObsView === 'fit' ? 'hidden' : 'auto',
-          overflowY: 'hidden',
-          maxWidth: '100%',
-          boxSizing: 'border-box',
-        }}
+        className={cn(
+          'max-w-full overflow-y-hidden py-2 px-1',
+          effectiveObsView === 'fit' ? 'overflow-x-hidden' : 'overflow-x-auto'
+        )}
       >
-        <div style={{ width: 'fit-content', minWidth: 'max-content', margin: '0 auto' }}>
+        <div className="mx-auto w-fit min-w-max">
           {renderCanvas(layoutLowerBracket, lowerBracketRounds, true, false, null)}
         </div>
       </div>
     </div>
   );
 
+  // Below 1025px the pods stack in one column; the wide template comes from layout widths.
   if (isSideBySide) {
     return (
       <div
-        className="qualifier-side-by-side-pods"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `max-content minmax(${(layoutPreMergeUpper?.totalWidth || 1168) + 24}px, 1fr) minmax(${(layoutLowerBracket?.totalWidth || 1172) + 24}px, 1fr)`,
-          gap: '1.25rem',
-          width: '100%',
-          boxSizing: 'border-box',
-          alignItems: 'stretch',
-        }}
+        className="grid w-full grid-cols-1 items-stretch gap-5 min-[1025px]:grid-cols-(--pod-cols)"
+        style={{ '--pod-cols': `max-content minmax(${upperPodMinWidth}, 1fr) minmax(${lowerPodMinWidth}, 1fr)` } as React.CSSProperties}
       >
         {renderPod1()}
         {renderPod2()}
@@ -264,18 +190,11 @@ export const BracketQualifierPodGrid: React.FC<BracketQualifierPodGridProps> = (
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', width: '100%' }}>
+    <div className="flex w-full flex-col gap-7">
       {/* Top Row: Pod 1 (Accelerated Round: compact) & Pod 2 (Upper Bracket: fills remaining space) */}
       <div
-        className="qualifier-top-pods"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `max-content minmax(${(layoutPreMergeUpper?.totalWidth || 1168) + 24}px, 1fr)`,
-          gap: '1.25rem',
-          width: '100%',
-          boxSizing: 'border-box',
-          alignItems: 'stretch',
-        }}
+        className="grid w-full grid-cols-1 items-stretch gap-5 min-[1025px]:grid-cols-(--pod-cols)"
+        style={{ '--pod-cols': `max-content minmax(${upperPodMinWidth}, 1fr)` } as React.CSSProperties}
       >
         {renderPod1()}
         {renderPod2()}

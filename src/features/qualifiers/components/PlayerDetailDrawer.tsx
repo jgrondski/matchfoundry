@@ -28,6 +28,12 @@ import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../players/components/PlaystyleChip';
 import { PlayerEditModal } from '../../players/components/PlayerEditModal';
 import { Overlay } from '../../../components/overlay';
+import { cn } from '../../../components/ui';
+
+const sectionTitleClass = 'text-sm font-extrabold text-white uppercase tracking-wide m-0';
+const statBoxClass = 'py-2.5 px-3 rounded-sm flex flex-col gap-1 border';
+const statLabelClass = 'text-2xs uppercase tracking-wide font-semibold';
+const quickBadgeClass = 'inline-flex items-center gap-1 py-1 px-2.5 rounded-full border text-caption font-bold';
 
 export interface PlayerDetailDrawerProps {
   isOpen: boolean;
@@ -308,51 +314,31 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
   const renderQualSubmissionsSection = () => (
     <div
+      className="border rounded-md p-4.5 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
       style={{
         background: getAlternateShade(cardColor, 2),
-        border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
-        borderRadius: 'var(--radius-md)',
-        padding: '1.1rem',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+        borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)'),
       }}
       data-testid="qual-submissions-card"
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
           <Trophy size={16} color={primaryColor} />
-          <h3 style={sectionTitleStyle}>Qual Submissions</h3>
+          <h3 className={sectionTitleClass}>Qual Submissions</h3>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-2">
           <span
-            className="tabular-nums"
+            className="font-mono tabular-nums tracking-tight text-xs font-bold py-0.5 px-2 rounded-full border"
             style={{
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              padding: '0.15rem 0.55rem',
-              borderRadius: 'var(--radius-full)',
               background: colorWithAlpha(primaryColor, 0.12),
               color: primaryColor,
-              border: `1px solid ${colorWithAlpha(primaryColor, 0.25)}`,
+              borderColor: colorWithAlpha(primaryColor, 0.25),
             }}
           >
             {playerSubmissions.length} {playerSubmissions.length === 1 ? 'submission' : 'submissions'}
           </span>
           {isVerified && (
-            <span
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                padding: '0.12rem 0.55rem',
-                borderRadius: 'var(--radius-full)',
-                background: 'rgba(34, 197, 94, 0.2)',
-                color: '#4ade80',
-                border: '1px solid rgba(34, 197, 94, 0.4)',
-                boxShadow: '0 0 8px rgba(34, 197, 94, 0.25)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-              }}
-            >
+            <span className="text-xs font-extrabold py-0.5 px-2 rounded-full bg-green-500/20 text-green-400 border border-green-500/40 shadow-[0_0_8px_rgba(34,197,94,0.25)] inline-flex items-center gap-1">
               <Check size={11} strokeWidth={3} /> Verified
             </span>
           )}
@@ -360,11 +346,11 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
       </div>
 
       {playerSubmissions.length === 0 ? (
-        <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+        <div className="p-6 text-center text-fg-muted text-sm">
           No qual submissions logged yet.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+        <div className="flex flex-col gap-2">
           {playerSubmissions.map((sub, idx) => {
             const isMaxout = sub.score >= MAXOUT_THRESHOLD;
             const isKicker = tournament.qualFormat === 'HIGH_SCORE' && sub.score === effectiveRankRow?.kickerScore && sub.score < MAXOUT_THRESHOLD;
@@ -373,9 +359,8 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
             return (
               <div
                 key={sub.id}
+                className="py-3 px-4 rounded-sm border flex items-center justify-between transition-all duration-150"
                 style={{
-                  padding: '0.75rem 0.95rem',
-                  borderRadius: 'var(--radius-sm)',
                   background: isMaxout
                     ? `linear-gradient(90deg, ${colorWithAlpha(primaryColor, 0.16)} 0%, ${getAlternateShade(cardColor, 4)} 100%)`
                     : isKicker
@@ -383,34 +368,22 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     : isBest
                     ? `linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, ${getAlternateShade(cardColor, 4)} 100%)`
                     : getAlternateShade(cardColor, 4),
-                  border: isMaxout
-                    ? `1px solid ${colorWithAlpha(primaryColor, 0.45)}`
+                  borderColor: isMaxout
+                    ? colorWithAlpha(primaryColor, 0.45)
                     : isKicker
-                    ? '1px solid rgba(56, 189, 248, 0.35)'
+                    ? 'rgba(56, 189, 248, 0.35)'
                     : isBest
-                    ? '1px solid rgba(16, 185, 129, 0.35)'
-                    : `1px solid ${colorWithAlpha(primaryColor, 0.15, 'var(--color-border-subtle)')}`,
-                  boxShadow: isMaxout ? `0 2px 10px ${colorWithAlpha(primaryColor, 0.12)}` : 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  transition: 'all 0.15s ease',
+                    ? 'rgba(16, 185, 129, 0.35)'
+                    : colorWithAlpha(primaryColor, 0.15, 'var(--color-border-subtle)'),
+                  boxShadow: isMaxout ? `0 2px 10px ${colorWithAlpha(primaryColor, 0.12)}` : undefined,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div className="flex items-center gap-3">
                   <div
-                    className="tabular-nums"
+                    className="font-mono tabular-nums tracking-tight size-6.5 rounded-full border flex items-center justify-center text-xs font-extrabold"
                     style={{
-                      width: '26px',
-                      height: '26px',
-                      borderRadius: '50%',
                       background: isMaxout ? colorWithAlpha(primaryColor, 0.25) : colorWithAlpha(primaryColor, 0.1),
-                      border: `1px solid ${isMaxout ? colorWithAlpha(primaryColor, 0.5) : colorWithAlpha(primaryColor, 0.2)}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
+                      borderColor: isMaxout ? colorWithAlpha(primaryColor, 0.5) : colorWithAlpha(primaryColor, 0.2),
                       color: isMaxout ? primaryColor : textColor,
                     }}
                   >
@@ -418,34 +391,22 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   </div>
 
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span
-                        className="tabular-nums"
-                        style={{
-                          fontWeight: 800,
-                          fontSize: '1rem',
-                          color: isMaxout ? primaryColor : '#ffffff',
-                          letterSpacing: '-0.01em',
-                        }}
+                        className={cn('font-mono tabular-nums tracking-tight font-extrabold text-base', !isMaxout && 'text-white')}
+                        style={{ color: isMaxout ? primaryColor : undefined }}
                       >
                         {sub.score.toLocaleString()}
                       </span>
 
                       {isMaxout && (
                         <span
+                          className="inline-flex items-center gap-1 py-0.5 px-2 rounded-sm border text-2xs font-extrabold tracking-wide"
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            padding: '0.12rem 0.45rem',
-                            borderRadius: 'var(--radius-sm)',
                             background: colorWithAlpha(primaryColor, 0.25),
                             color: primaryColor,
-                            border: `1px solid ${colorWithAlpha(primaryColor, 0.5)}`,
+                            borderColor: colorWithAlpha(primaryColor, 0.5),
                             boxShadow: `0 0 8px ${colorWithAlpha(primaryColor, 0.25)}`,
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            letterSpacing: '0.03em',
                           }}
                         >
                           <Sparkles size={11} /> MAXOUT
@@ -453,49 +414,19 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                       )}
 
                       {isKicker && (
-                        <span
-                          style={{
-                            padding: '0.12rem 0.45rem',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(56, 189, 248, 0.2)',
-                            color: '#38bdf8',
-                            border: '1px solid rgba(56, 189, 248, 0.4)',
-                            fontSize: '0.7rem',
-                            fontWeight: 800,
-                            letterSpacing: '0.03em',
-                          }}
-                        >
+                        <span className="py-0.5 px-2 rounded-sm bg-sky-400/20 text-sky-400 border border-sky-400/40 text-2xs font-extrabold tracking-wide">
                           KICKER
                         </span>
                       )}
 
                       {isBest && !isMaxout && (
-                        <span
-                          style={{
-                            padding: '0.12rem 0.45rem',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(16, 185, 129, 0.18)',
-                            color: '#34d399',
-                            border: '1px solid rgba(16, 185, 129, 0.35)',
-                            fontSize: '0.7rem',
-                            fontWeight: 700,
-                          }}
-                        >
+                        <span className="py-0.5 px-2 rounded-sm bg-green/18 text-green-bright border border-green/35 text-2xs font-bold">
                           Best
                         </span>
                       )}
                     </div>
 
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        fontSize: '0.72rem',
-                        color: 'var(--color-text-muted)',
-                        marginTop: '0.15rem',
-                      }}
-                    >
+                    <div className="flex items-center gap-1.5 text-xs text-fg-muted mt-0.5">
                       <Clock size={11} />
                       <span>
                         {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -507,15 +438,11 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 </div>
 
                 {/* Format Result Contribution & Delete */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div className="flex items-center gap-2.5">
                   {tournament.qualFormat === 'POINTS' ? (
                     <span
-                      className="tabular-nums"
-                      style={{
-                        fontWeight: 800,
-                        color: primaryColor,
-                        fontSize: '0.88rem',
-                      }}
+                      className="font-mono tabular-nums tracking-tight font-extrabold text-sm"
+                      style={{ color: primaryColor }}
                     >
                       {(() => {
                         const sorted = [...(tournament.pointsConfig || [])].sort((a, b) => b.minScore - a.minScore);
@@ -525,16 +452,13 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     </span>
                   ) : tournament.qualFormat === 'HIGH_SCORE' ? (
                     <span
-                      style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        color: isMaxout ? primaryColor : 'var(--color-text-muted)',
-                      }}
+                      className={cn('text-xs font-semibold', !isMaxout && 'text-fg-muted')}
+                      style={{ color: isMaxout ? primaryColor : undefined }}
                     >
                       {isMaxout ? 'Maxout' : isKicker ? 'Kicker' : 'Attempt'}
                     </span>
                   ) : (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                    <span className="text-xs text-fg-muted">
                       Logged
                     </span>
                   )}
@@ -543,20 +467,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => deleteQualifierScore(tournament.id, sub.id)}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'var(--color-red)',
-                        cursor: 'pointer',
-                        padding: '0.3rem',
-                        borderRadius: 'var(--radius-xs)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        opacity: 0.7,
-                        transition: 'opacity 0.15s ease',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+                      className="bg-transparent border-0 text-red cursor-pointer p-1 rounded-xs flex items-center opacity-70 transition-opacity duration-150 hover:opacity-100"
                       title="Delete attempt"
                     >
                       <Trash2 size={14} />
@@ -590,44 +501,29 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
           <>
             {/* Top Glowing Ambient Theme Stripe */}
             <div
+              className="absolute top-0 left-0 right-0 h-0.75 z-10"
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
                 background: `linear-gradient(90deg, transparent 0%, ${primaryColor} 25%, ${secondaryColor} 75%, transparent 100%)`,
                 boxShadow: `0 0 12px ${colorWithAlpha(primaryColor, 0.65)}`,
-                zIndex: 10,
               }}
             />
 
             {/* Glow-up Header */}
             <div
+              className="py-5 px-6 border-b flex justify-between items-start shadow-[0_4px_20px_rgba(0,0,0,0.35)] gap-4"
               style={{
-                padding: '1.25rem 1.5rem',
-                borderBottom: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-border)')}`,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
+                borderBottomColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
                 background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.14)} 0%, ${getAlternateShade(cardColor, 4)} 100%)`,
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
-                gap: '1rem',
               }}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+              <div className="flex flex-col min-w-0 flex-1">
                 {/* Tournament Title & Active Tier Badge Row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
                     <Trophy size={13} color={primaryColor} />
                     <span
-                      style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 800,
-                        color: primaryColor,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                      }}
+                      className="text-xs font-extrabold uppercase tracking-wider"
+                      style={{ color: primaryColor }}
                     >
                       {tournament.name}
                     </span>
@@ -635,27 +531,17 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
                   {resolvedTier?.name && (
                     <span
+                      className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full border text-xs font-extrabold tracking-wide uppercase"
                       style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        padding: '0.12rem 0.6rem',
-                        borderRadius: 'var(--radius-full)',
                         background: colorWithAlpha(primaryColor, 0.2),
                         color: primaryColor,
-                        border: `1px solid ${colorWithAlpha(primaryColor, 0.45)}`,
+                        borderColor: colorWithAlpha(primaryColor, 0.45),
                         boxShadow: `0 0 8px ${colorWithAlpha(primaryColor, 0.2)}`,
-                        fontSize: '0.72rem',
-                        fontWeight: 800,
-                        letterSpacing: '0.04em',
-                        textTransform: 'uppercase',
                       }}
                     >
                       <span
+                        className="size-1.5 rounded-full"
                         style={{
-                          width: '6px',
-                          height: '6px',
-                          borderRadius: '50%',
                           background: primaryColor,
                           boxShadow: `0 0 6px ${primaryColor}`,
                         }}
@@ -665,108 +551,57 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   )}
 
                   {isDQ && (
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        padding: '0.12rem 0.55rem',
-                        borderRadius: 'var(--radius-full)',
-                        background: 'rgba(239, 68, 68, 0.25)',
-                        color: '#fca5a5',
-                        border: '1px solid rgba(239, 68, 68, 0.5)',
-                        fontSize: '0.72rem',
-                        fontWeight: 800,
-                        letterSpacing: '0.04em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
+                    <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full bg-red/25 text-red-300 border border-red/50 text-xs font-extrabold tracking-wide uppercase">
                       <AlertTriangle size={11} /> Disqualified
                     </span>
                   )}
                 </div>
 
                 {/* Competitor Hero Row: Glowing Avatar Ring + Player Name */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                <div className="flex items-center gap-3.5">
                   <div
+                    className="size-11.5 rounded-full border-2 flex items-center justify-center shrink-0 text-xl"
                     style={{
-                      width: '46px',
-                      height: '46px',
-                      borderRadius: '50%',
                       background: `linear-gradient(135deg, ${colorWithAlpha(primaryColor, 0.25)} 0%, ${getAlternateShade(cardColor, 8)} 100%)`,
-                      border: `2px solid ${primaryColor}`,
+                      borderColor: primaryColor,
                       boxShadow: `0 0 14px ${colorWithAlpha(primaryColor, 0.35)}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      fontSize: '1.25rem',
                     }}
                   >
                     {player.country || player.avatarUrl ? (
                       <PlayerAvatar player={player} country={player.country} />
                     ) : (
-                      <span style={{ fontSize: '1rem', fontWeight: 800, color: primaryColor }}>
+                      <span className="text-base font-extrabold" style={{ color: primaryColor }}>
                         {player.name.slice(0, 1).toUpperCase()}
                       </span>
                     )}
                   </div>
 
-                  <div style={{ minWidth: 0 }}>
+                  <div className="min-w-0">
                     <h2
                       id={titleId}
-                      style={{
-                        fontSize: '1.45rem',
-                        fontWeight: 800,
-                        color: '#ffffff',
-                        letterSpacing: '-0.02em',
-                        margin: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        lineHeight: 1.2,
-                        flexWrap: 'wrap',
-                      }}
+                      className="text-2xl font-extrabold text-white tracking-tight m-0 flex items-center gap-2 leading-tight flex-wrap"
                     >
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span className="truncate">
                         {player.name}
                       </span>
                       {player.nickname && (
-                        <span
-                          style={{
-                            fontSize: '1.1rem',
-                            fontWeight: 700,
-                            fontStyle: 'italic',
-                            color: 'var(--color-gold-bright)',
-                          }}
-                        >
+                        <span className="text-lg font-bold italic text-gold-bright">
                           &quot;{player.nickname}&quot;
                         </span>
                       )}
                       {isVerified && (
                         <span
                           title="Verified Qualifier Competitor"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '18px',
-                            height: '18px',
-                            borderRadius: '50%',
-                            background: 'rgba(34, 197, 94, 0.25)',
-                            border: '1px solid rgba(34, 197, 94, 0.5)',
-                            color: '#4ade80',
-                            flexShrink: 0,
-                          }}
+                          className="inline-flex items-center justify-center size-4.5 rounded-full bg-green-500/25 border border-green-500/50 text-green-400 shrink-0"
                         >
                           <Check size={11} strokeWidth={3} />
                         </span>
                       )}
                     </h2>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                    <div className="flex items-center gap-2.5 mt-1 flex-wrap">
                       {player.displayName && player.displayName !== player.name && (
-                        <span style={{ fontSize: '0.78rem', color: 'var(--color-gold-bright)', fontWeight: 600 }}>
+                        <span className="text-caption text-gold-bright font-semibold">
                           Alias: {player.displayName}
                         </span>
                       )}
@@ -775,20 +610,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                           href={`https://twitch.tv/${player.twitchUsername}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{
-                            fontSize: '0.75rem',
-                            color: '#c084fc',
-                            fontWeight: 600,
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            background: 'rgba(168, 85, 247, 0.15)',
-                            border: '1px solid rgba(168, 85, 247, 0.35)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '0.1rem 0.45rem',
-                            transition: 'all 0.15s ease',
-                          }}
+                          className="text-xs text-purple-400 font-semibold no-underline inline-flex items-center gap-1 bg-purple-500/15 border border-purple-500/35 rounded-sm py-0.5 px-2 transition-all duration-150"
                           title={`Visit ${player.name}'s Twitch Channel`}
                         >
                           <span>twitch.tv/{player.twitchUsername}</span>
@@ -799,27 +621,16 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 </div>
 
                 {/* Quick Badges Row */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.65rem', flexWrap: 'wrap' }}>
+                <div className="flex items-center gap-2 mt-2.5 flex-wrap">
                   {/* Final Place Badge */}
                   {finalPlace !== '—' && (
                     <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        padding: '0.2rem 0.65rem',
-                        borderRadius: 'var(--radius-full)',
-                        background: effectiveStanding?.finalRank === 1
-                          ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(251, 191, 36, 0.2) 100%)'
-                          : 'rgba(255, 255, 255, 0.08)',
-                        color: effectiveStanding?.finalRank === 1 ? 'var(--color-gold-bright)' : '#ffffff',
-                        border: effectiveStanding?.finalRank === 1
-                          ? '1px solid rgba(245, 158, 11, 0.55)'
-                          : '1px solid var(--color-border)',
-                        boxShadow: effectiveStanding?.finalRank === 1 ? '0 0 10px rgba(245, 158, 11, 0.3)' : 'none',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                      }}
+                      className={cn(
+                        quickBadgeClass,
+                        effectiveStanding?.finalRank === 1
+                          ? 'bg-linear-135 from-gold/30 to-gold-bright/20 text-gold-bright border-gold/55 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                          : 'bg-white/8 text-white border-line shadow-none'
+                      )}
                     >
                       <Trophy size={12} color={effectiveStanding?.finalRank === 1 ? 'var(--color-gold-bright)' : undefined} />
                       Final: {finalPlace}
@@ -829,18 +640,12 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   {/* Bracket Seed Badge */}
                   {bracketSeed !== '—' && (
                     <span
+                      className={quickBadgeClass}
                       style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        padding: '0.2rem 0.65rem',
-                        borderRadius: 'var(--radius-full)',
                         background: colorWithAlpha(primaryColor, 0.18),
                         color: primaryColor,
-                        border: `1px solid ${colorWithAlpha(primaryColor, 0.45)}`,
+                        borderColor: colorWithAlpha(primaryColor, 0.45),
                         boxShadow: `0 0 8px ${colorWithAlpha(primaryColor, 0.2)}`,
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
                       }}
                     >
                       <Flame size={12} />
@@ -850,20 +655,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
                   {/* Overall Qual Seed Badge */}
                   {overallQualSeed !== '—' && (
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        padding: '0.2rem 0.65rem',
-                        borderRadius: 'var(--radius-full)',
-                        background: 'rgba(255, 255, 255, 0.06)',
-                        color: 'var(--color-text-secondary)',
-                        border: '1px solid var(--color-border)',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                      }}
-                    >
+                    <span className={cn(quickBadgeClass, 'bg-white/6 text-fg-secondary border-line')}>
                       Qual: {overallQualSeed}
                     </span>
                   )}
@@ -876,34 +668,19 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
               </div>
 
               {/* Header Actions: Edit Profile (if admin) + Close */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+              <div className="flex items-center gap-2 shrink-0">
                 {canManageTournament && (
                   <button
                     type="button"
                     onClick={() => setIsEditModalOpen(true)}
                     aria-label="Edit competitor profile"
+                    className="bg-white/5 border border-(--btn-border) cursor-pointer py-2 px-3 rounded-md flex items-center gap-1.5 text-caption font-bold transition-all duration-150 hover:bg-(--btn-hover-bg) hover:border-(--btn-hover-border)"
                     style={{
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-border)')}`,
+                      '--btn-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
+                      '--btn-hover-bg': colorWithAlpha(primaryColor, 0.18),
+                      '--btn-hover-border': primaryColor,
                       color: primaryColor,
-                      cursor: 'pointer',
-                      padding: '0.45rem 0.75rem',
-                      borderRadius: 'var(--radius-md)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.background = colorWithAlpha(primaryColor, 0.18);
-                      e.currentTarget.style.borderColor = primaryColor;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                      e.currentTarget.style.borderColor = colorWithAlpha(primaryColor, 0.35, 'var(--color-border)');
-                    }}
+                    } as React.CSSProperties}
                   >
                     <Edit2 size={13} />
                     <span>Edit Profile</span>
@@ -914,31 +691,13 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 <button
                   onClick={requestClose}
                   aria-label="Close drawer"
+                  className="bg-white/4 border border-(--btn-border) text-fg-muted cursor-pointer p-2 rounded-md flex items-center justify-center transition-all duration-150 shrink-0 hover:text-white hover:border-(--btn-hover-border) hover:bg-(--btn-hover-bg) hover:shadow-(--btn-hover-shadow)"
                   style={{
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    border: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-border)')}`,
-                    color: 'var(--color-text-muted)',
-                    cursor: 'pointer',
-                    padding: '0.45rem',
-                    borderRadius: 'var(--radius-md)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.15s ease',
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#ffffff';
-                    e.currentTarget.style.borderColor = primaryColor;
-                    e.currentTarget.style.background = colorWithAlpha(primaryColor, 0.18);
-                    e.currentTarget.style.boxShadow = `0 0 10px ${colorWithAlpha(primaryColor, 0.3)}`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'var(--color-text-muted)';
-                    e.currentTarget.style.borderColor = colorWithAlpha(primaryColor, 0.35, 'var(--color-border)');
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
+                    '--btn-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
+                    '--btn-hover-bg': colorWithAlpha(primaryColor, 0.18),
+                    '--btn-hover-border': primaryColor,
+                    '--btn-hover-shadow': `0 0 10px ${colorWithAlpha(primaryColor, 0.3)}`,
+                  } as React.CSSProperties}
                 >
                   <X size={20} />
                 </button>
@@ -947,87 +706,48 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
             {/* Scrollable Body Content */}
             <div
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-                padding: '1.25rem 1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '1.5rem',
-                scrollbarWidth: 'thin',
-                scrollbarColor: `${colorWithAlpha(primaryColor, 0.35)} transparent`,
-              }}
+              className="flex-1 overflow-y-auto py-5 px-6 flex flex-col gap-6 [scrollbar-width:thin]"
+              style={{ scrollbarColor: `${colorWithAlpha(primaryColor, 0.35)} transparent` }}
             >
               {/* Section 0: Quick Qual Submission & Judge Verification (Either/Or) */}
               {!tournament.isLocked && (
                 <>
                   {canManageTournament && isRegisteredCompetitor && (
                     <div
+                      className="border rounded-md p-4.5 flex flex-col gap-3.5"
                       style={{
                         background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.12)} 0%, ${getAlternateShade(cardColor, 3)} 100%)`,
-                        border: `1px solid ${colorWithAlpha(primaryColor, 0.4)}`,
-                        borderRadius: 'var(--radius-md)',
-                        padding: '1.1rem',
+                        borderColor: colorWithAlpha(primaryColor, 0.4),
                         boxShadow: `0 4px 18px ${colorWithAlpha(primaryColor, 0.1)}`,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '0.85rem',
                       }}
                     >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
                       <Trophy size={16} color={primaryColor} />
-                      <h3 style={{ ...sectionTitleStyle, color: '#ffffff' }}>Qualifier Stage Actions</h3>
+                      <h3 className={sectionTitleClass}>Qualifier Stage Actions</h3>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="flex items-center gap-2">
                       {/* Status Badge */}
                       {qualStatus === 'verified' && (
-                        <span
-                          style={{
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            padding: '0.2rem 0.6rem',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(34, 197, 94, 0.2)',
-                            color: '#4ade80',
-                            border: '1px solid rgba(34, 197, 94, 0.4)',
-                            boxShadow: '0 0 8px rgba(34, 197, 94, 0.25)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                          }}
-                        >
+                        <span className="text-xs font-bold py-1 px-2.5 rounded-sm bg-green-500/20 text-green-400 border border-green-500/40 shadow-[0_0_8px_rgba(34,197,94,0.25)] inline-flex items-center gap-1">
                           <Check size={12} strokeWidth={3} /> Verified
                         </span>
                       )}
                       {qualStatus === 'in progress' && (
                         <span
+                          className="text-xs font-bold py-1 px-2.5 rounded-sm border"
                           style={{
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                            padding: '0.2rem 0.6rem',
-                            borderRadius: 'var(--radius-sm)',
                             background: colorWithAlpha(primaryColor, 0.2),
                             color: primaryColor,
-                            border: `1px solid ${colorWithAlpha(primaryColor, 0.45)}`,
+                            borderColor: colorWithAlpha(primaryColor, 0.45),
                           }}
                         >
                           In Progress
                         </span>
                       )}
                       {qualStatus === 'not started' && (
-                        <span
-                          style={{
-                            fontSize: '0.72rem',
-                            fontWeight: 500,
-                            padding: '0.2rem 0.6rem',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(255, 255, 255, 0.08)',
-                            color: 'var(--color-text-muted)',
-                            border: '1px solid var(--color-border)',
-                          }}
-                        >
+                        <span className="text-xs font-medium py-1 px-2.5 rounded-sm bg-white/8 text-fg-muted border border-line">
                           Not Started
                         </span>
                       )}
@@ -1035,8 +755,8 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   </div>
 
                   {/* Action: Score Entry */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold text-fg-secondary uppercase tracking-wide">
                       Record Attempt Score
                     </span>
                     <form
@@ -1048,13 +768,10 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                           setScoreInput('');
                         }
                       }}
+                      className="flex gap-2 p-2 rounded-sm border"
                       style={{
-                        display: 'flex',
-                        gap: '0.5rem',
-                        padding: '0.45rem',
-                        borderRadius: 'var(--radius-sm)',
                         background: getAlternateShade(cardColor, 6),
-                        border: `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-border-subtle)')}`,
+                        borderColor: colorWithAlpha(primaryColor, 0.25, 'var(--color-border-subtle)'),
                       }}
                     >
                       <input
@@ -1062,36 +779,23 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                         value={scoreInput ? parseInt(scoreInput.replace(/\D/g, ''), 10).toLocaleString() : ''}
                         onChange={(e) => setScoreInput(e.target.value.replace(/\D/g, ''))}
                         placeholder="Enter score (e.g. 1,050,000)..."
+                        className="flex-1 py-2 px-3 rounded-sm border text-white text-sm font-bold"
                         style={{
-                          flex: 1,
-                          padding: '0.45rem 0.7rem',
-                          borderRadius: 'var(--radius-sm)',
-                          border: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-border)')}`,
+                          borderColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
                           background: backgroundColor,
-                          color: '#ffffff',
-                          fontSize: '0.88rem',
-                          fontWeight: 700,
                         }}
                       />
                       <button
                         type="submit"
                         disabled={!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0}
+                        className={cn(
+                          'py-2 px-3.5 text-caption font-bold gap-1.5 whitespace-nowrap rounded-sm border-0 inline-flex items-center transition-all duration-150',
+                          (!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                        )}
                         style={{
-                          padding: '0.45rem 0.9rem',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          gap: '0.35rem',
-                          whiteSpace: 'nowrap',
-                          borderRadius: 'var(--radius-sm)',
                           background: primaryColor,
                           color: primaryContrast,
-                          border: 'none',
-                          cursor: (!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0) ? 'not-allowed' : 'pointer',
-                          opacity: (!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0) ? 0.6 : 1,
                           boxShadow: `0 2px 10px ${colorWithAlpha(primaryColor, 0.35)}`,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          transition: 'all 0.15s ease',
                         }}
                       >
                         <Plus size={15} /> Log Score
@@ -1108,94 +812,109 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
               {/* Section 1: Player Profile Details */}
               <div
+                className="border rounded-md p-4.5 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
                 style={{
                   background: getAlternateShade(cardColor, 2),
-                  border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1.1rem',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+                  borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)'),
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                <div className="flex items-center gap-2 mb-3.5">
                   <User size={16} color={primaryColor} />
-                  <h3 style={sectionTitleStyle}>Competitor Profile</h3>
+                  <h3 className={sectionTitleClass}>Competitor Profile</h3>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3">
                   <div
+                    className={statBoxClass}
                     style={{
-                      ...statBoxStyle,
                       background: getAlternateShade(cardColor, 5),
-                      border: `1px solid ${colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)')}`,
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
                     }}
                   >
-                    <span style={{ ...statLabelStyle, color: textColor }}>Personal Best</span>
-                    <span className="tabular-nums" style={{ fontSize: '1.15rem', fontWeight: 800, color: primaryColor }}>
+                    <span className={statLabelClass} style={{ color: textColor }}>Personal Best</span>
+                    <span className="font-mono tabular-nums tracking-tight text-lg font-extrabold" style={{ color: primaryColor }}>
                       {player.personalBest ? player.personalBest.toLocaleString() : '—'}
                     </span>
                   </div>
 
                   <div
+                    className={statBoxClass}
                     style={{
-                      ...statBoxStyle,
                       background: getAlternateShade(cardColor, 5),
-                      border: `1px solid ${colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)')}`,
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
                     }}
                   >
-                    <span style={{ ...statLabelStyle, color: textColor }}>Playstyle</span>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
+                    <span className={statLabelClass} style={{ color: textColor }}>Playstyle</span>
+                    <span className="text-base font-bold text-white">
                       {player.playstyle || 'Standard'}
                     </span>
                   </div>
 
                   <div
+                    className={statBoxClass}
                     style={{
-                      ...statBoxStyle,
                       background: getAlternateShade(cardColor, 5),
-                      border: `1px solid ${colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)')}`,
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
                     }}
                   >
-                    <span style={{ ...statLabelStyle, color: textColor }}>Assigned Tier</span>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: primaryColor }}>
+                    <span className={statLabelClass} style={{ color: textColor }}>Assigned Tier</span>
+                    <span className="text-base font-bold" style={{ color: primaryColor }}>
                       {assignedTierDisplay}
                     </span>
                   </div>
 
                   <div
+                    className={statBoxClass}
                     style={{
-                      ...statBoxStyle,
                       background: getAlternateShade(cardColor, 5),
-                      border: `1px solid ${colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)')}`,
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
                     }}
                   >
-                    <span style={{ ...statLabelStyle, color: textColor }}>Overall Qual Seed</span>
-                    <span className="tabular-nums" style={{ fontSize: '1.15rem', fontWeight: 800, color: overallQualSeed !== '—' ? '#ffffff' : 'var(--color-text-muted)' }}>
+                    <span className={statLabelClass} style={{ color: textColor }}>Overall Qual Seed</span>
+                    <span
+                      className={cn(
+                        'font-mono tabular-nums tracking-tight text-lg font-extrabold',
+                        overallQualSeed !== '—' ? 'text-white' : 'text-fg-muted'
+                      )}
+                    >
                       {overallQualSeed}
                     </span>
                   </div>
 
                   <div
+                    className={statBoxClass}
                     style={{
-                      ...statBoxStyle,
                       background: getAlternateShade(cardColor, 5),
-                      border: `1px solid ${colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)')}`,
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
                     }}
                   >
-                    <span style={{ ...statLabelStyle, color: textColor }}>Bracket Seed</span>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: bracketSeed !== '—' ? primaryColor : 'var(--color-text-muted)' }}>
+                    <span className={statLabelClass} style={{ color: textColor }}>Bracket Seed</span>
+                    <span
+                      className={cn('text-base font-bold', bracketSeed === '—' && 'text-fg-muted')}
+                      style={{ color: bracketSeed !== '—' ? primaryColor : undefined }}
+                    >
                       {bracketSeed}
                     </span>
                   </div>
 
                   <div
+                    className={statBoxClass}
                     style={{
-                      ...statBoxStyle,
                       background: getAlternateShade(cardColor, 5),
-                      border: `1px solid ${colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)')}`,
+                      borderColor: colorWithAlpha(primaryColor, 0.18, 'var(--color-border-subtle)'),
                     }}
                   >
-                    <span style={{ ...statLabelStyle, color: textColor }}>Final Place</span>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 800, color: finalPlace !== '—' ? (effectiveStanding?.finalRank === 1 ? 'var(--color-gold-bright)' : '#ffffff') : 'var(--color-text-muted)' }}>
+                    <span className={statLabelClass} style={{ color: textColor }}>Final Place</span>
+                    <span
+                      className={cn(
+                        'text-base font-extrabold',
+                        finalPlace !== '—'
+                          ? effectiveStanding?.finalRank === 1
+                            ? 'text-gold-bright'
+                            : 'text-white'
+                          : 'text-fg-muted'
+                      )}
+                    >
                       {finalPlace}
                     </span>
                   </div>
@@ -1203,71 +922,55 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
                 {player.notes && (
                   <div
-                    style={{
-                      marginTop: '0.85rem',
-                      padding: '0.7rem 0.85rem',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      borderLeft: `3px solid ${primaryColor}`,
-                      fontSize: '0.82rem',
-                      color: 'var(--color-text-secondary)',
-                      lineHeight: 1.45,
-                    }}
+                    className="mt-3.5 py-3 px-3.5 rounded-sm bg-white/3 border-l-3 text-caption text-fg-secondary leading-normal"
+                    style={{ borderLeftColor: primaryColor }}
                   >
-                    <strong style={{ color: '#ffffff' }}>Notes:</strong> {player.notes}
+                    <strong className="text-white">Notes:</strong> {player.notes}
                   </div>
                 )}
               </div>
 
               {/* Section 2: Tournament Match Play History */}
               <div
+                className="border rounded-md p-4.5 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
                 style={{
                   background: getAlternateShade(cardColor, 2),
-                  border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1.1rem',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
+                  borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)'),
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="flex items-center justify-between mb-3.5 flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
                     <Swords size={16} color={primaryColor} />
-                    <h3 style={sectionTitleStyle}>Bracket Match Play Record</h3>
+                    <h3 className={sectionTitleClass}>Bracket Match Play Record</h3>
                   </div>
 
                   {playerMatches.length > 0 && (
-                    <div style={{ display: 'flex', gap: '0.45rem', fontSize: '0.75rem', flexWrap: 'wrap' }} className="tabular-nums">
+                    <div className="font-mono tabular-nums tracking-tight flex gap-2 text-xs flex-wrap">
                       <span
+                        className="py-1 px-2 rounded-full border text-fg-secondary"
                         style={{
-                          padding: '0.2rem 0.55rem',
-                          borderRadius: 'var(--radius-full)',
                           background: colorWithAlpha(primaryColor, 0.12),
-                          border: `1px solid ${colorWithAlpha(primaryColor, 0.25)}`,
-                          color: 'var(--color-text-secondary)',
+                          borderColor: colorWithAlpha(primaryColor, 0.25),
                         }}
                       >
-                        Matches: <strong style={{ color: '#ffffff' }}>{totalMatchesWon}–{totalMatchesLost}</strong>
+                        Matches: <strong className="text-white">{totalMatchesWon}–{totalMatchesLost}</strong>
                       </span>
                       <span
+                        className="py-1 px-2 rounded-full border text-fg-secondary"
                         style={{
-                          padding: '0.2rem 0.55rem',
-                          borderRadius: 'var(--radius-full)',
                           background: colorWithAlpha(primaryColor, 0.12),
-                          border: `1px solid ${colorWithAlpha(primaryColor, 0.25)}`,
-                          color: 'var(--color-text-secondary)',
+                          borderColor: colorWithAlpha(primaryColor, 0.25),
                         }}
                       >
-                        Games: <strong style={{ color: '#ffffff' }}>{totalGamesWon}–{totalGamesLost}</strong>
+                        Games: <strong className="text-white">{totalGamesWon}–{totalGamesLost}</strong>
                       </span>
                       {overallAvgScore > 0 && (
                         <span
+                          className="py-1 px-2 rounded-full border font-bold"
                           style={{
-                            padding: '0.2rem 0.55rem',
-                            borderRadius: 'var(--radius-full)',
                             background: colorWithAlpha(primaryColor, 0.18),
-                            border: `1px solid ${colorWithAlpha(primaryColor, 0.35)}`,
+                            borderColor: colorWithAlpha(primaryColor, 0.35),
                             color: primaryColor,
-                            fontWeight: 700,
                           }}
                         >
                           Avg: <strong style={{ color: primaryColor }}>{overallAvgScore.toLocaleString()}</strong>
@@ -1278,140 +981,100 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 </div>
 
                 {!tournament.isLocked && playerMatches.length === 0 ? (
-                  <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                  <div className="p-6 text-center text-fg-muted text-sm leading-normal">
                     Tournament is currently in <strong>Qualifiers Mode</strong>. Bracket matches and game logs will appear here once brackets are locked into Match Play Mode.
                   </div>
                 ) : playerMatches.length === 0 ? (
-                  <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                  <div className="p-6 text-center text-fg-muted text-sm">
                     {tournament.tiers.length === 0
                       ? 'No bracket tiers configured for this tournament yet.'
                       : 'No bracket matches scheduled or recorded for this competitor yet.'}
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div className="flex flex-col gap-3">
                     {playerMatches.map((m, idx) => {
                       const matchBorderColor = m.isWinner ? '#10b981' : m.isComplete ? '#f43f5e' : (m.tierColor || primaryColor);
 
                       return (
                         <div
                           key={m.matchId || idx}
+                          className="rounded-sm border border-l-4 overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.2)] transition-all duration-150"
                           style={{
-                            borderRadius: 'var(--radius-sm)',
                             background: getAlternateShade(cardColor, 4),
-                            border: `1px solid ${colorWithAlpha(m.tierColor || primaryColor, 0.25, 'var(--color-border-subtle)')}`,
-                            borderLeft: `4px solid ${matchBorderColor}`,
-                            overflow: 'hidden',
-                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                            transition: 'all 0.15s ease',
+                            borderColor: colorWithAlpha(m.tierColor || primaryColor, 0.25, 'var(--color-border-subtle)'),
+                            borderLeftColor: matchBorderColor,
                           }}
                         >
                           {/* Match Header Bar */}
                           <div
+                            className="py-2 px-3.5 flex items-center justify-between border-b"
                             style={{
-                              padding: '0.5rem 0.85rem',
                               background: getAlternateShade(cardColor, 6),
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              borderBottom: `1px solid ${colorWithAlpha(m.tierColor || primaryColor, 0.15, 'var(--color-border-subtle)')}`,
+                              borderBottomColor: colorWithAlpha(m.tierColor || primaryColor, 0.15, 'var(--color-border-subtle)'),
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                            <div className="flex items-center gap-2">
                               <span
+                                className="text-xs font-extrabold py-0.5 px-2 rounded-full border uppercase tracking-wide"
                                 style={{
-                                  fontSize: '0.72rem',
-                                  fontWeight: 800,
-                                  padding: '0.1rem 0.5rem',
-                                  borderRadius: 'var(--radius-full)',
                                   background: colorWithAlpha(m.tierColor, 0.2),
                                   color: m.tierColor,
-                                  border: `1px solid ${colorWithAlpha(m.tierColor, 0.4)}`,
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.04em',
+                                  borderColor: colorWithAlpha(m.tierColor, 0.4),
                                 }}
                               >
                                 {m.tierName}
                               </span>
-                              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>•</span>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                              <span className="text-xs text-fg-muted">•</span>
+                              <span className="text-caption font-semibold text-fg-secondary">
                                 {m.roundName}
                               </span>
                             </div>
 
                             {m.isComplete ? (
                               <span
-                                style={{
-                                  fontSize: '0.7rem',
-                                  fontWeight: 800,
-                                  letterSpacing: '0.04em',
-                                  padding: '0.12rem 0.55rem',
-                                  borderRadius: 'var(--radius-full)',
-                                  background: m.isWinner ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)',
-                                  color: m.isWinner ? '#34d399' : '#fb7185',
-                                  border: m.isWinner ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(244, 63, 94, 0.4)',
-                                  boxShadow: m.isWinner ? '0 0 8px rgba(16, 185, 129, 0.25)' : 'none',
-                                }}
+                                className={cn(
+                                  'text-2xs font-extrabold tracking-wide py-0.5 px-2 rounded-full border',
+                                  m.isWinner
+                                    ? 'bg-green/20 text-green-bright border-green/40 shadow-[0_0_8px_rgba(16,185,129,0.25)]'
+                                    : 'bg-rose-500/20 text-rose-400 border-rose-500/40 shadow-none'
+                                )}
                               >
                                 {m.isWinner ? 'VICTORY' : 'DEFEAT'}
                               </span>
                             ) : (
-                              <span
-                                style={{
-                                  fontSize: '0.7rem',
-                                  fontWeight: 700,
-                                  padding: '0.12rem 0.55rem',
-                                  borderRadius: 'var(--radius-full)',
-                                  background: 'rgba(56, 189, 248, 0.15)',
-                                  color: '#38bdf8',
-                                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                                }}
-                              >
+                              <span className="text-2xs font-bold py-0.5 px-2 rounded-full bg-sky-400/15 text-sky-400 border border-sky-400/30">
                                 In Progress
                               </span>
                             )}
                           </div>
 
                           {/* Match Score & Opponent */}
-                          <div style={{ padding: '0.75rem 0.85rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
-                              <div style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', fontWeight: 600 }}>vs</span>
+                          <div className="py-3 px-3.5">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-sm text-fg-secondary flex items-center gap-1.5">
+                                <span className="text-fg-muted text-caption font-semibold">vs</span>
                                 <PlayerAvatar country={m.opponentCountry} />
-                                <strong style={{ color: '#ffffff', fontSize: '0.95rem' }}>{m.opponentName}</strong>
+                                <strong className="text-white text-base">{m.opponentName}</strong>
                                 {m.opponentSeed && (
-                                  <span
-                                    style={{
-                                      fontSize: '0.7rem',
-                                      fontWeight: 700,
-                                      padding: '0.08rem 0.4rem',
-                                      borderRadius: 'var(--radius-sm)',
-                                      background: 'rgba(255, 255, 255, 0.08)',
-                                      color: 'var(--color-text-muted)',
-                                      marginLeft: '0.2rem',
-                                    }}
-                                  >
+                                  <span className="text-2xs font-bold py-0.5 px-1.5 rounded-sm bg-white/8 text-fg-muted ml-1">
                                     #{m.opponentSeed}
                                   </span>
                                 )}
                               </div>
 
-                              <div className="tabular-nums" style={{ fontSize: '1.15rem', fontWeight: 800 }}>
-                                <span style={{ color: m.isWinner ? '#34d399' : '#ffffff' }}>{m.playerWins}</span>
-                                <span style={{ color: 'var(--color-text-muted)', margin: '0 0.3rem' }}>–</span>
-                                <span style={{ color: !m.isWinner && m.isComplete ? '#fb7185' : 'var(--color-text-secondary)' }}>{m.opponentWins}</span>
+                              <div className="font-mono tabular-nums tracking-tight text-lg font-extrabold">
+                                <span className={m.isWinner ? 'text-green-bright' : 'text-white'}>{m.playerWins}</span>
+                                <span className="text-fg-muted mx-1">–</span>
+                                <span className={!m.isWinner && m.isComplete ? 'text-rose-400' : 'text-fg-secondary'}>{m.opponentWins}</span>
                               </div>
                             </div>
 
                             {/* Game-by-game scores */}
                             {m.games.length > 0 && (
                               <div
+                                className="flex flex-col gap-1 mt-2 border-t pt-2"
                                 style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '0.3rem',
-                                  marginTop: '0.5rem',
-                                  borderTop: `1px solid ${colorWithAlpha(m.tierColor || primaryColor, 0.12, 'rgba(255,255,255,0.05)')}`,
-                                  paddingTop: '0.5rem',
+                                  borderTopColor: colorWithAlpha(m.tierColor || primaryColor, 0.12, 'rgba(255,255,255,0.05)'),
                                 }}
                               >
                                 {m.games.map(g => {
@@ -1421,39 +1084,33 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                                   return (
                                     <div
                                       key={g.gameNumber}
-                                      className="tabular-nums"
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        fontSize: '0.75rem',
-                                        padding: '0.2rem 0.4rem',
-                                        borderRadius: 'var(--radius-xs)',
-                                        background: g.won ? 'rgba(16, 185, 129, 0.06)' : 'transparent',
-                                      }}
+                                      className={cn(
+                                        'font-mono tabular-nums tracking-tight flex items-center justify-between text-xs py-1 px-1.5 rounded-xs',
+                                        g.won ? 'bg-green/6' : 'bg-transparent'
+                                      )}
                                     >
-                                      <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                                      <span className="text-fg-muted font-semibold">
                                         Game {g.gameNumber}{g.isTie ? ' (TIE)' : ''}:
                                       </span>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                      <div className="flex items-center gap-1.5">
                                         {isPMaxout && (
-                                          <span title="Maxout" style={{ color: 'var(--color-gold-bright)', display: 'inline-flex', alignItems: 'center' }}>
+                                          <span title="Maxout" className="text-gold-bright inline-flex items-center">
                                             <Sparkles size={11} />
                                           </span>
                                         )}
                                         <span
-                                          style={{
-                                            fontWeight: 700,
-                                            color: g.isTie ? '#38bdf8' : g.won ? '#34d399' : 'var(--color-text-secondary)',
-                                          }}
+                                          className={cn(
+                                            'font-bold',
+                                            g.isTie ? 'text-sky-400' : g.won ? 'text-green-bright' : 'text-fg-secondary'
+                                          )}
                                         >
                                           {g.playerScore !== null ? g.playerScore.toLocaleString() : '—'}
                                         </span>
-                                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.7rem' }}>vs</span>
+                                        <span className="text-fg-muted text-2xs">vs</span>
                                         <span
-                                          style={{
-                                            color: g.isTie ? '#38bdf8' : !g.won && g.playerScore !== null ? '#fb7185' : 'var(--color-text-muted)',
-                                          }}
+                                          className={
+                                            g.isTie ? 'text-sky-400' : !g.won && g.playerScore !== null ? 'text-rose-400' : 'text-fg-muted'
+                                          }
                                         >
                                           {g.opponentScore !== null ? g.opponentScore.toLocaleString() : '—'}
                                         </span>
@@ -1477,36 +1134,20 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
             {/* Footer with Themed Border & Button */}
             <div
+              className="py-4 px-6 border-t flex gap-3"
               style={{
-                padding: '1rem 1.5rem',
-                borderTop: `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-border)')}`,
+                borderTopColor: colorWithAlpha(primaryColor, 0.25, 'var(--color-border)'),
                 background: getAlternateShade(cardColor, 3),
-                display: 'flex',
-                gap: '0.75rem',
               }}
             >
               <button
                 onClick={requestClose}
+                className="w-full p-2.5 text-sm font-bold rounded-sm bg-white/5 border border-(--btn-border) text-white cursor-pointer transition-all duration-150 hover:bg-(--btn-hover-bg) hover:border-(--btn-hover-border)"
                 style={{
-                  width: '100%',
-                  padding: '0.65rem',
-                  fontSize: '0.88rem',
-                  fontWeight: 700,
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-border)')}`,
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = colorWithAlpha(primaryColor, 0.15);
-                  e.currentTarget.style.borderColor = primaryColor;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                  e.currentTarget.style.borderColor = colorWithAlpha(primaryColor, 0.35, 'var(--color-border)');
-                }}
+                  '--btn-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
+                  '--btn-hover-bg': colorWithAlpha(primaryColor, 0.15),
+                  '--btn-hover-border': primaryColor,
+                } as React.CSSProperties}
               >
                 Close
               </button>
@@ -1528,28 +1169,4 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
     )}
     </>
   );
-};
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: '0.9rem',
-  fontWeight: 800,
-  color: '#ffffff',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  margin: 0,
-};
-
-const statBoxStyle: React.CSSProperties = {
-  padding: '0.65rem 0.75rem',
-  borderRadius: 'var(--radius-sm)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.2rem',
-};
-
-const statLabelStyle: React.CSSProperties = {
-  fontSize: '0.7rem',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-  fontWeight: 600,
 };

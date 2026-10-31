@@ -21,6 +21,15 @@ import { DualListSeedingModal } from './DualListSeedingModal';
 import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../../players/components/PlaystyleChip';
 import { Overlay, ConfirmDialog } from '../../../../components/overlay';
+import { Badge, Button, IconButton, buttonClasses, cn } from '../../../../components/ui';
+
+const headerRowClass =
+  'flex items-center gap-3 border-b border-line bg-elevated px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-fg-muted';
+const batchButtonClass = 'gap-1 px-2.5 py-1.5 text-caption';
+const rowControlClass =
+  'flex p-1 text-fg-secondary disabled:cursor-default disabled:text-fg-muted disabled:opacity-30';
+const seedInputClass =
+  'w-full rounded-sm border border-line bg-elevated px-3 py-2 text-base font-bold text-gold-bright';
 
 interface ManualSeedingManagerProps {
   tournament: Tournament;
@@ -248,50 +257,29 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+    <div className="flex flex-col gap-5">
       {/* Top Header Card */}
       {isObsMode ? (
-        <div style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>
+        <div className="flex items-center justify-between py-2">
+          <h1 className="m-0 text-2xl font-extrabold text-fg">
             {tournament.name} — Seeding Placements
           </h1>
-          <span style={{ fontSize: '0.85rem', color: 'var(--color-gold-bright)', fontWeight: 700 }}>
+          <span className="text-sm font-bold text-gold-bright">
             {manualSeeds.length} Competitors Seeded
           </span>
         </div>
       ) : (
-        <div
-          style={{
-            background: 'var(--color-bg-surface)',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--color-border)',
-            padding: '1.25rem 1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--color-gold-bright)',
-                }}
-              >
+        <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface px-6 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-md bg-gold/15 text-gold-bright">
                 <Layers size={18} />
               </div>
               <div>
-                <h1 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>
+                <h1 className="m-0 text-2xl font-extrabold text-fg">
                   {canManage ? 'Tournament Seeding Manager' : 'Tournament Seeding'}
                 </h1>
-                <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
+                <p className="mx-0 mb-0 mt-1.5 text-sm text-fg-muted">
                   {canManage
                     ? 'Direct seeding active. Drag, jump, or paste names to arrange tournament seeds and bracket allocations without quals.'
                     : 'Official competitor seeding and bracket allocations.'}
@@ -304,15 +292,10 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                 href={`/${tournament.slug}/leaderboard`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-secondary"
-                style={{
-                  fontSize: '0.8rem',
-                  padding: '0.45rem 0.85rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  textDecoration: 'none',
-                }}
+                className={buttonClasses({
+                  variant: 'secondary',
+                  className: 'gap-1.5 px-3.5 py-2 text-caption hover:bg-highlight hover:border-fg-secondary',
+                })}
                 title="Open seeding in new page view"
               >
                 <span>New Page View</span>
@@ -323,142 +306,83 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
 
           {/* Action Bar (Manage mode only) */}
           {canManage && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '0.75rem',
-              }}
-            >
+            <div className="flex flex-wrap items-center justify-between gap-3">
               {/* Left Actions: Shuffle, Reverse */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="secondary"
                   disabled={isLocked || manualSeeds.length < 2}
                   onClick={() => setIsShuffleConfirmOpen(true)}
-                  className="btn btn-secondary"
-                  style={{
-                    fontSize: '0.85rem',
-                    padding: '0.45rem 1rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                    minWidth: '80px',
-                    opacity: isLocked || manualSeeds.length < 2 ? 0.6 : 1,
-                    cursor: isLocked || manualSeeds.length < 2 ? 'not-allowed' : 'pointer',
-                  }}
+                  className="min-w-20 text-center"
                   title={isLocked ? 'Seeding is locked' : 'Randomize the seed sequence (Fisher-Yates shuffle)'}
                 >
                   Shuffle
-                </button>
+                </Button>
 
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   disabled={isLocked || manualSeeds.length < 2}
                   onClick={() => setIsReverseConfirmOpen(true)}
-                  className="btn btn-secondary"
-                  style={{
-                    fontSize: '0.85rem',
-                    padding: '0.45rem 1rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                    minWidth: '80px',
-                    opacity: isLocked || manualSeeds.length < 2 ? 0.6 : 1,
-                    cursor: isLocked || manualSeeds.length < 2 ? 'not-allowed' : 'pointer',
-                  }}
+                  className="min-w-20 text-center"
                   title={isLocked ? 'Seeding is locked' : 'Invert order of all seeds'}
                 >
                   Reverse
-                </button>
+                </Button>
               </div>
 
               {/* Right Actions: Bulk Import, Add Seeds */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="secondary"
                   disabled={isLocked}
                   onClick={() => setIsBulkImportOpen(true)}
-                  className="btn btn-secondary"
-                  style={{
-                    fontSize: '0.85rem',
-                    padding: '0.45rem 1rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                    minWidth: '100px',
-                    opacity: isLocked ? 0.6 : 1,
-                    cursor: isLocked ? 'not-allowed' : 'pointer',
-                  }}
+                  className="min-w-25 text-center"
                   title={isLocked ? 'Seeding is locked during match play' : 'Paste an ordered list of names from Sheets or text'}
                 >
                   Bulk Import
-                </button>
+                </Button>
 
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
                   disabled={isLocked}
                   onClick={() => setIsDualListOpen(true)}
-                  className="btn btn-primary"
-                  style={{
-                    fontSize: '0.85rem',
-                    padding: '0.45rem 1.15rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                    minWidth: '100px',
-                    opacity: isLocked ? 0.6 : 1,
-                    cursor: isLocked ? 'not-allowed' : 'pointer',
-                  }}
+                  className="min-w-25 px-4.5 text-center"
                   title={isLocked ? 'Seeding is locked' : 'Multi-select shuttle: select available players and stage seeds'}
                 >
                   Add Seeds
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
           {/* Capacity Telemetry & Quick Search */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.85rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-subtle pt-3.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-fg-secondary">
                 Total Seeds: <strong>{manualSeeds.length}</strong>
               </span>
-              <span style={{ color: 'var(--color-border)' }}>•</span>
-              <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+              <span className="text-line">•</span>
+              <span className="text-sm text-fg-secondary">
                 Bracket Capacity: <strong>{totalBracketCapacity}</strong>
               </span>
               {manualSeeds.length < totalBracketCapacity && (
-                <span className="badge badge-gold" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>
+                <Badge variant="gold" className="px-2">
                   <AlertTriangle size={12} /> Needs {totalBracketCapacity - manualSeeds.length} more to fill all brackets
-                </span>
+                </Badge>
               )}
               {manualSeeds.length >= totalBracketCapacity && (
-                <span className="badge badge-green" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>
+                <Badge variant="green" className="px-2">
                   <ShieldCheck size={12} /> All bracket tiers filled
-                </span>
+                </Badge>
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="flex items-center gap-2">
               {canManage && !isLocked && filteredList.length > 0 && (
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={selectedPlayerIds.size === filteredList.length ? handleClearSelection : handleSelectAll}
-                  className="btn btn-secondary"
-                  style={{
-                    fontSize: '0.78rem',
-                    padding: '0.35rem 0.65rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                  }}
+                  className="gap-1.5 px-2.5 py-1.5 text-caption"
                   title={selectedPlayerIds.size === filteredList.length ? 'Deselect all competitors' : 'Select all competitors in view'}
                 >
                   {selectedPlayerIds.size === filteredList.length ? (
@@ -472,29 +396,20 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                       Select All
                     </>
                   )}
-                </button>
+                </Button>
               )}
 
-              <div style={{ position: 'relative', width: '220px' }}>
+              <div className="relative w-55">
                 <Search
                   size={14}
-                  style={{ position: 'absolute', left: '0.65rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }}
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted"
                 />
                 <input
                   type="text"
                   placeholder="Filter seeds..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '0.35rem 0.65rem 0.35rem 2rem',
-                    backgroundColor: 'var(--color-bg-surface-elevated)',
-                    color: 'var(--color-text-primary)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.8rem',
-                  }}
+                  className="w-full rounded-sm border border-line bg-elevated py-1.5 pl-8 pr-2.5 text-caption text-fg"
                 />
               </div>
             </div>
@@ -504,131 +419,93 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
 
       {/* Batch Action Toolbar (Sticky) */}
       {canManage && selectedPlayerIds.size > 0 && !isLocked && (
-        <div
-          style={{
-            position: 'sticky',
-            top: '1rem',
-            zIndex: 40,
-            backgroundColor: 'rgba(15, 23, 42, 0.96)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid var(--color-brand)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.65rem 1rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <div className="sticky top-4 z-40 flex flex-wrap items-center justify-between gap-3 rounded-md border border-brand bg-surface/96 px-4 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
             <CheckSquare size={18} color="var(--color-brand)" />
-            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <span className="text-sm font-bold text-fg">
               {selectedPlayerIds.size} Competitor{selectedPlayerIds.size > 1 ? 's' : ''} Selected
             </span>
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+            <span className="text-xs text-fg-muted">
               (Hold Shift to range select)
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+          <div className="flex flex-wrap items-center gap-2">
             {/* Up 1 */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={handleBatchMoveUp}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              className={batchButtonClass}
               title="Shift each selected competitor up 1 position independently"
             >
               <ChevronUp size={14} />
               Up 1
-            </button>
+            </Button>
 
             {/* Down 1 */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={handleBatchMoveDown}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              className={batchButtonClass}
               title="Shift each selected competitor down 1 position independently"
             >
               <ChevronDown size={14} />
               Down 1
-            </button>
+            </Button>
 
             {/* Jump to Seed */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => {
                 setBatchJumpInput('1');
                 setIsBatchJumpOpen(true);
               }}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              className={batchButtonClass}
               title="Bunch selected competitors contiguously starting at target seed"
             >
               Jump to Seed...
-            </button>
+            </Button>
 
             {/* Move to Top */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={handleBatchMoveToTop}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              className={batchButtonClass}
               title="Bunch selected competitors at Seed #1"
             >
               <ChevronsUp size={14} />
               Top
-            </button>
+            </Button>
 
             {/* Move to Bottom */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={handleBatchMoveToBottom}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              className={batchButtonClass}
               title="Bunch selected competitors at the bottom"
             >
               <ChevronsDown size={14} />
               Bottom
-            </button>
+            </Button>
 
-            <div style={{ width: '1px', height: '18px', background: 'var(--color-border)', margin: '0 0.2rem' }} />
+            <div className="mx-1 h-4.5 w-px bg-line" />
 
             {/* Batch Remove */}
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => setIsBatchDeleteConfirmOpen(true)}
-              className="btn btn-secondary"
-              style={{
-                fontSize: '0.78rem',
-                padding: '0.35rem 0.65rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                color: 'var(--color-red)',
-                borderColor: 'rgba(239, 68, 68, 0.4)',
-              }}
+              className={cn(batchButtonClass, 'border-red/40 text-red enabled:hover:border-red/40')}
               title="Remove selected competitors from seeding list"
             >
               <X size={14} />
               Remove ({selectedPlayerIds.size})
-            </button>
+            </Button>
 
             {/* Clear Selection */}
             <button
               type="button"
               onClick={handleClearSelection}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                fontSize: '0.78rem',
-                padding: '0.35rem 0.5rem',
-              }}
+              className="cursor-pointer border-0 bg-transparent px-2 py-1.5 text-caption text-fg-muted"
               title="Clear selection"
             >
               Deselect All
@@ -639,103 +516,56 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
 
       {/* Main Seed Table with Tier Boundaries */}
       <div
-        style={{
-          background: isObsMode ? 'transparent' : 'var(--color-bg-surface)',
-          borderRadius: 'var(--radius-lg)',
-          border: isObsMode ? 'none' : '1px solid var(--color-border)',
-          overflow: 'hidden',
-          overflowX: 'auto',
-        }}
+        className={cn(
+          'overflow-x-auto overflow-y-hidden rounded-lg',
+          isObsMode ? 'border-0 bg-transparent' : 'border border-line bg-surface'
+        )}
       >
         {filteredList.length === 0 ? (
-          <div style={{ padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-            <p style={{ margin: '0 0 1rem 0', fontSize: '1rem', fontWeight: 600 }}>
+          <div className="px-6 py-12 text-center text-fg-muted">
+            <p className="mx-0 mb-4 mt-0 text-base font-semibold">
               {manualSeeds.length === 0 ? 'No participants seeded yet.' : 'No seeds match your search query.'}
             </p>
             {manualSeeds.length === 0 && canManage && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginTop: '1rem' }}>
-                <button
-                  type="button"
+              <div className="mt-4 flex justify-center gap-3">
+                <Button
+                  variant="primary"
                   onClick={() => setIsDualListOpen(true)}
-                  className="btn btn-primary"
-                  style={{
-                    fontSize: '0.85rem',
-                    padding: '0.5rem 1.25rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                  }}
+                  className="px-5 text-center"
                 >
                   Add Seeds
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="secondary"
                   onClick={() => setIsBulkImportOpen(true)}
-                  className="btn btn-secondary"
-                  style={{
-                    fontSize: '0.85rem',
-                    padding: '0.5rem 1.25rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                  }}
+                  className="px-5 text-center"
                 >
                   Bulk Import
-                </button>
+                </Button>
               </div>
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', minWidth: canManage ? '650px' : '580px' }}>
+          <div className={cn('flex flex-col', canManage ? 'min-w-162.5' : 'min-w-145')}>
             {/* Table Header Row */}
             {canManage ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0.65rem 1.25rem',
-                  backgroundColor: 'var(--color-bg-surface-elevated)',
-                  borderBottom: '1px solid var(--color-border)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  color: 'var(--color-text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  gap: '0.75rem',
-                }}
-              >
-                <div style={{ width: 16, flexShrink: 0 }} />
-                <div style={{ width: 20, flexShrink: 0 }} />
-                <div style={{ width: 42, textAlign: 'center', flexShrink: 0 }}>Seed</div>
-                <div style={{ flex: 1, minWidth: 0 }}>Competitor</div>
-                <div style={{ width: 110, textAlign: 'right', paddingRight: '0.5rem', flexShrink: 0 }}>Personal Best</div>
-                <div style={{ width: 110, textAlign: 'center', flexShrink: 0 }}>Bracket Seed</div>
-                <div style={{ width: 150, textAlign: 'right', flexShrink: 0 }}>Actions</div>
+              <div className={headerRowClass}>
+                <div className="w-4 shrink-0" />
+                <div className="w-5 shrink-0" />
+                <div className="w-10.5 shrink-0 text-center">Seed</div>
+                <div className="min-w-0 flex-1">Competitor</div>
+                <div className="w-27.5 shrink-0 pr-2 text-right">Personal Best</div>
+                <div className="w-27.5 shrink-0 text-center">Bracket Seed</div>
+                <div className="w-37.5 shrink-0 text-right">Actions</div>
               </div>
             ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0.65rem 1.25rem',
-                  backgroundColor: 'var(--color-bg-surface-elevated)',
-                  borderBottom: '1px solid var(--color-border)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  color: 'var(--color-text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  gap: '0.75rem',
-                }}
-              >
-                <div style={{ width: 40, textAlign: 'center', flexShrink: 0 }}>Seed</div>
-                <div style={{ width: 24, textAlign: 'center', flexShrink: 0 }}>Flag</div>
-                <div style={{ flex: 1, minWidth: 0 }}>Competitor</div>
-                <div style={{ width: 90, flexShrink: 0 }}>Style</div>
-                <div style={{ width: 110, textAlign: 'right', paddingRight: '0.5rem', flexShrink: 0 }}>Personal Best</div>
-                <div style={{ width: 110, textAlign: 'right', flexShrink: 0 }}>Bracket Seed</div>
+              <div className={headerRowClass}>
+                <div className="w-10 shrink-0 text-center">Seed</div>
+                <div className="w-6 shrink-0 text-center">Flag</div>
+                <div className="min-w-0 flex-1">Competitor</div>
+                <div className="w-22.5 shrink-0">Style</div>
+                <div className="w-27.5 shrink-0 pr-2 text-right">Personal Best</div>
+                <div className="w-27.5 shrink-0 text-right">Bracket Seed</div>
               </div>
             )}
 
@@ -749,72 +579,53 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                   {/* Tier Divider Banner */}
                   {cutoffStartingHere && (
                     <div
+                      className={cn(
+                        'flex items-center justify-between border-b border-l-5 border-line px-5 py-2.5',
+                        idx > 0 && 'border-t-2'
+                      )}
                       style={{
-                        padding: '0.65rem 1.25rem',
                         backgroundColor: cutoffStartingHere.tier.cardColor || 'rgba(245, 158, 11, 0.08)',
-                        borderTop: idx > 0 ? '2px solid var(--color-border)' : 'none',
-                        borderBottom: '1px solid var(--color-border)',
-                        borderLeft: `5px solid ${cutoffStartingHere.tier.primaryColor || 'var(--color-gold-bright)'}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
+                        borderLeftColor: cutoffStartingHere.tier.primaryColor || 'var(--color-gold-bright)',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="flex items-center gap-2">
                         <span
-                          style={{
-                            fontWeight: 800,
-                            fontSize: '0.88rem',
-                            color: cutoffStartingHere.tier.primaryColor || 'var(--color-gold-bright)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.04em',
-                          }}
+                          className="text-sm font-extrabold uppercase tracking-wide"
+                          style={{ color: cutoffStartingHere.tier.primaryColor || 'var(--color-gold-bright)' }}
                         >
                           {cutoffStartingHere.tier.name}
                         </span>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                        <span className="text-caption text-fg-muted">
                           • Seeds {cutoffStartingHere.start}–{cutoffStartingHere.end} ({cutoffStartingHere.capacity} slots)
                         </span>
                       </div>
-                      <span
-                        className="badge"
+                      <Badge
+                        className="text-xs"
                         style={{
-                          fontSize: '0.72rem',
                           backgroundColor: cutoffStartingHere.tier.primaryColor ? `${cutoffStartingHere.tier.primaryColor}22` : 'rgba(245, 158, 11, 0.15)',
                           color: cutoffStartingHere.tier.primaryColor || 'var(--color-gold-bright)',
-                          border: `1px solid ${cutoffStartingHere.tier.primaryColor || 'var(--color-gold-bright)'}44`,
+                          borderColor: `${cutoffStartingHere.tier.primaryColor || 'var(--color-gold-bright)'}44`,
                         }}
                       >
                         Tier {cutoffStartingHere.tier.priority}
-                      </span>
+                      </Badge>
                     </div>
                   )}
 
                   {/* Reserves Divider Banner */}
                   {isReservesStart && (
-                    <div
-                      style={{
-                        padding: '0.65rem 1.25rem',
-                        backgroundColor: 'rgba(100, 116, 139, 0.08)',
-                        borderTop: '2px solid var(--color-border)',
-                        borderBottom: '1px solid var(--color-border)',
-                        borderLeft: '5px solid var(--color-text-muted)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                    <div className="flex items-center justify-between border-b border-l-5 border-t-2 border-line border-l-fg-muted bg-fg-muted/8 px-5 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-extrabold uppercase text-fg-secondary">
                           Alternates / Reserves Pool (Did Not Qualify)
                         </span>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                        <span className="text-caption text-fg-muted">
                           • Seeds {totalBracketCapacity + 1}+
                         </span>
                       </div>
-                      <span className="badge" style={{ fontSize: '0.72rem', background: 'var(--color-bg-surface-elevated)', color: 'var(--color-text-muted)' }}>
+                      <Badge className="border-0 bg-elevated text-xs text-fg-muted">
                         Unassigned to Brackets
-                      </span>
+                      </Badge>
                     </div>
                   )}
 
@@ -826,38 +637,25 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                       onDragStart={() => handleDragStart(item.seedNumber - 1)}
                       onDragOver={handleDragOver}
                       onDrop={() => handleDrop(item.seedNumber - 1)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0.6rem 1.25rem',
-                        borderBottom: '1px solid var(--color-border-subtle)',
-                        backgroundColor: selectedPlayerIds.has(item.id)
-                          ? 'rgba(99, 102, 241, 0.12)'
+                      className={cn(
+                        'flex items-center gap-3 border-b border-line-subtle px-5 py-2.5 transition-colors duration-150',
+                        selectedPlayerIds.has(item.id)
+                          ? 'bg-[rgba(99,102,241,0.12)]'
                           : draggedIndex === item.seedNumber - 1
-                          ? 'rgba(99, 102, 241, 0.15)'
-                          : 'transparent',
-                        transition: 'background-color 0.15s ease',
-                        gap: '0.75rem',
-                      }}
+                          ? 'bg-[rgba(99,102,241,0.15)]'
+                          : 'bg-transparent'
+                      )}
                     >
                       {/* Drag Handle */}
                       {!isLocked ? (
                         <div
-                          style={{
-                            color: 'var(--color-text-muted)',
-                            cursor: 'grab',
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '0.2rem',
-                            flexShrink: 0,
-                            width: 16,
-                          }}
+                          className="flex w-4 shrink-0 cursor-grab items-center p-1 text-fg-muted"
                           title="Drag to reorder seed"
                         >
                           <GripVertical size={16} />
                         </div>
                       ) : (
-                        <div style={{ width: 16, flexShrink: 0 }} />
+                        <div className="w-4 shrink-0" />
                       )}
 
                       {/* Selection Checkbox */}
@@ -867,14 +665,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                             e.stopPropagation();
                             handleToggleSelect(item.id, idx, e.shiftKey);
                           }}
-                          style={{
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '0.2rem',
-                            flexShrink: 0,
-                            width: 20,
-                          }}
+                          className="flex w-5 shrink-0 cursor-pointer items-center p-1"
                           title="Select for batch actions (Hold Shift for range select)"
                         >
                           {selectedPlayerIds.has(item.id) ? (
@@ -897,18 +688,14 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                           });
                           setJumpTargetInput(String(item.seedNumber));
                         }}
+                        className={cn(
+                          'w-10.5 shrink-0 rounded-sm border px-2 py-1 text-center text-caption font-extrabold',
+                          isLocked ? 'cursor-default' : 'cursor-pointer'
+                        )}
                         style={{
                           background: item.tier ? (item.tier.primaryColor ? `${item.tier.primaryColor}22` : 'rgba(245, 158, 11, 0.15)') : 'var(--color-bg-surface-elevated)',
-                          border: `1px solid ${item.tier?.primaryColor ? `${item.tier.primaryColor}55` : 'var(--color-border)'}`,
+                          borderColor: item.tier?.primaryColor ? `${item.tier.primaryColor}55` : 'var(--color-border)',
                           color: item.tier?.primaryColor || 'var(--color-text-secondary)',
-                          fontWeight: 800,
-                          fontSize: '0.82rem',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '0.2rem 0.5rem',
-                          width: '42px',
-                          textAlign: 'center',
-                          cursor: isLocked ? 'default' : 'pointer',
-                          flexShrink: 0,
                         }}
                         title={isLocked ? `Seed #${item.seedNumber}` : 'Click to jump to a specific seed number'}
                       >
@@ -916,30 +703,14 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                       </button>
 
                       {/* Competitor Name (flex: 1) */}
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          fontSize: '0.9rem',
-                          color: 'var(--color-text-primary)',
-                          flex: 1,
-                          minWidth: 0,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
+                      <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">
                         {item.name}
                       </span>
 
                       {/* Personal Best (2nd from right column) */}
-                      <div style={{ width: '110px', textAlign: 'right', paddingRight: '0.5rem', flexShrink: 0 }}>
+                      <div className="w-27.5 shrink-0 pr-2 text-right">
                         <span
-                          style={{
-                            fontFamily: 'monospace',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                            color: item.personalBest ? 'var(--color-gold-bright)' : 'var(--color-text-muted)',
-                          }}
+                          className={cn('font-mono text-sm font-semibold', item.personalBest ? 'text-gold-bright' : 'text-fg-muted')}
                           title={item.personalBest ? `Personal Best: ${item.personalBest.toLocaleString()}` : 'No PB recorded'}
                         >
                           {item.personalBest ? item.personalBest.toLocaleString() : '—'}
@@ -947,208 +718,120 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                       </div>
 
                       {/* Bracket Seed Chip */}
-                      <div style={{ width: '110px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                      <div className="flex w-27.5 shrink-0 justify-center">
                         {item.tier && item.tierSeed ? (
                           <span
+                            className="inline-flex items-center whitespace-nowrap rounded-sm border px-2 py-1 text-xs font-bold tracking-wide"
                             style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              padding: '0.2rem 0.55rem',
-                              borderRadius: 'var(--radius-sm)',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
                               backgroundColor: item.tier.primaryColor ? `${item.tier.primaryColor}22` : 'rgba(245, 158, 11, 0.15)',
                               color: item.tier.primaryColor || 'var(--color-gold-bright)',
-                              border: `1px solid ${item.tier.primaryColor ? `${item.tier.primaryColor}55` : 'rgba(245, 158, 11, 0.3)'}`,
-                              whiteSpace: 'nowrap',
-                              letterSpacing: '0.02em',
+                              borderColor: item.tier.primaryColor ? `${item.tier.primaryColor}55` : 'rgba(245, 158, 11, 0.3)',
                             }}
                             title={`Assigned to ${item.tier.name} bracket as Seed #${item.tierSeed}`}
                           >
                             {`${item.tier.name} ${item.tierSeed}`}
                           </span>
                         ) : item.isReserve ? (
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              padding: '0.2rem 0.55rem',
-                              borderRadius: 'var(--radius-sm)',
-                              fontSize: '0.72rem',
-                              fontWeight: 600,
-                              backgroundColor: 'rgba(100, 116, 139, 0.15)',
-                              color: 'var(--color-text-muted)',
-                              border: '1px solid var(--color-border)',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
+                          <span className="inline-flex items-center whitespace-nowrap rounded-sm border border-line bg-fg-muted/15 px-2 py-1 text-xs font-semibold text-fg-muted">
                             Reserve
                           </span>
                         ) : (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>—</span>
+                          <span className="text-xs text-fg-muted">—</span>
                         )}
                       </div>
 
                       {/* Row Controls */}
                       {!isLocked && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', width: '150px', justifyContent: 'flex-end', flexShrink: 0 }}>
-                          <button
-                            type="button"
+                        <div className="flex w-37.5 shrink-0 items-center justify-end gap-1">
+                          <IconButton
+                            aria-label="Move to top"
                             disabled={item.seedNumber === 1}
                             onClick={() => reorderManualSeed(tournament.id, item.seedNumber - 1, 0)}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: item.seedNumber === 1 ? 'var(--color-text-muted)' : 'var(--color-text-secondary)',
-                              cursor: item.seedNumber === 1 ? 'default' : 'pointer',
-                              padding: '0.25rem',
-                              display: 'flex',
-                              opacity: item.seedNumber === 1 ? 0.3 : 1,
-                            }}
+                            className={rowControlClass}
                             title="Move to top (#1 Seed)"
                           >
                             <ChevronsUp size={15} />
-                          </button>
+                          </IconButton>
 
-                          <button
-                            type="button"
+                          <IconButton
+                            aria-label="Move up"
                             disabled={item.seedNumber === 1}
                             onClick={() => reorderManualSeed(tournament.id, item.seedNumber - 1, item.seedNumber - 2)}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: item.seedNumber === 1 ? 'var(--color-text-muted)' : 'var(--color-text-secondary)',
-                              cursor: item.seedNumber === 1 ? 'default' : 'pointer',
-                              padding: '0.25rem',
-                              display: 'flex',
-                              opacity: item.seedNumber === 1 ? 0.3 : 1,
-                            }}
+                            className={rowControlClass}
                             title="Move Up (↑)"
                           >
                             <ChevronUp size={15} />
-                          </button>
+                          </IconButton>
 
-                          <button
-                            type="button"
+                          <IconButton
+                            aria-label="Move down"
                             disabled={item.seedNumber === manualSeeds.length}
                             onClick={() => reorderManualSeed(tournament.id, item.seedNumber - 1, item.seedNumber)}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: item.seedNumber === manualSeeds.length ? 'var(--color-text-muted)' : 'var(--color-text-secondary)',
-                              cursor: item.seedNumber === manualSeeds.length ? 'default' : 'pointer',
-                              padding: '0.25rem',
-                              display: 'flex',
-                              opacity: item.seedNumber === manualSeeds.length ? 0.3 : 1,
-                            }}
+                            className={rowControlClass}
                             title="Move Down (↓)"
                           >
                             <ChevronDown size={15} />
-                          </button>
+                          </IconButton>
 
-                          <button
-                            type="button"
+                          <IconButton
+                            aria-label="Move to bottom"
                             disabled={item.seedNumber === manualSeeds.length}
                             onClick={() => reorderManualSeed(tournament.id, item.seedNumber - 1, manualSeeds.length - 1)}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: item.seedNumber === manualSeeds.length ? 'var(--color-text-muted)' : 'var(--color-text-secondary)',
-                              cursor: item.seedNumber === manualSeeds.length ? 'default' : 'pointer',
-                              padding: '0.25rem',
-                              display: 'flex',
-                              opacity: item.seedNumber === manualSeeds.length ? 0.3 : 1,
-                            }}
+                            className={rowControlClass}
                             title="Move to bottom"
                           >
                             <ChevronsDown size={15} />
-                          </button>
+                          </IconButton>
 
-                          <div style={{ width: '1px', height: '14px', background: 'var(--color-border)', margin: '0 0.25rem' }} />
+                          <div className="mx-1 h-3.5 w-px bg-line" />
 
-                          <button
-                            type="button"
+                          <IconButton
+                            aria-label="Remove from seeds"
                             onClick={() => removeManualSeed(tournament.id, item.id)}
-                            style={{
-                              background: 'transparent',
-                              border: 'none',
-                              color: 'var(--color-red-bright)',
-                              cursor: 'pointer',
-                              padding: '0.25rem',
-                              display: 'flex',
-                              opacity: 0.75,
-                            }}
+                            className="flex p-1 text-red-bright opacity-75"
                             title="Remove from seeds"
                           >
                             <X size={15} />
-                          </button>
+                          </IconButton>
                         </div>
                       )}
                     </div>
                   ) : (
                     /* Public Spectator Row: Overall seed > Flag > Player name > Playstyle > PB > bracket seed chip */
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0.65rem 1.25rem',
-                        borderBottom: '1px solid var(--color-border-subtle)',
-                        transition: 'background-color 0.15s ease',
-                        gap: '0.75rem',
-                      }}
-                    >
+                    <div className="flex items-center gap-3 border-b border-line-subtle px-5 py-2.5 transition-colors duration-150">
                       {/* Overall Seed */}
-                      <div style={{ width: '40px', textAlign: 'center', flexShrink: 0 }}>
+                      <div className="w-10 shrink-0 text-center">
                         <span
-                          style={{
-                            fontWeight: 800,
-                            fontSize: '0.85rem',
-                            color: item.tier?.primaryColor || 'var(--color-gold-bright)',
-                          }}
+                          className="text-sm font-extrabold"
+                          style={{ color: item.tier?.primaryColor || 'var(--color-gold-bright)' }}
                         >
                           {`#${item.seedNumber}`}
                         </span>
                       </div>
 
                       {/* Flag / Avatar (to the left of player name) */}
-                      <div style={{ width: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div className="flex w-6 shrink-0 items-center justify-center">
                         <PlayerAvatar player={item} />
                       </div>
 
                       {/* Competitor Name */}
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          fontSize: '0.92rem',
-                          color: 'var(--color-text-primary)',
-                          flex: 1,
-                          minWidth: 0,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
+                      <span className="min-w-0 flex-1 truncate text-base font-semibold text-fg">
                         {item.name}
                       </span>
 
                       {/* Playstyle (in its own column just to the right of player name) */}
-                      <div style={{ width: '90px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', flexShrink: 0 }}>
+                      <div className="flex w-22.5 shrink-0 items-center justify-start">
                         {item.playstyle ? (
                           <PlaystyleChip style={item.playstyle} />
                         ) : (
-                          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>—</span>
+                          <span className="text-xs text-fg-muted">—</span>
                         )}
                       </div>
 
                       {/* Personal Best (2nd from right column) */}
-                      <div style={{ width: '110px', textAlign: 'right', paddingRight: '0.5rem', flexShrink: 0 }}>
+                      <div className="w-27.5 shrink-0 pr-2 text-right">
                         <span
-                          style={{
-                            fontFamily: 'monospace',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                            color: item.personalBest ? 'var(--color-gold-bright)' : 'var(--color-text-muted)',
-                          }}
+                          className={cn('font-mono text-sm font-semibold', item.personalBest ? 'text-gold-bright' : 'text-fg-muted')}
                           title={item.personalBest ? `Personal Best: ${item.personalBest.toLocaleString()}` : 'No PB recorded'}
                         >
                           {item.personalBest ? item.personalBest.toLocaleString() : '—'}
@@ -1156,45 +839,25 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                       </div>
 
                       {/* Bracket Seed Chip (far right) */}
-                      <div style={{ width: '110px', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+                      <div className="flex w-27.5 shrink-0 justify-end">
                         {item.tier && item.tierSeed ? (
                           <span
+                            className="inline-flex items-center whitespace-nowrap rounded-sm border px-2 py-1 text-xs font-bold tracking-wide"
                             style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              padding: '0.2rem 0.55rem',
-                              borderRadius: 'var(--radius-sm)',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
                               backgroundColor: item.tier.primaryColor ? `${item.tier.primaryColor}22` : 'rgba(245, 158, 11, 0.15)',
                               color: item.tier.primaryColor || 'var(--color-gold-bright)',
-                              border: `1px solid ${item.tier.primaryColor ? `${item.tier.primaryColor}55` : 'rgba(245, 158, 11, 0.3)'}`,
-                              whiteSpace: 'nowrap',
-                              letterSpacing: '0.02em',
+                              borderColor: item.tier.primaryColor ? `${item.tier.primaryColor}55` : 'rgba(245, 158, 11, 0.3)',
                             }}
                             title={`Assigned to ${item.tier.name} bracket as Seed #${item.tierSeed}`}
                           >
                             {`${item.tier.name} ${item.tierSeed}`}
                           </span>
                         ) : item.isReserve ? (
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              padding: '0.2rem 0.55rem',
-                              borderRadius: 'var(--radius-sm)',
-                              fontSize: '0.72rem',
-                              fontWeight: 600,
-                              backgroundColor: 'rgba(100, 116, 139, 0.15)',
-                              color: 'var(--color-text-muted)',
-                              border: '1px solid var(--color-border)',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
+                          <span className="inline-flex items-center whitespace-nowrap rounded-sm border border-line bg-fg-muted/15 px-2 py-1 text-xs font-semibold text-fg-muted">
                             Reserve
                           </span>
                         ) : (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>—</span>
+                          <span className="text-xs text-fg-muted">—</span>
                         )}
                       </div>
                     </div>
@@ -1216,10 +879,10 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
       >
         {({ requestClose }) => (
           <>
-            <h3 id={jumpTitleId} style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <h3 id={jumpTitleId} className="m-0 text-lg font-bold text-fg">
               Set Seed for {jumpSeedTarget?.name}
             </h3>
-            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+            <p className="m-0 text-caption text-fg-muted">
               Currently Seed #{jumpSeedTarget?.currentSeed}. Enter a new seed position (1 to {manualSeeds.length}):
             </p>
             <input
@@ -1233,39 +896,20 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
               onKeyDown={e => {
                 if (e.key === 'Enter') handleExecuteJump();
               }}
-              style={{
-                width: '100%',
-                boxSizing: 'border-box',
-                padding: '0.5rem 0.75rem',
-                fontSize: '1rem',
-                fontWeight: 700,
-                backgroundColor: 'var(--color-bg-surface-elevated)',
-                color: 'var(--color-gold-bright)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-sm)',
-              }}
+              className={seedInputClass}
             />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={requestClose}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
-              >
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={requestClose} className="px-3.5 py-1.5 text-caption">
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteJump}
-                className="btn btn-primary"
-                style={{ fontSize: '0.82rem', padding: '0.4rem 1rem' }}
-              >
+              </Button>
+              <Button variant="primary" onClick={handleExecuteJump} className="px-4 py-1.5 text-caption">
                 Jump to Seed
-              </button>
+              </Button>
             </div>
           </>
         )}
       </Overlay>
+
 
       {/* Shuffle Confirmation Modal */}
       <ConfirmDialog
@@ -1317,14 +961,14 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
       >
         {({ requestClose }) => (
           <>
-            <h3 id={batchJumpTitleId} style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <h3 id={batchJumpTitleId} className="m-0 text-lg font-bold text-fg">
               Jump {selectedPlayerIds.size} Selected Competitors
             </h3>
-            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+            <p className="m-0 text-caption leading-snug text-fg-muted">
               Selected competitors will bunch contiguously starting at the target seed position, preserving their existing relative order.
             </p>
             <div>
-              <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--color-text-secondary)', marginBottom: '0.35rem' }}>
+              <label className="mb-1.5 block text-caption text-fg-secondary">
                 Target Seed Position (1 to {manualSeeds.length}):
               </label>
               <input
@@ -1338,36 +982,16 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                 onKeyDown={e => {
                   if (e.key === 'Enter') handleExecuteBatchJump();
                 }}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: '0.5rem 0.75rem',
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  backgroundColor: 'var(--color-bg-surface-elevated)',
-                  color: 'var(--color-gold-bright)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-sm)',
-                }}
+                className={seedInputClass}
               />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={requestClose}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
-              >
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={requestClose} className="px-3.5 py-1.5 text-caption">
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteBatchJump}
-                className="btn btn-primary"
-                style={{ fontSize: '0.82rem', padding: '0.4rem 1rem' }}
-              >
+              </Button>
+              <Button variant="primary" onClick={handleExecuteBatchJump} className="px-4 py-1.5 text-caption">
                 Jump to Seed #{batchJumpInput || '1'}
-              </button>
+              </Button>
             </div>
           </>
         )}

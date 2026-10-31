@@ -19,6 +19,7 @@ import {
   renderMicroChip,
 } from '../../routingChips';
 import { getHighlightedPlayerNameColor } from '../../journeyHighlight';
+import { cn } from '../../../../components/ui';
 
 interface BracketMatchCardProps {
   match: BracketMatch;
@@ -235,24 +236,19 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
 
   const isHighlightActive = Boolean(hoveredAncestry && isCardInAncestry);
 
-  const baseCardBorder = hoveredAncestry
+  const cardBorderColor = hoveredAncestry
     ? isCardInAncestry
-      ? `1.5px solid ${secondaryColor}`
-      : `1.5px solid ${secondaryColor}44`
-    : inProgress || isComplete
-    ? `2px solid ${primaryColor}`
-    : isMatchHovered
-    ? `1.5px solid ${primaryColor}`
-    : `1.5px solid ${secondaryColor}`;
-
-  const cardBorderTop = baseCardBorder;
-  const cardBorderBottom = baseCardBorder;
-  const cardBorderLeft = branchAccentColor
-    ? `4px solid ${hoveredAncestry && !isCardInAncestry ? `${branchAccentColor}55` : branchAccentColor}`
-    : baseCardBorder;
-  const cardBorderRight = branchAccentColor
-    ? `4px solid ${hoveredAncestry && !isCardInAncestry ? `${branchAccentColor}55` : branchAccentColor}`
-    : baseCardBorder;
+      ? secondaryColor
+      : `${secondaryColor}44`
+    : inProgress || isComplete || isMatchHovered
+    ? primaryColor
+    : secondaryColor;
+  const cardSideBorderColor = branchAccentColor
+    ? hoveredAncestry && !isCardInAncestry
+      ? `${branchAccentColor}55`
+      : branchAccentColor
+    : cardBorderColor;
+  const isCardBorderThick = !hoveredAncestry && (inProgress || isComplete);
 
   const p1NameColor = getHighlightedPlayerNameColor({
     isHighlightActive,
@@ -282,42 +278,32 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
     <div
       key={match.id}
       id={`bracket-match-${match.id}`}
+      className={cn(
+        'pointer-events-auto absolute overflow-visible transition-[transform,scale,box-shadow] duration-300',
+        isFocusedMatch
+          ? 'z-60 scale-[1.08]'
+          : isCardInAncestry
+          ? 'z-26'
+          : isOriginHovered
+          ? 'z-25'
+          : isMatchHovered
+          ? 'z-15'
+          : 'z-2'
+      )}
       style={{
-        position: 'absolute',
         left: `${pos.x}px`,
         top: `${pos.y}px`,
         width: `${pos.width}px`,
         height: `${pos.height}px`,
-        overflow: 'visible',
-        zIndex: isFocusedMatch
-          ? 60
-          : isCardInAncestry
-          ? 26
-          : isOriginHovered
-          ? 25
-          : isMatchHovered
-          ? 15
-          : 2,
-        pointerEvents: 'auto',
-        transform: isFocusedMatch ? 'scale(1.08)' : undefined,
-        transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease',
       }}
     >
       {/* Entry (Inbound) Micro-Chips: OUTSIDE the match to the left */}
       {p1InboundChip && (
         <div
-          style={{
-            position: 'absolute',
-            right: 'calc(100% + 6px)',
-            top: '20px',
-            height: '28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            zIndex: 30,
-            pointerEvents: 'auto',
-            opacity: hoveredAncestry ? (isCardInAncestry ? 1 : 0.35) : 1,
-          }}
+          className={cn(
+            'pointer-events-auto absolute right-[calc(100%+6px)] top-5 z-30 flex h-7 items-center justify-end',
+            hoveredAncestry && !isCardInAncestry && 'opacity-35'
+          )}
         >
           {renderMicroChip(p1InboundChip, setHoveredOriginMatchId, onChipClick)}
         </div>
@@ -325,18 +311,10 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
 
       {p2InboundChip && (
         <div
-          style={{
-            position: 'absolute',
-            right: 'calc(100% + 6px)',
-            top: '49.5px',
-            height: '28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            zIndex: 30,
-            pointerEvents: 'auto',
-            opacity: hoveredAncestry ? (isCardInAncestry ? 1 : 0.35) : 1,
-          }}
+          className={cn(
+            'pointer-events-auto absolute right-[calc(100%+6px)] top-12.5 z-30 flex h-7 items-center justify-end',
+            hoveredAncestry && !isCardInAncestry && 'opacity-35'
+          )}
         >
           {renderMicroChip(p2InboundChip, setHoveredOriginMatchId, onChipClick)}
         </div>
@@ -351,15 +329,17 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
         }}
         onMouseEnter={() => setHoveredMatchId(match.id)}
         onMouseLeave={() => setHoveredMatchId(null)}
+        className={cn(
+          'flex h-full w-full flex-col justify-start overflow-hidden rounded-sm shadow-[0_2px_6px_rgba(0,0,0,0.45)]',
+          isCardBorderThick ? 'border-2' : 'border-[1.5px]',
+          branchAccentColor && 'border-x-4',
+          isFocusedMatch ? 'outline-offset-2 animate-match-zoom-pulse' : 'outline-offset-0',
+          !isObsMode && tournament.isLocked && isPlayable ? 'cursor-pointer' : 'cursor-default',
+          hoveredAncestry ? !isCardInAncestry && 'opacity-35' : !isPlayable && 'opacity-70'
+        )}
         style={{
-          width: '100%',
-          height: '100%',
           background: effectiveCardBg,
-          borderRadius: '5px',
-          borderTop: cardBorderTop,
-          borderBottom: cardBorderBottom,
-          borderLeft: cardBorderLeft,
-          borderRight: cardBorderRight,
+          borderColor: `${cardBorderColor} ${cardSideBorderColor}`,
           boxShadow: isFocusedMatch
             ? `0 0 0 3px ${primaryColor}, 0 0 35px ${primaryColor}dd, 0 0 70px ${primaryColor}66`
             : hoveredAncestry
@@ -372,58 +352,34 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
             ? `0 0 16px ${primaryColor}55`
             : isMatchHovered
             ? `0 4px 14px ${secondaryColor}40`
-            : '0 2px 6px rgba(0, 0, 0, 0.45)',
+            : undefined,
           outline: isFocusedMatch
             ? `2.5px solid ${primaryColor}`
             : !hoveredAncestry && isOriginHovered
             ? `2px solid ${branchAccentColor || primaryColor}`
             : 'none',
-          outlineOffset: isFocusedMatch ? '2px' : '0px',
-          animation: isFocusedMatch ? 'matchZoomPulse 2.4s ease-in-out' : undefined,
-          cursor: !isObsMode && tournament.isLocked && isPlayable ? 'pointer' : 'default',
-          opacity: hoveredAncestry
-            ? isCardInAncestry
-              ? 1
-              : 0.35
-            : isPlayable
-            ? 1
-            : 0.72,
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-start',
-          boxSizing: 'border-box',
         }}
       >
         {/* Match Header Strip */}
         <div
+          className="flex h-5 min-h-5 max-h-5 items-center justify-between border-b-[1.5px] px-2 font-medium leading-[20px]"
           style={{
-            height: '20px',
-            minHeight: '20px',
-            maxHeight: '20px',
-            padding: '0 0.55rem',
             background: effectiveCardBg,
             fontSize: shelfFontSize,
             color: textColor,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: hoveredAncestry
+            borderBottomColor: hoveredAncestry
               ? isCardInAncestry
-                ? `1.5px solid ${secondaryColor}`
-                : `1.5px solid ${secondaryColor}44`
+                ? secondaryColor
+                : `${secondaryColor}44`
               : isComplete
-              ? `1.5px solid ${primaryColor}`
-              : `1.5px solid ${secondaryColor}`,
-            boxSizing: 'border-box',
-            lineHeight: '20px',
-            fontWeight: 500,
+              ? primaryColor
+              : secondaryColor,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div className="flex items-center gap-1.5">
             <span>Match #{match.matchNumber}</span>
             {isAdvanceRound && !isComplete && (
-              <span style={{ color: '#10b981', fontSize: '0.62rem', fontWeight: 800 }}>
+              <span className="text-3xs font-extrabold text-green">
                 • Winner Advances
               </span>
             )}
@@ -435,41 +391,23 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
         <div
           onMouseEnter={() => onSlotHover(match.id, 1)}
           onMouseLeave={() => onSlotHover(null, null)}
+          className={cn(
+            'relative flex h-7 min-h-7 max-h-7 items-center justify-between px-2',
+            isP1Target && 'z-10 rounded-xs'
+          )}
           style={{
-            height: '28px',
-            minHeight: '28px',
-            maxHeight: '28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 0.55rem',
-            background: isHighlightActive
-              ? p1ZebraBg
-              : isComplete
-              ? (p1Won ? colorWithAlpha(primaryColor, 0.12, 'rgba(255, 255, 255, 0.04)') : effectiveCardBg)
-              : p1ZebraBg,
-            boxSizing: 'border-box',
-            position: 'relative',
-            ...(isP1Target
-              ? {
-                  boxShadow: `inset 0 0 0 2px ${primaryColor}, inset 0 0 10px ${primaryColor}88`,
-                  background: `${primaryColor}22`,
-                  zIndex: 10,
-                  borderRadius: '3px',
-                }
-              : {}),
+            background: isP1Target
+              ? `${primaryColor}22`
+              : isHighlightActive
+                ? p1ZebraBg
+                : isComplete
+                ? (p1Won ? colorWithAlpha(primaryColor, 0.12, 'rgba(255, 255, 255, 0.04)') : effectiveCardBg)
+                : p1ZebraBg,
+            boxShadow: isP1Target ? `inset 0 0 0 2px ${primaryColor}, inset 0 0 10px ${primaryColor}88` : undefined,
           }}
         >
           {/* Left Sub-container (Ingress / Origin & Competitor Info) */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              minWidth: 0,
-              flex: 1,
-              overflow: 'hidden',
-            }}
-          >
+          <div className="flex min-w-0 flex-1 items-center overflow-hidden">
             <div
               onClick={(e) => {
                 // Only registered competitors open a profile; draft placeholder seeds ("Seed N") are inert
@@ -478,39 +416,28 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                   onPlayerClick(p1.id, p1.name, p1Profile.country);
                 }
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                overflow: 'hidden',
-                padding: '0.05rem 0.2rem',
-                borderRadius: 'var(--radius-sm)',
-                cursor: p1Profile ? 'pointer' : 'inherit',
-                minWidth: 0,
-                flex: 1,
-              }}
+              className={cn(
+                'flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden px-1 rounded-sm',
+                p1Profile ? 'cursor-pointer' : 'cursor-[inherit]'
+              )}
               title={p1Profile ? 'View competitor tournament profile' : undefined}
             >
               {p1?.seed && (
                 <span
+                  className={cn(
+                    'inline-flex shrink-0 items-center justify-center rounded-xs border-[1.5px] font-mono font-black',
+                    isComplete && p2Won && !isHighlightActive && 'opacity-45'
+                  )}
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                     width: `${seedDim}px`,
                     height: `${seedDim}px`,
                     minWidth: `${seedDim}px`,
                     background: (isComplete && p1Won) || p1Leading
                       ? colorWithAlpha(primaryColor, 0.15, 'rgba(255, 255, 255, 0.08)')
                       : effectiveCardBg,
-                    border: `1.5px solid ${(isComplete && p1Won) || p1Leading ? primaryColor : secondaryColor}`,
+                    borderColor: (isComplete && p1Won) || p1Leading ? primaryColor : secondaryColor,
                     color: (isComplete && p1Won) || p1Leading ? primaryColor : textColor,
-                    opacity: isComplete && p2Won && !isHighlightActive ? 0.45 : 1,
-                    fontWeight: 900,
                     fontSize: seedFontSize,
-                    fontFamily: 'var(--font-mono)',
-                    borderRadius: '3px',
-                    flexShrink: 0,
                     lineHeight: `${seedDim}px`,
                   }}
                 >
@@ -522,33 +449,22 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                 <PlayerAvatar
                   player={p1Profile}
                   country={p1Profile?.country}
-                  style={{
-                    fontSize: flagFontSize,
-                    lineHeight: 1,
-                    flexShrink: 0,
-                    opacity: isComplete && p2Won && !isHighlightActive ? 0.45 : 1,
-                  }}
+                  className={cn('shrink-0 leading-none', isComplete && p2Won && !isHighlightActive && 'opacity-45')}
+                  style={{ fontSize: flagFontSize }}
                 />
               )}
 
               <span
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  fontSize: nameFontSize,
-                  fontWeight:
-                    (isComplete && p1Won) || p1Leading || (isHighlightActive && isP1Target)
-                      ? 900
-                      : isComplete && p2Won
-                      ? 500
-                      : 700,
-                  color: p1NameColor,
-                  opacity: isComplete && p2Won && !isHighlightActive ? 0.45 : 1,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  lineHeight: 1.1,
-                }}
+                className={cn(
+                  'min-w-0 flex-1 truncate leading-tight',
+                  (isComplete && p1Won) || p1Leading || (isHighlightActive && isP1Target)
+                    ? 'font-black'
+                    : isComplete && p2Won
+                    ? 'font-medium'
+                    : 'font-bold',
+                  isComplete && p2Won && !isHighlightActive && 'opacity-45'
+                )}
+                style={{ fontSize: nameFontSize, color: p1NameColor }}
               >
                 {p1Name}
               </span>
@@ -556,32 +472,26 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
           </div>
 
           {/* Right Sub-container (Egress / Destination & Score) */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              flexShrink: 0,
-              marginLeft: '4px',
-            }}
-          >
+          <div className="ml-1 flex shrink-0 items-center">
             {/* Outbound Chip: Placed right-aligned, immediately to left of score container with 8px margin */}
             {p1OutboundChip && (
-              <div style={{ marginRight: '8px', display: 'flex', alignItems: 'center' }}>
+              <div className="mr-2 flex items-center">
                 {renderMicroChip(p1OutboundChip, setHoveredOriginMatchId, onChipClick)}
               </div>
             )}
 
             {/* Score Box */}
             <span
-              className="tabular-nums"
+              className={cn(
+                'font-mono tabular-nums tracking-tight inline-flex shrink-0 items-center justify-center ml-0 rounded-xs leading-none',
+                (isComplete && p1Won) || p1Leading ? 'font-black' : 'font-semibold',
+                !isComplete && !inProgress && !((isComplete && p1Won) || p1Leading) ? 'border-[1.5px]' : 'border',
+                isComplete && p2Won && !isHighlightActive && 'opacity-45'
+              )}
               style={{
                 fontSize: scoreFontSize,
-                fontWeight: (isComplete && p1Won) || p1Leading ? 900 : 600,
                 minWidth: `${scoreMinW}px`,
                 height: `${scoreH}px`,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
                 color: (isComplete && p1Won) || p1Leading
                   ? primaryColor
                   : textColor,
@@ -590,16 +500,11 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                   : !isComplete && !inProgress
                   ? effectiveCardBg
                   : 'transparent',
-                border: (isComplete && p1Won) || p1Leading
-                  ? `1px solid ${colorWithAlpha(primaryColor, 0.55, 'transparent')}`
+                borderColor: (isComplete && p1Won) || p1Leading
+                  ? colorWithAlpha(primaryColor, 0.55, 'transparent')
                   : !isComplete && !inProgress
-                  ? `1.5px solid ${secondaryColor}`
-                  : '1px solid transparent',
-                opacity: isComplete && p2Won && !isHighlightActive ? 0.45 : 1,
-                borderRadius: '3px',
-                marginLeft: 0,
-                flexShrink: 0,
-                lineHeight: 1,
+                  ? secondaryColor
+                  : 'transparent',
               }}
             >
               {!isComplete && !inProgress ? '-' : p1ScoreDisplay}
@@ -609,9 +514,8 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
 
         {/* Player Divider */}
         <div
+          className="h-[1.5px] min-h-[1.5px] shrink-0"
           style={{
-            height: '1.5px',
-            minHeight: '1.5px',
             background: hoveredAncestry
               ? isCardInAncestry
                 ? secondaryColor
@@ -619,7 +523,6 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
               : isComplete
               ? primaryColor
               : secondaryColor,
-            flexShrink: 0,
           }}
         />
 
@@ -627,41 +530,23 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
         <div
           onMouseEnter={() => onSlotHover(match.id, 2)}
           onMouseLeave={() => onSlotHover(null, null)}
+          className={cn(
+            'relative flex h-7 min-h-7 max-h-7 items-center justify-between px-2',
+            isP2Target && 'z-10 rounded-xs'
+          )}
           style={{
-            height: '28px',
-            minHeight: '28px',
-            maxHeight: '28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 0.55rem',
-            background: isHighlightActive
-              ? effectiveCardBg
-              : isComplete && p2Won
-              ? colorWithAlpha(primaryColor, 0.12, 'rgba(255, 255, 255, 0.04)')
-              : effectiveCardBg,
-            boxSizing: 'border-box',
-            position: 'relative',
-            ...(isP2Target
-              ? {
-                  boxShadow: `inset 0 0 0 2px ${primaryColor}, inset 0 0 10px ${primaryColor}88`,
-                  background: `${primaryColor}22`,
-                  zIndex: 10,
-                  borderRadius: '3px',
-                }
-              : {}),
+            background: isP2Target
+              ? `${primaryColor}22`
+              : isHighlightActive
+                ? effectiveCardBg
+                : isComplete && p2Won
+                ? colorWithAlpha(primaryColor, 0.12, 'rgba(255, 255, 255, 0.04)')
+                : effectiveCardBg,
+            boxShadow: isP2Target ? `inset 0 0 0 2px ${primaryColor}, inset 0 0 10px ${primaryColor}88` : undefined,
           }}
         >
           {/* Left Sub-container (Ingress / Origin & Competitor Info) */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              minWidth: 0,
-              flex: 1,
-              overflow: 'hidden',
-            }}
-          >
+          <div className="flex min-w-0 flex-1 items-center overflow-hidden">
             <div
               onClick={(e) => {
                 // Only registered competitors open a profile; draft placeholder seeds ("Seed N") are inert
@@ -670,39 +555,28 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                   onPlayerClick(p2.id, p2.name, p2Profile.country);
                 }
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                overflow: 'hidden',
-                padding: '0.05rem 0.2rem',
-                borderRadius: 'var(--radius-sm)',
-                cursor: p2Profile ? 'pointer' : 'inherit',
-                minWidth: 0,
-                flex: 1,
-              }}
+              className={cn(
+                'flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden px-1 rounded-sm',
+                p2Profile ? 'cursor-pointer' : 'cursor-[inherit]'
+              )}
               title={p2Profile ? 'View competitor tournament profile' : undefined}
             >
               {p2?.seed && (
                 <span
+                  className={cn(
+                    'inline-flex shrink-0 items-center justify-center rounded-xs border-[1.5px] font-mono font-black',
+                    isComplete && p1Won && !isHighlightActive && 'opacity-45'
+                  )}
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                     width: `${seedDim}px`,
                     height: `${seedDim}px`,
                     minWidth: `${seedDim}px`,
                     background: (isComplete && p2Won) || p2Leading
                       ? colorWithAlpha(primaryColor, 0.15, 'rgba(255, 255, 255, 0.08)')
                       : effectiveCardBg,
-                    border: `1.5px solid ${(isComplete && p2Won) || p2Leading ? primaryColor : secondaryColor}`,
+                    borderColor: (isComplete && p2Won) || p2Leading ? primaryColor : secondaryColor,
                     color: (isComplete && p2Won) || p2Leading ? primaryColor : textColor,
-                    opacity: isComplete && p1Won && !isHighlightActive ? 0.45 : 1,
-                    fontWeight: 900,
                     fontSize: seedFontSize,
-                    fontFamily: 'var(--font-mono)',
-                    borderRadius: '3px',
-                    flexShrink: 0,
                     lineHeight: `${seedDim}px`,
                   }}
                 >
@@ -714,33 +588,22 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                 <PlayerAvatar
                   player={p2Profile}
                   country={p2Profile?.country}
-                  style={{
-                    fontSize: flagFontSize,
-                    lineHeight: 1,
-                    flexShrink: 0,
-                    opacity: isComplete && p1Won && !isHighlightActive ? 0.45 : 1,
-                  }}
+                  className={cn('shrink-0 leading-none', isComplete && p1Won && !isHighlightActive && 'opacity-45')}
+                  style={{ fontSize: flagFontSize }}
                 />
               )}
 
               <span
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  fontSize: nameFontSize,
-                  fontWeight:
-                    (isComplete && p2Won) || p2Leading || (isHighlightActive && isP2Target)
-                      ? 900
-                      : isComplete && p1Won
-                      ? 500
-                      : 700,
-                  color: p2NameColor,
-                  opacity: isComplete && p1Won && !isHighlightActive ? 0.45 : 1,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  lineHeight: 1.1,
-                }}
+                className={cn(
+                  'min-w-0 flex-1 truncate leading-tight',
+                  (isComplete && p2Won) || p2Leading || (isHighlightActive && isP2Target)
+                    ? 'font-black'
+                    : isComplete && p1Won
+                    ? 'font-medium'
+                    : 'font-bold',
+                  isComplete && p1Won && !isHighlightActive && 'opacity-45'
+                )}
+                style={{ fontSize: nameFontSize, color: p2NameColor }}
               >
                 {p2Name}
               </span>
@@ -748,32 +611,26 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
           </div>
 
           {/* Right Sub-container (Egress / Destination & Score) */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              flexShrink: 0,
-              marginLeft: '4px',
-            }}
-          >
+          <div className="ml-1 flex shrink-0 items-center">
             {/* Outbound Chip: Placed right-aligned, immediately to left of score container with 8px margin */}
             {p2OutboundChip && (
-              <div style={{ marginRight: '8px', display: 'flex', alignItems: 'center' }}>
+              <div className="mr-2 flex items-center">
                 {renderMicroChip(p2OutboundChip, setHoveredOriginMatchId, onChipClick)}
               </div>
             )}
 
             {/* Score Box */}
             <span
-              className="tabular-nums"
+              className={cn(
+                'font-mono tabular-nums tracking-tight inline-flex shrink-0 items-center justify-center ml-0 rounded-xs leading-none',
+                (isComplete && p2Won) || p2Leading ? 'font-black' : 'font-semibold',
+                !isComplete && !inProgress && !((isComplete && p2Won) || p2Leading) ? 'border-[1.5px]' : 'border',
+                isComplete && p1Won && !isHighlightActive && 'opacity-45'
+              )}
               style={{
                 fontSize: scoreFontSize,
-                fontWeight: (isComplete && p2Won) || p2Leading ? 900 : 600,
                 minWidth: `${scoreMinW}px`,
                 height: `${scoreH}px`,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
                 color: (isComplete && p2Won) || p2Leading
                   ? primaryColor
                   : textColor,
@@ -782,16 +639,11 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                   : !isComplete && !inProgress
                   ? effectiveCardBg
                   : 'transparent',
-                border: (isComplete && p2Won) || p2Leading
-                  ? `1px solid ${colorWithAlpha(primaryColor, 0.55, 'transparent')}`
+                borderColor: (isComplete && p2Won) || p2Leading
+                  ? colorWithAlpha(primaryColor, 0.55, 'transparent')
                   : !isComplete && !inProgress
-                  ? `1.5px solid ${secondaryColor}`
-                  : '1px solid transparent',
-                opacity: isComplete && p1Won && !isHighlightActive ? 0.45 : 1,
-                borderRadius: '3px',
-                marginLeft: 0,
-                flexShrink: 0,
-                lineHeight: 1,
+                  ? secondaryColor
+                  : 'transparent',
               }}
             >
               {!isComplete && !inProgress ? '-' : p2ScoreDisplay}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Send } from 'lucide-react';
+import { Button, cn } from '../../../components/ui';
 import { QualFormat, PointsThreshold } from '../../tournament/types';
 import { QualFormatEditor } from '../../tournament/components/QualFormatEditor';
 
@@ -37,13 +38,13 @@ export const OrgSettingsTab: React.FC<OrgSettingsTabProps> = ({
   onSubmit,
 }) => {
   return (
-    <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-      <div style={{ background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <form onSubmit={onSubmit} className="flex flex-col gap-7">
+      <div className="flex flex-col gap-6 rounded-lg border border-line bg-surface p-6">
         <div>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: '0 0 0.25rem' }}>
+          <h3 className="m-0 mb-1 text-lg font-extrabold text-white">
             Default Tournament Rules
           </h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0 }}>
+          <p className="m-0 text-caption text-fg-muted">
             New tournaments hosted under {orgName} will automatically inherit these qualifying and match play rules.
           </p>
         </div>
@@ -57,22 +58,14 @@ export const OrgSettingsTab: React.FC<OrgSettingsTabProps> = ({
           onPointsConfigChange={onPointsConfigChange}
         />
 
-        <div style={{ maxWidth: '300px' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.35rem' }}>
+        <div className="max-w-75">
+          <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
             Default Bracket Best-of Match
           </label>
           <select
             value={bestOf}
             onChange={e => onBestOfChange(parseInt(e.target.value, 10) || 5)}
-            style={{
-              width: '100%',
-              padding: '0.65rem 0.85rem',
-              background: 'var(--color-bg-base)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              color: '#ffffff',
-              fontSize: '0.875rem',
-            }}
+            className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
           >
             <option value={3}>Best of 3</option>
             <option value={5}>Best of 5</option>
@@ -82,63 +75,55 @@ export const OrgSettingsTab: React.FC<OrgSettingsTabProps> = ({
       </div>
 
       {/* Discord Webhook Groundwork */}
-      <div style={{ background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', margin: '0 0 0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h3 className="m-0 mb-1 flex items-center gap-2 text-lg font-extrabold text-white">
               <span>Circuit Discord Webhook</span>
-              <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.45rem', borderRadius: '4px', background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', fontWeight: 600 }}>
+              <span className="rounded-xs bg-blue-500/20 px-2 py-0.5 text-3xs font-semibold text-blue-400">
                 Groundwork
               </span>
             </h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0 }}>
+            <p className="m-0 text-caption text-fg-muted">
               Announcements, tournament registrations, and championship alerts can dispatch to your organization's Discord channel.
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.6rem' }}>
+        <div className="flex gap-2.5">
           <input
             type="text"
             placeholder="https://discord.com/api/webhooks/..."
             value={discordWebhookUrl}
             onChange={e => onDiscordWebhookUrlChange(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '0.65rem 0.85rem',
-              background: 'var(--color-bg-base)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              color: '#ffffff',
-              fontSize: '0.875rem',
-            }}
+            className="flex-1 rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
           />
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={onTestWebhook}
-            className="btn btn-secondary"
-            style={{ padding: '0.65rem 1rem', fontSize: '0.85rem', display: 'inline-flex', gap: '0.4rem', whiteSpace: 'nowrap' }}
+            className="gap-1.5 px-4 py-2.5"
           >
             <Send size={14} />
             <span>Test Ping</span>
-          </button>
+          </Button>
         </div>
 
         {webhookTestStatus && (
-          <div style={{ fontSize: '0.8rem', color: webhookTestStatus.startsWith('✅') ? '#34d399' : '#f87171', fontWeight: 600 }}>
+          <div className={cn('text-caption font-semibold', webhookTestStatus.startsWith('✅') ? 'text-green-bright' : 'text-red-bright')}>
             {webhookTestStatus}
           </div>
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
+      <div className="flex justify-end">
+        <Button
           type="submit"
-          className="btn btn-primary"
-          style={{ padding: '0.65rem 1.75rem', fontSize: '0.92rem' }}
+          variant="primary"
+          className="px-7 py-2.5 text-base"
         >
           Save Default Rules &amp; Webhook
-        </button>
+        </Button>
       </div>
     </form>
   );

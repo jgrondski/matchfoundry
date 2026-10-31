@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { PlayerProfile } from '../../tournament/types';
 import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { User, Plus, Search, Check, X } from 'lucide-react';
+import { Badge, IconButton, cn } from '../../../components/ui';
 
 interface CreatablePlayerSelectProps {
   playersPool: PlayerProfile[];
@@ -100,8 +101,8 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
   };
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
-      <div style={{ position: 'relative' }}>
+    <div ref={containerRef} className="relative w-full">
+      <div className="relative">
         <input
           type="text"
           value={query}
@@ -111,61 +112,27 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder="Search or enter competitor name..."
-          style={{
-            width: '100%',
-            padding: '0.65rem 2.25rem 0.65rem 2.25rem',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--color-border)',
-            background: 'var(--color-bg-base)',
-            color: 'var(--color-text-primary)',
-            fontSize: '0.9rem',
-          }}
+          className="w-full py-2.5 px-9 rounded-sm border border-line bg-canvas text-fg text-sm"
         />
         <Search
           size={16}
           color="var(--color-text-muted)"
-          style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+          className="absolute left-2.5 top-1/2 -translate-y-1/2"
         />
         {query && (
-          <button
-            type="button"
+          <IconButton
+            aria-label="Clear player selection"
             onClick={handleClear}
-            style={{
-              position: 'absolute',
-              right: '10px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--color-text-muted)',
-              cursor: 'pointer',
-              padding: '2px',
-              display: 'flex',
-              alignItems: 'center',
-            }}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5"
             title="Clear player selection"
           >
             <X size={15} />
-          </button>
+          </IconButton>
         )}
       </div>
 
       {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            left: 0,
-            right: 0,
-            maxHeight: '340px',
-            overflowY: 'auto',
-            background: 'var(--color-bg-surface-elevated)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--color-border)',
-            zIndex: 1000,
-          }}
-        >
+        <div className="absolute top-[calc(100%+4px)] left-0 right-0 max-h-85 overflow-y-auto bg-elevated border border-line rounded-md shadow-[0_12px_28px_rgba(0,0,0,0.45),0_0_0_1px_var(--color-line)] z-1000">
           {/* In-Tournament Players */}
           {filteredInTournament.map(p => {
             const isSelected = selectedPlayer?.id === p.id;
@@ -173,35 +140,30 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
               <div
                 key={p.id}
                 onClick={() => handleSelect(p)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0.6rem 0.85rem',
-                  cursor: 'pointer',
-                  borderBottom: '1px solid var(--color-border-subtle)',
-                  background: isSelected ? 'var(--color-gold-bg)' : 'transparent',
-                }}
+                className={cn(
+                  'flex items-center justify-between py-2.5 px-3.5 cursor-pointer border-b border-line-subtle',
+                  isSelected ? 'bg-gold-soft' : 'bg-transparent'
+                )}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="flex items-center gap-2">
                   <User size={15} color="var(--color-text-muted)" />
-                  <span style={{ fontWeight: isSelected ? 700 : 500, color: 'var(--color-text-primary)' }}>
+                  <span className={cn('text-fg', isSelected ? 'font-bold' : 'font-medium')}>
                     {getEffectivePlayerName(p)}
                   </span>
                   {p.displayName && p.displayName !== p.name && (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                    <span className="text-xs text-fg-muted">
                       ({p.name})
                     </span>
                   )}
                   {p.country && (
-                    <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-surface-highlight)', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                    <span className="text-3xs py-0.5 px-1.5 rounded-sm bg-highlight text-fg-secondary font-semibold">
                       {p.country}
                     </span>
                   )}
                   {p.playstyle && (
-                    <span className="badge badge-muted" style={{ fontSize: '0.65rem' }}>
+                    <Badge variant="muted" className="text-3xs">
                       {p.playstyle}
-                    </span>
+                    </Badge>
                   )}
                 </div>
                 {isSelected && <Check size={16} color="var(--color-gold-bright)" />}
@@ -213,17 +175,10 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
           {filteredGlobal.length > 0 && (
             <div>
               <div
-                style={{
-                  padding: '0.4rem 0.85rem',
-                  background: 'var(--color-bg-base)',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  color: 'var(--color-gold-bright)',
-                  letterSpacing: '0.05em',
-                  borderTop: filteredInTournament.length > 0 ? '1px solid var(--color-border)' : 'none',
-                  borderBottom: '1px solid var(--color-border-subtle)',
-                }}
+                className={cn(
+                  'py-1.5 px-3.5 bg-canvas text-2xs font-bold uppercase text-gold-bright tracking-wider border-b border-line-subtle',
+                  filteredInTournament.length > 0 ? 'border-t border-line' : 'border-t-0'
+                )}
               >
                 From Global Player Pool (Auto-imports to tournament)
               </div>
@@ -231,47 +186,30 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
                 <div
                   key={p.id}
                   onClick={() => handleSelectGlobal(p)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.6rem 0.85rem',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid var(--color-border-subtle)',
-                    background: 'transparent',
-                  }}
+                  className="flex items-center justify-between py-2.5 px-3.5 cursor-pointer border-b border-line-subtle bg-transparent"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="flex items-center gap-2">
                     <User size={15} color="var(--color-gold-bright)" />
-                    <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                    <span className="font-semibold text-fg">
                       {getEffectivePlayerName(p)}
                     </span>
                     {p.displayName && p.displayName !== p.name && (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      <span className="text-xs text-fg-muted">
                         ({p.name})
                       </span>
                     )}
                     {p.country && (
-                      <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-surface-highlight)', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                      <span className="text-3xs py-0.5 px-1.5 rounded-sm bg-highlight text-fg-secondary font-semibold">
                         {p.country}
                       </span>
                     )}
                     {p.playstyle && (
-                      <span className="badge badge-muted" style={{ fontSize: '0.65rem' }}>
+                      <Badge variant="muted" className="text-3xs">
                         {p.playstyle}
-                      </span>
+                      </Badge>
                     )}
                   </div>
-                  <span
-                    style={{
-                      fontSize: '0.65rem',
-                      padding: '0.15rem 0.4rem',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'rgba(245, 158, 11, 0.15)',
-                      color: 'var(--color-gold-bright)',
-                      fontWeight: 600,
-                    }}
-                  >
+                  <span className="text-3xs py-0.5 px-1.5 rounded-sm bg-gold/15 text-gold-bright font-semibold">
                     + Import
                   </span>
                 </div>
@@ -283,18 +221,7 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
           {query.trim().length > 0 && !exactMatch && (
             <div
               onClick={handleCreateNew}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 0.85rem',
-                cursor: 'pointer',
-                background: 'rgba(245, 158, 11, 0.1)',
-                borderTop: '1px dashed var(--color-gold)',
-                color: 'var(--color-gold-bright)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-              }}
+              className="flex items-center gap-2 py-3 px-3.5 cursor-pointer bg-gold/10 border-t border-dashed border-gold text-gold-bright font-semibold text-sm"
             >
               <Plus size={16} />
               <span>Add &quot;{query.trim()}&quot; as new competitor</span>
@@ -302,7 +229,7 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
           )}
 
           {filteredInTournament.length === 0 && filteredGlobal.length === 0 && query.trim().length === 0 && (
-            <div style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+            <div className="p-3 text-center text-fg-muted text-caption">
               Type a name to search or add a player
             </div>
           )}

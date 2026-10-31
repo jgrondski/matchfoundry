@@ -18,6 +18,7 @@ import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../../players/components/PlaystyleChip';
 import { getEffectivePlayerName } from '../../../players/playerNameUtils';
 import { Overlay } from '../../../../components/overlay';
+import { Badge, Button, IconButton, cn } from '../../../../components/ui';
 
 interface DualListSeedingModalProps {
   isOpen: boolean;
@@ -308,112 +309,51 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderBottom: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--color-bg-surface-elevated)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--color-brand)',
-                }}
-              >
+          <div className="flex items-center justify-between border-b border-line bg-elevated px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-md bg-[rgba(99,102,241,0.15)] text-brand">
                 <Users size={20} />
               </div>
               <div>
-                <h2 id={titleId} style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
+                <h2 id={titleId} className="m-0 text-lg font-extrabold text-fg">
                   Multi-Select Seeding Shuttle
                 </h2>
-                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                <p className="m-0 text-caption text-fg-muted">
                   Select competitors on the left in the desired seed order and transfer them to the seeded roster on the right.
                 </p>
               </div>
             </div>
 
-            <button
-              type="button"
+            <IconButton
+              aria-label="Close"
               onClick={requestClose}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '0.35rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 'var(--radius-sm)',
-              }}
+              className="p-1.5"
               title="Close without saving"
             >
               <X size={20} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Dual List Body */}
-          <div
-            style={{
-              flex: 1,
-              display: 'grid',
-              gridTemplateColumns: '1fr 140px 1fr',
-              minHeight: 0,
-              overflow: 'hidden',
-            }}
-          >
+          <div className="grid min-h-0 flex-1 grid-cols-[1fr_140px_1fr] overflow-hidden">
             {/* Left Panel: Available Players */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                borderRight: '1px solid var(--color-border)',
-                minHeight: 0,
-                background: 'var(--color-bg-surface)',
-              }}
-            >
+            <div className="flex min-h-0 flex-col border-r border-line bg-surface">
               {/* Source Tabs & Search */}
-              <div
-                style={{
-                  padding: '0.85rem 1rem',
-                  borderBottom: '1px solid var(--color-border-subtle)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.65rem',
-                  background: 'var(--color-bg-surface-elevated)',
-                }}
-              >
+              <div className="flex flex-col gap-2.5 border-b border-line-subtle bg-elevated px-4 py-3.5">
                 {/* Tabs */}
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                <div className="flex gap-1.5">
                   <button
                     type="button"
                     onClick={() => {
                       setAvailableSourceTab('roster');
                       setLastClickedAvailableIdx(null);
                     }}
-                    style={{
-                      flex: 1,
-                      padding: '0.4rem 0.6rem',
-                      fontSize: '0.78rem',
-                      fontWeight: availableSourceTab === 'roster' ? 700 : 500,
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid',
-                      borderColor: availableSourceTab === 'roster' ? 'var(--color-brand)' : 'var(--color-border)',
-                      background: availableSourceTab === 'roster' ? 'rgba(99, 102, 241, 0.15)' : 'var(--color-bg-surface)',
-                      color: availableSourceTab === 'roster' ? 'var(--color-brand)' : 'var(--color-text-secondary)',
-                      cursor: 'pointer',
-                    }}
+                    className={cn(
+                      'flex-1 cursor-pointer rounded-sm border px-2.5 py-1.5 text-caption',
+                      availableSourceTab === 'roster'
+                        ? 'border-brand bg-[rgba(99,102,241,0.15)] font-bold text-brand'
+                        : 'border-line bg-surface font-medium text-fg-secondary'
+                    )}
                   >
                     Tournament Roster ({availableCandidates.roster.length})
                   </button>
@@ -423,22 +363,12 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
                       setAvailableSourceTab('global');
                       setLastClickedAvailableIdx(null);
                     }}
-                    style={{
-                      flex: 1,
-                      padding: '0.4rem 0.6rem',
-                      fontSize: '0.78rem',
-                      fontWeight: availableSourceTab === 'global' ? 700 : 500,
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid',
-                      borderColor: availableSourceTab === 'global' ? 'var(--color-gold-bright)' : 'var(--color-border)',
-                      background: availableSourceTab === 'global' ? 'rgba(245, 158, 11, 0.15)' : 'var(--color-bg-surface)',
-                      color: availableSourceTab === 'global' ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.3rem',
-                    }}
+                    className={cn(
+                      'flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-sm border px-2.5 py-1.5 text-caption',
+                      availableSourceTab === 'global'
+                        ? 'border-gold-bright bg-gold/15 font-bold text-gold-bright'
+                        : 'border-line bg-surface font-medium text-fg-secondary'
+                    )}
                   >
                     <Globe size={13} />
                     Global Pool ({availableCandidates.global.length})
@@ -446,53 +376,38 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
                 </div>
 
                 {/* Search Bar */}
-                <div style={{ position: 'relative' }}>
+                <div className="relative">
                   <Search
                     size={14}
-                    style={{
-                      position: 'absolute',
-                      left: '0.65rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'var(--color-text-muted)',
-                    }}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted"
                   />
                   <input
                     type="text"
                     placeholder="Filter available competitors..."
                     value={availableSearch}
                     onChange={e => setAvailableSearch(e.target.value)}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: '0.35rem 0.65rem 0.35rem 2rem',
-                      backgroundColor: 'var(--color-bg-surface)',
-                      color: 'var(--color-text-primary)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.8rem',
-                    }}
+                    className="w-full rounded-sm border border-line bg-surface py-1.5 pl-8 pr-2.5 text-caption text-fg"
                   />
                 </div>
 
                 {/* Selection Summary & Quick Actions */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>
-                    Selected: <strong style={{ color: 'var(--color-brand)' }}>{selectedAvailableIds.length}</strong> of {filteredAvailable.length}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-fg-muted">
+                    Selected: <strong className="text-brand">{selectedAvailableIds.length}</strong> of {filteredAvailable.length}
                   </span>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={handleSelectAllAvailable}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--color-brand)', cursor: 'pointer', fontSize: '0.75rem', padding: 0 }}
+                      className="cursor-pointer border-0 bg-transparent p-0 text-xs text-brand"
                     >
                       Select All
                     </button>
-                    <span style={{ color: 'var(--color-border)' }}>•</span>
+                    <span className="text-line">•</span>
                     <button
                       type="button"
                       onClick={handleClearAvailableSelection}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.75rem', padding: 0 }}
+                      className="cursor-pointer border-0 bg-transparent p-0 text-xs text-fg-muted"
                     >
                       Clear
                     </button>
@@ -501,13 +416,13 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
               </div>
 
               {/* Available Player List */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+              <div className="flex-1 overflow-y-auto p-2">
                 {filteredAvailable.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2rem 1rem', fontSize: '0.82rem' }}>
+                  <div className="px-4 py-8 text-center text-caption text-fg-muted">
                     No available competitors found.
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <div className="flex flex-col gap-1">
                     {filteredAvailable.map((player, idx) => {
                       const isSelected = selectedAvailableIds.includes(player.id);
                       const orderNumber = availableSelectionOrder.get(player.id);
@@ -516,50 +431,30 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
                         <div
                           key={player.id}
                           onClick={e => handleToggleAvailable(player.id, idx, e.shiftKey)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '0.45rem 0.65rem',
-                            borderRadius: 'var(--radius-sm)',
-                            backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.12)' : 'var(--color-bg-surface-elevated)',
-                            border: `1px solid ${isSelected ? 'var(--color-brand)' : 'var(--color-border-subtle)'}`,
-                            cursor: 'pointer',
-                            userSelect: 'none',
-                            transition: 'background-color 0.1s ease',
-                          }}
+                          className={cn(
+                            'flex cursor-pointer select-none items-center justify-between rounded-sm border px-2.5 py-2 transition-colors duration-100',
+                            isSelected ? 'border-brand bg-[rgba(99,102,241,0.12)]' : 'border-line-subtle bg-elevated'
+                          )}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                          <div className="flex min-w-0 items-center gap-2">
                             {/* Order Badge or Checkbox */}
                             {isSelected ? (
                               <div
-                                style={{
-                                  width: 22,
-                                  height: 22,
-                                  borderRadius: 'var(--radius-full)',
-                                  backgroundColor: 'var(--color-brand)',
-                                  color: '#ffffff',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 800,
-                                  flexShrink: 0,
-                                }}
+                                className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-extrabold text-white"
                                 title={`Transfer Order: ${orderNumber}`}
                               >
                                 {orderNumber}
                               </div>
                             ) : (
-                              <Square size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                              <Square size={16} color="var(--color-text-muted)" className="shrink-0" />
                             )}
 
-                            <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span className="truncate text-sm font-semibold text-fg">
                               {getEffectivePlayerName(player)}
                             </span>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                          <div className="flex shrink-0 items-center gap-1.5">
                             <PlayerAvatar player={player} />
                             {player.playstyle && <PlaystyleChip style={player.playstyle} />}
                           </div>
@@ -572,199 +467,125 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
             </div>
 
             {/* Center Shuttle Controls */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.75rem',
-                padding: '1rem 0.5rem',
-                background: 'var(--color-bg-surface-elevated)',
-                borderRight: '1px solid var(--color-border)',
-              }}
-            >
+            <div className="flex flex-col items-center justify-center gap-3 border-r border-line bg-elevated px-2 py-4">
               {/* Add to Bottom */}
-              <button
-                type="button"
+              <Button
+                variant="primary"
                 disabled={selectedAvailableIds.length === 0}
                 onClick={handleTransferToBottom}
-                className="btn btn-primary"
-                style={{
-                  width: '100%',
-                  fontSize: '0.75rem',
-                  padding: '0.5rem 0.4rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  opacity: selectedAvailableIds.length === 0 ? 0.4 : 1,
-                  cursor: selectedAvailableIds.length === 0 ? 'not-allowed' : 'pointer',
-                }}
+                className="flex w-full flex-col items-center gap-1 px-1.5 py-2 text-xs"
                 title="Add selected competitors to the bottom of the seed list in the order selected"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <div className="flex items-center gap-1">
                   <span>Add Bottom</span>
                   <ArrowRight size={13} />
                 </div>
                 {selectedAvailableIds.length > 0 && (
-                  <span style={{ fontSize: '0.68rem', opacity: 0.85 }}>
+                  <span className="text-2xs opacity-85">
                     ({selectedAvailableIds.length} players)
                   </span>
                 )}
-              </button>
+              </Button>
 
               {/* Add to Top */}
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 disabled={selectedAvailableIds.length === 0}
                 onClick={handleTransferToTop}
-                className="btn btn-secondary"
-                style={{
-                  width: '100%',
-                  fontSize: '0.75rem',
-                  padding: '0.5rem 0.4rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  opacity: selectedAvailableIds.length === 0 ? 0.4 : 1,
-                  cursor: selectedAvailableIds.length === 0 ? 'not-allowed' : 'pointer',
-                }}
+                className="flex w-full flex-col items-center gap-1 px-1.5 py-2 text-xs"
                 title="Insert selected competitors at the top (Seed #1..N) in the order selected"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <div className="flex items-center gap-1">
                   <ArrowUp size={13} />
                   <span>Add Top</span>
                 </div>
                 {selectedAvailableIds.length > 0 && (
-                  <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>
+                  <span className="text-2xs text-fg-muted">
                     ({selectedAvailableIds.length} players)
                   </span>
                 )}
-              </button>
+              </Button>
 
-              <div style={{ width: '80%', height: '1px', background: 'var(--color-border)', margin: '0.25rem 0' }} />
+              <div className="my-1 h-px w-4/5 bg-line" />
 
               {/* Remove Selected from Seeded */}
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 disabled={selectedSeededIds.size === 0}
                 onClick={handleRemoveSelectedSeeded}
-                className="btn btn-secondary"
-                style={{
-                  width: '100%',
-                  fontSize: '0.75rem',
-                  padding: '0.5rem 0.4rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  borderColor: selectedSeededIds.size > 0 ? 'var(--color-red)' : 'var(--color-border)',
-                  color: selectedSeededIds.size > 0 ? 'var(--color-red)' : 'var(--color-text-muted)',
-                  opacity: selectedSeededIds.size === 0 ? 0.4 : 1,
-                  cursor: selectedSeededIds.size === 0 ? 'not-allowed' : 'pointer',
-                }}
+                className={cn(
+                  'flex w-full flex-col items-center gap-1 px-1.5 py-2 text-xs',
+                  selectedSeededIds.size > 0 ? 'border-red text-red enabled:hover:border-red' : 'border-line text-fg-muted'
+                )}
                 title="Remove selected competitors from seeded list back to available pool"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <div className="flex items-center gap-1">
                   <ArrowLeft size={13} />
                   <span>Remove</span>
                 </div>
                 {selectedSeededIds.size > 0 && (
-                  <span style={{ fontSize: '0.68rem', opacity: 0.85 }}>
+                  <span className="text-2xs opacity-85">
                     ({selectedSeededIds.size} selected)
                   </span>
                 )}
-              </button>
+              </Button>
             </div>
 
             {/* Right Panel: Staged Seeded List */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: 0,
-                background: 'var(--color-bg-surface)',
-              }}
-            >
+            <div className="flex min-h-0 flex-col bg-surface">
               {/* Header & Search */}
-              <div
-                style={{
-                  padding: '0.85rem 1rem',
-                  borderBottom: '1px solid var(--color-border-subtle)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.65rem',
-                  background: 'var(--color-bg-surface-elevated)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <div className="flex flex-col gap-2.5 border-b border-line-subtle bg-elevated px-4 py-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
                     <Layers size={16} color="var(--color-gold-bright)" />
-                    <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                    <span className="text-sm font-bold text-fg">
                       Seeded Roster ({stagedSeeds.length} competitors)
                     </span>
                   </div>
                   {stagedSeeds.length >= totalCapacity && totalCapacity > 0 ? (
-                    <span className="badge badge-green" style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem' }}>
+                    <Badge variant="green" className="px-1.5 py-0.5 text-2xs">
                       <ShieldCheck size={11} /> All Tiers Filled
-                    </span>
+                    </Badge>
                   ) : (
-                    <span className="badge badge-gold" style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem' }}>
+                    <Badge variant="gold" className="px-1.5 py-0.5 text-2xs">
                       {totalCapacity - stagedSeeds.length} slots remain
-                    </span>
+                    </Badge>
                   )}
                 </div>
 
                 {/* Search Bar */}
-                <div style={{ position: 'relative' }}>
+                <div className="relative">
                   <Search
                     size={14}
-                    style={{
-                      position: 'absolute',
-                      left: '0.65rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'var(--color-text-muted)',
-                    }}
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted"
                   />
                   <input
                     type="text"
                     placeholder="Filter seeded competitors..."
                     value={seededSearch}
                     onChange={e => setSeededSearch(e.target.value)}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: '0.35rem 0.65rem 0.35rem 2rem',
-                      backgroundColor: 'var(--color-bg-surface)',
-                      color: 'var(--color-text-primary)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.8rem',
-                    }}
+                    className="w-full rounded-sm border border-line bg-surface py-1.5 pl-8 pr-2.5 text-caption text-fg"
                   />
                 </div>
 
                 {/* Selection Summary & Quick Actions */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                  <span style={{ color: 'var(--color-text-muted)' }}>
-                    Selected for removal: <strong style={{ color: 'var(--color-red)' }}>{selectedSeededIds.size}</strong>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-fg-muted">
+                    Selected for removal: <strong className="text-red">{selectedSeededIds.size}</strong>
                   </span>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={handleSelectAllSeeded}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--color-brand)', cursor: 'pointer', fontSize: '0.75rem', padding: 0 }}
+                      className="cursor-pointer border-0 bg-transparent p-0 text-xs text-brand"
                     >
                       Select All
                     </button>
-                    <span style={{ color: 'var(--color-border)' }}>•</span>
+                    <span className="text-line">•</span>
                     <button
                       type="button"
                       onClick={handleClearSeededSelection}
-                      style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: '0.75rem', padding: 0 }}
+                      className="cursor-pointer border-0 bg-transparent p-0 text-xs text-fg-muted"
                     >
                       Clear
                     </button>
@@ -773,15 +594,15 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
               </div>
 
               {/* Seeded Player List with Tier Cutoff Banners */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+              <div className="flex-1 overflow-y-auto p-2">
                 {filteredSeeded.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '2rem 1rem', fontSize: '0.82rem' }}>
+                  <div className="px-4 py-8 text-center text-caption text-fg-muted">
                     {stagedSeeds.length === 0
                       ? 'No competitors seeded yet. Select players from the left and click Add.'
                       : 'No seeds match your search query.'}
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <div className="flex flex-col gap-1">
                     {filteredSeeded.map((item, idx) => {
                       const isSelected = selectedSeededIds.has(item.id);
                       const cutoff = tierCutoffs.find(c => c.start === item.seedNumber);
@@ -792,21 +613,19 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
                           {/* Tier Divider Banner */}
                           {cutoff && (
                             <div
+                              className="mb-0.5 mt-1 flex items-center justify-between rounded-sm border-l-4 px-2.5 py-1.5"
                               style={{
-                                padding: '0.35rem 0.65rem',
                                 backgroundColor: cutoff.tier.cardColor || 'rgba(245, 158, 11, 0.08)',
-                                borderLeft: `4px solid ${cutoff.tier.primaryColor || 'var(--color-gold-bright)'}`,
-                                borderRadius: 'var(--radius-sm)',
-                                margin: '0.3rem 0 0.15rem 0',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
+                                borderLeftColor: cutoff.tier.primaryColor || 'var(--color-gold-bright)',
                               }}
                             >
-                              <span style={{ fontSize: '0.74rem', fontWeight: 800, color: cutoff.tier.primaryColor || 'var(--color-gold-bright)', textTransform: 'uppercase' }}>
+                              <span
+                                className="text-xs font-extrabold uppercase"
+                                style={{ color: cutoff.tier.primaryColor || 'var(--color-gold-bright)' }}
+                              >
                                 {cutoff.tier.name} (Seeds {cutoff.start}–{cutoff.end})
                               </span>
-                              <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>
+                              <span className="text-2xs text-fg-muted">
                                 Tier {cutoff.tier.priority}
                               </span>
                             </div>
@@ -814,16 +633,8 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
 
                           {/* Reserves Divider */}
                           {isReserves && (
-                            <div
-                              style={{
-                                padding: '0.35rem 0.65rem',
-                                backgroundColor: 'rgba(100, 116, 139, 0.08)',
-                                borderLeft: '4px solid var(--color-text-muted)',
-                                borderRadius: 'var(--radius-sm)',
-                                margin: '0.3rem 0 0.15rem 0',
-                              }}
-                            >
-                              <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                            <div className="mb-0.5 mt-1 rounded-sm border-l-4 border-fg-muted bg-fg-muted/8 px-2.5 py-1.5">
+                              <span className="text-xs font-bold uppercase text-fg-secondary">
                                 Alternates / DNQ Pool (Seeds {totalCapacity + 1}+)
                               </span>
                             </div>
@@ -832,42 +643,28 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
                           {/* Seeded Row */}
                           <div
                             onClick={e => handleToggleSeeded(item.id, idx, e.shiftKey)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '0.45rem 0.65rem',
-                              borderRadius: 'var(--radius-sm)',
-                              backgroundColor: isSelected ? 'rgba(239, 68, 68, 0.12)' : 'var(--color-bg-surface-elevated)',
-                              border: `1px solid ${isSelected ? 'var(--color-red)' : 'var(--color-border-subtle)'}`,
-                              cursor: 'pointer',
-                              userSelect: 'none',
-                            }}
+                            className={cn(
+                              'flex cursor-pointer select-none items-center justify-between rounded-sm border px-2.5 py-2',
+                              isSelected ? 'border-red bg-red/12' : 'border-line-subtle bg-elevated'
+                            )}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
+                            <div className="flex min-w-0 items-center gap-2">
                               {isSelected ? (
-                                <CheckSquare size={16} color="var(--color-red)" style={{ flexShrink: 0 }} />
+                                <CheckSquare size={16} color="var(--color-red)" className="shrink-0" />
                               ) : (
-                                <Square size={16} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+                                <Square size={16} color="var(--color-text-muted)" className="shrink-0" />
                               )}
 
-                              <span
-                                style={{
-                                  fontWeight: 800,
-                                  fontSize: '0.78rem',
-                                  color: 'var(--color-gold-bright)',
-                                  minWidth: '32px',
-                                }}
-                              >
+                              <span className="min-w-8 text-caption font-extrabold text-gold-bright">
                                 #{item.seedNumber}
                               </span>
 
-                              <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <span className="truncate text-sm font-semibold text-fg">
                                 {item.name}
                               </span>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+                            <div className="flex shrink-0 items-center gap-1.5">
                               <PlayerAvatar player={item} />
                               {item.playstyle && <PlaystyleChip style={item.playstyle} />}
                             </div>
@@ -882,44 +679,19 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderTop: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--color-bg-surface-elevated)',
-            }}
-          >
-            <div style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
+          <div className="flex items-center justify-between border-t border-line bg-elevated px-6 py-4">
+            <div className="text-caption text-fg-muted">
               <strong>{stagedSeeds.length}</strong> total seeded competitors staging
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button
-                type="button"
-                onClick={requestClose}
-                className="btn btn-secondary"
-                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-              >
+            <div className="flex items-center gap-3">
+              <Button variant="secondary" onClick={requestClose}>
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleApply}
-                className="btn btn-primary"
-                style={{
-                  padding: '0.5rem 1.25rem',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                }}
-              >
+              </Button>
+              <Button variant="primary" onClick={handleApply} className="gap-1.5 px-5">
                 <ShieldCheck size={16} />
                 Apply & Save Seeds ({stagedSeeds.length})
-              </button>
+              </Button>
             </div>
           </div>
         </>

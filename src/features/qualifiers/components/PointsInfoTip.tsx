@@ -34,7 +34,7 @@ export const PointsInfoTip: React.FC<PointsInfoTipProps> = ({ pointsConfig, size
       ref={containerRef}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle' }}
+      className="relative inline-flex items-center align-middle"
     >
       <button
         type="button"
@@ -45,15 +45,7 @@ export const PointsInfoTip: React.FC<PointsInfoTipProps> = ({ pointsConfig, size
         }}
         aria-label="View points breakdown"
         aria-expanded={isPinned || isHovered}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          padding: 0,
-          cursor: 'pointer',
-          display: 'inline-flex',
-          alignItems: 'center',
-          color: 'var(--color-gold-bright, #fbbf24)',
-        }}
+        className="bg-transparent border-0 p-0 cursor-pointer inline-flex items-center text-gold-bright"
         data-testid="points-info-icon"
       >
         <Info size={size} />
@@ -61,31 +53,17 @@ export const PointsInfoTip: React.FC<PointsInfoTipProps> = ({ pointsConfig, size
 
       {(isPinned || isHovered) && (
         <div
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            marginTop: '0.35rem',
-            background: 'var(--color-bg-surface-elevated, #161e27)',
-            border: '1px solid rgba(245, 158, 11, 0.4)',
-            borderRadius: '8px',
-            padding: '0.75rem 1rem',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.6)',
-            zIndex: 100,
-            minWidth: '220px',
-            textTransform: 'none',
-            letterSpacing: 'normal',
-          }}
+          className="absolute top-full left-0 mt-1.5 bg-elevated border border-gold/40 rounded-md py-3 px-4 shadow-[0_10px_25px_rgba(0,0,0,0.6)] z-100 min-w-55 normal-case tracking-normal"
           data-testid="points-breakdown-tooltip"
         >
-          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-gold-bright, #fbbf24)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
+          <div className="text-xs font-extrabold text-gold-bright mb-1.5 uppercase">
             Points Breakdown
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <div className="flex flex-col gap-1">
             {thresholds.map((pt, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#e2e8f0', fontFamily: "'JetBrains Mono', monospace" }}>
+              <div key={idx} className="flex justify-between text-caption text-slate-200 font-mono">
                 <span>&ge; {pt.minScore.toLocaleString()}</span>
-                <span style={{ fontWeight: 700, color: 'var(--color-gold-bright, #fbbf24)' }}>{pt.points} pts</span>
+                <span className="font-bold text-gold-bright">{pt.points} pts</span>
               </div>
             ))}
           </div>

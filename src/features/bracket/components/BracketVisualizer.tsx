@@ -26,6 +26,7 @@ import { BracketBroadcastHeader } from './visualizer/BracketBroadcastHeader';
 import { BracketStageNavBar, HybridStageTab } from './visualizer/BracketStageNavBar';
 import { BracketQualifierPodGrid } from './visualizer/BracketQualifierPodGrid';
 import { BracketCanvas } from './visualizer/BracketCanvas';
+import { cn } from '../../../components/ui';
 
 export * from '../routingChips';
 export * from '../journeyHighlight';
@@ -678,17 +679,12 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
 
   return (
     <div
-      style={{
-        position: 'relative',
-        width: '100%',
-        minHeight: isObsMode ? '100vh' : 'calc(100vh - 120px)',
-        height: effectiveObsView === 'fit' ? '100%' : 'auto',
-        flex: effectiveObsView === 'fit' ? 1 : undefined,
-        background: effectiveCanvasBg,
-        overflow: effectiveObsView === 'fit' ? 'hidden' : 'visible',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
+      className={cn(
+        'relative flex w-full flex-col',
+        isObsMode ? 'min-h-screen' : 'min-h-[calc(100vh-120px)]',
+        effectiveObsView === 'fit' ? 'h-full flex-1 overflow-hidden' : 'h-auto overflow-visible'
+      )}
+      style={{ background: effectiveCanvasBg }}
     >
       {/* Tournament Name and Bracket Tier Header for OBS Broadcasts Only */}
       {isObsMode && (
@@ -723,53 +719,36 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
         /* Strategy B: Viewport Auto-Scaled 1080p View */
         <div
           ref={fitContainerRef}
-          style={{
-            width: isObsMode ? '100vw' : '100%',
-            flex: 1,
-            minHeight: 0,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            paddingTop: isObsMode ? '4px' : '8px',
-            background: effectiveCanvasBg,
-            boxSizing: 'border-box',
-          }}
+          className={cn(
+            'flex min-h-0 flex-1 flex-col items-center justify-start overflow-hidden',
+            isObsMode ? 'w-screen pt-1' : 'w-full pt-2'
+          )}
+          style={{ background: effectiveCanvasBg }}
         >
           {isAcceleratedHybrid && activeHybridTab === 'combined' && combinedBounds ? (
             <div
+              className="relative shrink-0"
               style={{
                 width: `${Math.ceil(combinedBounds.combinedW * fitScale)}px`,
                 height: `${Math.ceil(combinedBounds.combinedH * fitScale)}px`,
-                position: 'relative',
-                flexShrink: 0,
               }}
             >
               <div
                 ref={combinedContentRef}
+                className="absolute top-0 left-0 flex origin-top-left flex-col items-start gap-10 pb-25"
                 style={{
                   width: `${combinedBounds.combinedW}px`,
                   minHeight: `${combinedBounds.combinedH}px`,
                   transform: `scale(${fitScale})`,
-                  transformOrigin: 'top left',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '2.5rem',
-                  alignItems: 'flex-start',
-                  paddingBottom: '100px',
                 }}
               >
                 {/* Stage 1: Early Rounds (3 Pods) */}
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: primaryColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <div className="flex w-full flex-col">
+                  <div className="mb-4 flex items-center gap-3">
+                    <h3 className="m-0 text-base font-black uppercase tracking-widest" style={{ color: primaryColor }}>
                       Early Rounds (3 Pods)
                     </h3>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                    <span className="text-xs text-fg-muted">
                       Accelerated Round • Upper Bracket • Lower Bracket
                     </span>
                   </div>
@@ -777,21 +756,21 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
                 </div>
 
                 {/* Phase 1 to Phase 2 Divider */}
-                <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 0' }}>
-                  <div style={{ height: '2px', flex: 1, background: `linear-gradient(to right, transparent, ${primaryColor}88)` }} />
-                  <span style={{ fontSize: '0.8rem', fontWeight: 900, color: primaryColor, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <div className="flex w-full items-center gap-4 py-2">
+                  <div className="h-0.5 flex-1" style={{ background: `linear-gradient(to right, transparent, ${primaryColor}88)` }} />
+                  <span className="text-caption font-black uppercase tracking-widest" style={{ color: primaryColor }}>
                     Top {bracket.finalsCutoff || 16} Finals ↓
                   </span>
-                  <div style={{ height: '2px', flex: 1, background: `linear-gradient(to left, transparent, ${primaryColor}88)` }} />
+                  <div className="h-0.5 flex-1" style={{ background: `linear-gradient(to left, transparent, ${primaryColor}88)` }} />
                 </div>
 
                 {/* Stage 2: Top C Finals */}
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: primaryColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <div className="flex w-full flex-col">
+                  <div className="mb-3.5 flex items-center gap-3">
+                    <h3 className="m-0 text-base font-black uppercase tracking-widest" style={{ color: primaryColor }}>
                       Top {bracket.finalsCutoff || 16} Finals
                     </h3>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                    <span className="text-xs text-fg-muted">
                       Single Elimination Championship Tree to Tournament Champion
                     </span>
                   </div>
@@ -801,22 +780,18 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
             </div>
           ) : isAcceleratedHybrid && activeHybridTab === 'qualifiers' && combinedBounds ? (
             <div
+              className="relative shrink-0"
               style={{
                 width: `${Math.ceil(combinedBounds.qualW * fitScale)}px`,
                 height: `${Math.ceil(combinedBounds.qualH * fitScale)}px`,
-                position: 'relative',
-                flexShrink: 0,
               }}
             >
               <div
+                className="absolute top-0 left-0 origin-top-left"
                 style={{
                   width: `${combinedBounds.qualW}px`,
                   minHeight: `${combinedBounds.qualH}px`,
                   transform: `scale(${fitScale})`,
-                  transformOrigin: 'top left',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
                 }}
               >
                 {renderQualifierPodGrid()}
@@ -824,22 +799,18 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
             </div>
           ) : (
             <div
+              className="relative shrink-0"
               style={{
                 width: `${Math.ceil(layout.totalWidth * fitScale)}px`,
                 height: `${Math.ceil(layout.totalHeight * fitScale)}px`,
-                position: 'relative',
-                flexShrink: 0,
               }}
             >
               <div
+                className="absolute top-0 left-0 origin-top-left"
                 style={{
                   width: `${layout.totalWidth}px`,
                   height: `${layout.totalHeight}px`,
                   transform: `scale(${fitScale})`,
-                  transformOrigin: 'top left',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
                 }}
               >
                 {isAcceleratedHybrid ? (
@@ -865,25 +836,19 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
         /* All Stages (Combined): Phase 1 (3 Pods) + Phase 2 (Championship Tree) */
         <div
           ref={combinedContentRef}
-          style={{
-            width: '100%',
-            padding: isObsMode ? '0.5rem' : '1.25rem 1.75rem',
-            paddingBottom: '100px',
-            overflowX: 'auto',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2.5rem',
-            alignItems: 'flex-start',
-          }}
+          className={cn(
+            'flex w-full flex-col items-start gap-10 overflow-x-auto overflow-y-auto',
+            isObsMode ? 'p-2' : 'py-5 px-7',
+            'pb-25'
+          )}
         >
           {/* Stage 1: Early Rounds (3 Pods) */}
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: primaryColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div className="flex w-full flex-col">
+            <div className="mb-4 flex items-center gap-3">
+              <h3 className="m-0 text-base font-black uppercase tracking-widest" style={{ color: primaryColor }}>
                 Early Rounds (3 Pods)
               </h3>
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+              <span className="text-xs text-fg-muted">
                 Accelerated Round • Upper Bracket • Lower Bracket
               </span>
             </div>
@@ -891,21 +856,21 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
           </div>
 
           {/* Phase 1 to Phase 2 Divider */}
-          <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 0' }}>
-            <div style={{ height: '2px', flex: 1, background: `linear-gradient(to right, transparent, ${primaryColor}88)` }} />
-            <span style={{ fontSize: '0.8rem', fontWeight: 900, color: primaryColor, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <div className="flex w-full items-center gap-4 py-2">
+            <div className="h-0.5 flex-1" style={{ background: `linear-gradient(to right, transparent, ${primaryColor}88)` }} />
+            <span className="text-caption font-black uppercase tracking-widest" style={{ color: primaryColor }}>
               Top {bracket.finalsCutoff || 16} Finals ↓
             </span>
-            <div style={{ height: '2px', flex: 1, background: `linear-gradient(to left, transparent, ${primaryColor}88)` }} />
+            <div className="h-0.5 flex-1" style={{ background: `linear-gradient(to left, transparent, ${primaryColor}88)` }} />
           </div>
 
           {/* Stage 2: Top C Finals */}
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: primaryColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div className="flex w-full flex-col">
+            <div className="mb-3.5 flex items-center gap-3">
+              <h3 className="m-0 text-base font-black uppercase tracking-widest" style={{ color: primaryColor }}>
                 Top {bracket.finalsCutoff || 16} Finals
               </h3>
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+              <span className="text-xs text-fg-muted">
                 Single Elimination Championship Tree to Tournament Champion
               </span>
             </div>
@@ -915,19 +880,14 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
       ) : (
         /* Standalone View for Selected Stage */
         <div
-          style={{
-            width: '100%',
-            padding: isObsMode ? '0.5rem' : '0.75rem 1.5rem',
-            overflowX: 'auto',
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-          }}
+          className={cn(
+            'flex w-full flex-col items-start overflow-x-auto overflow-y-auto',
+            isObsMode ? 'p-2' : 'py-3 px-6'
+          )}
         >
           {isAcceleratedHybrid ? (
             activeHybridTab === 'championship' ? (
-              <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div className="flex w-full flex-col">
                 {renderCanvas(layoutChampionship!, championshipRounds, false, true, championPlayer)}
               </div>
             ) : activeHybridTab === 'accel' ? (

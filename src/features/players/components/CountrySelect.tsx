@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { cn } from '../../../components/ui';
 import { ALL_COUNTRIES, CountryFlag, getCountryName } from '../flagUtils';
 import { Search, ChevronDown, Check, X } from 'lucide-react';
 
@@ -57,50 +58,25 @@ export const CountrySelect: React.FC<CountrySelectProps> = ({
   }, [search]);
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+    <div ref={containerRef} className="relative w-full">
       {/* Trigger Button */}
       <button
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        style={{
-          width: '100%',
-          padding: '0.55rem 0.75rem',
-          borderRadius: 'var(--radius-sm, 6px)',
-          border: '1px solid var(--color-border, #263342)',
-          background: 'var(--color-bg-base, #0a0e14)',
-          color: value ? 'var(--color-text-primary, #ffffff)' : 'var(--color-text-muted, #64748b)',
-          fontSize: '0.88rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.6 : 1,
-          outline: 'none',
-          boxSizing: 'border-box',
-          gap: '0.5rem',
-        }}
+        className={cn(
+          'flex w-full items-center justify-between gap-2 rounded-sm border border-line bg-canvas px-3 py-2 text-sm outline-none',
+          value ? 'text-fg' : 'text-fg-muted',
+          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer opacity-100'
+        )}
         data-testid="country-select-trigger"
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, overflow: 'hidden' }}>
+        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
           {value ? (
             <>
               <CountryFlag country={value} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
-                {selectedName}
-              </span>
-              <span
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  color: 'var(--color-gold-bright, #fbbf24)',
-                  background: 'rgba(245, 158, 11, 0.12)',
-                  padding: '0.1rem 0.35rem',
-                  borderRadius: '4px',
-                  flexShrink: 0,
-                }}
-              >
+              <span className="truncate font-semibold">{selectedName}</span>
+              <span className="shrink-0 rounded-xs bg-gold/12 px-1.5 py-0.5 font-mono text-xs font-bold text-gold-bright">
                 {value.toUpperCase()}
               </span>
             </>
@@ -109,7 +85,7 @@ export const CountrySelect: React.FC<CountrySelectProps> = ({
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', color: 'var(--color-text-muted, #64748b)' }}>
+        <div className="flex items-center gap-1.5 text-fg-muted">
           {value && !disabled && (
             <span
               role="button"
@@ -118,7 +94,7 @@ export const CountrySelect: React.FC<CountrySelectProps> = ({
                 e.stopPropagation();
                 onChange('');
               }}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+              className="flex cursor-pointer items-center p-0.5"
               title="Clear country"
             >
               <X size={14} />
@@ -131,76 +107,27 @@ export const CountrySelect: React.FC<CountrySelectProps> = ({
       {/* Dropdown Popover */}
       {isOpen && (
         <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            left: 0,
-            right: 0,
-            background: 'var(--color-bg-surface-elevated, #161e27)',
-            border: '1px solid var(--color-border, #263342)',
-            borderRadius: 'var(--radius-md, 8px)',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.65)',
-            zIndex: 10000,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            maxHeight: '320px',
-          }}
+          className="absolute top-[calc(100%+4px)] right-0 left-0 z-10000 flex max-h-80 flex-col overflow-hidden rounded-md border border-line bg-elevated shadow-[0_12px_32px_rgba(0,0,0,0.65)]"
           data-testid="country-select-dropdown"
         >
           {/* Search Bar */}
-          <div
-            style={{
-              padding: '0.65rem',
-              borderBottom: '1px solid var(--color-border, #263342)',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <Search
-              size={15}
-              style={{ position: 'absolute', left: '1rem', color: 'var(--color-text-muted, #64748b)' }}
-            />
+          <div className="relative flex items-center border-b border-line p-2.5">
+            <Search size={15} className="absolute left-4 text-fg-muted" />
             <input
               ref={searchInputRef}
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search 260+ countries..."
-              style={{
-                width: '100%',
-                padding: '0.45rem 0.65rem 0.45rem 2rem',
-                borderRadius: '6px',
-                border: '1px solid var(--color-border, #263342)',
-                background: 'var(--color-bg-base, #0a0e14)',
-                color: '#ffffff',
-                fontSize: '0.85rem',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
+              className="w-full rounded-sm border border-line bg-canvas py-2 pr-2.5 pl-8 text-sm text-white outline-none"
               data-testid="country-search-input"
             />
           </div>
 
           {/* Pure Alphabetical Country List */}
-          <div
-            style={{
-              overflowY: 'auto',
-              flex: 1,
-              padding: '0.35rem 0',
-            }}
-            data-testid="country-options-list"
-          >
+          <div className="flex-1 overflow-y-auto px-0 py-1.5" data-testid="country-options-list">
             {filteredCountries.length === 0 ? (
-              <div
-                style={{
-                  padding: '1rem',
-                  textAlign: 'center',
-                  fontSize: '0.82rem',
-                  color: 'var(--color-text-muted, #64748b)',
-                }}
-              >
+              <div className="p-4 text-center text-caption text-fg-muted">
                 No countries matching &quot;{search}&quot;
               </div>
             ) : (
@@ -214,43 +141,19 @@ export const CountrySelect: React.FC<CountrySelectProps> = ({
                       onChange(c.code);
                       setIsOpen(false);
                     }}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem 0.85rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      background: isSelected ? 'rgba(245, 158, 11, 0.12)' : 'transparent',
-                      border: 'none',
-                      color: isSelected ? 'var(--color-gold-bright, #fbbf24)' : '#ffffff',
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'background 0.1s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) e.currentTarget.style.background = 'transparent';
-                    }}
+                    className={cn(
+                      'flex w-full cursor-pointer items-center justify-between border-0 px-3.5 py-2 text-left text-sm transition-colors duration-100',
+                      isSelected ? 'bg-gold/12 text-gold-bright' : 'bg-transparent text-white hover:bg-white/5'
+                    )}
                     data-testid={`country-option-${c.code}`}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <div className="flex items-center gap-2.5">
                       <CountryFlag country={c.code} />
-                      <span style={{ fontWeight: isSelected ? 700 : 500 }}>{c.name}</span>
+                      <span className={isSelected ? 'font-bold' : 'font-medium'}>{c.name}</span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: '0.72rem',
-                          color: 'var(--color-text-muted, #64748b)',
-                        }}
-                      >
-                        {c.code}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-fg-muted">{c.code}</span>
                       {isSelected && <Check size={14} color="var(--color-gold-bright, #fbbf24)" />}
                     </div>
                   </button>

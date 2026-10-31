@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Check, Search } from 'lucide-react';
+import { cn } from '../../../components/ui';
 
 export interface BestOfSelectProps {
   value: number;
@@ -92,26 +93,12 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
   return (
     <div
       ref={containerRef}
-      className={className}
-      style={{
-        position: 'relative',
-        display: 'inline-block',
-        width: compact ? '140px' : '100%',
-        minWidth: 0,
-        maxWidth: '100%',
-        boxSizing: 'border-box',
-      }}
+      className={cn(className, 'relative inline-block min-w-0 max-w-full', compact ? 'w-35' : 'w-full')}
     >
       {label && (
         <label
           htmlFor={id}
-          style={{
-            display: 'block',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            color: 'var(--color-text-secondary)',
-            marginBottom: '0.35rem',
-          }}
+          className="mb-1.5 block text-caption font-semibold text-fg-secondary"
         >
           {label}
         </label>
@@ -128,77 +115,38 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
             setTimeout(() => inputRef.current?.focus(), 50);
           }
         }}
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '0.5rem',
-          padding: compact ? '0.35rem 0.6rem' : '0.5rem 0.75rem',
-          fontSize: compact ? '0.8rem' : '0.875rem',
-          fontWeight: 600,
-          background: 'var(--color-bg-surface-elevated)',
-          border: isOpen ? '1px solid var(--color-gold)' : '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-sm)',
-          color: 'var(--color-text-primary)',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          opacity: disabled ? 0.6 : 1,
-          boxShadow: isOpen ? '0 0 0 1px var(--color-gold)' : 'none',
-          transition: 'all 0.15s ease',
-        }}
+        className={cn(
+          'flex w-full items-center justify-between gap-2 rounded-sm border bg-elevated font-semibold text-fg transition-all duration-150',
+          compact ? 'py-1.5 px-2.5 text-caption' : 'py-2 px-3 text-sm',
+          isOpen ? 'border-gold shadow-[0_0_0_1px_var(--color-gold)]' : 'border-line shadow-none',
+          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+        )}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
-          <span style={{ color: 'var(--color-gold-bright)', fontWeight: 700 }}>Bo{value}</span>
+        <div className="flex items-center gap-1.5 overflow-hidden">
+          <span className="font-bold text-gold-bright">Bo{value}</span>
           {!compact && (
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>
+            <span className="whitespace-nowrap text-xs text-fg-muted">
               (First to {winThreshold})
             </span>
           )}
         </div>
         <ChevronDown
           size={16}
-          style={{
-            color: 'var(--color-text-muted)',
-            transform: isOpen ? 'rotate(180deg)' : 'none',
-            transition: 'transform 0.2s ease',
-            flexShrink: 0,
-          }}
+          className={cn('shrink-0 text-fg-muted transition-transform duration-200', isOpen && 'rotate-180')}
         />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            left: 0,
-            width: compact ? '220px' : '100%',
-            minWidth: '220px',
-            maxWidth: '320px',
-            background: 'var(--color-bg-surface-elevated)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-lg)',
-            zIndex: 9999,
-            padding: '0.5rem',
-            animation: 'fadeIn 0.15s ease',
-          }}
+          className={cn(
+            'absolute top-[calc(100%+4px)] left-0 z-9999 min-w-55 max-w-80 animate-fade-in rounded-md border border-line bg-elevated p-2 shadow-lg',
+            compact ? 'w-55' : 'w-full'
+          )}
         >
           {/* Search / Type Input */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.35rem 0.5rem',
-              background: 'var(--color-bg-base)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              marginBottom: '0.5rem',
-            }}
-          >
-            <Search size={14} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
+          <div className="mb-2 flex items-center gap-1.5 rounded-sm border border-line bg-canvas py-1.5 px-2">
+            <Search size={14} color="var(--color-text-muted)" className="shrink-0" />
             <input
               ref={inputRef}
               type="text"
@@ -206,27 +154,13 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
               onChange={e => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Search or type 1-99..."
-              style={{
-                width: '100%',
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                fontSize: '0.8rem',
-                color: 'var(--color-text-primary)',
-              }}
+              className="w-full border-0 bg-transparent text-caption text-fg outline-none"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => setQuery('')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--color-text-muted)',
-                  cursor: 'pointer',
-                  fontSize: '0.75rem',
-                  padding: '0 2px',
-                }}
+                className="cursor-pointer border-0 bg-transparent py-0 px-0.5 text-xs text-fg-muted"
               >
                 ×
               </button>
@@ -234,20 +168,11 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
           </div>
 
           {/* Quick Presets */}
-          <div style={{ marginBottom: '0.5rem' }}>
-            <div
-              style={{
-                fontSize: '0.65rem',
-                textTransform: 'uppercase',
-                fontWeight: 700,
-                color: 'var(--color-text-muted)',
-                marginBottom: '0.3rem',
-                letterSpacing: '0.04em',
-              }}
-            >
+          <div className="mb-2">
+            <div className="mb-1 text-3xs font-bold uppercase tracking-wide text-fg-muted">
               Presets
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+            <div className="flex flex-wrap gap-1">
               {QUICK_PRESETS.map(preset => {
                 const isSelected = value === preset;
                 return (
@@ -255,18 +180,12 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
                     key={preset}
                     type="button"
                     onClick={() => handleSelect(preset)}
-                    style={{
-                      padding: '0.15rem 0.45rem',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      borderRadius: 'var(--radius-sm)',
-                      border: isSelected
-                        ? '1px solid var(--color-gold)'
-                        : '1px solid var(--color-border-subtle)',
-                      background: isSelected ? 'var(--color-gold-bg)' : 'var(--color-bg-surface)',
-                      color: isSelected ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
-                      cursor: 'pointer',
-                    }}
+                    className={cn(
+                      'cursor-pointer rounded-sm border py-0.5 px-2 text-2xs font-semibold',
+                      isSelected
+                        ? 'border-gold bg-gold-soft text-gold-bright'
+                        : 'border-line-subtle bg-surface text-fg-secondary'
+                    )}
                   >
                     Bo{preset}
                   </button>
@@ -281,17 +200,7 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
             const parsed = parseInt(cleanQuery, 10);
             if (!isNaN(parsed) && parsed % 2 === 0 && parsed >= 2 && parsed <= 98) {
               return (
-                <div
-                  style={{
-                    padding: '0.35rem 0.5rem',
-                    fontSize: '0.7rem',
-                    color: 'var(--color-cyan)',
-                    background: 'var(--color-cyan-bg)',
-                    borderRadius: 'var(--radius-sm)',
-                    marginBottom: '0.4rem',
-                    lineHeight: 1.3,
-                  }}
-                >
+                <div className="mb-1.5 rounded-sm bg-cyan-soft py-1.5 px-2 text-2xs leading-snug text-cyan">
                   Best-of formats must be odd. Use Bo{parsed + 1} or Bo{parsed - 1}.
                 </div>
               );
@@ -300,24 +209,9 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
           })()}
 
           {/* Scrollable list of options */}
-          <div
-            style={{
-              maxHeight: '160px',
-              overflowY: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '2px',
-            }}
-          >
+          <div className="flex max-h-40 flex-col gap-0.5 overflow-y-auto">
             {filteredOptions.length === 0 ? (
-              <div
-                style={{
-                  padding: '0.75rem',
-                  textAlign: 'center',
-                  fontSize: '0.75rem',
-                  color: 'var(--color-text-muted)',
-                }}
-              >
+              <div className="p-3 text-center text-xs text-fg-muted">
                 No matching odd format (1–99)
               </div>
             ) : (
@@ -329,39 +223,14 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
                     key={bo}
                     type="button"
                     onClick={() => handleSelect(bo)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.35rem 0.5rem',
-                      borderRadius: 'var(--radius-sm)',
-                      background: isSelected ? 'var(--color-gold-bg)' : 'transparent',
-                      border: 'none',
-                      color: isSelected ? 'var(--color-gold-bright)' : 'var(--color-text-primary)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontSize: '0.8rem',
-                      transition: 'background 0.1s ease',
-                    }}
-                    onMouseEnter={e => {
-                      if (!isSelected) {
-                        e.currentTarget.style.background = 'var(--color-bg-surface-highlight)';
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (!isSelected) {
-                        e.currentTarget.style.background = 'transparent';
-                      }
-                    }}
+                    className={cn(
+                      'flex cursor-pointer items-center justify-between rounded-sm border-0 py-1.5 px-2 text-left text-caption transition-colors duration-100',
+                      isSelected ? 'bg-gold-soft text-gold-bright' : 'bg-transparent text-fg hover:bg-highlight'
+                    )}
                   >
-                    <span style={{ fontWeight: isSelected ? 700 : 500 }}>Bo{bo}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span
-                        style={{
-                          fontSize: '0.7rem',
-                          color: isSelected ? 'var(--color-gold)' : 'var(--color-text-muted)',
-                        }}
-                      >
+                    <span className={isSelected ? 'font-bold' : 'font-medium'}>Bo{bo}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={cn('text-2xs', isSelected ? 'text-gold' : 'text-fg-muted')}>
                         First to {winsNeeded}
                       </span>
                       {isSelected && <Check size={14} color="var(--color-gold-bright)" />}

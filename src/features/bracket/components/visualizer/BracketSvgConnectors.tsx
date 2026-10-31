@@ -2,6 +2,7 @@ import React from 'react';
 import { ConnectorPath } from '../../bracketLayout';
 import { BracketMatch, SeededPlayer } from '../../types';
 import { MatchScoreRecord } from '../../../tournament/types';
+import { cn } from '../../../../components/ui';
 
 interface BracketSvgConnectorsProps {
   totalWidth: number;
@@ -35,14 +36,10 @@ export const BracketSvgConnectors: React.FC<BracketSvgConnectorsProps> = ({
 }) => {
   return (
     <svg
+      className="pointer-events-none absolute top-0 left-0 z-1"
       style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
         width: `${totalWidth}px`,
         height: `${totalHeight}px`,
-        pointerEvents: 'none',
-        zIndex: 1,
       }}
     >
       {[...paths]
@@ -88,13 +85,13 @@ export const BracketSvgConnectors: React.FC<BracketSvgConnectorsProps> = ({
               strokeWidth={isPathInAncestry ? 4 : isTargetComplete ? 2.5 : 1.5}
               strokeLinecap="round"
               strokeLinejoin="round"
+              className={cn(!isPathInAncestry && hoveredAncestry && 'opacity-20')}
               style={{
                 filter: isPathInAncestry
                   ? `drop-shadow(0 0 10px ${primaryColor})`
                   : isTargetComplete
                   ? `drop-shadow(0 0 6px ${primaryColor}77)`
-                  : 'none',
-                opacity: isPathInAncestry ? 1 : hoveredAncestry ? 0.2 : 1,
+                  : undefined,
               }}
             />
           );
@@ -109,13 +106,13 @@ export const BracketSvgConnectors: React.FC<BracketSvgConnectorsProps> = ({
           strokeWidth={targetChampPlayer ? (hoveredAncestry?.isChampion ? 4 : 3) : 2}
           strokeLinecap="round"
           strokeDasharray={targetChampPlayer ? 'none' : '4 4'}
+          className={cn(hoveredAncestry && !hoveredAncestry.isChampion && 'opacity-20')}
           style={{
             filter: targetChampPlayer
               ? hoveredAncestry?.isChampion
                 ? `drop-shadow(0 0 12px ${primaryColor})`
                 : `drop-shadow(0 0 8px ${primaryColor}99)`
-              : 'none',
-            opacity: hoveredAncestry ? (hoveredAncestry.isChampion ? 1 : 0.2) : 1,
+              : undefined,
           }}
         />
       )}

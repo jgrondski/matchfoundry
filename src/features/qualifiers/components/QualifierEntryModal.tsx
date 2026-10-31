@@ -5,6 +5,9 @@ import { CreatablePlayerSelect } from './CreatablePlayerSelect';
 import { Trophy, Plus, Trash2, X, Check, User } from 'lucide-react';
 import { getPlayerQualifierStatus } from '../scoring';
 import { Overlay } from '../../../components/overlay';
+import { Button, IconButton } from '../../../components/ui';
+
+const labelClass = 'block text-caption font-semibold text-fg-secondary mb-1.5 uppercase tracking-wide';
 
 interface QualifierEntryModalProps {
   isOpen: boolean;
@@ -101,60 +104,30 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              background: 'var(--color-bg-surface-elevated)',
-              borderBottom: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: 'var(--color-gold-bg)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--color-gold-bright)',
-                }}
-              >
+          <div className="py-5 px-6 bg-elevated border-b border-line flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-md bg-gold-soft flex items-center justify-center text-gold-bright">
                 <Trophy size={18} />
               </div>
               <div>
-                <h3 id={titleId} style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                <h3 id={titleId} className="text-lg font-bold text-fg">
                   Submit Qualifier Score
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                <p className="text-xs text-fg-muted">
                   {tournament.name} • {tournament.qualFormat === 'HIGH_SCORE' ? '# of Maxes' : tournament.qualFormat.replace(/_/g, ' ')}
                 </p>
               </div>
             </div>
-            <button
-              onClick={requestClose}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '0.25rem',
-              }}
-            >
+            <IconButton aria-label="Close" onClick={requestClose}>
               <X size={18} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Content */}
-          <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1, overflowY: 'auto' }}>
+          <div className="p-6 flex flex-col gap-5 flex-1 overflow-y-auto">
             {/* 1. Player Selection */}
             <div>
-              <label style={labelStyle}>Competitor</label>
+              <label className={labelClass}>Competitor</label>
               <CreatablePlayerSelect
                 playersPool={tournament.playersPool}
                 globalPlayers={globalPlayers}
@@ -164,32 +137,19 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                 onCreatePlayer={handleCreatePlayer}
               />
               {tournament.playersPool.length === 0 && (
-                <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '0.4rem', fontStyle: 'italic' }}>
+                <p className="text-caption text-fg-muted mt-1.5 italic">
                   💡 Roster is currently empty. Type a player name above to register a competitor and record their score, or select from global pool.
                 </p>
               )}
             </div>
 
             {!selectedPlayer && tournament.playersPool.length > 0 && (
-              <div
-                style={{
-                  marginTop: '0.5rem',
-                  padding: '2rem 1.5rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--color-bg-base)',
-                  border: '1px dashed var(--color-border)',
-                  textAlign: 'center',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                }}
-              >
+              <div className="mt-2 py-8 px-6 rounded-md bg-canvas border border-dashed border-line text-center flex flex-col items-center gap-2.5">
                 <User size={28} color="var(--color-text-muted)" />
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                <div className="text-sm font-semibold text-fg-secondary">
                   Select a Competitor
                 </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, maxWidth: '340px' }}>
+                <p className="text-caption text-fg-muted m-0 max-w-85">
                   Start typing a player's name above to search the roster or global catalog and record their qualifier score.
                 </p>
               </div>
@@ -198,31 +158,21 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
             {selectedPlayer && (
               <>
                 {/* Qualifier Verification Status Bar */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.65rem 0.85rem',
-                    background: 'var(--color-bg-surface-elevated)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Status:</span>
+                <div className="flex items-center justify-between py-2.5 px-3.5 bg-elevated rounded-sm border border-line">
+                  <div className="flex items-center gap-2">
+                    <span className="text-caption text-fg-muted">Status:</span>
                     {qualStatus === 'verified' && (
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4ade80', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <span className="text-xs font-bold text-green-400 flex items-center gap-1">
                         <Check size={12} /> Verified
                       </span>
                     )}
                     {qualStatus === 'in progress' && (
-                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-gold-bright)' }}>
+                      <span className="text-xs font-semibold text-gold-bright">
                         In Progress
                       </span>
                     )}
                     {qualStatus === 'not started' && (
-                      <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-muted)' }}>
+                      <span className="text-xs font-medium text-fg-muted">
                         Not Started
                       </span>
                     )}
@@ -230,9 +180,9 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                 </div>
 
                 {/* 2. Score Submission Form */}
-                <form onSubmit={handleSubmitScore} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <label style={labelStyle}>New Attempt Score</label>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <form onSubmit={handleSubmitScore} className="flex flex-col gap-3">
+                  <label className={labelClass}>New Attempt Score</label>
+                  <div className="flex gap-2">
                     <input
                       type="text"
                       value={scoreInput ? parseInt(scoreInput, 10).toLocaleString() : ''}
@@ -240,20 +190,13 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                       placeholder="Enter score (e.g. 1,120,500)..."
                       autoFocus
                       data-autofocus
-                      style={{ ...inputStyle, fontSize: '1.1rem', fontWeight: 700 }}
+                      className="w-full py-2 px-3.5 rounded-sm border border-line bg-canvas text-fg text-lg font-bold"
                     />
-                    <button
+                    <Button
                       type="submit"
+                      variant="primary"
                       disabled={!isScoreValid || isSubmitting}
-                      className="btn btn-primary"
-                      style={{
-                        padding: '0.5rem 1.25rem',
-                        opacity: !isScoreValid || isSubmitting ? 0.45 : 1,
-                        cursor: !isScoreValid || isSubmitting ? 'not-allowed' : 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                      }}
+                      className="py-2 px-5 gap-1.5"
                       title={
                         !selectedPlayer
                           ? 'Select a competitor first'
@@ -263,56 +206,39 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                       }
                     >
                       {isSubmitting ? (
-                        <div
-                          style={{
-                            width: '14px',
-                            height: '14px',
-                            borderRadius: '50%',
-                            border: '2px solid rgba(255,255,255,0.3)',
-                            borderTopColor: '#ffffff',
-                            animation: 'spin 0.8s linear infinite',
-                          }}
-                        />
+                        <div className="size-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                       ) : (
                         <Plus size={16} />
                       )}
                       <span>{isSubmitting ? 'Saving...' : 'Submit'}</span>
-                    </button>
+                    </Button>
                   </div>
                 </form>
 
                 {/* 3. Existing Attempts History */}
                 <div>
-                  <label style={labelStyle}>
+                  <label className={labelClass}>
                     Submitted Attempts ({playerSubmissions.length})
                   </label>
                   {playerSubmissions.length === 0 ? (
-                    <div style={{ padding: '0.75rem', background: 'var(--color-bg-base)', borderRadius: 'var(--radius-sm)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                    <div className="p-3 bg-canvas rounded-sm text-fg-muted text-sm">
                       No qualifier attempts recorded yet for this competitor.
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <div className="flex flex-col gap-1.5">
                       {playerSubmissions.map((sub, idx) => (
                         <div
                           key={sub.id}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '0.5rem 0.75rem',
-                            background: 'var(--color-bg-surface-elevated)',
-                            borderRadius: 'var(--radius-sm)',
-                            border: '1px solid var(--color-border-subtle)',
-                          }}
+                          className="flex justify-between items-center py-2 px-3 bg-elevated rounded-sm border border-line-subtle"
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-fg-muted font-semibold">
                               #{idx + 1}
                             </span>
-                            <span className="tabular-nums" style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-gold-bright)' }}>
+                            <span className="font-mono tabular-nums tracking-tight font-bold text-base text-gold-bright">
                               {sub.score.toLocaleString()}
                             </span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                            <span className="text-xs text-fg-muted">
                               {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
@@ -322,13 +248,7 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                               onClick={async () => {
                                 await deleteQualifierScore(tournament.id, sub.id);
                               }}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: 'var(--color-red)',
-                                cursor: 'pointer',
-                                padding: '0.25rem',
-                              }}
+                              className="bg-transparent border-0 text-red cursor-pointer p-1"
                               title="Delete attempt"
                             >
                               <Trash2 size={15} />
@@ -344,41 +264,13 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              background: 'var(--color-bg-surface-elevated)',
-              borderTop: '1px solid var(--color-border)',
-              display: 'flex',
-              justifyContent: 'flex-end',
-            }}
-          >
-            <button onClick={requestClose} className="btn btn-secondary" style={{ padding: '0.45rem 1rem' }}>
+          <div className="py-4 px-6 bg-elevated border-t border-line flex justify-end">
+            <Button variant="secondary" onClick={requestClose} className="py-2 px-4">
               Done
-            </button>
+            </Button>
           </div>
         </>
       )}
     </Overlay>
   );
-};
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '0.8rem',
-  fontWeight: 600,
-  color: 'var(--color-text-secondary)',
-  marginBottom: '0.35rem',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '0.55rem 0.85rem',
-  borderRadius: 'var(--radius-sm)',
-  border: '1px solid var(--color-border)',
-  background: 'var(--color-bg-base)',
-  color: 'var(--color-text-primary)',
-  fontSize: '0.875rem',
 };

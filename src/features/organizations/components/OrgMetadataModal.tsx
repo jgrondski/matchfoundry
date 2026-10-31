@@ -1,6 +1,7 @@
 import React, { useId } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { Overlay } from '../../../components/overlay';
+import { Button, IconButton } from '../../../components/ui';
 
 interface OrgMetadataModalProps {
   isOpen: boolean;
@@ -59,22 +60,18 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
     >
       {({ requestClose }) => (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-            <h2 id={titleId} style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+          <div className="mb-5 flex items-center justify-between">
+            <h2 id={titleId} className="m-0 text-xl font-extrabold text-white">
               Edit Organization Details
             </h2>
-            <button
-              type="button"
-              onClick={requestClose}
-              style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
-            >
+            <IconButton aria-label="Close" onClick={requestClose}>
               <X size={18} />
-            </button>
+            </IconButton>
           </div>
 
-          <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <form onSubmit={onSubmit} className="flex flex-col gap-4">
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.35rem' }}>
+              <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
                 Organization Name *
               </label>
               <input
@@ -82,12 +79,12 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
                 required
                 value={editName}
                 onChange={e => setEditName(e.target.value)}
-                style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: '#ffffff', fontSize: '0.9rem' }}
+                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.35rem' }}>
+              <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
                 URL Slug *
               </label>
               <input
@@ -95,24 +92,24 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
                 required
                 value={editSlug}
                 onChange={e => setEditSlug(e.target.value)}
-                style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: '#ffffff', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}
+                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 font-mono text-sm text-white"
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.35rem' }}>
+              <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
                 Description
               </label>
               <textarea
                 value={editDescription}
                 onChange={e => setEditDescription(e.target.value)}
                 rows={2}
-                style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: '#ffffff', fontSize: '0.85rem' }}
+                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.35rem' }}>
+              <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
                 Website URL
               </label>
               <input
@@ -120,36 +117,25 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
                 placeholder="https://..."
                 value={editWebsite}
                 onChange={e => setEditWebsite(e.target.value)}
-                style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: '#ffffff', fontSize: '0.85rem' }}
+                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
               />
             </div>
 
             {/* Logo with Local Browse Button */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.35rem' }}>
+              <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
                 Logo URL or Local File
               </label>
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <div className="flex gap-1.5">
                 <input
                   type="text"
                   placeholder="https://... or /assets/..."
                   value={editLogoUrl}
                   onChange={e => setEditLogoUrl(e.target.value)}
-                  style={{ flex: 1, padding: '0.65rem 0.85rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: '#ffffff', fontSize: '0.85rem' }}
+                  className="flex-1 rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
                 />
                 <label
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    padding: '0.5rem 0.75rem',
-                    background: 'var(--color-bg-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer',
-                    fontSize: '0.75rem',
-                    color: 'var(--color-text-secondary)',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className="inline-flex cursor-pointer items-center whitespace-nowrap rounded-sm border border-line bg-surface px-3 py-2 text-xs text-fg-secondary"
                   title="Upload local image file"
                 >
                   Browse
@@ -157,7 +143,7 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
                     type="file"
                     accept="image/*"
                     onChange={e => handleFileUpload(e, setEditLogoUrl)}
-                    style={{ display: 'none' }}
+                    className="hidden"
                   />
                 </label>
               </div>
@@ -165,30 +151,19 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
 
             {/* Banner with Local Browse Button */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.35rem' }}>
+              <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
                 Banner URL or Local File
               </label>
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <div className="flex gap-1.5">
                 <input
                   type="text"
                   placeholder="https://... or /assets/..."
                   value={editBannerUrl}
                   onChange={e => setEditBannerUrl(e.target.value)}
-                  style={{ flex: 1, padding: '0.65rem 0.85rem', background: 'var(--color-bg-base)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', color: '#ffffff', fontSize: '0.85rem' }}
+                  className="flex-1 rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
                 />
                 <label
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    padding: '0.5rem 0.75rem',
-                    background: 'var(--color-bg-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer',
-                    fontSize: '0.75rem',
-                    color: 'var(--color-text-secondary)',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className="inline-flex cursor-pointer items-center whitespace-nowrap rounded-sm border border-line bg-surface px-3 py-2 text-xs text-fg-secondary"
                   title="Upload local image file"
                 >
                   Browse
@@ -196,40 +171,40 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
                     type="file"
                     accept="image/*"
                     onChange={e => handleFileUpload(e, setEditBannerUrl)}
-                    style={{ display: 'none' }}
+                    className="hidden"
                   />
                 </label>
               </div>
             </div>
 
             {deleteError && (
-              <div style={{ fontSize: '0.8rem', color: '#f87171', background: 'rgba(239, 68, 68, 0.1)', padding: '0.5rem', borderRadius: 'var(--radius-sm)' }}>
+              <div className="rounded-sm bg-red/10 p-2 text-caption text-red-bright">
                 {deleteError}
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem' }}>
-              <button
+            <div className="mt-4 flex items-center justify-between">
+              <Button
                 type="button"
+                variant="danger"
                 onClick={onDeleteOrganization}
-                className="btn btn-danger"
-                style={{ padding: '0.5rem 0.9rem', fontSize: '0.8rem' }}
+                className="px-3.5 py-2 text-caption"
               >
                 <Trash2 size={14} />
                 <span>Delete Org</span>
-              </button>
+              </Button>
 
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button
+              <div className="flex gap-3">
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={requestClose}
-                  className="btn btn-secondary"
                 >
                   Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
+                </Button>
+                <Button type="submit" variant="primary">
                   Save Changes
-                </button>
+                </Button>
               </div>
             </div>
           </form>

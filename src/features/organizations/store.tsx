@@ -219,36 +219,15 @@ export const OrganizationProvider: React.FC<{
       {orgError && (
         <div
           role="alert"
-          style={{
-            backgroundColor: '#dc2626',
-            color: '#ffffff',
-            padding: '12px 20px',
-            fontSize: '14px',
-            fontWeight: 600,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            position: 'sticky',
-            top: 0,
-            zIndex: 99999,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-          }}
+          className="sticky top-0 z-99999 flex items-center justify-between bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-md"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="flex items-center gap-2">
             <span>⚠️</span>
             <span>{orgError}</span>
           </div>
           <button
             onClick={clearOrgError}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#ffffff',
-              fontWeight: 700,
-              fontSize: '16px',
-              cursor: 'pointer',
-              padding: '4px 8px',
-            }}
+            className="cursor-pointer border-0 bg-transparent px-2 py-1 text-base font-bold text-white"
             title="Dismiss error"
           >
             ✕

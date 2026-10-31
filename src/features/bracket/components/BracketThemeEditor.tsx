@@ -1,6 +1,7 @@
 import React from 'react';
 import { TierThemeColors, getTextScale, getAlternateShade } from '../colorUtils';
 import { Palette, Type, RefreshCw } from 'lucide-react';
+import { Button, cn } from '../../../components/ui';
 
 interface BracketThemeEditorProps {
   themeColors: TierThemeColors;
@@ -49,65 +50,48 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.25rem',
-        padding: '1.25rem',
-        background: 'var(--color-bg-surface-elevated, #161922)',
-        borderRadius: 'var(--radius-md, 8px)',
-        border: '1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08))',
-      }}
-    >
+    <div className="flex flex-col gap-5 rounded-md border border-line-subtle bg-elevated p-5">
       {label && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))', paddingBottom: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+        <div className="flex items-center justify-between border-b border-line-subtle pb-2">
+          <div className="flex items-center gap-2">
             <Palette size={16} color={priColor} />
-            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-text-primary, #ffffff)' }}>
+            <span className="text-sm font-bold text-fg">
               {label}
             </span>
           </div>
           {onReset && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={onReset}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.72rem', padding: '0.25rem 0.6rem', gap: '0.35rem' }}
+              className="gap-1.5 py-1 px-2.5 text-xs"
               title="Reset to default colors"
             >
               <RefreshCw size={11} />
               Reset Defaults
-            </button>
+            </Button>
           )}
         </div>
       )}
 
       {/* 1. Color Picker Controls (Full Row) */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          gap: '0.75rem',
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3">
         {/* Primary Accent */}
         <div>
-          <label style={colorLabelStyle} title="Primary Accent (Lines, Rings & Winner Glory)">
+          <label className={colorLabelCls} title="Primary Accent (Lines, Rings & Winner Glory)">
             Primary Accent
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div className="flex items-center gap-1.5">
             <input
               type="color"
               value={priColor}
               onChange={e => handleColorChange('primaryColor', e.target.value)}
-              style={colorInputStyle}
+              className={colorInputCls}
             />
             <input
               type="text"
               value={priColor}
               onChange={e => handleColorChange('primaryColor', e.target.value)}
-              style={hexTextInputStyle}
+              className={hexTextInputCls}
               placeholder="#ffc905"
             />
           </div>
@@ -115,21 +99,21 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
         {/* Secondary Accent */}
         <div>
-          <label style={colorLabelStyle} title="Secondary Accent (Dividers & Winner Bg)">
+          <label className={colorLabelCls} title="Secondary Accent (Dividers & Winner Bg)">
             Secondary Accent
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div className="flex items-center gap-1.5">
             <input
               type="color"
               value={secColor}
               onChange={e => handleColorChange('secondaryColor', e.target.value)}
-              style={colorInputStyle}
+              className={colorInputCls}
             />
             <input
               type="text"
               value={secColor}
               onChange={e => handleColorChange('secondaryColor', e.target.value)}
-              style={hexTextInputStyle}
+              className={hexTextInputCls}
               placeholder="#705b33"
             />
           </div>
@@ -137,21 +121,21 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
         {/* Match Card Background */}
         <div>
-          <label style={colorLabelStyle} title="Match Card Background (Base)">
+          <label className={colorLabelCls} title="Match Card Background (Base)">
             Match Card Bg
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div className="flex items-center gap-1.5">
             <input
               type="color"
               value={cardBg}
               onChange={e => handleColorChange('cardColor', e.target.value)}
-              style={colorInputStyle}
+              className={colorInputCls}
             />
             <input
               type="text"
               value={cardBg}
               onChange={e => handleColorChange('cardColor', e.target.value)}
-              style={hexTextInputStyle}
+              className={hexTextInputCls}
               placeholder="#1b1c1d"
             />
           </div>
@@ -159,21 +143,21 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
         {/* Text Color */}
         <div>
-          <label style={colorLabelStyle} title="Text & Score Color">
+          <label className={colorLabelCls} title="Text & Score Color">
             Text Color
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div className="flex items-center gap-1.5">
             <input
               type="color"
               value={txtColor}
               onChange={e => handleColorChange('textColor', e.target.value)}
-              style={colorInputStyle}
+              className={colorInputCls}
             />
             <input
               type="text"
               value={txtColor}
               onChange={e => handleColorChange('textColor', e.target.value)}
-              style={hexTextInputStyle}
+              className={hexTextInputCls}
               placeholder="#94A3B8"
             />
           </div>
@@ -181,21 +165,21 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
         {/* Canvas Background Color */}
         <div>
-          <label style={colorLabelStyle} title="Overall Bracket Canvas Background">
+          <label className={colorLabelCls} title="Overall Bracket Canvas Background">
             Canvas Bg
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div className="flex items-center gap-1.5">
             <input
               type="color"
               value={canvasBg}
               onChange={e => handleColorChange('backgroundColor', e.target.value)}
-              style={colorInputStyle}
+              className={colorInputCls}
             />
             <input
               type="text"
               value={canvasBg}
               onChange={e => handleColorChange('backgroundColor', e.target.value)}
-              style={hexTextInputStyle}
+              className={hexTextInputCls}
               placeholder="#020203"
             />
           </div>
@@ -203,21 +187,21 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
         {/* Lower Bracket Accent Color */}
         <div>
-          <label style={colorLabelStyle} title="Lower Bracket Accent (Border highlights in Double Elimination)">
+          <label className={colorLabelCls} title="Lower Bracket Accent (Border highlights in Double Elimination)">
             Lower Bracket
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+          <div className="flex items-center gap-1.5">
             <input
               type="color"
               value={lowerColor}
               onChange={e => handleColorChange('lowerBracketColor', e.target.value)}
-              style={colorInputStyle}
+              className={colorInputCls}
             />
             <input
               type="text"
               value={lowerColor}
               onChange={e => handleColorChange('lowerBracketColor', e.target.value)}
-              style={hexTextInputStyle}
+              className={hexTextInputCls}
               placeholder="#c2410c"
             />
           </div>
@@ -226,27 +210,15 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
       {/* 2. Text Size Scaling Option */}
       {onTextSizeChange && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-            padding: '0.65rem 0.85rem',
-            background: 'var(--color-bg-base, #0c0d12)',
-            borderRadius: 'var(--radius-sm, 6px)',
-            border: '1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08))',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-line-subtle bg-canvas py-2.5 px-3.5">
+          <div className="flex items-center gap-2">
             <Type size={15} color={priColor} />
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-text-primary, #ffffff)' }}>
+            <span className="text-caption font-bold text-fg">
               Bracket Match Text Size:
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.35rem' }}>
+          <div className="flex gap-1.5">
             {(['compact', 'normal', 'large'] as const).map(opt => {
               const isSelected = (textSize || 'normal') === opt;
               return (
@@ -254,18 +226,11 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
                   key={opt}
                   type="button"
                   onClick={() => onTextSizeChange(opt)}
-                  style={{
-                    padding: '0.3rem 0.75rem',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                    fontWeight: isSelected ? 700 : 500,
-                    cursor: 'pointer',
-                    transition: 'all 0.12s ease',
-                    background: isSelected ? priColor : 'rgba(255, 255, 255, 0.05)',
-                    color: isSelected ? cardBg : 'var(--color-text-secondary, #94a3b8)',
-                    border: isSelected ? `1px solid ${priColor}` : '1px solid var(--color-border, rgba(255, 255, 255, 0.1))',
-                    textTransform: 'capitalize',
-                  }}
+                  className={cn(
+                    'cursor-pointer rounded-xs border py-1 px-3 text-xs capitalize transition-all duration-100',
+                    isSelected ? 'font-bold' : 'font-medium bg-white/5 text-fg-secondary border-line'
+                  )}
+                  style={isSelected ? { background: priColor, color: cardBg, borderColor: priColor } : undefined}
                 >
                   {opt}
                 </button>
@@ -277,155 +242,109 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
       {/* 3. The 3 Live Interactive Match Card Previews */}
       <div
-        style={{
-          padding: '1.25rem',
-          background: canvasBg,
-          borderRadius: 'var(--radius-md, 8px)',
-          border: `1px solid ${secColor}44`,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '1rem',
-          boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)',
-        }}
+        className="flex flex-col items-center gap-4 rounded-md border p-5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]"
+        style={{ background: canvasBg, borderColor: `${secColor}44` }}
       >
-        <span style={{ fontSize: '0.72rem', fontWeight: 800, color: txtColor, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.85 }}>
+        <span className="text-xs font-extrabold uppercase tracking-widest opacity-85" style={{ color: txtColor }}>
           Live Bracket Match Previews (Canvas Background: {canvasBg})
         </span>
 
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: '1.5rem',
-            width: '100%',
-          }}
-        >
+        <div className="flex w-full flex-wrap justify-center gap-6">
           {/* State 1: Inactive / Pre-Game */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div className="flex flex-col items-center gap-1.5">
+            <span className="text-2xs font-bold uppercase tracking-wide text-fg-muted">
               1. Inactive (Pre-Game)
             </span>
             <div
-              style={{
-                width: '260px',
-                height: '80px',
-                borderRadius: '5px',
-                background: cardBg,
-                border: `1.5px solid ${secColor}`,
-                overflow: 'hidden',
-                boxSizing: 'border-box',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
+              className={cn(previewCardCls, 'border-[1.5px]')}
+              style={{ background: cardBg, borderColor: secColor }}
             >
-              <div style={{ height: '20px', minHeight: '20px', padding: '0 0.55rem', background: cardBg, fontSize: previewShelfFontSize, color: txtColor, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 500, borderBottom: `1.5px solid ${secColor}`, boxSizing: 'border-box', lineHeight: '20px' }}>
+              <div className={previewHeaderCls} style={{ background: cardBg, fontSize: previewShelfFontSize, color: txtColor, borderBottomColor: secColor }}>
                 <span>Match #1</span>
                 <span>Bo{bestOf}</span>
               </div>
-              <div style={{ height: '28px', minHeight: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.55rem', background: p1ZebraBg, boxSizing: 'border-box' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                  <span style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, border: `1.5px solid ${secColor}`, color: txtColor, fontWeight: 900, fontSize: previewSeedFontSize, fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px' }}>1</span>
-                  <span style={{ fontSize: previewFlagFontSize, lineHeight: 1, flexShrink: 0 }}>🇺🇸</span>
-                  <span style={{ fontSize: previewNameFontSize, fontWeight: 700, color: txtColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Cheez</span>
+              <div className={previewRowCls} style={{ background: p1ZebraBg }}>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className={previewSeedCls} style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, borderColor: secColor, color: txtColor, fontSize: previewSeedFontSize }}>1</span>
+                  <span className="shrink-0 leading-none" style={{ fontSize: previewFlagFontSize }}>🇺🇸</span>
+                  <span className={cn('truncate', 'font-bold')} style={{ fontSize: previewNameFontSize, color: txtColor }}>Cheez</span>
                 </div>
-                <span style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, background: cardBg, border: `1.5px solid ${secColor}`, color: txtColor, fontSize: previewScoreFontSize, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px', lineHeight: 1 }}>-</span>
+                <span className={cn(previewScoreCls, 'border-[1.5px]')} style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, background: cardBg, borderColor: secColor, color: txtColor, fontSize: previewScoreFontSize }}>-</span>
               </div>
-              <div style={{ height: '1.5px', minHeight: '1.5px', background: secColor }} />
-              <div style={{ height: '28px', minHeight: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.55rem', background: cardBg, boxSizing: 'border-box' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                  <span style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, border: `1.5px solid ${secColor}`, color: txtColor, fontWeight: 900, fontSize: previewSeedFontSize, fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px' }}>4</span>
-                  <span style={{ fontSize: previewFlagFontSize, lineHeight: 1, flexShrink: 0 }}>🇨🇦</span>
-                  <span style={{ fontSize: previewNameFontSize, fontWeight: 700, color: txtColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Fractal</span>
+              <div className="h-[1.5px] min-h-[1.5px]" style={{ background: secColor }} />
+              <div className={previewRowCls} style={{ background: cardBg }}>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className={previewSeedCls} style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, borderColor: secColor, color: txtColor, fontSize: previewSeedFontSize }}>4</span>
+                  <span className="shrink-0 leading-none" style={{ fontSize: previewFlagFontSize }}>🇨🇦</span>
+                  <span className={cn('truncate', 'font-bold')} style={{ fontSize: previewNameFontSize, color: txtColor }}>Fractal</span>
                 </div>
-                <span style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, background: cardBg, border: `1.5px solid ${secColor}`, color: txtColor, fontSize: previewScoreFontSize, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px', lineHeight: 1 }}>-</span>
+                <span className={cn(previewScoreCls, 'border-[1.5px]')} style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, background: cardBg, borderColor: secColor, color: txtColor, fontSize: previewScoreFontSize }}>-</span>
               </div>
             </div>
           </div>
 
           {/* State 2: Active Match */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: priColor, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div className="flex flex-col items-center gap-1.5">
+            <span className="text-2xs font-bold uppercase tracking-wide" style={{ color: priColor }}>
               2. Active (Live Ring)
             </span>
             <div
-              style={{
-                width: '260px',
-                height: '80px',
-                borderRadius: '5px',
-                background: cardBg,
-                border: `2px solid ${priColor}`,
-                boxShadow: `0 0 16px ${priColor}55`,
-                overflow: 'hidden',
-                boxSizing: 'border-box',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
+              className={cn(previewCardCls, 'border-2')}
+              style={{ background: cardBg, borderColor: priColor, boxShadow: `0 0 16px ${priColor}55` }}
             >
-              <div style={{ height: '20px', minHeight: '20px', padding: '0 0.55rem', background: cardBg, fontSize: previewShelfFontSize, color: txtColor, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 500, borderBottom: `1.5px solid ${secColor}`, boxSizing: 'border-box', lineHeight: '20px' }}>
+              <div className={previewHeaderCls} style={{ background: cardBg, fontSize: previewShelfFontSize, color: txtColor, borderBottomColor: secColor }}>
                 <span>Match #1</span>
                 <span>Bo{bestOf}</span>
               </div>
-              <div style={{ height: '28px', minHeight: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.55rem', background: p1ZebraBg, boxSizing: 'border-box' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                  <span style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, border: `1.5px solid ${priColor}`, color: priColor, fontWeight: 900, fontSize: previewSeedFontSize, fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px' }}>1</span>
-                  <span style={{ fontSize: previewFlagFontSize, lineHeight: 1, flexShrink: 0 }}>🇺🇸</span>
-                  <span style={{ fontSize: previewNameFontSize, fontWeight: 900, color: priColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Cheez</span>
+              <div className={previewRowCls} style={{ background: p1ZebraBg }}>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className={previewSeedCls} style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, borderColor: priColor, color: priColor, fontSize: previewSeedFontSize }}>1</span>
+                  <span className="shrink-0 leading-none" style={{ fontSize: previewFlagFontSize }}>🇺🇸</span>
+                  <span className={cn('truncate', 'font-black')} style={{ fontSize: previewNameFontSize, color: priColor }}>Cheez</span>
                 </div>
-                <span style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, background: priColor, border: 'none', color: cardBg, fontSize: previewScoreFontSize, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px', lineHeight: 1 }}>2</span>
+                <span className={cn(previewScoreCls, 'border-0')} style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, background: priColor, color: cardBg, fontSize: previewScoreFontSize }}>2</span>
               </div>
-              <div style={{ height: '1.5px', minHeight: '1.5px', background: secColor }} />
-              <div style={{ height: '28px', minHeight: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.55rem', background: cardBg, boxSizing: 'border-box' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                  <span style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, border: `1.5px solid ${secColor}`, color: txtColor, fontWeight: 900, fontSize: previewSeedFontSize, fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px' }}>4</span>
-                  <span style={{ fontSize: previewFlagFontSize, lineHeight: 1, flexShrink: 0 }}>🇨🇦</span>
-                  <span style={{ fontSize: previewNameFontSize, fontWeight: 700, color: txtColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Fractal</span>
+              <div className="h-[1.5px] min-h-[1.5px]" style={{ background: secColor }} />
+              <div className={previewRowCls} style={{ background: cardBg }}>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className={previewSeedCls} style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, borderColor: secColor, color: txtColor, fontSize: previewSeedFontSize }}>4</span>
+                  <span className="shrink-0 leading-none" style={{ fontSize: previewFlagFontSize }}>🇨🇦</span>
+                  <span className={cn('truncate', 'font-bold')} style={{ fontSize: previewNameFontSize, color: txtColor }}>Fractal</span>
                 </div>
-                <span style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, background: 'transparent', border: 'none', color: txtColor, fontSize: previewScoreFontSize, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px', lineHeight: 1 }}>1</span>
+                <span className={cn(previewScoreCls, 'border-0 bg-transparent')} style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, color: txtColor, fontSize: previewScoreFontSize }}>1</span>
               </div>
             </div>
           </div>
 
           {/* State 3: Finished Match */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: priColor, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div className="flex flex-col items-center gap-1.5">
+            <span className="text-2xs font-bold uppercase tracking-wide" style={{ color: priColor }}>
               3. Finished (Final Result)
             </span>
             <div
-              style={{
-                width: '260px',
-                height: '80px',
-                borderRadius: '5px',
-                background: cardBg,
-                border: `2px solid ${priColor}`,
-                boxShadow: `0 0 16px ${priColor}55`,
-                overflow: 'hidden',
-                boxSizing: 'border-box',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
+              className={cn(previewCardCls, 'border-2')}
+              style={{ background: cardBg, borderColor: priColor, boxShadow: `0 0 16px ${priColor}55` }}
             >
-              <div style={{ height: '20px', minHeight: '20px', padding: '0 0.55rem', background: cardBg, fontSize: previewShelfFontSize, color: txtColor, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 500, borderBottom: `1.5px solid ${priColor}`, boxSizing: 'border-box', lineHeight: '20px' }}>
+              <div className={previewHeaderCls} style={{ background: cardBg, fontSize: previewShelfFontSize, color: txtColor, borderBottomColor: priColor }}>
                 <span>Match #1</span>
                 <span>Bo{bestOf}</span>
               </div>
-              <div style={{ height: '28px', minHeight: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.55rem', background: secColor, boxSizing: 'border-box' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                  <span style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, border: `1.5px solid ${priColor}`, color: priColor, fontWeight: 900, fontSize: previewSeedFontSize, fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px' }}>1</span>
-                  <span style={{ fontSize: previewFlagFontSize, lineHeight: 1, flexShrink: 0 }}>🇺🇸</span>
-                  <span style={{ fontSize: previewNameFontSize, fontWeight: 900, color: priColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Cheez</span>
+              <div className={previewRowCls} style={{ background: secColor }}>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className={previewSeedCls} style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, borderColor: priColor, color: priColor, fontSize: previewSeedFontSize }}>1</span>
+                  <span className="shrink-0 leading-none" style={{ fontSize: previewFlagFontSize }}>🇺🇸</span>
+                  <span className={cn('truncate', 'font-black')} style={{ fontSize: previewNameFontSize, color: priColor }}>Cheez</span>
                 </div>
-                <span style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, background: priColor, border: 'none', color: cardBg, fontSize: previewScoreFontSize, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px', lineHeight: 1 }}>3</span>
+                <span className={cn(previewScoreCls, 'border-0')} style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, background: priColor, color: cardBg, fontSize: previewScoreFontSize }}>3</span>
               </div>
-              <div style={{ height: '1.5px', minHeight: '1.5px', background: priColor }} />
-              <div style={{ height: '28px', minHeight: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 0.55rem', background: cardBg, boxSizing: 'border-box' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', minWidth: 0 }}>
-                  <span style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, border: `1.5px solid ${secColor}`, color: txtColor, fontWeight: 900, fontSize: previewSeedFontSize, fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px' }}>4</span>
-                  <span style={{ fontSize: previewFlagFontSize, lineHeight: 1, flexShrink: 0 }}>🇨🇦</span>
-                  <span style={{ fontSize: previewNameFontSize, fontWeight: 700, color: txtColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Fractal</span>
+              <div className="h-[1.5px] min-h-[1.5px]" style={{ background: priColor }} />
+              <div className={previewRowCls} style={{ background: cardBg }}>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className={previewSeedCls} style={{ width: `${previewSeedDim}px`, height: `${previewSeedDim}px`, minWidth: `${previewSeedDim}px`, background: cardBg, borderColor: secColor, color: txtColor, fontSize: previewSeedFontSize }}>4</span>
+                  <span className="shrink-0 leading-none" style={{ fontSize: previewFlagFontSize }}>🇨🇦</span>
+                  <span className={cn('truncate', 'font-bold')} style={{ fontSize: previewNameFontSize, color: txtColor }}>Fractal</span>
                 </div>
-                <span style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, background: 'transparent', border: 'none', color: txtColor, fontSize: previewScoreFontSize, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '3px', lineHeight: 1 }}>1</span>
+                <span className={cn(previewScoreCls, 'border-0 bg-transparent')} style={{ width: `${previewScoreMinW}px`, height: `${previewScoreH}px`, minWidth: `${previewScoreMinW}px`, color: txtColor, fontSize: previewScoreFontSize }}>1</span>
               </div>
             </div>
           </div>
@@ -435,37 +354,16 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
   );
 };
 
-const colorLabelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '0.72rem',
-  fontWeight: 600,
-  color: 'var(--color-text-secondary, #94a3b8)',
-  marginBottom: '0.25rem',
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-};
+const colorLabelCls = 'mb-1 block truncate text-xs font-semibold text-fg-secondary';
 
-const colorInputStyle: React.CSSProperties = {
-  width: '34px',
-  height: '34px',
-  borderRadius: '4px',
-  border: 'none',
-  cursor: 'pointer',
-  background: 'transparent',
-  flexShrink: 0,
-};
+const colorInputCls = 'size-8.5 shrink-0 cursor-pointer rounded-xs border-0 bg-transparent';
 
-const hexTextInputStyle: React.CSSProperties = {
-  width: '100%',
-  minWidth: 0,
-  flex: 1,
-  padding: '0.35rem 0.45rem',
-  borderRadius: 'var(--radius-sm, 6px)',
-  border: '1px solid var(--color-border, rgba(255, 255, 255, 0.12))',
-  background: 'var(--color-bg-base, #0c0d12)',
-  color: 'var(--color-text-primary, #ffffff)',
-  fontSize: '0.8rem',
-  fontFamily: 'var(--font-mono, monospace)',
-  boxSizing: 'border-box',
-};
+const hexTextInputCls =
+  'w-full min-w-0 flex-1 rounded-sm border border-line bg-canvas py-1.5 px-2 font-mono text-caption text-fg';
+
+const previewCardCls = 'flex h-20 w-65 flex-col overflow-hidden rounded-sm';
+const previewHeaderCls =
+  'flex h-5 min-h-5 items-center justify-between border-b-[1.5px] px-2 font-medium leading-[20px]';
+const previewRowCls = 'flex h-7 min-h-7 items-center justify-between px-2';
+const previewSeedCls = 'flex items-center justify-center rounded-xs border-[1.5px] font-mono font-black';
+const previewScoreCls = 'flex items-center justify-center rounded-xs font-black leading-none';

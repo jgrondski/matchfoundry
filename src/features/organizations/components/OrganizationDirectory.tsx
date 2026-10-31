@@ -16,6 +16,14 @@ import {
 import { QualFormat } from '../../tournament/types';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Overlay } from '../../../components/overlay';
+import { Button, IconButton, buttonClasses, cn } from '../../../components/ui';
+
+const labelClass = 'mb-1.5 block text-caption font-semibold text-fg-secondary';
+const fieldClass = 'rounded-md border border-line bg-canvas px-3.5 py-2.5 text-sm text-white';
+const browseClass =
+  'inline-flex cursor-pointer items-center whitespace-nowrap rounded-md border border-line bg-surface px-3 py-2 text-xs text-fg-secondary';
+const swatchLabelClass = 'mb-1 block text-2xs text-fg-muted';
+const swatchInputClass = 'h-8 w-full cursor-pointer rounded-xs';
 
 export const OrganizationDirectory: React.FC = () => {
   const { organizations, createOrganization, isLoading, isHydrated } = useOrganization();
@@ -136,90 +144,59 @@ export const OrganizationDirectory: React.FC = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-bg-base)', padding: '0 0 4rem' }}>
+    <div className="min-h-screen bg-canvas pb-16">
       <TopNavSwitcher />
 
-      <div style={{ maxWidth: '1180px', width: '100%', margin: '0 auto', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '2rem', boxSizing: 'border-box' }}>
+      <div className="mx-auto flex w-full max-w-295 flex-col gap-8 px-6 py-8">
         {/* Header Hero */}
-        <header style={{ textAlign: 'center', padding: '1.5rem 1rem 0' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: 'var(--radius-md, 8px)',
-                background: 'linear-gradient(135deg, var(--color-gold-bright, #ffc905), #d97706)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+        <header className="px-4 pb-0 pt-6 text-center">
+          <div className="mb-3 inline-flex items-center gap-2">
+            <div className="flex size-9.5 items-center justify-center rounded-md bg-linear-135 from-gold-bright to-amber-600">
               <Building2 size={20} color="#090d16" />
             </div>
-            <span style={{ fontWeight: 800, fontSize: '1.4rem', color: 'var(--color-text-primary, #ffffff)' }}>
-              ORGANIZATION <span style={{ color: 'var(--color-gold-bright, #ffc905)' }}>DIRECTORY</span>
+            <span className="text-2xl font-extrabold text-fg">
+              ORGANIZATION <span className="text-gold-bright">DIRECTORY</span>
             </span>
           </div>
-          <h1 style={{ fontSize: '2.4rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em', marginBottom: '0.75rem' }}>
+          <h1 className="mb-3 text-4xl font-extrabold tracking-tight text-white">
             Organizations
           </h1>
-          <p style={{ fontSize: '1.05rem', color: 'var(--color-text-secondary, #94a3b8)', maxWidth: '650px', margin: '0 auto 1.5rem' }}>
+          <p className="mx-auto mb-6 mt-0 max-w-162.5 text-base text-fg-secondary">
             Manage your organization's themes and tournaments.
           </p>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button
+              variant="primary"
               onClick={() => setIsCreateModalOpen(true)}
-              className="btn btn-primary"
-              style={{ padding: '0.65rem 1.5rem', fontSize: '0.95rem', boxShadow: '0 4px 14px rgba(255, 201, 5, 0.35)' }}
+              className="px-6 py-2.5 text-base shadow-[0_4px_14px_rgba(255,201,5,0.35)]"
             >
               <Plus size={18} />
               Create New Organization
-            </button>
+            </Button>
           </div>
         </header>
 
         {/* Search Bar */}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: '540px',
-            }}
-          >
+        <div className="flex justify-center">
+          <div className="relative w-full max-w-135">
             <Search
               size={18}
               color="var(--color-text-muted, #64748b)"
-              style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)' }}
+              className="absolute left-4 top-1/2 -translate-y-1/2"
             />
             <input
               type="text"
               placeholder="Search organizations by name, description, or slug..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem 0.75rem 2.75rem',
-                background: 'var(--color-bg-surface, #161922)',
-                border: '1px solid var(--color-border, rgba(255, 255, 255, 0.1))',
-                borderRadius: 'var(--radius-full, 9999px)',
-                color: 'var(--color-text-primary, #ffffff)',
-                fontSize: '0.9rem',
-                outline: 'none',
-              }}
+              className="w-full rounded-full border border-line bg-surface py-3 pl-11 pr-4 text-sm text-fg outline-none"
             />
           </div>
         </div>
 
         {/* Organizations Grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-            gap: '1.5rem',
-          }}
-        >
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-6">
           {filteredOrgs.map(org => {
             const orgTournaments = tournaments.filter(t => t.organizationId === org.id);
             const colors = org.themeColors || {
@@ -229,77 +206,45 @@ export const OrganizationDirectory: React.FC = () => {
               textColor: '#94A3B8',
               backgroundColor: '#020203',
             };
+            const orgPrimary = colors.primaryColor || '#ffc905';
+            const orgSecondary = colors.secondaryColor || '#1e293b';
+            const orgCard = colors.cardColor || '#161922';
 
             return (
               <div
                 key={org.id}
-                style={{
-                  background: 'var(--color-bg-surface, #161922)',
-                  border: '1px solid var(--color-border, rgba(255, 255, 255, 0.08))',
-                  borderRadius: 'var(--radius-lg, 12px)',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'transform 0.15s ease, border-color 0.15s ease',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-                }}
+                className="flex flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-[transform,border-color] duration-150"
               >
                 {/* Banner / Header (Clickable to Org Dashboard) */}
-                <Link
-                  to={`/org/${org.slug}`}
-                  style={{ textDecoration: 'none', display: 'block', position: 'relative' }}
-                >
+                <Link to={`/org/${org.slug}`} className="relative block no-underline">
                   <div
+                    className="relative h-22.5"
                     style={{
-                      height: '90px',
-                      position: 'relative',
                       background: org.bannerUrl
                         ? `url(${org.bannerUrl}) center/cover no-repeat`
-                        : `linear-gradient(135deg, ${colors.secondaryColor || '#1e293b'}, ${colors.primaryColor || '#ffc905'}33)`,
-                      borderBottom: `2px solid ${colors.primaryColor || '#ffc905'}`,
+                        : `linear-gradient(135deg, ${orgSecondary}, ${orgPrimary}33)`,
+                      borderBottom: `2px solid ${orgPrimary}`,
                     }}
                   >
                     {/* Logo Avatar */}
                     <div
+                      className="absolute -bottom-5 left-5 flex size-13.5 items-center justify-center overflow-hidden rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
                       style={{
-                        position: 'absolute',
-                        bottom: '-20px',
-                        left: '1.25rem',
-                        width: '54px',
-                        height: '54px',
-                        borderRadius: 'var(--radius-md, 8px)',
-                        background: colors.cardColor || '#161922',
-                        border: `2px solid ${colors.primaryColor || '#ffc905'}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-                        overflow: 'hidden',
+                        background: orgCard,
+                        border: `2px solid ${orgPrimary}`,
                       }}
                     >
                       {org.logoUrl ? (
-                        <img src={org.logoUrl} alt={org.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        <img src={org.logoUrl} alt={org.name} className="size-full object-contain" />
                       ) : (
-                        <Building2 size={26} color={colors.primaryColor || '#ffc905'} />
+                        <Building2 size={26} color={orgPrimary} />
                       )}
                     </div>
 
                     {/* Slug Badge */}
                     <div
-                      style={{
-                        position: 'absolute',
-                        top: '0.75rem',
-                        right: '0.75rem',
-                        background: 'rgba(0, 0, 0, 0.65)',
-                        backdropFilter: 'blur(4px)',
-                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                        borderRadius: 'var(--radius-full, 9999px)',
-                        padding: '0.2rem 0.6rem',
-                        fontSize: '0.72rem',
-                        fontFamily: 'var(--font-mono, monospace)',
-                        color: colors.primaryColor || '#ffc905',
-                        fontWeight: 700,
-                      }}
+                      className="absolute right-3 top-3 rounded-full border border-white/15 bg-black/65 px-2.5 py-1 font-mono text-xs font-bold backdrop-blur-xs"
+                      style={{ color: orgPrimary }}
                     >
                       /{org.slug}
                     </div>
@@ -307,14 +252,11 @@ export const OrganizationDirectory: React.FC = () => {
                 </Link>
 
                 {/* Card Body */}
-                <div style={{ padding: '1.75rem 1.25rem 1.25rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div className="flex flex-1 flex-col gap-4 px-5 pb-5 pt-7">
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-                      <Link
-                        to={`/org/${org.slug}`}
-                        style={{ textDecoration: 'none', color: 'inherit' }}
-                      >
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-text-primary, #ffffff)', margin: 0 }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <Link to={`/org/${org.slug}`} className="text-inherit no-underline">
+                        <h3 className="m-0 text-lg font-extrabold text-fg">
                           {org.name}
                         </h3>
                       </Link>
@@ -324,14 +266,14 @@ export const OrganizationDirectory: React.FC = () => {
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Visit official website"
-                          style={{ color: 'var(--color-text-muted, #64748b)', transition: 'color 0.15s ease' }}
+                          className="text-fg-muted transition-colors duration-150"
                         >
                           <ExternalLink size={15} />
                         </a>
                       )}
                     </div>
                     {org.description && (
-                      <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary, #94a3b8)', margin: '0.4rem 0 0', lineHeight: 1.45 }}>
+                      <p className="mx-0 mb-0 mt-1.5 text-sm leading-normal text-fg-secondary">
                         {org.description}
                       </p>
                     )}
@@ -339,41 +281,25 @@ export const OrganizationDirectory: React.FC = () => {
 
                   {/* Recent Tournaments Preview */}
                   <div>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted, #64748b)', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                    <div className="mb-1.5 text-xs font-bold uppercase text-fg-muted">
                       Recent Tournaments ({orgTournaments.length})
                     </div>
                     {orgTournaments.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <div className="flex flex-col gap-1.5">
                         {orgTournaments.slice(0, 3).map(t => (
                           <Link
                             key={t.id}
                             to={`/${t.slug}/leaderboard`}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '0.4rem 0.65rem',
-                              background: 'var(--color-bg-base, #0c0d12)',
-                              borderRadius: 'var(--radius-sm, 6px)',
-                              fontSize: '0.8rem',
-                              color: 'var(--color-text-secondary, #94a3b8)',
-                              textDecoration: 'none',
-                              border: '1px solid rgba(255,255,255,0.04)',
-                            }}
+                            className="flex items-center justify-between rounded-sm border border-white/4 bg-canvas px-2.5 py-1.5 text-caption text-fg-secondary no-underline"
                           >
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span className="truncate">
                               {t.name}
                             </span>
                             <span
-                              style={{
-                                fontSize: '0.65rem',
-                                fontWeight: 700,
-                                padding: '0.1rem 0.4rem',
-                                borderRadius: 'var(--radius-full, 9999px)',
-                                background: t.isLocked ? 'rgba(34, 197, 94, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                color: t.isLocked ? '#4ade80' : 'var(--color-gold-bright, #ffc905)',
-                                flexShrink: 0,
-                              }}
+                              className={cn(
+                                'shrink-0 rounded-full px-1.5 py-0.5 text-3xs font-bold',
+                                t.isLocked ? 'bg-green-500/15 text-green-400' : 'bg-gold/15 text-gold-bright'
+                              )}
                             >
                               {t.isLocked ? 'Match Play' : 'Quals'}
                             </span>
@@ -381,18 +307,20 @@ export const OrganizationDirectory: React.FC = () => {
                         ))}
                       </div>
                     ) : (
-                      <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted, #64748b)', fontStyle: 'italic', padding: '0.4rem 0' }}>
+                      <div className="py-1.5 text-caption italic text-fg-muted">
                         No tournaments hosted yet.
                       </div>
                     )}
                   </div>
 
                   {/* Actions Footer */}
-                  <div style={{ marginTop: 'auto', paddingTop: '0.75rem', display: 'flex', alignItems: 'center' }}>
+                  <div className="mt-auto flex items-center pt-3">
                     <Link
                       to={`/org/${org.slug}`}
-                      className="btn btn-secondary"
-                      style={{ width: '100%', padding: '0.55rem', fontSize: '0.85rem', justifyContent: 'center', gap: '0.4rem' }}
+                      className={buttonClasses({
+                        variant: 'secondary',
+                        className: 'w-full justify-center gap-1.5 p-2 text-sm hover:border-fg-secondary hover:bg-highlight',
+                      })}
                     >
                       <span>Manage Organization</span>
                       <ArrowRight size={14} />
@@ -415,25 +343,21 @@ export const OrganizationDirectory: React.FC = () => {
         >
           {({ requestClose }) => (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="mb-5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <Building2 size={20} color="var(--color-gold-bright, #ffc905)" />
-                  <h2 id={createTitleId} style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--color-text-primary, #ffffff)', margin: 0 }}>
+                  <h2 id={createTitleId} className="m-0 text-xl font-extrabold text-fg">
                     Create New Organization
                   </h2>
                 </div>
-                <button
-                  type="button"
-                  onClick={requestClose}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted, #64748b)', cursor: 'pointer' }}
-                >
+                <IconButton aria-label="Close" onClick={requestClose}>
                   <X size={18} />
-                </button>
+                </IconButton>
               </div>
 
-              <form onSubmit={handleCreateOrg} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <form onSubmit={handleCreateOrg} className="flex flex-col gap-4">
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '0.35rem' }}>
+                  <label className={labelClass}>
                     Organization Name *
                   </label>
                   <input
@@ -442,12 +366,12 @@ export const OrganizationDirectory: React.FC = () => {
                     placeholder="e.g. Classic Tetris World Championship"
                     value={orgName}
                     onChange={e => handleNameChange(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base, #0c0d12)', border: '1px solid var(--color-border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-md, 8px)', color: '#ffffff', fontSize: '0.9rem' }}
+                    className={cn(fieldClass, 'w-full')}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '0.35rem' }}>
+                  <label className={labelClass}>
                     URL Slug *
                   </label>
                   <input
@@ -456,12 +380,12 @@ export const OrganizationDirectory: React.FC = () => {
                     placeholder="e.g. ctwc"
                     value={orgSlug}
                     onChange={e => setOrgSlug(e.target.value)}
-                    style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base, #0c0d12)', border: '1px solid var(--color-border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-md, 8px)', color: '#ffffff', fontSize: '0.9rem', fontFamily: 'var(--font-mono, monospace)' }}
+                    className={cn(fieldClass, 'w-full font-mono')}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '0.35rem' }}>
+                  <label className={labelClass}>
                     Description
                   </label>
                   <textarea
@@ -469,13 +393,13 @@ export const OrganizationDirectory: React.FC = () => {
                     value={orgDescription}
                     onChange={e => setOrgDescription(e.target.value)}
                     rows={2}
-                    style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base, #0c0d12)', border: '1px solid var(--color-border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-md, 8px)', color: '#ffffff', fontSize: '0.85rem' }}
+                    className={cn(fieldClass, 'w-full')}
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '0.35rem' }}>
+                    <label className={labelClass}>
                       Official Website
                     </label>
                     <input
@@ -483,88 +407,60 @@ export const OrganizationDirectory: React.FC = () => {
                       placeholder="https://..."
                       value={orgWebsite}
                       onChange={e => setOrgWebsite(e.target.value)}
-                      style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base, #0c0d12)', border: '1px solid var(--color-border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-md, 8px)', color: '#ffffff', fontSize: '0.85rem' }}
+                      className={cn(fieldClass, 'w-full')}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '0.35rem' }}>
+                    <label className={labelClass}>
                       Logo URL or Local File
                     </label>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <div className="flex gap-1.5">
                       <input
                         type="text"
                         placeholder="https://... or /assets/..."
                         value={orgLogoUrl}
                         onChange={e => setOrgLogoUrl(e.target.value)}
-                        style={{ flex: 1, padding: '0.65rem 0.85rem', background: 'var(--color-bg-base, #0c0d12)', border: '1px solid var(--color-border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-md, 8px)', color: '#ffffff', fontSize: '0.85rem' }}
+                        className={cn(fieldClass, 'flex-1')}
                       />
-                      <label
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '0.5rem 0.75rem',
-                          background: 'var(--color-bg-surface, #161922)',
-                          border: '1px solid var(--color-border, rgba(255,255,255,0.15))',
-                          borderRadius: 'var(--radius-md, 8px)',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          color: 'var(--color-text-secondary, #94a3b8)',
-                          whiteSpace: 'nowrap',
-                        }}
-                        title="Choose local image file"
-                      >
+                      <label className={browseClass} title="Choose local image file">
                         Browse
                         <input
                           type="file"
                           accept="image/*"
                           onChange={e => handleFileUpload(e, setOrgLogoUrl)}
-                          style={{ display: 'none' }}
+                          className="hidden"
                         />
                       </label>
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '0.35rem' }}>
+                    <label className={labelClass}>
                       Banner URL or Local File
                     </label>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <div className="flex gap-1.5">
                       <input
                         type="text"
                         placeholder="https://... or /assets/..."
                         value={orgBannerUrl}
                         onChange={e => setOrgBannerUrl(e.target.value)}
-                        style={{ flex: 1, padding: '0.65rem 0.85rem', background: 'var(--color-bg-base, #0c0d12)', border: '1px solid var(--color-border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-md, 8px)', color: '#ffffff', fontSize: '0.85rem' }}
+                        className={cn(fieldClass, 'flex-1')}
                       />
-                      <label
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '0.5rem 0.75rem',
-                          background: 'var(--color-bg-surface, #161922)',
-                          border: '1px solid var(--color-border, rgba(255,255,255,0.15))',
-                          borderRadius: 'var(--radius-md, 8px)',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          color: 'var(--color-text-secondary, #94a3b8)',
-                          whiteSpace: 'nowrap',
-                        }}
-                        title="Choose local image file"
-                      >
+                      <label className={browseClass} title="Choose local image file">
                         Browse
                         <input
                           type="file"
                           accept="image/*"
                           onChange={e => handleFileUpload(e, setOrgBannerUrl)}
-                          style={{ display: 'none' }}
+                          className="hidden"
                         />
                       </label>
                     </div>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '0.35rem' }}>
+                    <label className={labelClass}>
                       Discord Webhook URL (Groundwork)
                     </label>
                     <input
@@ -572,21 +468,21 @@ export const OrganizationDirectory: React.FC = () => {
                       placeholder="https://discord.com/api/webhooks/..."
                       value={discordWebhookUrl}
                       onChange={e => setDiscordWebhookUrl(e.target.value)}
-                      style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base, #0c0d12)', border: '1px solid var(--color-border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-md, 8px)', color: '#ffffff', fontSize: '0.85rem' }}
+                      className={cn(fieldClass, 'w-full')}
                     />
                   </div>
                 </div>
 
                 {/* Default Rules */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
+                <div className="grid grid-cols-[2fr_1fr_1fr] gap-3">
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '0.35rem' }}>
+                    <label className={labelClass}>
                       Default Qual Format
                     </label>
                     <select
                       value={defaultQualFormat}
                       onChange={e => setDefaultQualFormat(e.target.value as QualFormat)}
-                      style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base, #0c0d12)', border: '1px solid var(--color-border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-md, 8px)', color: '#ffffff', fontSize: '0.85rem' }}
+                      className={cn(fieldClass, 'w-full')}
                     >
                       <option value="AVERAGE_OF_X">Average of X Attempts</option>
                       <option value="HIGH_SCORE"># of Maxes</option>
@@ -594,7 +490,7 @@ export const OrganizationDirectory: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '0.35rem' }}>
+                    <label className={labelClass}>
                       Avg Count (X)
                     </label>
                     <input
@@ -603,17 +499,17 @@ export const OrganizationDirectory: React.FC = () => {
                       max={10}
                       value={defaultAvgCount}
                       onChange={e => setDefaultAvgCount(parseInt(e.target.value, 10) || 2)}
-                      style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base, #0c0d12)', border: '1px solid var(--color-border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-md, 8px)', color: '#ffffff', fontSize: '0.85rem' }}
+                      className={cn(fieldClass, 'w-full')}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '0.35rem' }}>
+                    <label className={labelClass}>
                       Default Best Of
                     </label>
                     <select
                       value={defaultBestOf}
                       onChange={e => setDefaultBestOf(parseInt(e.target.value, 10) || 5)}
-                      style={{ width: '100%', padding: '0.65rem 0.85rem', background: 'var(--color-bg-base, #0c0d12)', border: '1px solid var(--color-border, rgba(255,255,255,0.1))', borderRadius: 'var(--radius-md, 8px)', color: '#ffffff', fontSize: '0.85rem' }}
+                      className={cn(fieldClass, 'w-full')}
                     >
                       <option value={3}>Best of 3</option>
                       <option value={5}>Best of 5</option>
@@ -623,56 +519,47 @@ export const OrganizationDirectory: React.FC = () => {
                 </div>
 
                 {/* 5 Bracket Colors Section */}
-                <div style={{ border: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))', borderRadius: 'var(--radius-md, 8px)', padding: '0.85rem', background: 'rgba(0,0,0,0.2)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.65rem' }}>
+                <div className="rounded-md border border-line-subtle bg-black/20 p-3.5">
+                  <div className="mb-2.5 flex items-center gap-1.5">
                     <Palette size={16} color="var(--color-gold-bright, #ffc905)" />
-                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text-primary, #ffffff)' }}>
+                    <span className="text-caption font-bold text-fg">
                       Default 5-Color Bracket Theme Palette
                     </span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem' }}>
+                  <div className="grid grid-cols-5 gap-2">
                     <div>
-                      <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--color-text-muted, #64748b)', marginBottom: '0.2rem' }}>Primary</span>
-                      <input type="color" value={primaryColor} onChange={e => { setPrimaryColor(e.target.value); setBrandColor(e.target.value); }} style={{ width: '100%', height: '32px', borderRadius: '4px', cursor: 'pointer' }} />
+                      <span className={swatchLabelClass}>Primary</span>
+                      <input type="color" value={primaryColor} onChange={e => { setPrimaryColor(e.target.value); setBrandColor(e.target.value); }} className={swatchInputClass} />
                     </div>
                     <div>
-                      <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--color-text-muted, #64748b)', marginBottom: '0.2rem' }}>Secondary</span>
-                      <input type="color" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} style={{ width: '100%', height: '32px', borderRadius: '4px', cursor: 'pointer' }} />
+                      <span className={swatchLabelClass}>Secondary</span>
+                      <input type="color" value={secondaryColor} onChange={e => setSecondaryColor(e.target.value)} className={swatchInputClass} />
                     </div>
                     <div>
-                      <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--color-text-muted, #64748b)', marginBottom: '0.2rem' }}>Card Bg</span>
-                      <input type="color" value={cardColor} onChange={e => setCardColor(e.target.value)} style={{ width: '100%', height: '32px', borderRadius: '4px', cursor: 'pointer' }} />
+                      <span className={swatchLabelClass}>Card Bg</span>
+                      <input type="color" value={cardColor} onChange={e => setCardColor(e.target.value)} className={swatchInputClass} />
                     </div>
                     <div>
-                      <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--color-text-muted, #64748b)', marginBottom: '0.2rem' }}>Text</span>
-                      <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} style={{ width: '100%', height: '32px', borderRadius: '4px', cursor: 'pointer' }} />
+                      <span className={swatchLabelClass}>Text</span>
+                      <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} className={swatchInputClass} />
                     </div>
                     <div>
-                      <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--color-text-muted, #64748b)', marginBottom: '0.2rem' }}>Canvas Bg</span>
-                      <input type="color" value={backgroundColor} onChange={e => setBackgroundColor(e.target.value)} style={{ width: '100%', height: '32px', borderRadius: '4px', cursor: 'pointer' }} />
+                      <span className={swatchLabelClass}>Canvas Bg</span>
+                      <input type="color" value={backgroundColor} onChange={e => setBackgroundColor(e.target.value)} className={swatchInputClass} />
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <button type="button" onClick={requestClose} disabled={isSubmitting} className="btn btn-secondary">
+                <div className="mt-2 flex justify-end gap-3">
+                  <Button variant="secondary" onClick={requestClose} disabled={isSubmitting}>
                     Cancel
-                  </button>
-                  <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
+                  </Button>
+                  <Button type="submit" variant="primary" disabled={isSubmitting}>
                     {isSubmitting && (
-                      <div
-                        style={{
-                          width: '14px',
-                          height: '14px',
-                          borderRadius: '50%',
-                          border: '2px solid rgba(255,255,255,0.3)',
-                          borderTopColor: '#ffffff',
-                          animation: 'spin 0.8s linear infinite',
-                        }}
-                      />
+                      <div className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     )}
                     <span>{isSubmitting ? 'Saving...' : 'Save Organization'}</span>
-                  </button>
+                  </Button>
                 </div>
               </form>
             </>

@@ -243,7 +243,7 @@ describe('Phase 7: Relational Persistence & Avatar System', () => {
       expect(html).toContain('src="https://r2.myorg.com/avatars/tristop.webp"');
       expect(html).toContain('width:28px');
       expect(html).toContain('height:28px');
-      expect(html).toContain('border-radius:50%');
+      expect(html).toContain('rounded-full');
     });
 
     it('falls back to country flag when avatarType is flag', () => {

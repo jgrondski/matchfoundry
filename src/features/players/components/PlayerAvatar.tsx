@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '../../../components/ui';
 import { PlayerProfile } from '../../tournament/types';
 import { CountryFlag } from '../flagUtils';
 import { getEffectivePlayerName } from '../playerNameUtils';
@@ -33,23 +34,17 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = React.memo(({
   if (isCustom && customSrc && !hasImgError) {
     const dim = typeof size === 'number' ? `${size}px` : size;
     return (
-      <span
-        className={`inline-flex items-center gap-1.5 ${className || ''}`}
-        style={{ display: 'inline-flex', alignItems: 'center' }}
-      >
+      <span className={cn('inline-flex items-center gap-1.5', className)}>
         <img
           src={customSrc}
           alt={player.name || 'Player'}
           onError={() => setHasImgError(true)}
+          className="inline-block rounded-full object-cover align-middle"
           style={{
             width: dim,
             height: dim,
             minWidth: dim,
             minHeight: dim,
-            borderRadius: '50%',
-            objectFit: 'cover',
-            display: 'inline-block',
-            verticalAlign: 'middle',
             ...style,
           }}
         />
@@ -64,7 +59,7 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = React.memo(({
         country={finalCountry}
         showName={showName}
         className={className}
-        style={style}
+        style={style ? { ...style } : undefined}
       />
     );
   }
@@ -78,31 +73,16 @@ export const PlayerAvatar: React.FC<PlayerAvatarProps> = React.memo(({
   const fontSize = typeof size === 'number' ? `${Math.max(10, Math.round(numSize * 0.55))}px` : '0.75em';
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 ${className || ''}`}
-      style={{ display: 'inline-flex', alignItems: 'center' }}
-    >
+    <span className={cn('inline-flex items-center gap-1.5', className)}>
       <span
         data-testid="player-initial-avatar"
+        className="inline-flex shrink-0 items-center justify-center rounded-full border border-line bg-elevated font-bold uppercase text-fg shadow-[0_1px_2px_rgba(0,0,0,0.2)] align-middle select-none"
         style={{
           width: dim,
           height: dim,
           minWidth: dim,
           minHeight: dim,
-          borderRadius: '50%',
-          background: 'var(--color-bg-surface-elevated, #27272a)',
-          border: '1px solid var(--color-border, #3f3f46)',
-          color: 'var(--color-text-main, #ffffff)',
           fontSize,
-          fontWeight: 700,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textTransform: 'uppercase',
-          userSelect: 'none',
-          verticalAlign: 'middle',
-          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
-          flexShrink: 0,
           ...style,
         }}
         title={player?.name || 'Player'}
