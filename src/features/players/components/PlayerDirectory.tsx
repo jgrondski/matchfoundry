@@ -15,8 +15,8 @@ import {
   Plus,
   Sparkles,
   Trash2,
-  AlertTriangle,
 } from 'lucide-react';
+import { ConfirmDialog } from '../../../components/overlay';
 
 export const PlayerDirectory: React.FC = () => {
   const {
@@ -339,146 +339,42 @@ export const PlayerDirectory: React.FC = () => {
       )}
 
       {/* Delete Single Player Speedbump Modal */}
-      {playerToDelete && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: 'var(--color-bg-surface-elevated)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              width: '100%',
-              maxWidth: '440px',
-              padding: '1.5rem',
-              boxShadow: 'var(--shadow-xl)',
-              animation: 'fadeIn 0.15s ease-out',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: enrolledTournamentsForDelete.length > 0 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: enrolledTournamentsForDelete.length > 0 ? 'var(--color-gold-bright)' : 'var(--color-red)',
-                }}
-              >
-                <AlertTriangle size={22} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
-                  {enrolledTournamentsForDelete.length > 0 ? 'Cannot Delete Competitor' : 'Delete Competitor?'}
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0 }}>
-                  {enrolledTournamentsForDelete.length > 0 ? 'Competitor is active in tournaments' : 'Remove from master player directory'}
-                </p>
-              </div>
-            </div>
-
+      <ConfirmDialog
+        open={playerToDelete !== null}
+        tone={enrolledTournamentsForDelete.length > 0 ? 'warning' : 'danger'}
+        title={enrolledTournamentsForDelete.length > 0 ? 'Cannot Delete Competitor' : 'Delete Competitor?'}
+        body={
+          <>
+            <p className="text-caption text-fg-muted">
+              {enrolledTournamentsForDelete.length > 0 ? 'Competitor is active in tournaments' : 'Remove from master player directory'}
+            </p>
             {enrolledTournamentsForDelete.length > 0 ? (
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-                <strong style={{ color: 'var(--color-text-primary)' }}>{playerToDelete.name}</strong> cannot be deleted from the global pool because they are currently enrolled in: <strong>{enrolledTournamentsForDelete.map(t => t.name).join(', ')}</strong>. To delete this competitor, remove them from tournament rosters first.
+              <p className="text-sm leading-normal text-fg-secondary">
+                <strong className="text-fg">{playerToDelete?.name}</strong> cannot be deleted from the global pool because they are currently enrolled in: <strong>{enrolledTournamentsForDelete.map(t => t.name).join(', ')}</strong>. To delete this competitor, remove them from tournament rosters first.
               </p>
             ) : (
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-                Are you sure you want to permanently delete <strong>{playerToDelete.name}</strong> from the global player pool?
+              <p className="text-sm leading-normal text-fg-secondary">
+                Are you sure you want to permanently delete <strong>{playerToDelete?.name}</strong> from the global player pool?
               </p>
             )}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button
-                type="button"
-                onClick={() => setPlayerToDelete(null)}
-                className="btn btn-secondary"
-                style={{ padding: '0.5rem 1.15rem', fontSize: '0.85rem' }}
-              >
-                {enrolledTournamentsForDelete.length > 0 ? 'Close' : 'Cancel'}
-              </button>
-              {enrolledTournamentsForDelete.length === 0 && (
-                <button
-                  type="button"
-                  onClick={handleDeleteConfirm}
-                  className="btn btn-danger"
-                  style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}
-                >
-                  Delete Competitor
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        }
+        cancelLabel={enrolledTournamentsForDelete.length > 0 ? 'Close' : 'Cancel'}
+        confirmLabel="Delete Competitor"
+        confirmDisabled={enrolledTournamentsForDelete.length > 0}
+        onCancel={() => setPlayerToDelete(null)}
+        onConfirm={handleDeleteConfirm}
+      />
 
       {/* Clear All Players Speedbump Modal */}
-      {isClearAllConfirmOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: 'var(--color-bg-surface-elevated)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              width: '100%',
-              maxWidth: '460px',
-              padding: '1.5rem',
-              boxShadow: 'var(--shadow-xl)',
-              animation: 'fadeIn 0.15s ease-out',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: 'rgba(239, 68, 68, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--color-red)',
-                }}
-              >
-                <AlertTriangle size={22} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
-                  Clear All Global Players?
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0 }}>
-                  Destructive catalog purge action
-                </p>
-              </div>
-            </div>
-
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+      <ConfirmDialog
+        open={isClearAllConfirmOpen}
+        tone="danger"
+        title="Clear All Global Players?"
+        body={
+          <>
+            <p className="text-caption text-fg-muted">Destructive catalog purge action</p>
+            <p className="text-sm leading-normal text-fg-secondary">
               This will permanently delete <strong>{unattachedCount}</strong> unattached competitor{unattachedCount === 1 ? '' : 's'} from the global player pool.{' '}
               {enrolledCount > 0 && (
                 <span>
@@ -487,34 +383,14 @@ export const PlayerDirectory: React.FC = () => {
               )}
               This action cannot be undone.
             </p>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button
-                type="button"
-                onClick={() => setIsClearAllConfirmOpen(false)}
-                className="btn btn-secondary"
-                style={{ padding: '0.5rem 1.15rem', fontSize: '0.85rem' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleClearAllConfirm}
-                disabled={unattachedCount === 0}
-                className="btn btn-danger"
-                style={{
-                  padding: '0.5rem 1.25rem',
-                  fontSize: '0.85rem',
-                  opacity: unattachedCount === 0 ? 0.5 : 1,
-                  cursor: unattachedCount === 0 ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Clear Unattached Competitors
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Clear Unattached Competitors"
+        confirmDisabled={unattachedCount === 0}
+        onCancel={() => setIsClearAllConfirmOpen(false)}
+        onConfirm={handleClearAllConfirm}
+      />
     </div>
   );
 };

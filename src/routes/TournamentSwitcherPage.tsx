@@ -7,6 +7,7 @@ import { TournamentCard } from '../features/tournament/components/TournamentCard
 import { CreateTournamentModal } from '../features/tournament/components/CreateTournamentModal';
 import { usePinAuth } from '../features/auth/AuthContext';
 import { OpenQualsCard } from '../features/online-quals/components/OpenQualsCard';
+import { ConfirmDialog } from '../components/overlay';
 
 export const TournamentSwitcherPage: React.FC = () => {
   const { isSystemAdmin, session, canManage } = usePinAuth();
@@ -395,86 +396,25 @@ export const TournamentSwitcherPage: React.FC = () => {
       />
 
       {/* Delete Confirmation Modal */}
-      {tournamentToDelete && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--color-bg-surface)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              width: '100%',
-              maxWidth: '480px',
-              overflow: 'hidden',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-            }}
-          >
-            <div
-              style={{
-                padding: '1.25rem 1.5rem',
-                borderBottom: '1px solid var(--color-border)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                background: 'rgba(239, 68, 68, 0.08)',
-              }}
-            >
-              <AlertTriangle size={22} color="#ef4444" />
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff' }}>
-                Delete Tournament
-              </h3>
-            </div>
-
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <p style={{ fontSize: '0.95rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                Are you sure you want to delete <strong style={{ color: '#ffffff' }}>{tournamentToDelete.name}</strong>?
-              </p>
-              <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-                This tournament has no recorded matches or qualifiers and will be permanently removed. This action cannot be undone.
-              </p>
-            </div>
-
-            <div
-              style={{
-                padding: '1rem 1.5rem',
-                background: 'var(--color-bg-surface-elevated)',
-                borderTop: '1px solid var(--color-border)',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.75rem',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setTournamentToDelete(null)}
-                className="btn btn-secondary"
-                style={{ padding: '0.5rem 1rem' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDeleteTournament}
-                className="btn btn-danger"
-                style={{ padding: '0.5rem 1.25rem' }}
-              >
-                Yes, Delete Tournament
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={tournamentToDelete !== null}
+        tone="danger"
+        title="Delete Tournament"
+        body={
+          <>
+            <p className="text-base leading-normal text-fg-secondary">
+              Are you sure you want to delete <strong className="text-white">{tournamentToDelete?.name}</strong>?
+            </p>
+            <p className="text-caption leading-snug text-fg-muted">
+              This tournament has no recorded matches or qualifiers and will be permanently removed. This action cannot be undone.
+            </p>
+          </>
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Yes, Delete Tournament"
+        onCancel={() => setTournamentToDelete(null)}
+        onConfirm={confirmDeleteTournament}
+      />
 
       {/* Footer / Common-Law Trademark Notice */}
       <footer

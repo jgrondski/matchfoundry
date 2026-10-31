@@ -94,3 +94,30 @@ Tier 3: Pure Presentational Leaf Components (Tables, Forms, Cards, Chips)
 4. **Conditional classes go through `cn()`** (`src/components/ui/cn.ts`), which joins class names and resolves Tailwind conflicts so later classes win.
 5. **Inline `style` is only for runtime values**, such as tier colors or layout coordinates computed at render time. Pass them as plain values or CSS custom properties; everything static is a class. `npm run lint:styles -- <files>` reports static inline styles.
 6. Converting an existing component: follow the [conversion guide](specs/phase-11/11.2-conversion-guide.html).
+
+### Overlays
+
+Every modal, drawer and confirmation uses `src/components/overlay`. Never render a hand-rolled fixed backdrop.
+
+* **`Overlay`** renders the backdrop and panel in a portal, traps Tab focus, restores focus on close, locks page scroll, and makes only the topmost overlay react to Escape. Props:
+  * `open`, `onClose`: `onClose` actually closes (the parent sets its open state to false).
+  * `variant`: `'modal'` (centered, default) or `'drawer'` (full-height, slides in from the right).
+  * `dirty`: the form has unsaved changes. Compute it by comparing current state with the values the form opened with.
+  * `busy`: a request is in flight; every dismissal is ignored.
+  * `dismissible`: `false` ignores backdrop and Escape; X and Cancel still follow the dirty rule.
+  * `aria-labelledby` / `aria-label`: name the dialog (use `useId()` for the title id).
+  * `panelClassName`: static panel classes (width, background, border, radius, shadow). `panelStyle`: runtime-only values such as tier-themed gradients. `panelTestId`: `data-testid` on the panel.
+  * `children`: nodes, or a render function `({ requestClose }) => …`. Wire every X and Cancel button to `requestClose` so it applies the rules below. Save/Confirm handlers call the parent's close directly, with no prompt.
+* **`ConfirmDialog`**: title, body, Cancel and Confirm buttons on top of `Overlay`, with `tone` (`danger`, `warning`, `info`), `confirmVariant`, `busy`, `confirmDisabled` and `extraActions`.
+* **`DiscardChangesDialog`**: the standard "Discard unsaved changes?" prompt (Keep Editing / Discard Changes). `Overlay` shows it automatically when a dirty overlay is dismissed; use it directly for page-level navigation guards.
+
+The dismissal rule (`resolveDismissal` in `dismissal.ts`):
+
+| Overlay state | Outside click/tap | Escape | X or Cancel |
+| :--- | :--- | :--- | :--- |
+| Not dirty | Closes | Closes | Closes |
+| Dirty | Discard prompt | Discard prompt | Discard prompt |
+| Busy | Ignored | Ignored | Ignored (buttons disabled) |
+| `dismissible={false}` | Ignored | Ignored | Follows the dirty rule |
+
+On the Discard prompt, an outside click or Escape means Keep Editing. While an overlay is dirty, closing or reloading the tab also triggers the browser's leave-page warning.

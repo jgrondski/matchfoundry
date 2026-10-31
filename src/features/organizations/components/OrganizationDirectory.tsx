@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useOrganization } from '../store';
 import { useTournament } from '../../tournament/store';
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { QualFormat } from '../../tournament/types';
 import { LoadingScreen } from '../../../components/LoadingScreen';
+import { Overlay } from '../../../components/overlay';
 
 export const OrganizationDirectory: React.FC = () => {
   const { organizations, createOrganization, isLoading, isHydrated } = useOrganization();
@@ -42,6 +43,24 @@ export const OrganizationDirectory: React.FC = () => {
   const [defaultAvgCount, setDefaultAvgCount] = useState(2);
   const [defaultBestOf, setDefaultBestOf] = useState(5);
   const [discordWebhookUrl, setDiscordWebhookUrl] = useState('');
+  const createTitleId = useId();
+  const isCreateFormDirty =
+    orgName !== '' ||
+    orgSlug !== '' ||
+    orgDescription !== '' ||
+    orgWebsite !== '' ||
+    orgLogoUrl !== '' ||
+    orgBannerUrl !== '' ||
+    brandColor !== '#ffc905' ||
+    primaryColor !== '#ffc905' ||
+    secondaryColor !== '#705b33' ||
+    cardColor !== '#1b1c1d' ||
+    textColor !== '#94A3B8' ||
+    backgroundColor !== '#020203' ||
+    defaultQualFormat !== 'AVERAGE_OF_X' ||
+    defaultAvgCount !== 2 ||
+    defaultBestOf !== 5 ||
+    discordWebhookUrl !== '';
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
     const file = e.target.files?.[0];
@@ -386,43 +405,26 @@ export const OrganizationDirectory: React.FC = () => {
         </div>
 
         {/* Create Organization Modal */}
-        {isCreateModalOpen && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0, 0, 0, 0.75)',
-              backdropFilter: 'blur(6px)',
-              zIndex: 1000,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '1.5rem',
-            }}
-          >
-            <div
-              style={{
-                width: '100%',
-                maxWidth: '560px',
-                maxHeight: '90vh',
-                overflowY: 'auto',
-                background: 'var(--color-bg-surface-elevated, #161922)',
-                border: '1px solid var(--color-border, rgba(255, 255, 255, 0.12))',
-                borderRadius: 'var(--radius-lg, 12px)',
-                padding: '1.75rem',
-                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)',
-              }}
-            >
+        <Overlay
+          open={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          dirty={isCreateFormDirty}
+          busy={isSubmitting}
+          aria-labelledby={createTitleId}
+          panelClassName="max-h-[90vh] max-w-140 overflow-y-auto rounded-lg border border-line bg-elevated p-7 shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
+        >
+          {({ requestClose }) => (
+            <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <Building2 size={20} color="var(--color-gold-bright, #ffc905)" />
-                  <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--color-text-primary, #ffffff)', margin: 0 }}>
+                  <h2 id={createTitleId} style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--color-text-primary, #ffffff)', margin: 0 }}>
                     Create New Organization
                   </h2>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={requestClose}
                   style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted, #64748b)', cursor: 'pointer' }}
                 >
                   <X size={18} />
@@ -653,7 +655,7 @@ export const OrganizationDirectory: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <button type="button" onClick={() => setIsCreateModalOpen(false)} disabled={isSubmitting} className="btn btn-secondary">
+                  <button type="button" onClick={requestClose} disabled={isSubmitting} className="btn btn-secondary">
                     Cancel
                   </button>
                   <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}>
@@ -673,9 +675,9 @@ export const OrganizationDirectory: React.FC = () => {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+        </Overlay>
 
 
 
