@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw, Clock } from 'lucide-react';
 import type { Tournament } from '../../tournament/types';
 import { useTournamentQualTimer } from '../../tournament/qualTimer';
 import { usePinAuth } from '../../auth/AuthContext';
+import { Button, cn } from '../../../components/ui';
 
 export interface TournamentQualTimerHudProps {
   tournament: Tournament;
@@ -41,33 +42,23 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
       return (
         <div
           data-testid="sidebar-qual-timer-hud"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0.35rem 0.2rem',
-            borderRadius: 'var(--radius-sm)',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: `1px solid ${isExpired ? 'rgba(239, 68, 68, 0.5)' : isRunning ? 'rgba(34, 197, 94, 0.35)' : 'var(--color-border-subtle)'}`,
-            cursor: userCanManage && !readOnly ? 'pointer' : 'default',
-          }}
+          className={cn(
+            'flex flex-col items-center justify-center py-1.5 px-1 rounded-sm bg-white/3 border',
+            isExpired ? 'border-red/50' : isRunning ? 'border-green-500/35' : 'border-line-subtle',
+            userCanManage && !readOnly ? 'cursor-pointer' : 'cursor-default'
+          )}
           onClick={userCanManage && !readOnly ? toggleRunning : undefined}
           title={`Qual Timer: ${formattedTime} (${isExpired ? 'Expired' : isRunning ? 'Running - Click to Pause' : 'Paused - Click to Start'})`}
         >
           <Clock
             size={14}
-            color={isExpired ? '#ef4444' : isRunning ? '#22c55e' : 'var(--color-gold-bright, #f59e0b)'}
+            className={cn(isExpired ? 'text-red' : isRunning ? 'text-green-500' : 'text-gold-bright')}
           />
           <span
-            className="tabular-nums"
-            style={{
-              fontSize: '0.62rem',
-              fontWeight: 800,
-              color: isExpired ? '#ef4444' : '#ffffff',
-              marginTop: '0.15rem',
-              lineHeight: 1,
-            }}
+            className={cn(
+              'font-mono tabular-nums tracking-tight text-3xs font-extrabold mt-0.5 leading-none',
+              isExpired ? 'text-red' : 'text-white'
+            )}
           >
             {formattedTime.split(':').slice(0, 2).join(':')}
           </span>
@@ -78,70 +69,48 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
     return (
       <div
         data-testid="sidebar-qual-timer-hud"
-        style={{
-          width: '100%',
-          padding: '0.45rem 0.55rem',
-          background: 'rgba(255, 255, 255, 0.03)',
-          border: `1px solid ${isExpired ? 'rgba(239, 68, 68, 0.5)' : isRunning ? 'rgba(34, 197, 94, 0.35)' : 'var(--color-border-subtle)'}`,
-          borderRadius: 'var(--radius-sm)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.35rem',
-          boxSizing: 'border-box',
-        }}
+        className={cn(
+          'w-full p-2 bg-white/3 border rounded-sm flex flex-col gap-1.5',
+          isExpired ? 'border-red/50' : isRunning ? 'border-green-500/35' : 'border-line-subtle'
+        )}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
             <Clock
               size={13}
-              color={isExpired ? '#ef4444' : isRunning ? '#22c55e' : 'var(--color-gold-bright, #f59e0b)'}
+              className={cn(isExpired ? 'text-red' : isRunning ? 'text-green-500' : 'text-gold-bright')}
             />
             <span
-              style={{
-                fontSize: '0.62rem',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                color: isExpired ? '#fca5a5' : isRunning ? '#86efac' : 'var(--color-text-muted, #94a3b8)',
-              }}
+              className={cn(
+                'text-3xs font-extrabold uppercase tracking-wider',
+                isExpired ? 'text-red-300' : isRunning ? 'text-green-300' : 'text-fg-muted'
+              )}
             >
               {isExpired ? 'Quals Expired' : isRunning ? 'Qual Time' : 'Quals Paused'}
             </span>
           </div>
           <span
-            className="tabular-nums"
-            style={{
-              fontSize: '0.92rem',
-              fontWeight: 900,
-              color: isExpired ? '#ef4444' : '#ffffff',
-              letterSpacing: '0.02em',
-            }}
+            className={cn(
+              'font-mono tabular-nums text-base font-black tracking-wide',
+              isExpired ? 'text-red' : 'text-white'
+            )}
           >
             {formattedTime}
           </span>
         </div>
 
         {userCanManage && !readOnly && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', width: '100%' }}>
+          <div className="flex items-center gap-1 w-full">
             <button
               type="button"
               onClick={toggleRunning}
               title={isRunning ? 'Pause Qual Timer' : 'Start Qual Timer'}
-              style={{
-                flex: 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.25rem',
-                padding: '0.22rem 0.4rem',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.68rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                border: isRunning ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(34, 197, 94, 0.4)',
-                background: isRunning ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)',
-                color: isRunning ? '#f87171' : '#4ade80',
-              }}
+              className={cn(
+                'flex-1 inline-flex items-center justify-center gap-1 py-1 px-1.5 rounded-sm text-2xs font-bold cursor-pointer border',
+                isRunning
+                  ? 'border-red/40 bg-red/15 text-red-bright'
+                  : 'border-green-500/40 bg-green-500/15 text-green-400'
+              )}
             >
               {isRunning ? (
                 <>
@@ -150,7 +119,7 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
                 </>
               ) : (
                 <>
-                  <Play size={10} fill="#4ade80" />
+                  <Play size={10} className="fill-green-400" />
                   <span>Start</span>
                 </>
               )}
@@ -159,18 +128,7 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
               type="button"
               onClick={resetTimer}
               title="Reset timer to default starting duration"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '0.22rem 0.35rem',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.68rem',
-                cursor: 'pointer',
-                border: '1px solid var(--color-border-subtle)',
-                background: 'rgba(255, 255, 255, 0.04)',
-                color: 'var(--color-text-secondary, #94a3b8)',
-              }}
+              className="inline-flex items-center justify-center py-1 px-1.5 rounded-sm text-2xs cursor-pointer border border-line-subtle bg-white/4 text-fg-secondary"
             >
               <RotateCcw size={10} />
             </button>
@@ -184,45 +142,29 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
     return (
       <div
         data-testid="obs-qual-timer-hud"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.4rem 0.85rem',
-          background: 'rgba(9, 13, 19, 0.88)',
-          backdropFilter: 'blur(8px)',
-          borderRadius: '8px',
-          border: `1px solid ${isExpired ? 'rgba(239, 68, 68, 0.6)' : isRunning ? 'rgba(34, 197, 94, 0.4)' : 'rgba(245, 158, 11, 0.35)'}`,
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-          fontFamily: "'Space Grotesk', system-ui, sans-serif",
-        }}
+        className={cn(
+          'inline-flex items-center gap-2 py-1.5 px-3.5 bg-canvas/88 backdrop-blur-sm rounded-md border shadow-[0_4px_12px_rgba(0,0,0,0.5)] font-sans',
+          isExpired ? 'border-red/60' : isRunning ? 'border-green-500/40' : 'border-gold/35'
+        )}
       >
         <Clock
           size={16}
-          color={isExpired ? '#ef4444' : isRunning ? '#22c55e' : 'var(--color-gold-bright, #f59e0b)'}
+          className={cn(isExpired ? 'text-red' : isRunning ? 'text-green-500' : 'text-gold-bright')}
         />
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="flex flex-col">
           <span
-            style={{
-              fontSize: '0.62rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: isExpired ? '#fca5a5' : isRunning ? '#86efac' : 'var(--color-gold-bright, #f59e0b)',
-              lineHeight: 1,
-            }}
+            className={cn(
+              'text-3xs font-extrabold uppercase tracking-widest leading-none',
+              isExpired ? 'text-red-300' : isRunning ? 'text-green-300' : 'text-gold-bright'
+            )}
           >
             {isExpired ? 'Quals Expired' : isRunning ? 'Qual Time Left' : 'Quals Paused'}
           </span>
           <span
-            className="tabular-nums"
-            style={{
-              fontSize: '1.15rem',
-              fontWeight: 900,
-              color: isExpired ? '#ef4444' : '#ffffff',
-              letterSpacing: '0.04em',
-              lineHeight: 1.15,
-            }}
+            className={cn(
+              'font-mono tabular-nums text-lg font-black tracking-wide leading-tight',
+              isExpired ? 'text-red' : 'text-white'
+            )}
           >
             {formattedTime}
           </span>
@@ -234,44 +176,32 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
   return (
     <div
       data-testid="tournament-qual-timer-hud"
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: compact ? '0.5rem' : '0.75rem',
-        padding: compact ? '0.25rem 0.65rem' : '0.4rem 0.85rem',
-        background: 'var(--color-bg-surface-elevated, #161e27)',
-        border: `1px solid ${isExpired ? 'rgba(239, 68, 68, 0.5)' : isRunning ? 'rgba(34, 197, 94, 0.35)' : 'var(--color-border, #263342)'}`,
-        borderRadius: 'var(--radius-md, 8px)',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-      }}
+      className={cn(
+        'inline-flex items-center bg-elevated border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3)]',
+        compact ? 'gap-2 py-1 px-2.5' : 'gap-3 py-1.5 px-3.5',
+        isExpired ? 'border-red/50' : isRunning ? 'border-green-500/35' : 'border-line'
+      )}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+      <div className="flex items-center gap-2">
         <Clock
           size={compact ? 14 : 16}
-          color={isExpired ? '#ef4444' : isRunning ? '#22c55e' : 'var(--color-gold-bright, #f59e0b)'}
+          className={cn(isExpired ? 'text-red' : isRunning ? 'text-green-500' : 'text-gold-bright')}
         />
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="flex flex-col">
           <span
-            style={{
-              fontSize: '0.62rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: isExpired ? '#fca5a5' : isRunning ? '#86efac' : 'var(--color-text-muted, #94a3b8)',
-              lineHeight: 1,
-            }}
+            className={cn(
+              'text-3xs font-extrabold uppercase tracking-wider leading-none',
+              isExpired ? 'text-red-300' : isRunning ? 'text-green-300' : 'text-fg-muted'
+            )}
           >
             {isExpired ? 'Time Expired' : isRunning ? 'Qual Time' : 'Qual Paused'}
           </span>
           <span
-            className="tabular-nums"
-            style={{
-              fontSize: compact ? '1rem' : '1.15rem',
-              fontWeight: 900,
-              color: isExpired ? '#ef4444' : '#ffffff',
-              letterSpacing: '0.02em',
-              lineHeight: 1.2,
-            }}
+            className={cn(
+              'font-mono tabular-nums font-black tracking-wide leading-tight',
+              compact ? 'text-base' : 'text-lg',
+              isExpired ? 'text-red' : 'text-white'
+            )}
           >
             {formattedTime}
           </span>
@@ -279,23 +209,18 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
       </div>
 
       {userCanManage && !readOnly && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginLeft: '0.25rem' }}>
-          <button
-            type="button"
+        <div className="flex items-center gap-1.5 ml-1">
+          <Button
+            variant="secondary"
             onClick={toggleRunning}
             title={isRunning ? 'Pause Qual Timer' : 'Start Qual Timer'}
-            className="btn btn-secondary"
-            style={{
-              padding: compact ? '0.2rem 0.5rem' : '0.3rem 0.65rem',
-              fontSize: '0.75rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.3rem',
-              background: isRunning ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)',
-              borderColor: isRunning ? 'rgba(239, 68, 68, 0.4)' : 'rgba(34, 197, 94, 0.4)',
-              color: isRunning ? '#f87171' : '#4ade80',
-              fontWeight: 700,
-            }}
+            className={cn(
+              'text-xs inline-flex items-center gap-1 font-bold',
+              compact ? 'py-1 px-2' : 'py-1 px-2.5',
+              isRunning
+                ? 'bg-red/15 border-red/40 text-red-bright enabled:hover:bg-red/15 enabled:hover:border-red/40'
+                : 'bg-green-500/15 border-green-500/40 text-green-400 enabled:hover:bg-green-500/15 enabled:hover:border-green-500/40'
+            )}
           >
             {isRunning ? (
               <>
@@ -304,24 +229,19 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
               </>
             ) : (
               <>
-                <Play size={12} fill="#4ade80" />
+                <Play size={12} className="fill-green-400" />
                 <span>Start</span>
               </>
             )}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={resetTimer}
             title="Reset timer to default starting duration"
-            className="btn btn-secondary"
-            style={{
-              padding: compact ? '0.2rem 0.45rem' : '0.3rem 0.55rem',
-              fontSize: '0.75rem',
-              color: 'var(--color-text-secondary, #94a3b8)',
-            }}
+            className="py-1 px-2 text-xs text-fg-secondary"
           >
             <RotateCcw size={12} />
-          </button>
+          </Button>
         </div>
       )}
     </div>

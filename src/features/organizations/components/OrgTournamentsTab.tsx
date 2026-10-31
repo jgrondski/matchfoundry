@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, Plus, Trophy } from 'lucide-react';
+import { Button } from '../../../components/ui';
 import { Tournament } from '../../../features/tournament/types';
 import { TournamentCard } from '../../tournament/components/TournamentCard';
 
@@ -27,75 +28,56 @@ export const OrgTournamentsTab: React.FC<OrgTournamentsTabProps> = ({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-        <div style={{ position: 'relative', width: '100%', maxWidth: '380px' }}>
-          <Search size={16} color="var(--color-text-muted)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="relative w-full max-w-95">
+          <Search size={16} color="var(--color-text-muted)" className="absolute top-1/2 left-3.5 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Filter hosted tournaments..."
             value={tourneySearch}
             onChange={e => onSearchChange(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.55rem 0.85rem 0.55rem 2.4rem',
-              background: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)',
-              color: '#ffffff',
-              fontSize: '0.85rem',
-            }}
+            className="w-full rounded-md border border-line bg-surface py-2 pr-3.5 pl-9.5 text-sm text-white"
           />
         </div>
 
-        <button
+        <Button
           type="button"
+          variant="primary"
           onClick={onCreateTourneyOpen}
-          className="btn btn-primary"
-          style={{ padding: '0.6rem 1.25rem', fontSize: '0.88rem', boxShadow: `0 2px 10px ${primaryColor}44` }}
+          className="px-5 py-2.5 text-sm"
+          style={{ boxShadow: `0 2px 10px ${primaryColor}44` }}
         >
           <Plus size={16} />
           <span>Create Tournament</span>
-        </button>
+        </Button>
       </div>
 
       {filteredTournaments.length === 0 ? (
-        <div
-          style={{
-            background: 'var(--color-bg-surface)',
-            border: '1px dashed var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '3.5rem 2rem',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '0.75rem',
-          }}
-        >
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-line bg-surface px-8 py-14 text-center">
           <Trophy size={32} color="var(--color-gold-bright)" />
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+          <h3 className="m-0 text-lg font-bold text-white">
             {tourneySearch ? 'No matching tournaments' : 'No tournaments hosted yet'}
           </h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', maxWidth: '400px' }}>
+          <p className="max-w-100 text-sm text-fg-secondary">
             {tourneySearch
               ? 'Try adjusting your search filter.'
               : `Create your first tournament under ${orgName} to start organizing brackets.`}
           </p>
           {!tourneySearch && (
-            <button
+            <Button
               type="button"
+              variant="primary"
               onClick={onCreateTourneyOpen}
-              className="btn btn-primary"
-              style={{ marginTop: '0.5rem', padding: '0.55rem 1.25rem' }}
+              className="mt-2 px-5 py-2"
             >
               <Plus size={16} />
               <span>Create Tournament</span>
-            </button>
+            </Button>
           )}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(480px, 1fr))', gap: '1.5rem' }}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(480px,1fr))] gap-6">
           {filteredTournaments.map(t => (
             <TournamentCard
               key={t.id}

@@ -19,6 +19,7 @@ import { OrgSettingsTab } from './OrgSettingsTab';
 import { OrgMetadataModal } from './OrgMetadataModal';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ConfirmDialog } from '../../../components/overlay';
+import { buttonClasses } from '../../../components/ui';
 
 export const OrganizationDashboard: React.FC = () => {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -33,15 +34,21 @@ export const OrganizationDashboard: React.FC = () => {
 
   if (!org) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--color-bg-base)', padding: '0 0 3rem' }}>
+      <div className="min-h-screen bg-canvas pb-12">
         <TopNavSwitcher />
-        <div style={{ maxWidth: '800px', margin: '4rem auto', textAlign: 'center', padding: '2rem' }}>
-          <Building2 size={48} color="var(--color-gold-bright, #ffc905)" style={{ margin: '0 auto 1rem' }} />
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff' }}>Organization Not Found</h2>
-          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
-            No organization found matching slug <code style={{ color: 'var(--color-gold-bright)' }}>/{orgSlug}</code>.
+        <div className="mx-auto my-16 max-w-200 p-8 text-center">
+          <Building2 size={48} color="var(--color-gold-bright, #ffc905)" className="mx-auto mb-4" />
+          <h2 className="text-2xl font-extrabold text-white">Organization Not Found</h2>
+          <p className="mb-6 text-fg-secondary">
+            No organization found matching slug <code className="text-gold-bright">/{orgSlug}</code>.
           </p>
-          <Link to="/organizations" className="btn btn-primary" style={{ display: 'inline-flex', gap: '0.5rem' }}>
+          <Link
+            to="/organizations"
+            className={buttonClasses({
+              variant: 'primary',
+              className: 'hover:brightness-110 hover:shadow-gold-hover hover:-translate-y-px',
+            })}
+          >
             <ArrowLeft size={16} />
             <span>Back to Organizations</span>
           </Link>
@@ -265,32 +272,15 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-bg-base)', padding: '0 0 4rem' }}>
+    <div className="min-h-screen bg-canvas pb-16">
       <TopNavSwitcher />
 
-      <div style={{ maxWidth: '1180px', margin: '0 auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div className="mx-auto flex max-w-295 flex-col gap-8 p-6">
         {/* Toast Alert */}
         {saveToast && (
-          <div
-            style={{
-              position: 'fixed',
-              top: '5rem',
-              right: '2rem',
-              zIndex: 2000,
-              background: 'var(--color-bg-surface-elevated, #161922)',
-              border: '1px solid var(--color-gold-bright, #ffc905)',
-              color: '#ffffff',
-              padding: '0.75rem 1.25rem',
-              borderRadius: 'var(--radius-md, 8px)',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              animation: 'fadeIn 0.2s ease',
-            }}
-          >
+          <div className="fixed top-20 right-8 z-2000 flex animate-fade-in items-center gap-2 rounded-md border border-gold-bright bg-elevated px-5 py-3 text-white shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
             <Sparkles size={16} color="var(--color-gold-bright, #ffc905)" />
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{saveToast}</span>
+            <span className="text-sm font-semibold">{saveToast}</span>
           </div>
         )}
 

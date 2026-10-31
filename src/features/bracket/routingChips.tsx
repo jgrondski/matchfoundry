@@ -1,4 +1,5 @@
 import { BracketStructure, BracketMatch } from './types';
+import { cn } from '../../components/ui';
 
 export interface MicroChipData {
   text: string;
@@ -616,7 +617,12 @@ export const renderMicroChip = (
   const matchId = chip.targetMatchId || chip.sourceMatchId;
   return (
     <span
-      className={matchId ? 'bracket-side-chip' : undefined}
+      className={cn(
+        'inline-flex min-w-4.5 shrink-0 items-center justify-center rounded-xs py-px px-1.5 font-mono text-3xs font-bold leading-none tracking-tight whitespace-nowrap select-none',
+        matchId
+          ? 'cursor-pointer transition-[transform,scale,filter,box-shadow] duration-150 hover:z-35 hover:scale-[1.18] hover:brightness-[1.28] active:scale-95'
+          : 'cursor-help'
+      )}
       onClick={(e) => {
         if (matchId && onClick) {
           e.stopPropagation();
@@ -634,26 +640,11 @@ export const renderMicroChip = (
         }
       }}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1px 5px',
-        minWidth: '18px',
-        fontSize: '10px',
-        fontWeight: 700,
-        fontFamily: 'var(--font-mono, monospace)',
-        borderRadius: '3px',
         backgroundColor: chip.bg,
         color: chip.color,
         border: chip.border || 'none',
         boxShadow: chip.glow || 'none',
         opacity: chip.opacity !== undefined ? chip.opacity : 1,
-        lineHeight: 1,
-        flexShrink: 0,
-        letterSpacing: '-0.02em',
-        cursor: matchId ? 'pointer' : 'help',
-        userSelect: 'none',
-        whiteSpace: 'nowrap',
       }}
       title={chip.tooltip}
     >

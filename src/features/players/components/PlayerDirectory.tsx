@@ -17,6 +17,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { ConfirmDialog } from '../../../components/overlay';
+import { Button } from '../../../components/ui';
 
 export const PlayerDirectory: React.FC = () => {
   const {
@@ -208,85 +209,55 @@ export const PlayerDirectory: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', width: '100%' }}>
+    <div className="flex w-full flex-col gap-7">
       {/* Header & Main Actions */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: '1.25rem',
-        }}
-      >
+      <div className="flex flex-wrap items-start justify-between gap-5">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: 'var(--color-gold-bg)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-gold-bright)',
-              }}
-            >
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 items-center justify-center rounded-md bg-gold-soft text-gold-bright">
               <Users size={20} />
             </div>
-            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>
+            <h1 className="m-0 text-3xl font-extrabold text-fg">
               Global Player Pool
             </h1>
           </div>
-          <p style={{ fontSize: '0.9rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>
+          <p className="mt-1.5 text-sm text-fg-muted">
             List of Global Players and their relevant data.
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap items-center gap-3">
           {isSystemAdmin && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={handleOpenGenerateModal}
-              className="btn btn-secondary"
-              style={{ padding: '0.6rem 1.15rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              className="px-4.5 py-2.5 text-sm"
             >
               <Sparkles size={16} color="var(--color-gold-bright)" />
               Generate Fake Players
-            </button>
+            </Button>
           )}
 
-          <button
-            type="button"
+          <Button
+            variant="primary"
             onClick={handleOpenAddModal}
-            className="btn btn-primary"
-            style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: 'var(--shadow-gold)' }}
+            className="px-5 py-2.5 text-sm shadow-gold"
           >
             <Plus size={16} />
             Add Competitor
-          </button>
+          </Button>
 
           {isSystemAdmin && globalPlayers.length > 0 && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
               onClick={() => setIsClearAllConfirmOpen(true)}
-              className="btn btn-secondary"
-              style={{
-                padding: '0.6rem 0.9rem',
-                fontSize: '0.85rem',
-                color: 'var(--color-red)',
-                borderColor: 'rgba(239, 68, 68, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
+              className="gap-1.5 border-red/30 px-3.5 py-2.5 text-sm text-red"
               title="Clear all global players from catalog"
             >
               <Trash2 size={15} />
               Clear All
-            </button>
+            </Button>
           )}
         </div>
       </div>

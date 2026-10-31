@@ -3,6 +3,7 @@ import { Tournament } from '../../tournament/types';
 import { useTournament } from '../../tournament/store';
 import { AlertTriangle, Lock, Unlock, ShieldCheck } from 'lucide-react';
 import { VerifyBracketModal } from '../../tournament/components/VerifyBracketModal';
+import { Button } from '../../../components/ui';
 
 interface BracketDraftBannerProps {
   tournament: Tournament;
@@ -31,91 +32,52 @@ export const BracketDraftBanner: React.FC<BracketDraftBannerProps> = ({
   return (
     <>
       {isDraft ? (
-        <div
-          style={{
-            background: 'linear-gradient(90deg, rgba(245, 158, 11, 0.18) 0%, rgba(217, 119, 6, 0.28) 100%)',
-            borderBottom: '2px solid var(--color-gold)',
-            padding: '0.75rem 1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap',
-            boxShadow: '0 2px 10px rgba(245, 158, 11, 0.2)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '280px' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: 'rgba(245, 158, 11, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-gold-bright)',
-                flexShrink: 0,
-              }}
-            >
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b-2 border-gold bg-linear-90 from-gold/18 to-[rgba(217,119,6,0.28)] py-3 px-6 shadow-[0_2px_10px_rgba(245,158,11,0.2)]">
+          <div className="flex min-w-70 items-center gap-3">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gold/25 text-gold-bright">
               <AlertTriangle size={18} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-gold-bright)', letterSpacing: '0.02em' }}>
+              <div className="text-sm font-bold tracking-wide text-gold-bright">
                 QUALIFIERS MODE — Seeding preview active
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-primary)' }}>
+              <div className="text-caption text-fg">
                 Bracket seeds update dynamically with incoming qualifier scores. Match scoring is disabled. Click &quot;Lock Brackets &amp; Begin Match Play&quot; to start matches.
               </div>
             </div>
           </div>
 
           {canManage && (
-            <button
-              onClick={() => setIsVerifyModalOpen(true)}
-              className="btn btn-primary"
-              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}
-            >
+            <Button variant="primary" onClick={() => setIsVerifyModalOpen(true)}>
               <Lock size={15} />
               Lock Brackets &amp; Begin Match Play
-            </button>
+            </Button>
           )}
         </div>
       ) : (
-        <div
-          style={{
-            background: 'rgba(16, 185, 129, 0.1)',
-            borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
-            padding: '0.4rem 1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            fontSize: '0.8rem',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#34d399' }}>
+        <div className="flex items-center justify-between gap-4 border-b border-green/30 bg-green/10 py-1.5 px-6 text-caption">
+          <div className="flex items-center gap-2 text-green-bright">
             <ShieldCheck size={16} />
-            <span style={{ fontWeight: 600 }}>MATCH PLAY MODE</span>
-            <span style={{ color: 'var(--color-text-muted)' }}>• Match play and score entry active</span>
+            <span className="font-semibold">MATCH PLAY MODE</span>
+            <span className="text-fg-muted">• Match play and score entry active</span>
           </div>
 
           {canManage && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div className="flex items-center gap-3">
               {unlockError && (
-                <span style={{ color: 'var(--color-red)', fontSize: '0.75rem', fontWeight: 600 }}>
+                <span className="text-xs font-semibold text-red">
                   {unlockError}
                 </span>
               )}
-              <button
+              <Button
+                variant="secondary"
                 onClick={handleUnlockClick}
-                className="btn btn-secondary"
-                style={{ padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}
+                className="py-1 px-2.5 text-xs"
                 title="Revert tournament to Qualifiers Mode"
               >
                 <Unlock size={13} />
                 Unlock Brackets
-              </button>
+              </Button>
             </div>
           )}
         </div>

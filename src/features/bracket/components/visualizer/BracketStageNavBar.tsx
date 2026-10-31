@@ -2,6 +2,7 @@ import React from 'react';
 import { getContrastingTextColor } from '../../colorUtils';
 import { ACCELERATED_HYBRID_POD_PALETTE } from '../../routingChips';
 import { BracketViewMode } from '../../bracketLayout';
+import { cn } from '../../../../components/ui';
 
 export type HybridStageTab = 'qualifiers' | 'championship' | 'combined' | 'accel' | 'premerge' | 'upper' | 'lower';
 
@@ -22,81 +23,39 @@ export const BracketStageNavBar: React.FC<BracketStageNavBarProps> = ({
   finalsCutoff = 16,
   topOffset,
 }) => {
+  const isEarlyRoundsTab =
+    activeHybridTab === 'qualifiers' || activeHybridTab === 'accel' || activeHybridTab === 'premerge';
+  const stageTabCls =
+    'inline-flex cursor-pointer items-center gap-1.5 rounded-xs border-0 py-1.5 px-3.5 text-caption transition-all duration-150';
+  const activeTabStyle = {
+    background: primaryColor,
+    color: getContrastingTextColor(primaryColor),
+    boxShadow: `0 0 10px ${primaryColor}44`,
+  };
+
   return (
     <div
       id="bracket-stage-nav-bar"
+      className={cn(
+        'z-41 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-line bg-[rgba(15,18,26,0.88)] py-2 px-5 backdrop-blur-md',
+        effectiveObsView === 'fit' ? 'relative top-0' : 'sticky'
+      )}
       style={{
-        position: effectiveObsView === 'fit' ? 'relative' : 'sticky',
-        top: effectiveObsView === 'fit' ? 0 : (topOffset || 'var(--bracket-tier-bar-height, 48px)'),
-        zIndex: 41,
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        background: 'rgba(15, 18, 26, 0.88)',
-        borderBottom: '1px solid var(--color-border)',
-        padding: '0.55rem 1.25rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.75rem',
-        flexShrink: 0,
+        top: effectiveObsView === 'fit' ? undefined : (topOffset || 'var(--bracket-tier-bar-height, 48px)'),
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-        <span
-          style={{
-            fontSize: '0.72rem',
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: 'var(--color-text-muted)',
-          }}
-        >
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="text-xs font-extrabold uppercase tracking-widest text-fg-muted">
           Stage:
         </span>
 
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            background: 'var(--color-bg-base)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '3px',
-            gap: '4px',
-          }}
-        >
+        <div className="inline-flex items-center gap-1 rounded-sm border border-line bg-canvas p-1">
           {/* Tab 1: Early Rounds */}
           <button
             type="button"
             onClick={() => onSelectTab('qualifiers')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.35rem 0.85rem',
-              borderRadius: 'var(--radius-xs)',
-              fontSize: '0.78rem',
-              fontWeight:
-                activeHybridTab === 'qualifiers' || activeHybridTab === 'accel' || activeHybridTab === 'premerge'
-                  ? 800
-                  : 600,
-              background:
-                activeHybridTab === 'qualifiers' || activeHybridTab === 'accel' || activeHybridTab === 'premerge'
-                  ? primaryColor
-                  : 'transparent',
-              color:
-                activeHybridTab === 'qualifiers' || activeHybridTab === 'accel' || activeHybridTab === 'premerge'
-                  ? getContrastingTextColor(primaryColor)
-                  : 'var(--color-text-secondary)',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              boxShadow:
-                activeHybridTab === 'qualifiers' || activeHybridTab === 'accel' || activeHybridTab === 'premerge'
-                  ? `0 0 10px ${primaryColor}44`
-                  : 'none',
-            }}
+            className={cn(stageTabCls, isEarlyRoundsTab ? 'font-extrabold' : 'font-semibold bg-transparent text-fg-secondary')}
+            style={isEarlyRoundsTab ? { ...activeTabStyle } : undefined}
           >
             <span>Early Rounds</span>
           </button>
@@ -105,24 +64,8 @@ export const BracketStageNavBar: React.FC<BracketStageNavBarProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('championship')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.35rem 0.85rem',
-              borderRadius: 'var(--radius-xs)',
-              fontSize: '0.78rem',
-              fontWeight: activeHybridTab === 'championship' ? 800 : 600,
-              background: activeHybridTab === 'championship' ? primaryColor : 'transparent',
-              color:
-                activeHybridTab === 'championship'
-                  ? getContrastingTextColor(primaryColor)
-                  : 'var(--color-text-secondary)',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              boxShadow: activeHybridTab === 'championship' ? `0 0 10px ${primaryColor}44` : 'none',
-            }}
+            className={cn(stageTabCls, activeHybridTab === 'championship' ? 'font-extrabold' : 'font-semibold bg-transparent text-fg-secondary')}
+            style={activeHybridTab === 'championship' ? { ...activeTabStyle } : undefined}
           >
             <span>Top {finalsCutoff}</span>
           </button>
@@ -131,24 +74,8 @@ export const BracketStageNavBar: React.FC<BracketStageNavBarProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('combined')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.35rem 0.85rem',
-              borderRadius: 'var(--radius-xs)',
-              fontSize: '0.78rem',
-              fontWeight: activeHybridTab === 'combined' ? 800 : 600,
-              background: activeHybridTab === 'combined' ? primaryColor : 'transparent',
-              color:
-                activeHybridTab === 'combined'
-                  ? getContrastingTextColor(primaryColor)
-                  : 'var(--color-text-secondary)',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              boxShadow: activeHybridTab === 'combined' ? `0 0 10px ${primaryColor}44` : 'none',
-            }}
+            className={cn(stageTabCls, activeHybridTab === 'combined' ? 'font-extrabold' : 'font-semibold bg-transparent text-fg-secondary')}
+            style={activeHybridTab === 'combined' ? { ...activeTabStyle } : undefined}
           >
             <span>Combined View</span>
           </button>
@@ -156,57 +83,42 @@ export const BracketStageNavBar: React.FC<BracketStageNavBarProps> = ({
       </div>
 
       {/* Embedded Right-Side Compact Dot Badge Legend */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          fontSize: '0.74rem',
-          flexWrap: 'wrap',
-          userSelect: 'none',
-        }}
-      >
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+      <div className="flex flex-wrap items-center gap-3 text-xs select-none">
+        <div className="inline-flex items-center gap-1.5">
           <span
+            className="size-2 rounded-full"
             style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
               background: ACCELERATED_HYBRID_POD_PALETTE.AR.border,
               boxShadow: `0 0 6px ${ACCELERATED_HYBRID_POD_PALETTE.AR.glow}`,
             }}
           />
-          <span style={{ color: ACCELERATED_HYBRID_POD_PALETTE.AR.text, fontWeight: 700 }}>
+          <span className="font-bold" style={{ color: ACCELERATED_HYBRID_POD_PALETTE.AR.text }}>
             Accelerated
           </span>
         </div>
-        <span style={{ color: 'var(--color-border)' }}>|</span>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+        <span className="text-line">|</span>
+        <div className="inline-flex items-center gap-1.5">
           <span
+            className="size-2 rounded-full"
             style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
               background: ACCELERATED_HYBRID_POD_PALETTE.UB.border,
               boxShadow: `0 0 6px ${ACCELERATED_HYBRID_POD_PALETTE.UB.glow}`,
             }}
           />
-          <span style={{ color: ACCELERATED_HYBRID_POD_PALETTE.UB.text, fontWeight: 700 }}>
+          <span className="font-bold" style={{ color: ACCELERATED_HYBRID_POD_PALETTE.UB.text }}>
             Upper Bracket
           </span>
         </div>
-        <span style={{ color: 'var(--color-border)' }}>|</span>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+        <span className="text-line">|</span>
+        <div className="inline-flex items-center gap-1.5">
           <span
+            className="size-2 rounded-full"
             style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
               background: ACCELERATED_HYBRID_POD_PALETTE.LB.border,
               boxShadow: `0 0 6px ${ACCELERATED_HYBRID_POD_PALETTE.LB.glow}`,
             }}
           />
-          <span style={{ color: ACCELERATED_HYBRID_POD_PALETTE.LB.text, fontWeight: 700 }}>
+          <span className="font-bold" style={{ color: ACCELERATED_HYBRID_POD_PALETTE.LB.text }}>
             Lower Bracket
           </span>
         </div>

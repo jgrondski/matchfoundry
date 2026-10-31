@@ -1,5 +1,6 @@
 import React, { useId, useState } from 'react';
 import { Overlay } from '../../components/overlay';
+import { Button, IconButton } from '../../components/ui';
 import { usePinAuth } from './AuthContext';
 import { KeyRound, ShieldAlert, Check, X, Eye, EyeOff } from 'lucide-react';
 
@@ -70,111 +71,46 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'rgba(0, 0, 0, 0.2)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: 'linear-gradient(135deg, var(--color-gold-bright, #ffd700), #f59e0b)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#000',
-                }}
-              >
+          <div className="flex items-center justify-between border-b border-line-subtle bg-black/20 px-6 py-5">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-md bg-linear-135 from-gold-bright to-gold text-black">
                 <KeyRound size={18} />
               </div>
               <div>
-                <h3 id={titleId} style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#ffffff' }}>
+                <h3 id={titleId} className="m-0 text-base font-bold text-white">
                   Admin Access
                 </h3>
-                <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--color-text-muted, #8b949e)' }}>
+                <p className="m-0 text-xs text-fg-muted">
                   {tournamentName ? `Unlock ${tournamentName}` : 'Enter Master or Tournament PIN'}
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={requestClose}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted, #8b949e)',
-                cursor: 'pointer',
-                padding: '0.25rem',
-                display: 'flex',
-              }}
-            >
+            <IconButton aria-label="Close" onClick={requestClose}>
               <X size={18} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Body */}
-          <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+          <form onSubmit={handleSubmit} className="p-6">
             {error && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.65rem 0.85rem',
-                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  borderRadius: '6px',
-                  color: '#f87171',
-                  fontSize: '0.82rem',
-                  marginBottom: '1rem',
-                }}
-              >
-                <ShieldAlert size={16} style={{ flexShrink: 0 }} />
+              <div className="mb-4 flex items-center gap-2 rounded-sm border border-red/40 bg-red/15 px-3.5 py-2.5 text-caption text-red-bright">
+                <ShieldAlert size={16} className="shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             {successMsg && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.65rem 0.85rem',
-                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                  border: '1px solid rgba(16, 185, 129, 0.4)',
-                  borderRadius: '6px',
-                  color: '#34d399',
-                  fontSize: '0.82rem',
-                  marginBottom: '1rem',
-                }}
-              >
-                <Check size={16} style={{ flexShrink: 0 }} />
+              <div className="mb-4 flex items-center gap-2 rounded-sm border border-green/40 bg-green/15 px-3.5 py-2.5 text-caption text-green-bright">
+                <Check size={16} className="shrink-0" />
                 <span>{successMsg}</span>
               </div>
             )}
 
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: 'var(--color-text-secondary, #c9d1d9)',
-                  marginBottom: '0.4rem',
-                }}
-              >
+            <div className="mb-5">
+              <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
                 Security PIN
               </label>
-              <div style={{ position: 'relative' }}>
+              <div className="relative">
                 <input
                   type={showPin ? 'text' : 'password'}
                   value={pin}
@@ -182,83 +118,29 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   autoFocus
                   data-autofocus
                   placeholder="Enter 4-8 digit PIN"
-                  style={{
-                    width: '100%',
-                    padding: '0.6rem 2.5rem 0.6rem 0.75rem',
-                    backgroundColor: 'var(--color-bg-base, #0d1117)',
-                    border: '1px solid var(--color-border, #30363d)',
-                    borderRadius: '6px',
-                    color: '#ffffff',
-                    fontSize: '0.95rem',
-                    letterSpacing: '0.08em',
-                    boxSizing: 'border-box',
-                  }}
+                  className="w-full rounded-sm border border-line bg-canvas py-2.5 pl-3 pr-10 text-base tracking-widest text-white"
                 />
-                <button
-                  type="button"
+                <IconButton
+                  aria-label={showPin ? 'Hide PIN' : 'Show PIN'}
                   onClick={() => setShowPin(!showPin)}
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--color-text-muted, #8b949e)',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    display: 'flex',
-                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2"
                   tabIndex={-1}
                 >
                   {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+                </IconButton>
               </div>
-              <p
-                style={{
-                  margin: '0.45rem 0 0 0',
-                  fontSize: '0.72rem',
-                  color: 'var(--color-text-muted, #8b949e)',
-                }}
-              >
+              <p className="mx-0 mb-0 mt-2 text-xs text-fg-muted">
                 Floor Judges & Tournament Directors enter tournament PIN. System Administrators enter Master PIN.
               </p>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem' }}>
-              <button
-                type="button"
-                onClick={requestClose}
-                disabled={isSubmitting}
-                style={{
-                  padding: '0.55rem 1rem',
-                  backgroundColor: 'transparent',
-                  border: '1px solid var(--color-border, #30363d)',
-                  borderRadius: '6px',
-                  color: 'var(--color-text-secondary, #c9d1d9)',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                }}
-              >
+            <div className="flex justify-end gap-2.5">
+              <Button variant="secondary" onClick={requestClose} disabled={isSubmitting}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || !pin.trim()}
-                style={{
-                  padding: '0.55rem 1.25rem',
-                  backgroundColor: 'var(--color-gold-bright, #ffd700)',
-                  color: '#000000',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  cursor: isSubmitting || !pin.trim() ? 'not-allowed' : 'pointer',
-                  opacity: isSubmitting || !pin.trim() ? 0.6 : 1,
-                }}
-              >
+              </Button>
+              <Button type="submit" variant="primary" disabled={isSubmitting || !pin.trim()}>
                 {isSubmitting ? 'Verifying...' : 'Unlock'}
-              </button>
+              </Button>
             </div>
           </form>
         </>

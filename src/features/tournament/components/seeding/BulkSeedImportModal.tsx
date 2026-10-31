@@ -4,6 +4,7 @@ import { Tournament, PlayerProfile } from '../../types';
 import { useTournament } from '../../store';
 import { COUNTRIES } from '../../../players/flagUtils';
 import { Overlay } from '../../../../components/overlay';
+import { Button, IconButton, cn } from '../../../../components/ui';
 
 const ISO_COUNTRY_CODES = new Set([
   ...COUNTRIES.map(c => c.code.toUpperCase()),
@@ -322,62 +323,29 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--color-brand)',
-                }}
-              >
+          <div className="flex items-center justify-between border-b border-line px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-md bg-[rgba(99,102,241,0.15)] text-brand">
                 <Upload size={20} />
               </div>
               <div>
-                <h3 id={titleId} style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                <h3 id={titleId} className="m-0 text-lg font-bold text-fg">
                   Bulk Import Participants & Seeds
                 </h3>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                <p className="m-0 text-caption text-fg-muted">
                   Paste an ordered list of competitors with top seeds at the top.
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={requestClose}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '0.35rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
+            <IconButton aria-label="Close" onClick={requestClose} className="p-1.5">
               <X size={20} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Body */}
-          <div style={{ padding: '1.25rem 1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="flex flex-col gap-4 overflow-y-auto px-6 py-5">
             <div>
-              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.35rem' }}>
+              <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
                 Paste Participant List (1 per line)
               </label>
               <textarea
@@ -385,74 +353,43 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                 value={rawText}
                 onChange={e => setRawText(e.target.value)}
                 placeholder={`Example:\n1. Jonas Neubauer\n2. Harry Hong\n#3 Joseph Saelee\nDogPlayingTetris\nPixelAndy`}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  fontFamily: 'monospace',
-                  fontSize: '0.85rem',
-                  padding: '0.75rem',
-                  backgroundColor: 'var(--color-bg-surface-elevated)',
-                  color: 'var(--color-text-primary)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  resize: 'vertical',
-                  lineHeight: '1.4',
-                }}
+                className="w-full resize-y rounded-md border border-line bg-elevated p-3 font-mono text-sm leading-snug text-fg"
               />
-              <span style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
+              <span className="text-xs text-fg-muted">
                 Supports plain lists, numbered/bulleted ranks, or direct copy-paste from player tables, Google Sheets, and Excel. Table ranks, scores, country codes, and action buttons are automatically cleaned.
               </span>
             </div>
 
             {/* Additive Mode Selector when tournament already has seeds */}
             {existingSeedsCount > 0 && (
-              <div
-                style={{
-                  background: 'var(--color-bg-surface-elevated)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.85rem 1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.65rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="flex flex-col gap-2.5 rounded-md border border-line bg-elevated px-4 py-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     <Layers size={16} color="var(--color-gold-bright)" />
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                    <span className="text-sm font-bold text-fg">
                       Existing Seeds ({existingSeedsCount} competitors currently seeded)
                     </span>
                   </div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                  <span className="text-xs text-fg-muted">
                     Additive Import Mode
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                <div className="grid grid-cols-3 gap-2">
                   {/* Append to Bottom */}
                   <button
                     type="button"
                     onClick={() => setImportDestination('BOTTOM')}
-                    style={{
-                      padding: '0.6rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: `1.5px solid ${importDestination === 'BOTTOM' ? 'var(--color-brand)' : 'var(--color-border)'}`,
-                      background: importDestination === 'BOTTOM' ? 'rgba(99, 102, 241, 0.12)' : 'var(--color-bg-surface)',
-                      color: 'var(--color-text-primary)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.2rem',
-                      transition: 'all 0.15s ease',
-                    }}
+                    className={cn(
+                      'flex cursor-pointer flex-col gap-1 rounded-sm border-[1.5px] px-3 py-2.5 text-left text-fg transition-all duration-150',
+                      importDestination === 'BOTTOM' ? 'border-brand bg-[rgba(99,102,241,0.12)]' : 'border-line bg-surface'
+                    )}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.8rem', color: importDestination === 'BOTTOM' ? 'var(--color-brand)' : 'var(--color-text-primary)' }}>
+                    <div className={cn('flex items-center gap-1.5 text-caption font-bold', importDestination === 'BOTTOM' ? 'text-brand' : 'text-fg')}>
                       <ArrowDown size={14} />
                       Add to Bottom
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
+                    <span className="text-2xs text-fg-muted">
                       Seeds #{existingSeedsCount + 1}+
                     </span>
                   </button>
@@ -461,25 +398,16 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setImportDestination('TOP')}
-                    style={{
-                      padding: '0.6rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: `1.5px solid ${importDestination === 'TOP' ? 'var(--color-brand)' : 'var(--color-border)'}`,
-                      background: importDestination === 'TOP' ? 'rgba(99, 102, 241, 0.12)' : 'var(--color-bg-surface)',
-                      color: 'var(--color-text-primary)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.2rem',
-                      transition: 'all 0.15s ease',
-                    }}
+                    className={cn(
+                      'flex cursor-pointer flex-col gap-1 rounded-sm border-[1.5px] px-3 py-2.5 text-left text-fg transition-all duration-150',
+                      importDestination === 'TOP' ? 'border-brand bg-[rgba(99,102,241,0.12)]' : 'border-line bg-surface'
+                    )}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.8rem', color: importDestination === 'TOP' ? 'var(--color-brand)' : 'var(--color-text-primary)' }}>
+                    <div className={cn('flex items-center gap-1.5 text-caption font-bold', importDestination === 'TOP' ? 'text-brand' : 'text-fg')}>
                       <ArrowUp size={14} />
                       Add to Top
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
+                    <span className="text-2xs text-fg-muted">
                       Seeds #1..N (shift existing)
                     </span>
                   </button>
@@ -488,25 +416,16 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setImportDestination('REPLACE')}
-                    style={{
-                      padding: '0.6rem 0.75rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: `1.5px solid ${importDestination === 'REPLACE' ? 'var(--color-red)' : 'var(--color-border)'}`,
-                      background: importDestination === 'REPLACE' ? 'rgba(239, 68, 68, 0.12)' : 'var(--color-bg-surface)',
-                      color: 'var(--color-text-primary)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.2rem',
-                      transition: 'all 0.15s ease',
-                    }}
+                    className={cn(
+                      'flex cursor-pointer flex-col gap-1 rounded-sm border-[1.5px] px-3 py-2.5 text-left text-fg transition-all duration-150',
+                      importDestination === 'REPLACE' ? 'border-red bg-red/12' : 'border-line bg-surface'
+                    )}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700, fontSize: '0.8rem', color: importDestination === 'REPLACE' ? 'var(--color-red)' : 'var(--color-text-primary)' }}>
+                    <div className={cn('flex items-center gap-1.5 text-caption font-bold', importDestination === 'REPLACE' ? 'text-red' : 'text-fg')}>
                       <RefreshCw size={14} />
                       Replace All
                     </div>
-                    <span style={{ fontSize: '0.7rem', color: importDestination === 'REPLACE' ? 'var(--color-red)' : 'var(--color-text-muted)' }}>
+                    <span className={cn('text-2xs', importDestination === 'REPLACE' ? 'text-red' : 'text-fg-muted')}>
                       Overwrite {existingSeedsCount} seeds
                     </span>
                   </button>
@@ -516,20 +435,8 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
 
             {/* Warning banner when text is entered but 0 competitors parsed */}
             {rawText.trim().length > 0 && parsedNames.length === 0 && (
-              <div
-                style={{
-                  padding: '0.75rem 1rem',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.35)',
-                  borderRadius: 'var(--radius-md)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                  color: 'var(--color-red)',
-                  fontSize: '0.82rem',
-                }}
-              >
-                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+              <div className="flex items-center gap-2.5 rounded-md border border-red/35 bg-red/10 px-4 py-3 text-caption text-red">
+                <AlertCircle size={16} className="shrink-0" />
                 <span>
                   No valid competitor names detected. The pasted text appears to contain only numbers, country codes, or action buttons.
                 </span>
@@ -538,46 +445,36 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
 
             {/* Analysis & Summary Badges */}
             {parsedNames.length > 0 && (
-              <div
-                style={{
-                  background: 'var(--color-bg-surface-elevated)',
-                  border: '1px solid var(--color-border-subtle)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.85rem 1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.65rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+              <div className="flex flex-col gap-2.5 rounded-md border border-line-subtle bg-elevated px-4 py-3.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="text-sm font-bold text-fg">
                       Detected {parsedNames.length} Competitors
                     </span>
                     {rawText.split(/\r?\n/).filter(l => l.trim().length > 0).length > parsedNames.length && (
-                      <span style={{ fontSize: '0.73rem', color: 'var(--color-text-muted)', background: 'var(--color-bg-surface)', padding: '0.15rem 0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border-subtle)' }}>
+                      <span className="rounded-sm border border-line-subtle bg-surface px-2 py-0.5 text-xs text-fg-muted">
                         Filtered {rawText.split(/\r?\n/).filter(l => l.trim().length > 0).length - parsedNames.length} table artifacts
                       </span>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.75rem', flexWrap: 'wrap' }}>
+                  <div className="flex flex-wrap gap-2 text-xs">
                     {resolutionAnalysis.alreadySeededCount > 0 && importDestination !== 'REPLACE' && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--color-text-muted)' }}>
+                      <span className="flex items-center gap-1 text-fg-muted">
                         <CheckCircle2 size={13} /> {resolutionAnalysis.alreadySeededCount} already seeded (preserved)
                       </span>
                     )}
                     {resolutionAnalysis.onRosterCount > 0 && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--color-green-bright)' }}>
+                      <span className="flex items-center gap-1 text-green-bright">
                         <CheckCircle2 size={13} /> {resolutionAnalysis.onRosterCount} on roster
                       </span>
                     )}
                     {resolutionAnalysis.inGlobalCount > 0 && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--color-gold-bright)' }}>
+                      <span className="flex items-center gap-1 text-gold-bright">
                         <Globe size={13} /> {resolutionAnalysis.inGlobalCount} in global pool
                       </span>
                     )}
                     {resolutionAnalysis.newPlayerCount > 0 && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--color-brand)' }}>
+                      <span className="flex items-center gap-1 text-brand">
                         <UserPlus size={13} /> {resolutionAnalysis.newPlayerCount} new
                       </span>
                     )}
@@ -585,47 +482,41 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                 </div>
 
                 {/* Seed Preview List */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', maxHeight: '180px', overflowY: 'auto' }}>
+                <div className="flex max-h-45 flex-col gap-1.5 overflow-y-auto">
                   {resolutionAnalysis.items.slice(0, 16).map(item => (
                     <div
                       key={`${item.projectedSeed}-${item.name}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.35rem 0.65rem',
-                        background: 'var(--color-bg-surface)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '0.8rem',
-                        opacity: item.isAlreadySeeded && importDestination !== 'REPLACE' ? 0.75 : 1,
-                      }}
+                      className={cn(
+                        'flex items-center justify-between rounded-sm bg-surface px-2.5 py-1.5 text-caption',
+                        item.isAlreadySeeded && importDestination !== 'REPLACE' && 'opacity-75'
+                      )}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--color-gold-bright)', width: '28px' }}>
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 font-bold text-gold-bright">
                           #{item.projectedSeed}
                         </span>
-                        <span style={{ color: 'var(--color-text-primary)', fontWeight: 500 }}>
+                        <span className="font-medium text-fg">
                           {item.name}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <div className="flex items-center gap-1.5">
                         {item.isAlreadySeeded && importDestination !== 'REPLACE' && (
-                          <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', background: 'var(--color-bg-surface-elevated)', padding: '0.1rem 0.45rem', borderRadius: 'var(--radius-full)' }}>
+                          <span className="rounded-full bg-elevated px-2 py-0.5 text-2xs text-fg-muted">
                             Preserved
                           </span>
                         )}
                         {item.status === 'roster' && (
-                          <span style={{ fontSize: '0.7rem', color: 'var(--color-green-bright)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.1rem 0.45rem', borderRadius: 'var(--radius-full)' }}>
+                          <span className="rounded-full bg-green/10 px-2 py-0.5 text-2xs text-green-bright">
                             On Roster
                           </span>
                         )}
                         {item.status === 'global' && (
-                          <span style={{ fontSize: '0.7rem', color: 'var(--color-gold-bright)', background: 'rgba(245, 158, 11, 0.1)', padding: '0.1rem 0.45rem', borderRadius: 'var(--radius-full)' }}>
+                          <span className="rounded-full bg-gold/10 px-2 py-0.5 text-2xs text-gold-bright">
                             Global Catalog
                           </span>
                         )}
                         {item.status === 'new' && (
-                          <span style={{ fontSize: '0.7rem', color: 'var(--color-brand)', background: 'rgba(99, 102, 241, 0.1)', padding: '0.1rem 0.45rem', borderRadius: 'var(--radius-full)' }}>
+                          <span className="rounded-full bg-[rgba(99,102,241,0.1)] px-2 py-0.5 text-2xs text-brand">
                             Create New
                           </span>
                         )}
@@ -633,7 +524,7 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                     </div>
                   ))}
                   {resolutionAnalysis.items.length > 16 && (
-                    <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-text-muted)', paddingTop: '0.25rem' }}>
+                    <div className="pt-1 text-center text-xs text-fg-muted">
                       + {resolutionAnalysis.items.length - 16} more competitors...
                     </div>
                   )}
@@ -643,39 +534,15 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderTop: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-              backgroundColor: 'var(--color-bg-surface-elevated)',
-            }}
-          >
-            <button
-              type="button"
-              onClick={requestClose}
-              className="btn btn-secondary"
-              style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-            >
+          <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated px-6 py-4">
+            <Button variant="secondary" onClick={requestClose}>
               Cancel
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="primary"
               disabled={parsedNames.length === 0}
               onClick={handleApply}
-              className="btn btn-primary"
-              style={{
-                padding: '0.5rem 1.25rem',
-                fontSize: '0.85rem',
-                opacity: parsedNames.length === 0 ? 0.5 : 1,
-                cursor: parsedNames.length === 0 ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-              }}
+              className="gap-1.5 px-5"
             >
               <Upload size={16} />
               {existingSeedsCount === 0 || importDestination === 'REPLACE'
@@ -683,7 +550,7 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                 : importDestination === 'TOP'
                 ? `Insert ${resolutionAnalysis.netNewSeedsCount} Seeds at Top`
                 : `Append ${resolutionAnalysis.netNewSeedsCount} Seeds to Bottom`}
-            </button>
+            </Button>
           </div>
         </>
       )}

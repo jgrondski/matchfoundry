@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '../../../components/ui';
 import { Playstyle } from '../../tournament/types';
 
 interface PlaystyleChipProps {
@@ -67,24 +68,18 @@ export const PlaystyleChip: React.FC<PlaystyleChipProps> = ({
 
   return (
     <span
-      className={className}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: isSmall ? '0.12rem 0.45rem' : '0.2rem 0.65rem',
-        fontSize: isSmall ? '0.68rem' : '0.78rem',
-        fontWeight: 700,
-        borderRadius: 'var(--radius-sm, 4px)',
-        color: theme.color,
-        backgroundColor: theme.background,
-        border: `1px solid ${theme.borderColor}`,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
-        lineHeight: 1.1,
-        letterSpacing: '0.02em',
-        whiteSpace: 'nowrap',
-        userSelect: 'none',
-      }}
+      className={cn(
+        'inline-flex items-center justify-center rounded-sm border border-(--chip-border) bg-(--chip-bg) font-bold leading-tight tracking-wide whitespace-nowrap text-(--chip-fg) shadow-[0_1px_3px_rgba(0,0,0,0.2)] select-none',
+        isSmall ? 'px-2 py-0.5 text-2xs' : 'px-2.5 py-1 text-caption',
+        className
+      )}
+      style={
+        {
+          '--chip-fg': theme.color,
+          '--chip-bg': theme.background,
+          '--chip-border': theme.borderColor,
+        } as React.CSSProperties
+      }
       title={`Playstyle: ${theme.label}`}
     >
       {theme.label}

@@ -1,6 +1,7 @@
 import React from 'react';
 import * as Flags from 'country-flag-icons/react/3x2';
 import { hasFlag, countries } from 'country-flag-icons';
+import { cn } from '../../components/ui';
 
 /**
  * Standard list of countries with 2-letter ISO codes and names.
@@ -153,35 +154,19 @@ export const CountryFlag: React.FC<CountryFlagProps> = React.memo(({
   const flagNode = FlagComponent ? (
     React.createElement(FlagComponent, {
       title: name,
-      style: {
-        width: '1.2em',
-        height: '0.8em',
-        borderRadius: '2px',
-        boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.15)',
-        display: 'inline-block',
-        flexShrink: 0,
-        verticalAlign: 'middle',
-      },
+      className:
+        'inline-block h-[0.8em] w-[1.2em] shrink-0 rounded-2xs align-middle shadow-[0_0_0_1px_rgba(255,255,255,0.15)]',
     })
   ) : (
     // Fallback to unicode emoji if specific SVG flag not found
-    React.createElement('span', { style: { fontSize: '1.05em' } }, getCountryFlag(country))
+    React.createElement('span', { className: 'text-[1.05em]' }, getCountryFlag(country))
   );
 
   return React.createElement(
     'span',
     {
-      className,
-      style: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.35rem',
-        fontSize: '1em',
-        lineHeight: 1,
-        verticalAlign: 'middle',
-        userSelect: 'none',
-        ...style,
-      },
+      className: cn('inline-flex items-center gap-1.5 text-[1em] leading-none align-middle select-none', className),
+      style: style ? { ...style } : undefined,
       title: name,
     },
     flagNode,

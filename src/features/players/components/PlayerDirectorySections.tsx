@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
+import { Button, cn } from '../../../components/ui';
 import { PlayerProfile, Organization } from '../../tournament/types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { PlaystyleChip } from './PlaystyleChip';
@@ -16,6 +17,13 @@ import {
   Filter,
   Building2,
 } from 'lucide-react';
+
+const statCardClass = 'flex flex-col gap-1.5 rounded-md border border-line bg-surface px-5 py-4.5';
+const statLabelClass = 'text-xs font-semibold uppercase text-fg-muted';
+const statSubtextClass = 'text-xs text-fg-muted';
+const filterSelectClass = 'rounded-sm border border-line bg-canvas px-3 py-2 text-caption text-fg';
+const thClass = 'px-4 py-3';
+const tdClass = 'px-4 py-3';
 
 /* -------------------------------------------------------------------------- */
 /*                            1. Stats Summary Cards                          */
@@ -62,99 +70,59 @@ export const PlayerDirectoryStats: React.FC<PlayerDirectoryStatsProps> = React.m
   }, [globalPlayers]);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-      <div
-        style={{
-          padding: '1.1rem 1.25rem',
-          background: 'var(--color-bg-surface)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.35rem',
-        }}
-      >
-        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+      <div className={statCardClass}>
+        <div className={statLabelClass}>
           Total Global Competitors
         </div>
-        <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text-primary)' }}>
+        <div className="text-3xl font-extrabold text-fg">
           {stats.total}
         </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+        <div className={statSubtextClass}>
           Ready for tournament roster import
         </div>
       </div>
 
-      <div
-        style={{
-          padding: '1.1rem 1.25rem',
-          background: 'var(--color-bg-surface)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.35rem',
-        }}
-      >
-        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+      <div className={statCardClass}>
+        <div className={statLabelClass}>
           Playstyle Breakdown
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-          <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', fontWeight: 700 }}>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="rounded-sm bg-purple-500/15 px-2 py-1 text-caption font-bold text-purple-400">
             Rolling: {stats.rollingCount}
           </span>
-          <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', background: 'rgba(245, 158, 11, 0.15)', color: 'var(--color-gold-bright)', fontWeight: 700 }}>
+          <span className="rounded-sm bg-gold/15 px-2 py-1 text-caption font-bold text-gold-bright">
             DAS: {stats.dasCount}
           </span>
-          <span style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem', borderRadius: 'var(--radius-sm)', background: 'rgba(20, 184, 166, 0.15)', color: '#2dd4bf', fontWeight: 700 }}>
+          <span className="rounded-sm bg-teal-500/15 px-2 py-1 text-caption font-bold text-teal-400">
             Hypertap: {stats.hypertapCount}
           </span>
         </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.15rem' }}>
+        <div className="mt-0.5 text-xs text-fg-muted">
           Diverse competitive mechanical styles
         </div>
       </div>
 
-      <div
-        style={{
-          padding: '1.1rem 1.25rem',
-          background: 'var(--color-bg-surface)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.35rem',
-        }}
-      >
-        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+      <div className={statCardClass}>
+        <div className={statLabelClass}>
           Highest Personal Best
         </div>
-        <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-gold-bright)', fontFamily: 'monospace' }}>
+        <div className="font-mono text-3xl font-extrabold text-gold-bright">
           {stats.maxPb > 0 ? stats.maxPb.toLocaleString() : '—'}
         </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+        <div className={statSubtextClass}>
           {stats.maxPbPlayer ? `Held by ${stats.maxPbPlayer}` : 'No personal bests recorded'}
         </div>
       </div>
 
-      <div
-        style={{
-          padding: '1.1rem 1.25rem',
-          background: 'var(--color-bg-surface)',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.35rem',
-        }}
-      >
-        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+      <div className={statCardClass}>
+        <div className={statLabelClass}>
           Average Personal Best
         </div>
-        <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text-primary)', fontFamily: 'monospace' }}>
+        <div className="font-mono text-3xl font-extrabold text-fg">
           {stats.avgPb > 0 ? stats.avgPb.toLocaleString() : '—'}
         </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+        <div className={statSubtextClass}>
           Across {stats.total} registered competitors
         </div>
       </div>
@@ -210,56 +178,26 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
   };
 
   return (
-    <div
-      style={{
-        background: 'var(--color-bg-surface)',
-        padding: '1rem 1.25rem',
-        borderRadius: 'var(--radius-md)',
-        border: '1px solid var(--color-border)',
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}
-    >
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-surface px-5 py-4">
       {/* Search Input */}
-      <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: '400px' }}>
+      <div className="relative max-w-100 flex-[1_1_280px]">
         <input
           type="text"
           value={searchInput}
           onChange={handleInputChange}
           placeholder="Search competitor name, country, notes..."
-          style={{
-            width: '100%',
-            padding: '0.55rem 0.85rem 0.55rem 2.25rem',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--color-border)',
-            background: 'var(--color-bg-base)',
-            color: 'var(--color-text-primary)',
-            fontSize: '0.85rem',
-          }}
+          className="w-full rounded-sm border border-line bg-canvas py-2 pr-3.5 pl-9 text-sm text-fg"
         />
         <Search
           size={16}
           color="var(--color-text-muted)"
-          style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+          className="absolute top-1/2 left-2.5 -translate-y-1/2"
         />
         {searchInput && (
           <button
             type="button"
             onClick={handleClear}
-            style={{
-              position: 'absolute',
-              right: '8px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--color-text-muted)',
-              cursor: 'pointer',
-              padding: '2px',
-            }}
+            className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer border-0 bg-transparent p-0.5 text-fg-muted"
           >
             <X size={14} />
           </button>
@@ -267,8 +205,8 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
       </div>
 
       {/* Playstyle Filter Pills */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600, marginRight: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 flex items-center gap-1 text-xs font-semibold text-fg-muted">
           <Filter size={13} /> Style:
         </span>
         {[
@@ -281,17 +219,12 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
             key={f.key}
             type="button"
             onClick={() => onPlaystyleChange(f.key)}
-            style={{
-              padding: '0.35rem 0.75rem',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.8rem',
-              fontWeight: playstyleFilter === f.key ? 700 : 500,
-              background: playstyleFilter === f.key ? 'var(--color-gold-bg)' : 'transparent',
-              border: playstyleFilter === f.key ? '1px solid var(--color-gold)' : '1px solid var(--color-border-subtle)',
-              color: playstyleFilter === f.key ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
+            className={cn(
+              'cursor-pointer rounded-sm border px-3 py-1.5 text-caption transition-all duration-150',
+              playstyleFilter === f.key
+                ? 'border-gold bg-gold-soft font-bold text-gold-bright'
+                : 'border-line-subtle bg-transparent font-medium text-fg-secondary'
+            )}
           >
             {f.label}
           </button>
@@ -299,21 +232,14 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
       </div>
 
       {/* Filters Group: Org & Sort */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+      <div className="flex flex-wrap items-center gap-3">
         {/* Organization Circuit Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div className="flex items-center gap-1.5">
           <Building2 size={14} color="var(--color-text-muted)" />
           <select
             value={orgFilter}
             onChange={e => onOrgFilterChange(e.target.value)}
-            style={{
-              padding: '0.45rem 0.75rem',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--color-border)',
-              background: 'var(--color-bg-base)',
-              color: 'var(--color-text-primary)',
-              fontSize: '0.8rem',
-            }}
+            className={filterSelectClass}
           >
             <option value="ALL">All Organizations</option>
             {organizations.map(org => (
@@ -325,19 +251,12 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
         </div>
 
         {/* Sort Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-2">
           <ArrowUpDown size={14} color="var(--color-text-muted)" />
           <select
             value={sortBy}
             onChange={e => onSortChange(e.target.value as 'NAME_ASC' | 'PB_DESC' | 'PB_ASC' | 'COUNTRY')}
-            style={{
-              padding: '0.45rem 0.75rem',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--color-border)',
-              background: 'var(--color-bg-base)',
-              color: 'var(--color-text-primary)',
-              fontSize: '0.8rem',
-            }}
+            className={filterSelectClass}
           >
             <option value="PB_DESC">Sort: PB High to Low</option>
             <option value="PB_ASC">Sort: PB Low to High</option>
@@ -370,62 +289,41 @@ export const PlayerDirectoryRow: React.FC<PlayerDirectoryRowProps> = React.memo(
   const isMaxout = (player.personalBest || 0) >= 999999;
 
   return (
-    <tr
-      style={{
-        borderBottom: '1px solid var(--color-border-subtle)',
-        background: 'transparent',
-        transition: 'background 0.15s ease',
-      }}
-    >
+    <tr className="border-b border-line-subtle bg-transparent transition-colors duration-150">
       {/* Index */}
-      <td style={{ padding: '0.75rem 1rem', textAlign: 'center', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+      <td className="px-4 py-3 text-center font-semibold text-fg-muted">
         {index + 1}
       </td>
 
       {/* Name */}
-      <td style={{ padding: '0.75rem 1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <div
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              background: 'var(--color-bg-surface-elevated)',
-              border: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: '0.75rem',
-              color: 'var(--color-gold-bright)',
-              flexShrink: 0,
-            }}
-          >
+      <td className={tdClass}>
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-7.5 shrink-0 items-center justify-center rounded-full border border-line bg-elevated text-xs font-bold text-gold-bright">
             {player.name.substring(0, 2).toUpperCase()}
           </div>
           <div>
-            <div style={{ fontWeight: 700, color: 'var(--color-text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <div className="flex flex-wrap items-center gap-1.5 font-bold text-fg">
               <PlayerAvatar player={player} />
               <span>{player.name}</span>
               {player.nickname && (
-                <span style={{ fontSize: '0.8rem', color: 'var(--color-gold-bright)', fontStyle: 'italic', fontWeight: 600 }}>
+                <span className="text-caption font-semibold text-gold-bright italic">
                   &quot;{player.nickname}&quot;
                 </span>
               )}
               {player.displayName && player.displayName !== player.name && (
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                <span className="text-xs text-fg-muted">
                   ({player.displayName})
                 </span>
               )}
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.15rem' }}>
+            <div className="mt-0.5 flex items-center gap-2.5 text-2xs text-fg-muted">
               {player.twitchUsername && (
                 <a
                   href={`https://twitch.tv/${player.twitchUsername}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={e => e.stopPropagation()}
-                  style={{ color: '#c084fc', textDecoration: 'none', fontWeight: 600 }}
+                  className="font-semibold text-purple-400 no-underline"
                   title={`Twitch: ${player.twitchUsername}`}
                 >
                   twitch.tv/{player.twitchUsername}
@@ -438,63 +336,35 @@ export const PlayerDirectoryRow: React.FC<PlayerDirectoryRowProps> = React.memo(
       </td>
 
       {/* Country (Uses CountryFlag directly to avoid duplicate PlayerAvatar) */}
-      <td style={{ padding: '0.75rem 1rem' }}>
+      <td className={tdClass}>
         {player.country ? (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.15rem 0.45rem',
-              borderRadius: 'var(--radius-sm)',
-              background: 'var(--color-bg-surface-highlight)',
-              fontWeight: 700,
-              fontSize: '0.75rem',
-              color: 'var(--color-text-primary)',
-              border: '1px solid var(--color-border-subtle)',
-            }}
-          >
+          <span className="inline-flex items-center gap-1.5 rounded-sm border border-line-subtle bg-highlight px-2 py-0.5 text-xs font-bold text-fg">
             <CountryFlag country={player.country} />
             <span>{player.country}</span>
           </span>
         ) : (
-          <span style={{ color: 'var(--color-text-muted)' }}>—</span>
+          <span className="text-fg-muted">—</span>
         )}
       </td>
 
       {/* Playstyle */}
-      <td style={{ padding: '0.75rem 1rem' }}>
+      <td className={tdClass}>
         <PlaystyleChip style={player.playstyle} />
       </td>
 
       {/* Personal Best */}
-      <td style={{ padding: '0.75rem 1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+      <td className={tdClass}>
+        <div className="flex items-center gap-2">
           <span
-            style={{
-              fontWeight: 700,
-              fontFamily: 'monospace',
-              fontSize: '0.9rem',
-              color: isMaxout ? 'var(--color-gold-bright)' : 'var(--color-text-primary)',
-            }}
+            className={cn(
+              'font-mono text-sm font-bold',
+              isMaxout ? 'text-gold-bright' : 'text-fg'
+            )}
           >
             {player.personalBest ? player.personalBest.toLocaleString() : '—'}
           </span>
           {isMaxout && (
-            <span
-              style={{
-                fontSize: '0.65rem',
-                padding: '0.1rem 0.35rem',
-                borderRadius: 'var(--radius-sm)',
-                background: 'rgba(245, 158, 11, 0.2)',
-                color: 'var(--color-gold-bright)',
-                fontWeight: 800,
-                border: '1px solid var(--color-gold)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.2rem',
-              }}
-            >
+            <span className="inline-flex items-center gap-1 rounded-sm border border-gold bg-gold/20 px-1.5 py-0.5 text-3xs font-extrabold text-gold-bright">
               <Trophy size={10} /> MAXOUT
             </span>
           )}
@@ -502,59 +372,38 @@ export const PlayerDirectoryRow: React.FC<PlayerDirectoryRowProps> = React.memo(
       </td>
 
       {/* Status */}
-      <td style={{ padding: '0.75rem 1rem' }}>
-        <span
-          style={{
-            display: 'inline-block',
-            padding: '0.2rem 0.5rem',
-            borderRadius: 'var(--radius-sm)',
-            fontSize: '0.7rem',
-            fontWeight: 600,
-            background: 'rgba(34, 197, 94, 0.1)',
-            color: '#4ade80',
-          }}
-        >
+      <td className={tdClass}>
+        <span className="inline-block rounded-sm bg-green-500/10 px-2 py-1 text-2xs font-semibold text-green-400">
           Active
         </span>
       </td>
 
       {/* Notes */}
-      <td style={{ padding: '0.75rem 1rem', maxWidth: '240px' }}>
-        <div
-          style={{
-            color: 'var(--color-text-secondary)',
-            fontSize: '0.8rem',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-          title={player.notes}
-        >
-          {player.notes || <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
+      <td className="max-w-60 px-4 py-3">
+        <div className="truncate text-caption text-fg-secondary" title={player.notes}>
+          {player.notes || <span className="text-fg-muted">—</span>}
         </div>
       </td>
 
       {/* Actions */}
-      <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-          <button
-            type="button"
+      <td className="px-4 py-3 text-right">
+        <div className="inline-flex items-center gap-1.5">
+          <Button
+            variant="secondary"
             onClick={() => onEdit(player)}
-            className="btn btn-secondary"
-            style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+            className="px-2.5 py-1.5 text-xs"
             title="Edit competitor profile"
           >
             <Edit2 size={13} />
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
             onClick={() => onDelete(player)}
-            className="btn btn-secondary"
-            style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem', color: 'var(--color-red)' }}
+            className="px-2.5 py-1.5 text-xs text-red"
             title="Delete competitor from catalog"
           >
             <Trash2 size={13} />
-          </button>
+          </Button>
         </div>
       </td>
     </tr>
@@ -583,85 +432,48 @@ export const PlayerDirectoryTable: React.FC<PlayerDirectoryTableProps> = React.m
   onOpenAddModal,
 }) => {
   return (
-    <div
-      style={{
-        background: 'var(--color-bg-surface)',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--color-border)',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="overflow-hidden rounded-lg border border-line bg-surface">
       {filteredPlayers.length === 0 ? (
-        <div
-          style={{
-            padding: '4rem 1.5rem',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '1rem',
-          }}
-        >
-          <div
-            style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              background: 'var(--color-gold-bg)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--color-gold-bright)',
-            }}
-          >
+        <div className="flex flex-col items-center gap-4 px-6 py-16 text-center">
+          <div className="flex size-14 items-center justify-center rounded-full bg-gold-soft text-gold-bright">
             <Users size={28} />
           </div>
           <div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: '0 0 0.35rem 0' }}>
+            <h3 className="m-0 mb-1.5 text-lg font-bold text-fg">
               {totalPlayersCount === 0 ? 'Global Player Directory is Empty' : 'No Competitors Match Your Filter'}
             </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', maxWidth: '420px', margin: 0 }}>
+            <p className="m-0 max-w-105 text-sm text-fg-muted">
               {totalPlayersCount === 0
                 ? 'Add competitors manually or click "Generate Fake Players" to simulate authentic competitors for tournaments.'
                 : 'Try adjusting your search query or playstyle filter.'}
             </p>
           </div>
           {totalPlayersCount === 0 && (
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={onOpenGenerateModal}
-                className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-              >
+            <div className="mt-2 flex gap-3">
+              <Button variant="secondary" onClick={onOpenGenerateModal}>
                 <Sparkles size={16} color="var(--color-gold-bright)" />
                 Generate Fake Players
-              </button>
-              <button
-                type="button"
-                onClick={onOpenAddModal}
-                className="btn btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-              >
+              </Button>
+              <Button variant="primary" onClick={onOpenAddModal}>
                 <Plus size={16} />
                 Add Competitor
-              </button>
+              </Button>
             </div>
           )}
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-sm">
             <thead>
-              <tr style={{ background: 'var(--color-bg-base)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>
-                <th style={{ padding: '0.75rem 1rem', width: '50px', textAlign: 'center' }}>#</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Competitor</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Country</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Playstyle</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Personal Best</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Status</th>
-                <th style={{ padding: '0.75rem 1rem' }}>Notes</th>
-                <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+              <tr className="border-b border-line bg-canvas text-fg-muted">
+                <th className="w-12.5 px-4 py-3 text-center">#</th>
+                <th className={thClass}>Competitor</th>
+                <th className={thClass}>Country</th>
+                <th className={thClass}>Playstyle</th>
+                <th className={thClass}>Personal Best</th>
+                <th className={thClass}>Status</th>
+                <th className={thClass}>Notes</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>

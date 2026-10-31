@@ -3,6 +3,7 @@ import { PlayerProfile } from '../../tournament/types';
 import { Users, X, Search, CheckSquare, Square, Download, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Overlay } from '../../../components/overlay';
+import { Badge, Button, IconButton, buttonClasses, cn } from '../../../components/ui';
 
 interface ImportFromGlobalModalProps {
   isOpen: boolean;
@@ -96,112 +97,59 @@ export const ImportFromGlobalModal: React.FC<ImportFromGlobalModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--color-bg-surface)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--color-gold-bright)',
-                }}
-              >
+          <div className="flex items-center justify-between border-b border-line bg-surface px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-full bg-gold/15 text-gold-bright">
                 <Users size={18} />
               </div>
               <div>
-                <h3 id={titleId} style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+                <h3 id={titleId} className="m-0 text-lg font-bold text-fg">
                   Import from Global Pool
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0 }}>
+                <p className="m-0 text-xs text-fg-muted">
                   Select competitors from master catalog to register into tournament roster
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={requestClose}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '0.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
+            <IconButton aria-label="Close" onClick={requestClose}>
               <X size={18} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Search & Bulk Select Bar */}
-          <div
-            style={{
-              padding: '0.85rem 1.5rem',
-              borderBottom: '1px solid var(--color-border-subtle)',
-              background: 'var(--color-bg-surface)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div style={{ position: 'relative', flex: 1 }}>
+          <div className="flex items-center justify-between gap-4 border-b border-line-subtle bg-surface px-6 py-3.5">
+            <div className="relative flex-1">
               <input
                 type="text"
                 placeholder="Search available global competitors..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem 0.75rem 0.5rem 2.2rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--color-border)',
-                  background: 'var(--color-bg-base)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: '0.85rem',
-                }}
+                className="w-full rounded-sm border border-line bg-canvas py-2 pr-3 pl-9 text-sm text-fg"
               />
               <Search
                 size={15}
                 color="var(--color-text-muted)"
-                style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)' }}
+                className="absolute top-1/2 left-2.5 -translate-y-1/2"
               />
             </div>
 
             {filteredAvailable.length > 0 && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={handleSelectAll}
-                className="btn btn-secondary"
-                style={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
+                className="gap-1.5 px-3 py-2 text-caption"
               >
                 {isAllSelected ? <CheckSquare size={14} color="var(--color-gold-bright)" /> : <Square size={14} />}
                 {isAllSelected ? 'Deselect All' : `Select All (${filteredAvailable.length})`}
-              </button>
+              </Button>
             )}
           </div>
 
           {/* Body: List of Players */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 1.5rem', display: 'flex', flexDirection: 'column' }}>
+          <div className="flex flex-1 flex-col overflow-y-auto px-6 py-2">
             {availablePlayers.length === 0 ? (
-              <div style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--color-text-secondary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                <p style={{ margin: 0, fontSize: '0.9rem' }}>
+              <div className="flex flex-col items-center gap-3 px-4 py-12 text-center text-fg-secondary">
+                <p className="m-0 text-sm">
                   {globalPlayers.length === 0
                     ? 'No competitors in global player directory.'
                     : 'All competitors in global catalog are already registered in this tournament!'}
@@ -209,14 +157,16 @@ export const ImportFromGlobalModal: React.FC<ImportFromGlobalModalProps> = ({
                 <Link
                   to="/players"
                   onClick={onClose}
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.8rem', padding: '0.45rem 0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none', marginTop: '0.5rem' }}
+                  className={buttonClasses({
+                    variant: 'secondary',
+                    className: 'mt-2 gap-1.5 px-3.5 py-2 text-caption hover:border-fg-secondary hover:bg-highlight',
+                  })}
                 >
                   <Plus size={14} /> Open Global Player Pool
                 </Link>
               </div>
             ) : filteredAvailable.length === 0 ? (
-              <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+              <div className="px-4 py-10 text-center text-sm text-fg-muted">
                 No available competitors match &quot;{searchQuery}&quot;
               </div>
             ) : (
@@ -226,39 +176,32 @@ export const ImportFromGlobalModal: React.FC<ImportFromGlobalModalProps> = ({
                   <div
                     key={player.id}
                     onClick={() => handleTogglePlayer(player.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.75rem 0.5rem',
-                      borderBottom: '1px solid var(--color-border-subtle)',
-                      cursor: 'pointer',
-                      background: isSelected ? 'var(--color-gold-bg)' : 'transparent',
-                      borderRadius: 'var(--radius-sm)',
-                      transition: 'background 0.15s ease',
-                    }}
+                    className={cn(
+                      'flex cursor-pointer items-center justify-between rounded-sm border-b border-line-subtle px-2 py-3 transition-colors duration-150',
+                      isSelected ? 'bg-gold-soft' : 'bg-transparent'
+                    )}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div style={{ color: isSelected ? 'var(--color-gold-bright)' : 'var(--color-text-muted)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className={isSelected ? 'text-gold-bright' : 'text-fg-muted'}>
                         {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
                       </div>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--color-text-primary)', fontSize: '0.9rem' }}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-fg">
                             {player.name}
                           </span>
                           {player.country && (
-                            <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-surface-highlight)', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                            <span className="rounded-sm bg-highlight px-1.5 py-0.5 text-3xs font-semibold text-fg-secondary">
                               {player.country}
                             </span>
                           )}
                           {player.playstyle && (
-                            <span className="badge badge-muted" style={{ fontSize: '0.65rem' }}>
+                            <Badge variant="muted" className="text-3xs">
                               {player.playstyle}
-                            </span>
+                            </Badge>
                           )}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.15rem' }}>
+                        <div className="mt-0.5 text-xs text-fg-muted">
                           PB: {player.personalBest ? player.personalBest.toLocaleString() : '—'}
                           {player.notes && ` • ${player.notes}`}
                         </div>
@@ -271,47 +214,27 @@ export const ImportFromGlobalModal: React.FC<ImportFromGlobalModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderTop: '1px solid var(--color-border)',
-              background: 'var(--color-bg-surface)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+          <div className="flex items-center justify-between border-t border-line bg-surface px-6 py-4">
+            <div className="text-caption text-fg-muted">
               <strong>{selectedIds.size}</strong> competitor(s) selected
             </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                type="button"
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
                 onClick={requestClose}
-                className="btn btn-secondary"
-                style={{ padding: '0.5rem 1.15rem', fontSize: '0.85rem' }}
+                className="px-4.5 py-2 text-sm"
               >
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="primary"
                 onClick={handleConfirmImport}
                 disabled={selectedIds.size === 0}
-                className="btn btn-primary"
-                style={{
-                  padding: '0.5rem 1.35rem',
-                  fontSize: '0.85rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  boxShadow: 'var(--shadow-gold)',
-                  opacity: selectedIds.size === 0 ? 0.5 : 1,
-                  cursor: selectedIds.size === 0 ? 'not-allowed' : 'pointer',
-                }}
+                className="gap-2 px-5.5 py-2 text-sm shadow-gold"
               >
                 <Download size={15} />
                 Import Selected ({selectedIds.size})
-              </button>
+              </Button>
             </div>
           </div>
         </>

@@ -6,6 +6,11 @@ import { PlaystyleChip } from './PlaystyleChip';
 import { CountrySelect } from './CountrySelect';
 import { processAvatarImage } from '../../../utils/image';
 import { Overlay } from '../../../components/overlay';
+import { Button, IconButton, cn } from '../../../components/ui';
+
+const labelClass = 'mb-1.5 block text-caption font-semibold text-fg';
+const inputClass = 'w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-fg';
+const hintClass = 'mt-1 text-2xs text-fg-muted';
 
 interface PlayerEditModalProps {
   isOpen: boolean;
@@ -160,85 +165,39 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--color-bg-surface)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--color-gold-bright)',
-                }}
-              >
+          <div className="flex items-center justify-between border-b border-line bg-surface px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-full bg-gold/15 text-gold-bright">
                 <User size={18} />
               </div>
               <div>
-                <h3 id={titleId} style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+                <h3 id={titleId} className="m-0 text-lg font-bold text-fg">
                   {initialPlayer ? `Edit Competitor: ${initialPlayer.name}` : 'Add New Competitor'}
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: 0 }}>
+                <p className="m-0 text-xs text-fg-muted">
                   {initialPlayer ? 'Update profile in master player directory' : 'Register new competitor in global directory'}
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={requestClose}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '0.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
+            <IconButton aria-label="Close" onClick={requestClose}>
               <X size={18} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Form Body */}
           <form onSubmit={handleSubmit}>
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div className="flex flex-col gap-5 p-6">
               {error && (
-                <div
-                  style={{
-                    padding: '0.75rem 1rem',
-                    background: 'rgba(239, 68, 68, 0.15)',
-                    border: '1px solid rgba(239, 68, 68, 0.4)',
-                    borderRadius: 'var(--radius-sm)',
-                    color: '#f87171',
-                    fontSize: '0.85rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                  }}
-                >
+                <div className="flex items-center gap-2 rounded-sm border border-red/40 bg-red/15 px-4 py-3 text-sm text-red-bright">
                   <AlertTriangle size={16} />
                   <span>{error}</span>
                 </div>
               )}
 
               {/* Name & Country */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+              <div className="grid grid-cols-[2fr_1fr] gap-4">
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
+                  <label className={labelClass}>
                     Player Name *
                   </label>
                   <input
@@ -250,20 +209,12 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                       setName(e.target.value);
                       if (error) setError(null);
                     }}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--color-border)',
-                      background: 'var(--color-bg-base)',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '0.9rem',
-                    }}
+                    className={inputClass}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
+                  <label className={labelClass}>
                     Country
                   </label>
                   <CountrySelect value={country} onChange={setCountry} />
@@ -271,9 +222,9 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
               </div>
 
               {/* Preferred Name & Nickname */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
+                  <label className={labelClass}>
                     Preferred Name (Optional)
                   </label>
                   <input
@@ -281,23 +232,15 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                     placeholder="e.g. Scuti"
                     value={displayName}
                     onChange={e => setDisplayName(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--color-border)',
-                      background: 'var(--color-bg-base)',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '0.9rem',
-                    }}
+                    className={inputClass}
                   />
-                  <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.2rem' }}>
+                  <div className={hintClass}>
                     Displayed on brackets, cards &amp; streams (defaults to Player Name)
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
+                  <label className={labelClass}>
                     Nickname (Optional)
                   </label>
                   <input
@@ -305,17 +248,9 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                     placeholder="e.g. The Prodigy"
                     value={nickname}
                     onChange={e => setNickname(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--color-border)',
-                      background: 'var(--color-bg-base)',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '0.9rem',
-                    }}
+                    className={inputClass}
                   />
-                  <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.2rem' }}>
+                  <div className={hintClass}>
                     Moniker displayed in quotes in Master Catalog
                   </div>
                 </div>
@@ -323,21 +258,11 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
 
               {/* Twitch Username */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
+                <label className={labelClass}>
                   Twitch Channel (Optional)
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <span
-                    style={{
-                      position: 'absolute',
-                      left: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      fontSize: '0.82rem',
-                      color: '#c084fc',
-                      fontWeight: 700,
-                    }}
-                  >
+                <div className="relative">
+                  <span className="absolute top-1/2 left-2.5 -translate-y-1/2 text-caption font-bold text-purple-400">
                     twitch.tv/
                   </span>
                   <input
@@ -345,53 +270,34 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                     placeholder="username"
                     value={twitchUsername}
                     onChange={e => setTwitchUsername(e.target.value.replace(/^@/, ''))}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem 0.65rem 5.6rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--color-border)',
-                      background: 'var(--color-bg-base)',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '0.9rem',
-                    }}
+                    className="w-full rounded-sm border border-line bg-canvas py-2.5 pr-3.5 pl-22.5 text-sm text-fg"
                   />
                 </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.2rem' }}>
+                <div className={hintClass}>
                   Twitch handle for live qualifier tracking &amp; broadcast profile links
                 </div>
               </div>
 
               {/* Avatar Section */}
-              <div
-                style={{
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--color-border)',
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div className="flex items-center justify-between gap-4 rounded-sm border border-line bg-white/2 px-4 py-3">
+                <div className="flex items-center gap-3">
                   <PlayerAvatar player={{ name, country, avatarType, avatarUrl }} size={36} />
                   <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                    <div className="text-sm font-semibold text-fg">
                       Avatar Display
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                    <div className="text-xs text-fg-muted">
                       {avatarType === 'custom' && avatarUrl ? 'Custom uploaded avatar' : 'Flag badge (default)'}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="flex items-center gap-2">
                   <input
                     type="file"
                     ref={fileInputRef}
                     accept="image/png,image/jpeg,image/webp,image/gif"
-                    style={{ display: 'none' }}
+                    className="hidden"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
@@ -408,19 +314,10 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      padding: '0.4rem 0.75rem',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--color-border)',
-                      background: avatarType === 'custom' ? 'var(--color-primary-dark, #3b82f6)' : 'var(--color-bg-base)',
-                      color: '#fff',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-1.5 rounded-sm border border-line px-3 py-1.5 text-caption font-semibold text-white',
+                      avatarType === 'custom' ? 'bg-blue-500' : 'bg-canvas'
+                    )}
                   >
                     <Upload size={14} />
                     <span>{avatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
@@ -434,15 +331,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                         setAvatarUrl(undefined);
                         setAvatarThumbnailUrl(undefined);
                       }}
-                      style={{
-                        padding: '0.4rem 0.6rem',
-                        fontSize: '0.75rem',
-                        borderRadius: 'var(--radius-sm)',
-                        border: '1px solid var(--color-border)',
-                        background: 'transparent',
-                        color: 'var(--color-text-muted)',
-                        cursor: 'pointer',
-                      }}
+                      className="cursor-pointer rounded-sm border border-line bg-transparent px-2.5 py-1.5 text-xs text-fg-muted"
                     >
                       Reset to Flag
                     </button>
@@ -451,26 +340,19 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
               </div>
 
               {/* Playstyle & Personal Best */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <label className="text-caption font-semibold text-fg">
                       Playstyle
                     </label>
+                    {/* eslint-disable-next-line no-restricted-syntax -- runtime: PlaystyleChip prop is named style */}
                     <PlaystyleChip style={playstyle} />
                   </div>
                   <select
                     value={playstyle}
                     onChange={e => setPlaystyle(e.target.value as Playstyle)}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--color-border)',
-                      background: 'var(--color-bg-base)',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '0.9rem',
-                    }}
+                    className={inputClass}
                   >
                     <option value="Rolling">Rolling / Roll</option>
                     <option value="DAS">DAS</option>
@@ -480,7 +362,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
+                  <label className={labelClass}>
                     Personal Best (Manual)
                   </label>
                   <input
@@ -491,18 +373,9 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                       const cleaned = e.target.value.replace(/\D/g, '');
                       setPersonalBest(cleaned);
                     }}
-                    style={{
-                      width: '100%',
-                      padding: '0.65rem 0.85rem',
-                      borderRadius: 'var(--radius-sm)',
-                      border: '1px solid var(--color-border)',
-                      background: 'var(--color-bg-base)',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '0.9rem',
-                      fontFamily: 'monospace',
-                    }}
+                    className={cn(inputClass, 'font-mono')}
                   />
-                  <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.2rem' }}>
+                  <div className={hintClass}>
                     Strict manual PB field (never auto-overwritten)
                   </div>
                 </div>
@@ -510,7 +383,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
 
               {/* Notes */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.35rem' }}>
+                <label className={labelClass}>
                   Notes / Bio (Optional)
                 </label>
                 <textarea
@@ -518,58 +391,30 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                   placeholder="Regional qualifier notes, team affiliation, setup notes..."
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--color-border)',
-                    background: 'var(--color-bg-base)',
-                    color: 'var(--color-text-primary)',
-                    fontSize: '0.85rem',
-                    resize: 'vertical',
-                  }}
+                  className="w-full resize-y rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-fg"
                 />
               </div>
 
             </div>
 
             {/* Footer */}
-            <div
-              style={{
-                padding: '1rem 1.5rem',
-                borderTop: '1px solid var(--color-border)',
-                background: 'var(--color-bg-surface)',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.75rem',
-              }}
-            >
-              <button
-                type="button"
+            <div className="flex justify-end gap-3 border-t border-line bg-surface px-6 py-4">
+              <Button
+                variant="secondary"
                 onClick={requestClose}
-                className="btn btn-secondary"
-                style={{ padding: '0.55rem 1.25rem', fontSize: '0.85rem' }}
+                className="px-5 py-2 text-sm"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
+                variant="primary"
                 disabled={!name.trim()}
-                className="btn btn-primary"
-                style={{
-                  padding: '0.55rem 1.5rem',
-                  fontSize: '0.85rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  boxShadow: 'var(--shadow-gold)',
-                  opacity: !name.trim() ? 0.5 : 1,
-                  cursor: !name.trim() ? 'not-allowed' : 'pointer',
-                }}
+                className="px-6 py-2 text-sm shadow-gold"
               >
                 <Check size={16} />
                 {initialPlayer ? 'Save Changes' : 'Add Player'}
-              </button>
+              </Button>
             </div>
           </form>
         </>
