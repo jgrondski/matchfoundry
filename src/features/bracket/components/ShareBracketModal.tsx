@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useId } from 'react';
+import { Overlay } from '../../../components/overlay';
 import QRCode from 'qrcode';
 import { Tournament, TournamentTier } from '../../tournament/types';
 import { getDefaultTierColors, colorWithAlpha } from '../colorUtils';
@@ -69,15 +70,7 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
       .catch(err => console.error('Failed to generate QR code', err));
   }, [isOpen, publicUrl]);
 
-  // Handle Escape key to dismiss
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const titleId = useId();
 
   if (!isOpen) return null;
 
@@ -99,282 +92,255 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
   )}&url=${encodeURIComponent(publicUrl)}`;
 
   return (
-    <div
-      style={scrimStyle}
-      onClick={e => {
-        if (e.target === e.currentTarget) onClose();
+    <Overlay
+      open
+      onClose={onClose}
+      aria-labelledby={titleId}
+      panelClassName="flex max-w-130 max-h-[92vh] flex-col overflow-hidden rounded-lg"
+      panelStyle={{
+        background: cardColor,
+        border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}`,
+        boxShadow: `0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px ${colorWithAlpha(primaryColor, 0.15)}`,
       }}
     >
-      <div
-        style={{
-          ...modalCardStyle,
-          background: cardColor,
-          border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}`,
-          boxShadow: `0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px ${colorWithAlpha(primaryColor, 0.15)}`,
-        }}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="share-bracket-title"
-      >
-        {/* Ambient Top Glow Stripe */}
-        <div
-          style={{
-            height: '4px',
-            width: '100%',
-            background: `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})`,
-          }}
-        />
-
-        {/* Modal Header */}
-        <div style={headerStyle}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: primaryColor,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                }}
-              >
-                <Layers size={13} />
-                {resolvedTier ? `${resolvedTier.name} Tier Bracket` : 'Tournament Portal'}
-              </span>
-              <span style={{ color: 'var(--color-border-subtle)', fontSize: '0.75rem' }}>•</span>
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
-                Public Spectator Link
-              </span>
-            </div>
-            <h2
-              id="share-bracket-title"
-              style={{
-                fontSize: '1.25rem',
-                fontWeight: 800,
-                color: '#ffffff',
-                margin: 0,
-                letterSpacing: '-0.02em',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}
-            >
-              <Share2 size={20} color={primaryColor} />
-              Share Tournament Bracket
-            </h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            style={closeBtnStyle}
-            title="Close (Esc)"
-            aria-label="Close share bracket modal"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div style={bodyStyle}>
-          {/* Section 1: Canonical Public Link */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <label style={labelStyle}>Canonical Spectator URL</label>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: 'rgba(0, 0, 0, 0.4)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                padding: '0.4rem 0.65rem 0.4rem 0.85rem',
-              }}
-            >
-              <span
-                style={{
-                  flex: 1,
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.85rem',
-                  color: 'var(--color-gold-bright)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {cleanDisplayUrl}
-              </span>
-              <button
-                type="button"
-                onClick={() => copyToClipboard(publicUrl, 'main-url')}
-                className="btn btn-primary"
-                style={{
-                  padding: '0.35rem 0.75rem',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  gap: '0.35rem',
-                }}
-              >
-                {copiedKey === 'main-url' ? <Check size={13} /> : <Copy size={13} />}
-                <span>{copiedKey === 'main-url' ? 'Copied!' : 'Copy Link'}</span>
-              </button>
-            </div>
-            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', margin: '0.1rem 0 0 0.1rem' }}>
-              Visitors on this URL receive an interactive, real-time read-only bracket without edit permissions.
-            </span>
-          </div>
-
-          {/* Section 2: QR Code for Venue Spectators */}
+      {({ requestClose }) => (
+        <>
+          {/* Ambient Top Glow Stripe */}
           <div
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              padding: '1.25rem',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(0, 0, 0, 0.25)',
-              border: '1px solid var(--color-border-subtle)',
-              gap: '0.75rem',
+              height: '4px',
+              width: '100%',
+              background: `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})`,
             }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <QrCode size={16} color={primaryColor} />
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                Venue Smartphone QR Code
+          />
+
+          {/* Modal Header */}
+          <div style={headerStyle}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span
+                  style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: primaryColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                  }}
+                >
+                  <Layers size={13} />
+                  {resolvedTier ? `${resolvedTier.name} Tier Bracket` : 'Tournament Portal'}
+                </span>
+                <span style={{ color: 'var(--color-border-subtle)', fontSize: '0.75rem' }}>•</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                  Public Spectator Link
+                </span>
+              </div>
+              <h2
+                id={titleId}
+                style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 800,
+                  color: '#ffffff',
+                  margin: 0,
+                  letterSpacing: '-0.02em',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <Share2 size={20} color={primaryColor} />
+                Share Tournament Bracket
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={requestClose}
+              style={closeBtnStyle}
+              title="Close (Esc)"
+              aria-label="Close share bracket modal"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Modal Body */}
+          <div style={bodyStyle}>
+            {/* Section 1: Canonical Public Link */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              <label style={labelStyle}>Canonical Spectator URL</label>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.4rem 0.65rem 0.4rem 0.85rem',
+                }}
+              >
+                <span
+                  style={{
+                    flex: 1,
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.85rem',
+                    color: 'var(--color-gold-bright)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {cleanDisplayUrl}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(publicUrl, 'main-url')}
+                  className="btn btn-primary"
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    gap: '0.35rem',
+                  }}
+                >
+                  {copiedKey === 'main-url' ? <Check size={13} /> : <Copy size={13} />}
+                  <span>{copiedKey === 'main-url' ? 'Copied!' : 'Copy Link'}</span>
+                </button>
+              </div>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', margin: '0.1rem 0 0 0.1rem' }}>
+                Visitors on this URL receive an interactive, real-time read-only bracket without edit permissions.
               </span>
             </div>
 
-            {/* QR Image Box */}
+            {/* Section 2: QR Code for Venue Spectators */}
             <div
               style={{
-                padding: '0.65rem',
-                borderRadius: 'var(--radius-md)',
-                background: '#ffffff',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center',
+                padding: '1.25rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'rgba(0, 0, 0, 0.25)',
+                border: '1px solid var(--color-border-subtle)',
+                gap: '0.75rem',
               }}
             >
-              {qrDataUrl ? (
-                <img
-                  src={qrDataUrl}
-                  alt={`QR code for ${tournament.name} ${resolvedTier?.name || ''} bracket`}
-                  style={{ width: '180px', height: '180px', display: 'block' }}
-                />
-              ) : (
-                <div style={{ width: '180px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
-                  Generating QR...
-                </div>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <QrCode size={16} color={primaryColor} />
+                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                  Venue Smartphone QR Code
+                </span>
+              </div>
+
+              {/* QR Image Box */}
+              <div
+                style={{
+                  padding: '0.65rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: '#ffffff',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {qrDataUrl ? (
+                  <img
+                    src={qrDataUrl}
+                    alt={`QR code for ${tournament.name} ${resolvedTier?.name || ''} bracket`}
+                    style={{ width: '180px', height: '180px', display: 'block' }}
+                  />
+                ) : (
+                  <div style={{ width: '180px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                    Generating QR...
+                  </div>
+                )}
+              </div>
+
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'center', maxWidth: '300px' }}>
+                Scan with any iPhone or Android camera to open this bracket on mobile.
+              </span>
             </div>
 
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'center', maxWidth: '300px' }}>
-              Scan with any iPhone or Android camera to open this bracket on mobile.
-            </span>
-          </div>
+            {/* Section 3: Quick Broadcast & Community Snippets */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <label style={labelStyle}>Quick Community Snippets</label>
 
-          {/* Section 3: Quick Broadcast & Community Snippets */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-            <label style={labelStyle}>Quick Community Snippets</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem' }}>
+                {/* Twitch Chat Snippet */}
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(twitchCommandText, 'twitch-cmd')}
+                  style={snippetBtnStyle}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <MessageSquare size={14} color="#a855f7" />
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                      Twitch Chat Command
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                    <span>{copiedKey === 'twitch-cmd' ? 'Copied to clipboard!' : twitchCommandText}</span>
+                    {copiedKey === 'twitch-cmd' ? <Check size={12} color="#4ade80" /> : <Copy size={12} />}
+                  </div>
+                </button>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem' }}>
-              {/* Twitch Chat Snippet */}
-              <button
-                type="button"
-                onClick={() => copyToClipboard(twitchCommandText, 'twitch-cmd')}
-                style={snippetBtnStyle}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <MessageSquare size={14} color="#a855f7" />
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                    Twitch Chat Command
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-                  <span>{copiedKey === 'twitch-cmd' ? 'Copied to clipboard!' : twitchCommandText}</span>
-                  {copiedKey === 'twitch-cmd' ? <Check size={12} color="#4ade80" /> : <Copy size={12} />}
-                </div>
-              </button>
-
-              {/* Discord Markdown */}
-              <button
-                type="button"
-                onClick={() => copyToClipboard(discordMarkdownText, 'discord-md')}
-                style={snippetBtnStyle}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                  <Sparkles size={14} color="#38bdf8" />
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                    Discord Markdown Link
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
-                  <span>{copiedKey === 'discord-md' ? 'Copied to clipboard!' : '[Tournament] Link'}</span>
-                  {copiedKey === 'discord-md' ? <Check size={12} color="#4ade80" /> : <Copy size={12} />}
-                </div>
-              </button>
+                {/* Discord Markdown */}
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(discordMarkdownText, 'discord-md')}
+                  style={snippetBtnStyle}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                    <Sparkles size={14} color="#38bdf8" />
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                      Discord Markdown Link
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                    <span>{copiedKey === 'discord-md' ? 'Copied to clipboard!' : '[Tournament] Link'}</span>
+                    {copiedKey === 'discord-md' ? <Check size={12} color="#4ade80" /> : <Copy size={12} />}
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Modal Footer */}
-        <div style={footerStyle}>
-          <a
-            href={twitterIntentUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-secondary"
-            style={{
-              fontSize: '0.78rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
-          >
-            <ExternalLink size={13} />
-            <span>Post to X / Twitter</span>
-          </a>
+          {/* Modal Footer */}
+          <div style={footerStyle}>
+            <a
+              href={twitterIntentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              style={{
+                fontSize: '0.78rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              <ExternalLink size={13} />
+              <span>Post to X / Twitter</span>
+            </a>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-secondary"
-            style={{ fontSize: '0.82rem', padding: '0.45rem 1.1rem' }}
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
+            <button
+              type="button"
+              onClick={requestClose}
+              className="btn btn-secondary"
+              style={{ fontSize: '0.82rem', padding: '0.45rem 1.1rem' }}
+            >
+              Done
+            </button>
+          </div>
+        </>
+      )}
+    </Overlay>
   );
-};
-
-const scrimStyle: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0, 0, 0, 0.75)',
-  backdropFilter: 'blur(5px)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-  padding: '1rem',
-  animation: 'fadeIn 0.15s ease-out',
-};
-
-const modalCardStyle: React.CSSProperties = {
-  width: '100%',
-  maxWidth: '520px',
-  maxHeight: '92vh',
-  borderRadius: 'var(--radius-lg)',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-  animation: 'scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
 };
 
 const headerStyle: React.CSSProperties = {

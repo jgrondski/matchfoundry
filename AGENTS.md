@@ -52,7 +52,7 @@
   - Tier 2: Keyed Feature View (`key={entity.id}`). Owns ephemeral layout/modal/dirty state. Automatically resets state on remount. ZERO `useEffect`s for resetting state.
   - Tier 3: Pure Presentational Leaf Components. Driven purely by props & callbacks.
 - **Anti-`useEffect` Mandate**: Never use `useEffect` to reset state when an ID changes (use `key={id}`), to sync URL params, or to compute derived values. `useEffect` is only for external browser API sync.
-- **Modals & Drawers**: Backdrop/scrim clicks MUST NEVER dismiss dialogs or score drawers (`onClick={onClose}` on backdrops is prohibited). Dismissal requires explicit Cancel/Save/X.
+- **Overlays (modals, drawers, sheets)**: Always use `Overlay` or `ConfirmDialog` from `src/components/overlay`; never hand-roll a fixed backdrop. Read-only overlays and confirmations close on backdrop click/tap and Escape. Forms pass `dirty`; when dirty, backdrop, Escape, X and Cancel open the Discard prompt ("Keep Editing" / "Discard Changes"). Pass `busy` while a request is in flight so nothing dismisses mid-save.
 - **Country Flags**: Country codes MUST be 2-letter uppercase ISO 3166-1 alpha-2 strings. Always provide a safe fallback icon for null or unknown countries.
 - **Tier Switching & Navigation**: Tab/tier selection must be driven by URL params (`?tier=slug`), never `sessionStorage`. Multi-tier feeds (`MatchCardFeed`) must use `key={tier.id}` to guarantee clean remounting without stale state.
 - **Competitor Name Trimming**: Database enforces `lower(trim(name))` uniqueness. Always trim names before queries/inserts.

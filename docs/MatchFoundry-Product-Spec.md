@@ -108,7 +108,7 @@ The system prioritizes human readability, deterministic rules, minimal runtime o
    * Reverting back to Qualifiers Mode is permitted **only if exactly 0 match scores have been recorded**.
    * Clearing qualifiers is forbidden while match scores exist ("Clear Matches" first).
 5. **Modal & Drawer Dismissal Safety:**
-   * Modals and drawers never dismiss on backdrop/scrim click. Dismissal requires explicit Cancel, Save, or `X` click.
+   * Pop-ups and side drawers that only show information, and confirmation prompts, close when you click or tap outside them or press Escape. A form with unsaved changes asks first ("Discard unsaved changes?" with Keep Editing and Discard Changes) before closing by outside click, Escape, `X`, or Cancel; an outside click or Escape on that prompt keeps editing. Nothing closes while a save is in progress, and a successful Save closes the form without asking.
 
 ---
 

@@ -20,6 +20,7 @@ import { PointsInfoTip } from '../../qualifiers/components/PointsInfoTip';
 import type { OnlineQualSessionSummary } from '../../../api/qualifiers';
 import { TournamentContext } from '../../tournament/store';
 import { isOnlineQualsOpen } from '../onlineQualsStatus';
+import { ConfirmDialog } from '../../../components/overlay';
 
 export interface CompetitorPortalViewProps {
   tournament: Tournament;
@@ -950,107 +951,30 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       )}
 
       {/* Switch Competitor Confirmation Speedbump Modal */}
-      {isSwitchModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          data-testid="switch-competitor-modal"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--color-bg-surface-elevated, #161e27)',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              maxWidth: '480px',
-              width: '100%',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.7)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-gold-bright, #f59e0b)' }}>
-                <AlertCircle size={20} />
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#ffffff' }}>
-                  Switch Competitor?
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSwitchModalOpen(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--color-text-muted, #94a3b8)',
-                  cursor: 'pointer',
-                  fontSize: '1.2rem',
-                  lineHeight: 1,
-                  padding: '0.2rem',
-                }}
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--color-text-secondary, #94a3b8)', lineHeight: 1.5 }}>
-              Your run for <strong style={{ color: '#ffffff' }}>{resolvedPlayer?.name || activeSession?.playerName}</strong> (Authword: <strong style={{ color: 'var(--color-gold-bright, #f59e0b)' }}>{activeSession?.authWord}</strong>) stays open.
+      <ConfirmDialog
+        open={isSwitchModalOpen}
+        tone="warning"
+        title="Switch Competitor?"
+        body={
+          <>
+            <p className="leading-normal text-fg-secondary">
+              Your run for <strong className="text-white">{resolvedPlayer?.name || activeSession?.playerName}</strong> (Authword: <strong className="text-gold-bright">{activeSession?.authWord}</strong>) stays open.
             </p>
-
-            <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--color-text-muted, #64748b)', lineHeight: 1.4 }}>
+            <p className="leading-snug text-fg-muted">
               To come back to it, use your run link or enter the same name and Twitch.
             </p>
-
             {(draftDirtyRef.current || !resumeToken) && scores.some(s => typeof s === 'number' && s > 0) && (
-              <div style={{ padding: '0.5rem 0.75rem', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', fontSize: '0.8rem' }}>
+              <div className="rounded-sm border border-red/30 bg-red/10 px-3 py-2 text-caption text-red-300">
                 ⚠️ Some scores haven't been saved to the server yet and will be lost.
               </div>
             )}
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={() => setIsSwitchModalOpen(false)}
-                data-testid="cancel-switch-competitor-button"
-                className="btn btn-secondary"
-                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-              >
-                Stay in Run
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmSwitchCompetitor}
-                data-testid="confirm-switch-competitor-button"
-                style={{
-                  background: 'rgba(239, 68, 68, 0.2)',
-                  border: '1px solid rgba(239, 68, 68, 0.5)',
-                  color: '#ef4444',
-                  borderRadius: '6px',
-                  padding: '0.5rem 1rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Switch Competitor
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        }
+        cancelLabel="Stay in Run"
+        confirmLabel="Switch Competitor"
+        onCancel={() => setIsSwitchModalOpen(false)}
+        onConfirm={handleConfirmSwitchCompetitor}
+      />
     </div>
   );
 };

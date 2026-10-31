@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useId } from 'react';
 import {
   GripVertical,
   ChevronUp,
@@ -12,8 +12,6 @@ import {
   Layers,
   CheckSquare,
   Square,
-  Shuffle,
-  ArrowUpDown,
   ExternalLink,
 } from 'lucide-react';
 import { Tournament } from '../../types';
@@ -22,6 +20,7 @@ import { BulkSeedImportModal } from './BulkSeedImportModal';
 import { DualListSeedingModal } from './DualListSeedingModal';
 import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../../players/components/PlaystyleChip';
+import { Overlay, ConfirmDialog } from '../../../../components/overlay';
 
 interface ManualSeedingManagerProps {
   tournament: Tournament;
@@ -59,6 +58,8 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
   const [isBatchJumpOpen, setIsBatchJumpOpen] = useState(false);
   const [batchJumpInput, setBatchJumpInput] = useState('');
   const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
+  const jumpTitleId = useId();
+  const batchJumpTitleId = useId();
 
   const isLocked = tournament.isLocked || !canManage;
   const manualSeeds = tournament.manualSeeds || [];
@@ -1206,38 +1207,20 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
       </div>
 
       {/* Jump to Seed Modal */}
-      {jumpSeedTarget && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--color-bg-surface)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
-              width: '100%',
-              maxWidth: '380px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-              Set Seed for {jumpSeedTarget.name}
+      <Overlay
+        open={jumpSeedTarget !== null}
+        onClose={() => setJumpSeedTarget(null)}
+        dirty={jumpSeedTarget !== null && jumpTargetInput !== String(jumpSeedTarget.currentSeed)}
+        aria-labelledby={jumpTitleId}
+        panelClassName="flex max-w-95 flex-col gap-4 rounded-lg border border-line bg-surface p-5"
+      >
+        {({ requestClose }) => (
+          <>
+            <h3 id={jumpTitleId} style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+              Set Seed for {jumpSeedTarget?.name}
             </h3>
             <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-text-muted)' }}>
-              Currently Seed #{jumpSeedTarget.currentSeed}. Enter a new seed position (1 to {manualSeeds.length}):
+              Currently Seed #{jumpSeedTarget?.currentSeed}. Enter a new seed position (1 to {manualSeeds.length}):
             </p>
             <input
               type="number"
@@ -1246,6 +1229,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
               value={jumpTargetInput}
               onChange={e => setJumpTargetInput(e.target.value)}
               autoFocus
+              data-autofocus
               onKeyDown={e => {
                 if (e.key === 'Enter') handleExecuteJump();
               }}
@@ -1264,7 +1248,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <button
                 type="button"
-                onClick={() => setJumpSeedTarget(null)}
+                onClick={requestClose}
                 className="btn btn-secondary"
                 style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
               >
@@ -1279,160 +1263,61 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                 Jump to Seed
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Overlay>
 
       {/* Shuffle Confirmation Modal */}
-      {isShuffleConfirmOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--color-bg-surface)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
-              width: '100%',
-              maxWidth: '420px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--color-gold-bright)' }}>
-              <Shuffle size={20} />
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                Shuffle Seeds?
-              </h3>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
-              This will randomly shuffle all {manualSeeds.length} seeds (ideal for blind draw tournaments). Bracket matchups will update immediately.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={() => setIsShuffleConfirmOpen(false)}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem', justifyContent: 'center', textAlign: 'center' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  shuffleManualSeeds(tournament.id);
-                  setIsShuffleConfirmOpen(false);
-                }}
-                className="btn btn-primary"
-                style={{ fontSize: '0.82rem', padding: '0.4rem 1rem', justifyContent: 'center', textAlign: 'center' }}
-              >
-                Yes, Shuffle Seeds
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={isShuffleConfirmOpen}
+        tone="warning"
+        title="Shuffle Seeds?"
+        body={
+          <p className="leading-snug text-fg-secondary">
+            This will randomly shuffle all {manualSeeds.length} seeds (ideal for blind draw tournaments). Bracket matchups will update immediately.
+          </p>
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Yes, Shuffle Seeds"
+        confirmVariant="primary"
+        onCancel={() => setIsShuffleConfirmOpen(false)}
+        onConfirm={() => {
+          shuffleManualSeeds(tournament.id);
+          setIsShuffleConfirmOpen(false);
+        }}
+      />
 
       {/* Reverse Confirmation Modal */}
-      {isReverseConfirmOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--color-bg-surface)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
-              width: '100%',
-              maxWidth: '420px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--color-gold-bright)' }}>
-              <ArrowUpDown size={20} />
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                Reverse Seeding Order?
-              </h3>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
-              This will invert the order of all {manualSeeds.length} seeds (Seed #1 will become the bottom seed and vice-versa). Bracket matchups will update immediately.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={() => setIsReverseConfirmOpen(false)}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem', justifyContent: 'center', textAlign: 'center' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteReverse}
-                className="btn btn-primary"
-                style={{ fontSize: '0.82rem', padding: '0.4rem 1rem', justifyContent: 'center', textAlign: 'center' }}
-              >
-                Yes, Reverse Seeds
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={isReverseConfirmOpen}
+        tone="warning"
+        title="Reverse Seeding Order?"
+        body={
+          <p className="leading-snug text-fg-secondary">
+            This will invert the order of all {manualSeeds.length} seeds (Seed #1 will become the bottom seed and vice-versa). Bracket matchups will update immediately.
+          </p>
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Yes, Reverse Seeds"
+        confirmVariant="primary"
+        onCancel={() => setIsReverseConfirmOpen(false)}
+        onConfirm={handleExecuteReverse}
+      />
 
       {/* Batch Jump to Seed Modal */}
-      {isBatchJumpOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--color-bg-surface)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
-              width: '100%',
-              maxWidth: '420px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+      <Overlay
+        open={isBatchJumpOpen}
+        onClose={() => {
+          setIsBatchJumpOpen(false);
+          setBatchJumpInput('');
+        }}
+        dirty={batchJumpInput !== '1'}
+        aria-labelledby={batchJumpTitleId}
+        panelClassName="flex max-w-105 flex-col gap-4 rounded-lg border border-line bg-surface p-5"
+      >
+        {({ requestClose }) => (
+          <>
+            <h3 id={batchJumpTitleId} style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
               Jump {selectedPlayerIds.size} Selected Competitors
             </h3>
             <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
@@ -1449,6 +1334,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                 value={batchJumpInput}
                 onChange={e => setBatchJumpInput(e.target.value)}
                 autoFocus
+                data-autofocus
                 onKeyDown={e => {
                   if (e.key === 'Enter') handleExecuteBatchJump();
                 }}
@@ -1468,10 +1354,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
               <button
                 type="button"
-                onClick={() => {
-                  setIsBatchJumpOpen(false);
-                  setBatchJumpInput('');
-                }}
+                onClick={requestClose}
                 className="btn btn-secondary"
                 style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
               >
@@ -1486,73 +1369,25 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                 Jump to Seed #{batchJumpInput || '1'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Overlay>
 
       {/* Batch Removal Confirmation Modal */}
-      {isBatchDeleteConfirmOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--color-bg-surface)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-border)',
-              width: '100%',
-              maxWidth: '440px',
-              padding: '1.25rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', color: 'var(--color-red)' }}>
-              <AlertTriangle size={20} />
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                Remove {selectedPlayerIds.size} Competitor{selectedPlayerIds.size > 1 ? 's' : ''} from Seeds?
-              </h3>
-            </div>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
-              This will remove {selectedPlayerIds.size} competitors from the tournament seeding list. Remaining competitors will automatically shift up to fill open seeds.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={() => setIsBatchDeleteConfirmOpen(false)}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.82rem', padding: '0.4rem 0.85rem' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteBatchRemove}
-                className="btn btn-primary"
-                style={{
-                  fontSize: '0.82rem',
-                  padding: '0.4rem 1rem',
-                  backgroundColor: 'var(--color-red)',
-                  borderColor: 'var(--color-red)',
-                }}
-              >
-                Yes, Remove Seeds
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={isBatchDeleteConfirmOpen}
+        tone="danger"
+        title={`Remove ${selectedPlayerIds.size} Competitor${selectedPlayerIds.size > 1 ? 's' : ''} from Seeds?`}
+        body={
+          <p className="leading-snug text-fg-secondary">
+            This will remove {selectedPlayerIds.size} competitors from the tournament seeding list. Remaining competitors will automatically shift up to fill open seeds.
+          </p>
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Yes, Remove Seeds"
+        onCancel={() => setIsBatchDeleteConfirmOpen(false)}
+        onConfirm={handleExecuteBatchRemove}
+      />
 
       {/* Bulk Seed Import Modal */}
       <BulkSeedImportModal

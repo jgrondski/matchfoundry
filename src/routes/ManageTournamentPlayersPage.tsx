@@ -16,13 +16,12 @@ import {
   DownloadCloud,
   Search,
   UserX,
-  AlertTriangle,
-  X,
   Layers,
   Edit2,
 } from 'lucide-react';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { isPlaceholderSubmissionStatus } from '../features/online-quals/onlineQualsStatus';
+import { ConfirmDialog } from '../components/overlay';
 
 export const ManageTournamentPlayersPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -519,87 +518,25 @@ export const ManageTournamentPlayersPage: React.FC = () => {
       />
 
       {/* Delete Confirmation Modal */}
-      {playerToRemove && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--color-bg-surface)',
-              borderRadius: 'var(--radius-lg)',
-              border: isRemovalBlocked ? '1px solid var(--color-border)' : '1px solid var(--color-border)',
-              maxWidth: '440px',
-              width: '100%',
-              padding: '1.5rem',
-              boxShadow: 'var(--shadow-lg)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: isRemovalBlocked ? 'var(--color-gold-bright)' : 'var(--color-red)' }}>
-                <AlertTriangle size={20} />
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>
-                  {isRemovalBlocked ? 'Cannot Remove Competitor' : 'Remove Competitor?'}
-                </h3>
-              </div>
-              <button
-                onClick={() => setPlayerToRemove(null)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {isRemovalBlocked ? (
-              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                {removalBlockReason}
-              </p>
-            ) : (
-              <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                Are you sure you want to remove <strong style={{ color: 'var(--color-text-primary)' }}>{playerToRemove.name}</strong> from this tournament's roster? The competitor remains in the global player catalog.
-              </p>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={() => setPlayerToRemove(null)}
-                className="btn btn-secondary"
-                style={{ padding: '0.45rem 0.95rem', fontSize: '0.85rem' }}
-              >
-                {isRemovalBlocked ? 'Close' : 'Cancel'}
-              </button>
-              {!isRemovalBlocked && (
-                <button
-                  type="button"
-                  onClick={handleConfirmRemove}
-                  className="btn btn-primary"
-                  style={{
-                    padding: '0.45rem 1rem',
-                    fontSize: '0.85rem',
-                    background: 'var(--color-red)',
-                    borderColor: 'var(--color-red)',
-                  }}
-                >
-                  Remove Competitor
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={playerToRemove !== null}
+        tone={isRemovalBlocked ? 'warning' : 'danger'}
+        title={isRemovalBlocked ? 'Cannot Remove Competitor' : 'Remove Competitor?'}
+        body={
+          isRemovalBlocked ? (
+            <p className="leading-normal text-fg-secondary">{removalBlockReason}</p>
+          ) : (
+            <p className="leading-normal text-fg-secondary">
+              Are you sure you want to remove <strong className="text-fg">{playerToRemove?.name}</strong> from this tournament's roster? The competitor remains in the global player catalog.
+            </p>
+          )
+        }
+        cancelLabel={isRemovalBlocked ? 'Close' : 'Cancel'}
+        confirmLabel="Remove Competitor"
+        confirmDisabled={isRemovalBlocked}
+        onCancel={() => setPlayerToRemove(null)}
+        onConfirm={handleConfirmRemove}
+      />
     </TournamentLayout>
   );
 };

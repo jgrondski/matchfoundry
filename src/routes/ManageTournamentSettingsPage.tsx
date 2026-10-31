@@ -4,8 +4,9 @@ import { useTournament } from '../features/tournament/store';
 import { Tournament } from '../features/tournament/types';
 import { TournamentLayout } from '../components/TournamentLayout';
 import { TournamentAdminForm } from '../features/tournament/components/TournamentAdminForm';
-import { AlertTriangle, X, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { DiscardChangesDialog } from '../components/overlay';
 
 /**
  * Tier 1: Route Gate (Hydration & Data Boundary)
@@ -116,93 +117,7 @@ const TournamentSettingsView: React.FC<TournamentSettingsViewProps> = ({ tournam
       </main>
 
       {/* Unsaved Changes Speedbump Modal */}
-      {pendingNavigation && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div
-            style={{
-              background: 'var(--color-bg-surface)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--color-gold)',
-              maxWidth: '460px',
-              width: '100%',
-              boxShadow: 'var(--shadow-lg)',
-              overflow: 'hidden',
-              animation: 'fadeIn 0.2s ease-out',
-            }}
-          >
-            <div
-              style={{
-                padding: '1.25rem 1.5rem',
-                background: 'var(--color-bg-surface-elevated)',
-                borderBottom: '1px solid var(--color-border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--color-gold-bright)' }}>
-                <AlertTriangle size={20} />
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-                  Unsaved Changes
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={handleStay}
-                style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: '0.25rem' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <p style={{ fontSize: '0.9rem', color: 'var(--color-text-primary)', lineHeight: 1.5 }}>
-                You have unsaved changes in tournament settings. If you leave this page now, your changes will be discarded.
-              </p>
-            </div>
-
-            <div
-              style={{
-                padding: '1rem 1.5rem',
-                background: 'var(--color-bg-surface-elevated)',
-                borderTop: '1px solid var(--color-border)',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.75rem',
-              }}
-            >
-              <button
-                type="button"
-                onClick={handleStay}
-                className="btn btn-secondary"
-                style={{ padding: '0.5rem 1.25rem' }}
-              >
-                Stay
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmLeave}
-                className="btn btn-danger"
-                style={{ padding: '0.5rem 1.25rem' }}
-              >
-                Discard &amp; Leave
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DiscardChangesDialog open={pendingNavigation !== null} onKeepEditing={handleStay} onDiscard={handleConfirmLeave} />
     </TournamentLayout>
   );
 };

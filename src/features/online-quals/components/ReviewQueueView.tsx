@@ -3,7 +3,6 @@ import {
   Clock,
   X,
   CheckCheck,
-  AlertTriangle,
 } from 'lucide-react';
 import type { Tournament, PlayerProfile } from '../../tournament/types';
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
@@ -13,6 +12,7 @@ import { getAuthHeaders } from '../../auth/AuthContext';
 import { ReviewQueueTable } from './ReviewQueueTable';
 import { AdjudicationModal } from './AdjudicationModal';
 import { IdentityResolutionModal } from './IdentityResolutionModal';
+import { ConfirmDialog } from '../../../components/overlay';
 
 export interface ReviewQueueViewProps {
   tournament: Tournament;
@@ -424,261 +424,58 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       )}
 
       {/* Discard Unfinished Run Speedbump Modal */}
-      {discardTarget && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div
-            data-testid="discard-run-modal"
-            style={{
-              background: 'var(--color-bg-surface, #181b20)',
-              borderRadius: 'var(--radius-lg, 12px)',
-              border: '1px solid rgba(239, 68, 68, 0.5)',
-              maxWidth: '480px',
-              width: '100%',
-              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6)',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                padding: '1.25rem 1.5rem',
-                borderBottom: '1px solid var(--color-border, #2d3139)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <AlertTriangle size={22} color="#ef4444" />
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
-                  Discard Unfinished Run?
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDiscardTarget(null)}
-                disabled={isSubmitting}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--color-text-muted, #94a3b8)',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  padding: '0.25rem',
-                  display: 'flex',
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--color-text-secondary, #cbd5e1)', lineHeight: 1.5 }}>
-                <strong style={{ color: '#ffffff' }}>{discardTarget.playerName}</strong>'s run (Authword{' '}
-                <strong style={{ color: 'var(--color-gold-bright)' }}>{discardTarget.authWord}</strong>) and anything typed
-                into it so far will be deleted. They can start a new run afterwards.
+      <ConfirmDialog
+        open={discardTarget !== null}
+        tone="danger"
+        title="Discard Unfinished Run?"
+        body={
+          <>
+            <p className="leading-normal text-fg-secondary">
+              <strong className="text-white">{discardTarget?.playerName}</strong>'s run (Authword{' '}
+              <strong className="text-gold-bright">{discardTarget?.authWord}</strong>) and anything typed
+              into it so far will be deleted. They can start a new run afterwards.
+            </p>
+            {discardTarget?.identityStatus === 'PROVISIONAL_NEW' && (
+              <p className="text-caption leading-snug text-fg-muted">
+                This run created {discardTarget.playerName} as a walk-in player. If they have nothing else on record,
+                they'll be removed from the player list too.
               </p>
-              {discardTarget.identityStatus === 'PROVISIONAL_NEW' && (
-                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-text-muted, #94a3b8)', lineHeight: 1.4 }}>
-                  This run created {discardTarget.playerName} as a walk-in player. If they have nothing else on record,
-                  they'll be removed from the player list too.
-                </p>
-              )}
-            </div>
-
-            <div
-              style={{
-                padding: '1rem 1.5rem',
-                borderTop: '1px solid var(--color-border, #2d3139)',
-                background: 'var(--color-bg-base, #111317)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: '0.75rem',
-              }}
-            >
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => setDiscardTarget(null)}
-                className="btn btn-secondary"
-                style={{ padding: '0.55rem 1.15rem', fontSize: '0.85rem' }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                data-testid="confirm-discard-run-button"
-                disabled={isSubmitting}
-                onClick={handleDiscardRun}
-                style={{
-                  padding: '0.55rem 1.15rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  background: 'rgba(239, 68, 68, 0.2)',
-                  border: '1px solid rgba(239, 68, 68, 0.5)',
-                  color: '#ef4444',
-                  borderRadius: 'var(--radius-md, 6px)',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {isSubmitting ? 'Discarding...' : 'Discard Run'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
+          </>
+        }
+        cancelLabel="Cancel"
+        confirmLabel={isSubmitting ? 'Discarding...' : 'Discard Run'}
+        busy={isSubmitting}
+        onCancel={() => setDiscardTarget(null)}
+        onConfirm={handleDiscardRun}
+      />
 
       {/* Verify All Speedbump Modal */}
-      {isVerifyAllModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
-        >
-          <div
-            data-testid="verify-all-modal"
-            style={{
-              background: 'var(--color-bg-surface, #181b20)',
-              borderRadius: 'var(--radius-lg, 12px)',
-              border: '1px solid rgba(234, 179, 8, 0.5)',
-              maxWidth: '480px',
-              width: '100%',
-              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6)',
-              overflow: 'hidden',
-              animation: 'fadeIn 0.2s ease-out',
-            }}
-          >
-            {/* Modal Header */}
-            <div
-              style={{
-                padding: '1.25rem 1.5rem',
-                borderBottom: '1px solid var(--color-border, #2d3139)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                <AlertTriangle size={22} color="var(--color-gold-bright, #f59e0b)" />
-                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
-                  Verify All Qualifiers?
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsVerifyAllModalOpen(false)}
-                disabled={isSubmitting}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--color-text-muted, #94a3b8)',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                  padding: '0.25rem',
-                  display: 'flex',
-                }}
-              >
-                <X size={18} />
-              </button>
+      <ConfirmDialog
+        open={isVerifyAllModalOpen}
+        tone="warning"
+        title="Verify All Qualifiers?"
+        body={
+          <>
+            <div className="rounded-md border border-[rgba(234,179,8,0.35)] bg-[rgba(234,179,8,0.12)] px-4 py-3.5 text-sm leading-normal font-semibold text-gold-bright">
+              ⚠️ Are you sure you want to verify all {pendingUnverifiedCount} pending qualifier run{pendingUnverifiedCount === 1 ? '' : 's'}?
             </div>
-
-            {/* Modal Body */}
-            <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div
-                style={{
-                  padding: '0.85rem 1rem',
-                  borderRadius: 'var(--radius-md, 8px)',
-                  background: 'rgba(234, 179, 8, 0.12)',
-                  border: '1px solid rgba(234, 179, 8, 0.35)',
-                  color: 'var(--color-gold-bright, #f59e0b)',
-                  fontSize: '0.85rem',
-                  lineHeight: 1.45,
-                  fontWeight: 600,
-                }}
-              >
-                ⚠️ Are you sure you want to verify all {pendingUnverifiedCount} pending qualifier run{pendingUnverifiedCount === 1 ? '' : 's'}?
-              </div>
-              <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--color-text-secondary, #cbd5e1)', lineHeight: 1.5 }}>
-                This will immediately mark all currently pending qualifier submissions as <strong>VERIFIED</strong>, lock in official scores on the public leaderboard, and update tournament seeding drafts.
-              </p>
-              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-text-muted, #94a3b8)', lineHeight: 1.4 }}>
-                This action is intended for organizers verifying all outstanding runs in bulk.
-              </p>
-            </div>
-
-            {/* Modal Footer */}
-            <div
-              style={{
-                padding: '1rem 1.5rem',
-                borderTop: '1px solid var(--color-border, #2d3139)',
-                background: 'var(--color-bg-base, #111317)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: '0.75rem',
-              }}
-            >
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => setIsVerifyAllModalOpen(false)}
-                className="btn btn-secondary"
-                style={{
-                  padding: '0.55rem 1.15rem',
-                  fontSize: '0.85rem',
-                  background: 'transparent',
-                  border: '1px solid var(--color-border, #3f3f46)',
-                  color: 'var(--color-text-main, #ffffff)',
-                  borderRadius: 'var(--radius-md, 6px)',
-                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                data-testid="confirm-verify-all-button"
-                disabled={isSubmitting || pendingUnverifiedCount === 0}
-                onClick={handleVerifyAll}
-                className="btn btn-primary"
-                style={{
-                  padding: '0.55rem 1.15rem',
-                  fontSize: '0.85rem',
-                  background: 'var(--color-gold-bright, #f59e0b)',
-                  color: '#000000',
-                  fontWeight: 800,
-                  border: 'none',
-                  borderRadius: 'var(--radius-md, 6px)',
-                  cursor: isSubmitting || pendingUnverifiedCount === 0 ? 'not-allowed' : 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                }}
-              >
-                {isSubmitting ? 'Verifying...' : `Yes, Verify All (${pendingUnverifiedCount})`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            <p className="leading-normal text-fg-secondary">
+              This will immediately mark all currently pending qualifier submissions as <strong>VERIFIED</strong>, lock in official scores on the public leaderboard, and update tournament seeding drafts.
+            </p>
+            <p className="text-caption leading-snug text-fg-muted">
+              This action is intended for organizers verifying all outstanding runs in bulk.
+            </p>
+          </>
+        }
+        cancelLabel="Cancel"
+        confirmLabel={isSubmitting ? 'Verifying...' : `Yes, Verify All (${pendingUnverifiedCount})`}
+        confirmVariant="primary"
+        busy={isSubmitting}
+        confirmDisabled={pendingUnverifiedCount === 0}
+        onCancel={() => setIsVerifyAllModalOpen(false)}
+        onConfirm={handleVerifyAll}
+      />
     </div>
   );
 };
