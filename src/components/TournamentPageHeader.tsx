@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trophy, Search, Video, ExternalLink, X } from 'lucide-react';
+import { buttonClasses, cn, IconButton } from './ui';
 
 export interface TournamentPageHeaderProps {
   eyebrow: string;
@@ -27,51 +28,27 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
   isObsMode = false,
 }) => {
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem',
-      }}
-    >
+    <div className="flex flex-wrap items-center justify-between gap-4">
       {/* Title & Eyebrow */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
-          <span
-            style={{
-              fontSize: '0.78rem',
-              fontWeight: 700,
-              color: 'var(--color-gold-bright)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-            }}
-          >
-            {eyebrow}
-          </span>
+        <div className="mb-1 flex items-center gap-2">
+          <span className="text-caption font-bold tracking-widest text-gold-bright uppercase">{eyebrow}</span>
         </div>
         <h1
-          style={{
-            fontSize: isObsMode ? '1.5rem' : '1.85rem',
-            fontWeight: 800,
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.65rem',
-            letterSpacing: '-0.02em',
-            margin: 0,
-          }}
+          className={cn(
+            'm-0 flex items-center gap-2.5 font-extrabold tracking-tight text-white',
+            isObsMode ? 'text-2xl' : 'text-3xl'
+          )}
         >
           {icon || <Trophy color="var(--color-gold-bright)" size={isObsMode ? 24 : 28} />}
           {title}
         </h1>
-        {subtitle && <div style={{ marginTop: '0.35rem' }}>{subtitle}</div>}
+        {subtitle && <div className="mt-1.5">{subtitle}</div>}
       </div>
 
       {/* Action Controls & Search Group */}
       {!isObsMode && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap items-center gap-3">
           {action}
 
           {obsUrl && (
@@ -79,9 +56,12 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
               href={obsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-secondary"
+              className={buttonClasses({
+                variant: 'secondary',
+                className:
+                  'gap-1.5 px-3.5 py-2 text-caption whitespace-nowrap hover:border-fg-secondary hover:bg-highlight',
+              })}
               title="Open OBS broadcast overlay in new tab (stripped chrome, transparent background)"
-              style={{ fontSize: '0.8rem', padding: '0.5rem 0.85rem', gap: '0.4rem', whiteSpace: 'nowrap' }}
             >
               <Video size={15} color="var(--color-gold-bright)" />
               <span>OBS Overlay</span>
@@ -90,59 +70,31 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
           )}
 
           {onSearchChange !== undefined && (
-            <div style={{ position: 'relative', width: '280px', maxWidth: '100%' }}>
+            <div className="relative w-70 max-w-full">
               <Search
                 size={16}
                 color="var(--color-text-muted)"
-                style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  pointerEvents: 'none',
-                }}
+                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
               />
               <input
                 type="text"
                 placeholder={searchPlaceholder}
                 value={searchTerm || ''}
                 onChange={e => onSearchChange(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: searchTerm ? '0.55rem 2rem 0.55rem 2.25rem' : '0.55rem 0.85rem 0.55rem 2.25rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--color-border)',
-                  background: 'var(--color-bg-surface)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: '0.85rem',
-                  outline: 'none',
-                  transition: 'border-color 0.15s ease',
-                  boxSizing: 'border-box',
-                }}
+                className={cn(
+                  'w-full rounded-md border border-line bg-surface py-2 pl-9 text-sm text-fg outline-none transition-colors duration-150',
+                  searchTerm ? 'pr-8' : 'pr-3.5'
+                )}
               />
               {searchTerm && (
-                <button
-                  type="button"
+                <IconButton
                   onClick={() => onSearchChange('')}
                   title="Clear search"
                   aria-label="Clear search"
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
-                    border: 'none',
-                    padding: '2px',
-                    cursor: 'pointer',
-                    color: 'var(--color-text-muted)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
+                  className="absolute top-1/2 right-2 -translate-y-1/2 p-0.5"
                 >
                   <X size={14} />
-                </button>
+                </IconButton>
               )}
             </div>
           )}

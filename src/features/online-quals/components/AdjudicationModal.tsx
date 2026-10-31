@@ -3,6 +3,7 @@ import { CheckCircle2, AlertTriangle, ExternalLink, ShieldAlert, StickyNote, X, 
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { Overlay } from '../../../components/overlay';
+import { Button, IconButton, buttonClasses, cn } from '../../../components/ui';
 
 export interface AdjudicationModalProps {
   isOpen: boolean;
@@ -89,17 +90,8 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--color-bg-surface-elevated)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="flex items-center justify-between border-b border-line bg-elevated px-6 py-5">
+            <div className="flex items-center gap-3">
               <PlayerAvatar
                 player={{
                   name: session.playerName,
@@ -110,101 +102,55 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 size={36}
               />
               <div>
-                <h2
-                  id={titleId}
-                  style={{
-                    fontSize: '1.2rem',
-                    fontWeight: 800,
-                    color: '#ffffff',
-                    margin: 0,
-                  }}
-                >
+                <h2 id={titleId} className="m-0 text-lg font-extrabold text-white">
                   Adjudicate Run: {session.playerName}
                 </h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
+                <div className="mt-1 flex items-center gap-2">
                   {session.submittedTwitchUsername && (
-                    <span style={{ fontSize: '0.8rem', color: '#a78bfa' }}>
+                    <span className="text-caption text-violet-400">
                       Twitch: @{session.submittedTwitchUsername}
                     </span>
                   )}
                   {session.status !== 'SUBMITTED' && (
                     <span
-                      style={{
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        padding: '0.1rem 0.45rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background:
-                          session.status === 'VERIFIED'
-                            ? 'rgba(34, 197, 94, 0.2)'
-                            : 'rgba(239, 68, 68, 0.2)',
-                        color:
-                          session.status === 'VERIFIED'
-                            ? '#4ade80'
-                            : '#f87171',
-                      }}
+                      className={cn(
+                        'rounded-sm px-2 py-0.5 text-xs font-bold',
+                        session.status === 'VERIFIED' ? 'bg-green-500/20 text-green-400' : 'bg-red/20 text-red-bright'
+                      )}
                     >
                       Status: {session.status}
                     </span>
                   )}
                   {onOpenIdentity && (
-                    <button
+                    <Button
                       type="button"
                       onClick={() => onOpenIdentity(session)}
-                      className="btn btn-secondary"
-                      style={{
-                        fontSize: '0.72rem',
-                        padding: '0.15rem 0.5rem',
-                        color: 'var(--color-gold-bright)',
-                        borderColor: 'rgba(245, 158, 11, 0.4)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        marginLeft: '0.35rem',
-                      }}
+                      variant="secondary"
+                      className="ml-1.5 inline-flex items-center gap-1 border-gold/40 px-2 py-0.5 text-xs text-gold-bright enabled:hover:border-gold/40"
                     >
                       <UserCheck size={13} />
                       Reconcile / Change Player
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
             </div>
-            <button
+            <IconButton
               onClick={requestClose}
               aria-label="Close Adjudication Dialog"
               disabled={isSubmitting}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '0.4rem',
-                borderRadius: 'var(--radius-sm)',
-              }}
+              className="p-1.5"
             >
               <X size={20} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Scrollable Content */}
-          <div style={{ padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="flex flex-col gap-5 overflow-y-auto p-6">
             {/* Overtime Alert */}
             {isOvertime && (
-              <div
-                style={{
-                  background: 'rgba(239, 68, 68, 0.12)',
-                  border: '1px solid rgba(239, 68, 68, 0.4)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.85rem 1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  color: '#fca5a5',
-                  fontSize: '0.85rem',
-                }}
-              >
-                <AlertTriangle size={20} color="#ef4444" style={{ flexShrink: 0 }} />
+              <div className="flex items-center gap-3 rounded-md border border-red/40 bg-red/12 px-4 py-3.5 text-sm text-red-300">
+                <AlertTriangle size={20} color="#ef4444" className="shrink-0" />
                 <div>
                   <strong>Overtime Recorded:</strong> Submission was submitted after the official tournament window.
                   Review elapsed telemetry before approving.
@@ -214,64 +160,28 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
 
             {/* Competitor's notes from submission (also posted publicly to Discord) */}
             {session.playerNotes && (
-              <div
-                style={{
-                  background: 'rgba(168, 85, 247, 0.12)',
-                  border: '1px solid rgba(168, 85, 247, 0.4)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.85rem 1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.4rem',
-                  color: '#d8b4fe',
-                  fontSize: '0.85rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+              <div className="flex flex-col gap-1.5 rounded-md border border-purple-500/40 bg-purple-500/12 px-4 py-3.5 text-sm text-[#d8b4fe]">
+                <div className="flex items-center gap-2 font-bold">
                   <StickyNote size={16} color="#a855f7" />
                   Competitor Notes
                 </div>
-                <div style={{ color: '#ffffff', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                <div className="whitespace-pre-wrap rounded-sm bg-black/30 px-3 py-2 text-white wrap-anywhere">
                   {session.playerNotes}
                 </div>
               </div>
             )}
 
             {/* Authword & Twitch VOD Checklist */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1rem',
-              }}
-            >
+            <div className="grid grid-cols-2 gap-4">
               {/* Authword HUD Box */}
-              <div
-                style={{
-                  background: 'var(--color-bg-surface-elevated)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 700 }}>
+              <div className="flex flex-col gap-2 rounded-md border border-line bg-elevated p-4">
+                <span className="text-xs font-bold uppercase text-fg-muted">
                   Assigned NES Authword
                 </span>
-                <div
-                  style={{
-                    fontFamily: 'monospace',
-                    fontSize: '1.4rem',
-                    fontWeight: 900,
-                    letterSpacing: '0.15em',
-                    color: 'var(--color-gold-bright)',
-                  }}
-                >
+                <div className="font-mono text-2xl font-black tracking-widest text-gold-bright">
                   {session.authWord || '-'}
                 </div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                <span className="text-xs text-fg-secondary">
                   {session.submissionSource === 'IN_PERSON'
                     ? 'In-person qualification at venue.'
                     : 'Verify this word appears on the NES 10,000 pts topout high-score screen in the VOD.'}
@@ -279,31 +189,14 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
               </div>
 
               {/* Timer Telemetry */}
-              <div
-                style={{
-                  background: 'var(--color-bg-surface-elevated)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 700 }}>
+              <div className="flex flex-col gap-2 rounded-md border border-line bg-elevated p-4">
+                <span className="text-xs font-bold uppercase text-fg-muted">
                   {session.submissionSource === 'IN_PERSON' ? 'Qual Window Time' : 'Run Elapsed Timer'}
                 </span>
-                <div
-                  style={{
-                    fontFamily: 'monospace',
-                    fontSize: '1.4rem',
-                    fontWeight: 800,
-                    color: isOvertime ? '#ef4444' : '#4ade80',
-                  }}
-                >
+                <div className={cn('font-mono text-2xl font-extrabold', isOvertime ? 'text-red' : 'text-green-400')}>
                   {elapsedMinutes}m {elapsedRemSec}s
                 </div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                <span className="text-xs text-fg-secondary">
                   {session.submissionSource === 'IN_PERSON'
                     ? 'In-person tournament window duration.'
                     : `Started: ${new Date(session.timerLog?.startedAt || Date.now()).toLocaleTimeString()}`}
@@ -313,52 +206,39 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
 
             {/* Twitch VOD Link or In-Person Marker */}
             <div
-              style={{
-                background: session.submissionSource === 'IN_PERSON' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(167, 139, 250, 0.08)',
-                border: session.submissionSource === 'IN_PERSON' ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(167, 139, 250, 0.3)',
-                borderRadius: 'var(--radius-md)',
-                padding: '0.85rem 1rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
+              className={cn(
+                'flex items-center justify-between rounded-md border px-4 py-3.5',
+                session.submissionSource === 'IN_PERSON'
+                  ? 'border-blue-500/30 bg-blue-500/8'
+                  : 'border-violet-400/30 bg-violet-400/8'
+              )}
             >
               {session.submissionSource === 'IN_PERSON' ? (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div className="flex items-center gap-2.5">
                     <MapPin size={20} color="#60a5fa" />
                     <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
+                      <div className="text-sm font-bold text-white">
                         In-Person Qualification Event
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      <div className="text-xs text-fg-muted">
                         Scores recorded in person at venue
                       </div>
                     </div>
                   </div>
-                  <span
-                    style={{
-                      fontSize: '0.78rem',
-                      padding: '0.25rem 0.65rem',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'rgba(59, 130, 246, 0.15)',
-                      color: '#60a5fa',
-                      fontWeight: 700,
-                      border: '1px solid rgba(59, 130, 246, 0.3)',
-                    }}
-                  >
+                  <span className="rounded-sm border border-blue-500/30 bg-blue-500/15 px-2.5 py-1 text-caption font-bold text-blue-400">
                     In Person
                   </span>
                 </>
               ) : (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <div className="flex items-center gap-2.5">
                     <Film size={20} color="#a78bfa" />
                     <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
+                      <div className="text-sm font-bold text-white">
                         Twitch Broadcast VOD
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      <div className="text-xs text-fg-muted">
                         {session.twitchVodUrl || 'No VOD URL provided'}
                       </div>
                     </div>
@@ -368,16 +248,11 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                       href={session.twitchVodUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn btn-secondary"
-                      style={{
-                        fontSize: '0.8rem',
-                        padding: '0.35rem 0.75rem',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.35rem',
-                        color: '#a78bfa',
-                        borderColor: 'rgba(167, 139, 250, 0.4)',
-                      }}
+                      className={buttonClasses({
+                        variant: 'secondary',
+                        size: 'sm',
+                        className: 'border-violet-400/40 text-caption text-violet-400 hover:border-violet-400/40 hover:bg-highlight',
+                      })}
                     >
                       Open VOD <ExternalLink size={14} />
                     </a>
@@ -387,50 +262,34 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
             </div>
 
             {/* Scores Review & Adjustment */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-fg">
                   Submitted Game Scores:
                 </label>
                 <button
                   type="button"
                   onClick={handleAddGame}
                   disabled={isSubmitting}
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid var(--color-border)',
-                    color: 'var(--color-gold-bright)',
-                    fontSize: '0.75rem',
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer',
-                  }}
+                  className="cursor-pointer rounded-sm border border-line bg-transparent px-2 py-1 text-xs text-gold-bright"
                 >
                   + Add Game
                 </button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
                 {scores.map((score, idx) => (
                   <div
                     key={idx}
-                    style={{
-                      background: 'var(--color-bg-surface-elevated)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-md)',
-                      padding: '0.5rem 0.75rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.25rem',
-                    }}
+                    className="flex flex-col gap-1 rounded-md border border-line bg-elevated px-3 py-2"
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                    <div className="flex justify-between text-xs text-fg-muted">
                       <span>Game {idx + 1}</span>
                       {scores.length > 1 && (
                         <button
                           type="button"
                           onClick={() => handleRemoveGame(idx)}
                           disabled={isSubmitting}
-                          style={{ background: 'transparent', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.7rem' }}
+                          className="cursor-pointer border-0 bg-transparent text-2xs text-red-bright"
                         >
                           Remove
                         </button>
@@ -449,16 +308,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                       placeholder="e.g. 1,024,500"
                       onChange={e => handleScoreChange(idx, e.target.value)}
                       disabled={isSubmitting}
-                      style={{
-                        background: 'rgba(0, 0, 0, 0.4)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '0.4rem 0.6rem',
-                        color: '#ffffff',
-                        fontFamily: 'monospace',
-                        fontWeight: 700,
-                        fontSize: '0.95rem',
-                      }}
+                      className="rounded-sm border border-line bg-black/40 px-2.5 py-1.5 font-mono text-base font-bold text-white"
                     />
                   </div>
                 ))}
@@ -466,8 +316,8 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
             </div>
 
             {/* Judge Notes */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <label htmlFor="judge-notes-input" style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="judge-notes-input" className="text-sm font-bold text-fg">
                 Judge Audit Notes (Appended to submission log):
               </label>
               <textarea
@@ -477,127 +327,78 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 onChange={e => setJudgeNotes(e.target.value)}
                 placeholder="e.g. Verified 10k topout Authword at 12:45 VOD mark. Score edited for Game 2."
                 disabled={isSubmitting}
-                style={{
-                  background: 'var(--color-bg-surface-elevated)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '0.6rem 0.75rem',
-                  color: '#ffffff',
-                  fontSize: '0.85rem',
-                  resize: 'vertical',
-                }}
+                className="resize-y rounded-sm border border-line bg-elevated px-3 py-2.5 text-sm text-white"
               />
             </div>
           </div>
 
           {/* Footer Actions */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderTop: '1px solid var(--color-border)',
-              background: 'var(--color-bg-surface-elevated)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-elevated px-6 py-4">
             {/* Destructive actions (DNQ, DQ) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <button
+            <div className="flex items-center gap-2">
+              <Button
                 type="button"
                 onClick={() => onAdjudicate('DNQ', { judgeNotes })}
                 disabled={isSubmitting}
-                className="btn btn-secondary"
-                style={{
-                  color: '#fbbf24',
-                  borderColor: 'rgba(245, 158, 11, 0.4)',
-                  fontSize: '0.8rem',
-                }}
+                variant="secondary"
+                className="border-gold/40 text-caption text-gold-bright enabled:hover:border-gold/40"
               >
                 Mark DNQ
-              </button>
+              </Button>
               {!confirmDQ ? (
-                <button
+                <Button
                   type="button"
                   onClick={() => setConfirmDQ(true)}
                   disabled={isSubmitting}
-                  className="btn btn-secondary"
-                  style={{
-                    color: '#f87171',
-                    borderColor: 'rgba(239, 68, 68, 0.4)',
-                    fontSize: '0.8rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                  }}
+                  variant="secondary"
+                  className="inline-flex items-center gap-1.5 border-red/40 text-caption text-red-bright enabled:hover:border-red/40"
                 >
                   <ShieldAlert size={14} /> Disqualify (DQ)
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   type="button"
                   onClick={() => onAdjudicate('DQ', { judgeNotes })}
                   disabled={isSubmitting}
-                  className="btn"
-                  style={{
-                    background: '#ef4444',
-                    color: '#ffffff',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                  }}
+                  variant="danger"
+                  className="border-transparent bg-red text-caption font-bold text-white"
                 >
                   Confirm Disqualify
-                </button>
+                </Button>
               )}
             </div>
 
             {/* Approval Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button
+            <div className="flex items-center gap-3">
+              <Button
                 type="button"
                 onClick={requestClose}
                 disabled={isSubmitting}
-                className="btn btn-secondary"
-                style={{ fontSize: '0.85rem' }}
+                variant="secondary"
+                className="text-sm"
               >
                 Cancel
-              </button>
+              </Button>
               {scoresChanged ? (
-                <button
+                <Button
                   type="button"
                   onClick={() => onAdjudicate('EDIT_AND_VERIFY', { scores, judgeNotes })}
                   disabled={isSubmitting}
-                  className="btn btn-primary"
-                  style={{
-                    fontSize: '0.85rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    background: '#3b82f6',
-                    borderColor: '#2563eb',
-                  }}
+                  variant="primary"
+                  className="inline-flex items-center gap-1.5 text-sm border-blue-600 bg-blue-500 bg-none"
                 >
                   <Edit3 size={15} /> Edit Score &amp; Verify
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button
                   type="button"
                   onClick={() => onAdjudicate('VERIFY', { judgeNotes })}
                   disabled={isSubmitting}
-                  className="btn btn-primary"
-                  style={{
-                    fontSize: '0.85rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    background: '#16a34a',
-                    borderColor: '#15803d',
-                  }}
+                  variant="primary"
+                  className="inline-flex items-center gap-1.5 text-sm border-[#15803d] bg-[#16a34a] bg-none"
                 >
                   <CheckCircle2 size={15} /> Verify Qual
-                </button>
+                </Button>
               )}
             </div>
           </div>

@@ -4,6 +4,17 @@ import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import type { PlayerProfile } from '../../tournament/types';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { Overlay } from '../../../components/overlay';
+import { Button, IconButton, cn } from '../../../components/ui';
+
+const tabClass = (active: boolean) =>
+  cn(
+    'flex-1 cursor-pointer border-0 border-b-2 p-3 text-sm font-bold',
+    active ? 'border-gold-bright bg-surface text-white' : 'border-transparent bg-transparent text-fg-muted'
+  );
+
+const labelClass = 'mb-1.5 block text-caption font-bold text-fg-muted';
+
+const fieldClass = 'w-full rounded-md border border-line bg-elevated px-3 py-2 text-sm text-white';
 
 export interface IdentityResolutionModalProps {
   isOpen: boolean;
@@ -64,74 +75,35 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--color-bg-surface-elevated)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div className="flex items-center justify-between border-b border-line bg-elevated px-6 py-5">
+            <div className="flex items-center gap-2.5">
               <UserCheck size={22} color="var(--color-gold-bright)" />
               <div>
-                <h2
-                  id={titleId}
-                  style={{
-                    fontSize: '1.15rem',
-                    fontWeight: 800,
-                    color: '#ffffff',
-                    margin: 0,
-                  }}
-                >
+                <h2 id={titleId} className="m-0 text-lg font-extrabold text-white">
                   Resolve Competitor Identity: {session.playerName}
                 </h2>
-                <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                <span className="text-caption text-fg-muted">
                   Twitch: @{session.submittedTwitchUsername || 'N/A'} (ID: {session.submittedTwitchId || 'N/A'})
                 </span>
               </div>
             </div>
-            <button
+            <IconButton
               onClick={requestClose}
               aria-label="Close Identity Resolution Dialog"
               disabled={isSubmitting}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '0.4rem',
-              }}
+              className="p-1.5"
             >
               <X size={20} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Tab Controls: Tab 1 = Reassign Competitor (Default), Tab 2 = Add Global Player */}
-          <div
-            style={{
-              display: 'flex',
-              borderBottom: '1px solid var(--color-border)',
-              background: 'rgba(0, 0, 0, 0.25)',
-            }}
-          >
+          <div className="flex border-b border-line bg-black/25">
             <button
               type="button"
               data-testid="tab-reassign"
               onClick={() => setActiveTab('reassign')}
-              style={{
-                flex: 1,
-                padding: '0.75rem',
-                background: activeTab === 'reassign' ? 'var(--color-bg-surface)' : 'transparent',
-                border: 'none',
-                borderBottom: activeTab === 'reassign' ? '2px solid var(--color-gold-bright)' : '2px solid transparent',
-                color: activeTab === 'reassign' ? '#ffffff' : 'var(--color-text-muted)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-              }}
+              className={tabClass(activeTab === 'reassign')}
             >
               Reassign Competitor
             </button>
@@ -139,17 +111,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
               type="button"
               data-testid="tab-add-global"
               onClick={() => setActiveTab('add_global')}
-              style={{
-                flex: 1,
-                padding: '0.75rem',
-                background: activeTab === 'add_global' ? 'var(--color-bg-surface)' : 'transparent',
-                border: 'none',
-                borderBottom: activeTab === 'add_global' ? '2px solid var(--color-gold-bright)' : '2px solid transparent',
-                color: activeTab === 'add_global' ? '#ffffff' : 'var(--color-text-muted)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                cursor: 'pointer',
-              }}
+              className={tabClass(activeTab === 'add_global')}
             >
               Add Global Player
             </button>
@@ -158,17 +120,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                 type="button"
                 data-testid="tab-confirm"
                 onClick={() => setActiveTab('confirm')}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  background: activeTab === 'confirm' ? 'var(--color-bg-surface)' : 'transparent',
-                  border: 'none',
-                  borderBottom: activeTab === 'confirm' ? '2px solid var(--color-gold-bright)' : '2px solid transparent',
-                  color: activeTab === 'confirm' ? '#ffffff' : 'var(--color-text-muted)',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                }}
+                className={tabClass(activeTab === 'confirm')}
               >
                 Confirm Binding
               </button>
@@ -176,58 +128,34 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
           </div>
 
           {/* Tab Body */}
-          <div style={{ padding: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="flex flex-col gap-4 overflow-y-auto p-6">
             {/* TAB 1: Reassign Competitor */}
             {activeTab === 'reassign' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+              <div className="flex flex-col gap-3.5">
+                <p className="m-0 text-sm text-fg-secondary">
                   If the competitor has an existing account under another name or claimed the wrong person,
                   select the correct competitor below to transfer this run.
                 </p>
 
                 {/* Search Box */}
-                <div style={{ position: 'relative' }}>
+                <div className="relative">
                   <Search
                     size={16}
-                    style={{
-                      position: 'absolute',
-                      left: '0.75rem',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'var(--color-text-muted)',
-                    }}
+                    className="absolute top-1/2 left-3 -translate-y-1/2 text-fg-muted"
                   />
                   <input
                     type="text"
                     placeholder="Search registered competitors..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem 0.55rem 2.25rem',
-                      background: 'var(--color-bg-surface-elevated)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-md)',
-                      color: '#ffffff',
-                      fontSize: '0.85rem',
-                      boxSizing: 'border-box',
-                    }}
+                    className={cn(fieldClass, 'pl-9')}
                   />
                 </div>
 
                 {/* Competitors List */}
-                <div
-                  style={{
-                    maxHeight: '220px',
-                    overflowY: 'auto',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-md)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                  }}
-                >
+                <div className="flex max-h-55 flex-col overflow-y-auto rounded-md border border-line">
                   {filteredPlayers.length === 0 ? (
-                    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                    <div className="p-6 text-center text-sm text-fg-muted">
                       No matching competitors found.
                     </div>
                   ) : (
@@ -237,32 +165,26 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                         <div
                           key={p.id}
                           onClick={() => setSelectedTargetId(p.id)}
-                          style={{
-                            padding: '0.65rem 0.85rem',
-                            background: isSelected ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
-                            borderBottom: '1px solid var(--color-border-subtle)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            cursor: 'pointer',
-                            transition: 'background 0.1s',
-                          }}
+                          className={cn(
+                            'flex cursor-pointer items-center justify-between border-b border-line-subtle px-3.5 py-2.5 transition-colors duration-100',
+                            isSelected ? 'bg-gold/15' : 'bg-transparent'
+                          )}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <div className="flex items-center gap-2.5">
                             <PlayerAvatar player={p} size={28} />
                             <div>
-                              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ffffff' }}>
+                              <div className="text-sm font-bold text-white">
                                 {p.name}
                               </div>
                               {p.twitchUsername && (
-                                <div style={{ fontSize: '0.72rem', color: '#a78bfa' }}>
+                                <div className="text-xs text-violet-400">
                                   @{p.twitchUsername}
                                 </div>
                               )}
                             </div>
                           </div>
                           {isSelected && (
-                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-gold-bright)' }}>
+                            <span className="text-xs font-extrabold text-gold-bright">
                               Selected
                             </span>
                           )}
@@ -276,23 +198,13 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
 
             {/* TAB 2: Add Global Player (Consolidated) */}
             {activeTab === 'add_global' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+              <div className="flex flex-col gap-3.5">
+                <p className="m-0 text-sm text-fg-secondary">
                   Register this competitor as an official player in the global directory with confirmed name, country, and playstyle.
                 </p>
 
                 {/* Profile Card Preview */}
-                <div
-                  style={{
-                    background: 'var(--color-bg-surface-elevated)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '0.85rem 1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                  }}
-                >
+                <div className="flex items-center gap-3 rounded-md border border-line bg-elevated px-4 py-3.5">
                   <PlayerAvatar
                     player={{
                       name: newName || session.playerName,
@@ -303,8 +215,8 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                     size={42}
                   />
                   <div>
-                    <div style={{ fontWeight: 800, color: '#ffffff' }}>{newName || session.playerName}</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+                    <div className="font-extrabold text-white">{newName || session.playerName}</div>
+                    <div className="text-caption text-fg-muted">
                       {session.submittedTwitchUsername ? `@${session.submittedTwitchUsername} • ` : ''}
                       Country: {newCountry || 'Unassigned'} • Style: {newPlaystyle}
                     </div>
@@ -312,7 +224,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>
+                  <label className={labelClass}>
                     Competitor Name / Alias
                   </label>
                   <input
@@ -321,22 +233,13 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
                     placeholder="e.g. Sharky DAS"
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      background: 'var(--color-bg-surface-elevated)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-md)',
-                      color: '#ffffff',
-                      fontSize: '0.85rem',
-                      boxSizing: 'border-box',
-                    }}
+                    className={fieldClass}
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>
+                    <label className={labelClass}>
                       Country Code (ISO 2-letter)
                     </label>
                     <input
@@ -346,38 +249,19 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                       value={newCountry}
                       onChange={e => setNewCountry(e.target.value.toUpperCase())}
                       placeholder="e.g. US"
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        background: 'var(--color-bg-surface-elevated)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-md)',
-                        color: '#ffffff',
-                        fontSize: '0.85rem',
-                        boxSizing: 'border-box',
-                        textTransform: 'uppercase',
-                      }}
+                      className={cn(fieldClass, 'uppercase')}
                     />
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-muted)', display: 'block', marginBottom: '0.35rem' }}>
+                    <label className={labelClass}>
                       Playstyle
                     </label>
                     <select
                       data-testid="new-player-playstyle-select"
                       value={newPlaystyle}
                       onChange={e => setNewPlaystyle(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.55rem 0.75rem',
-                        background: 'var(--color-bg-surface-elevated)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-md)',
-                        color: '#ffffff',
-                        fontSize: '0.85rem',
-                        boxSizing: 'border-box',
-                      }}
+                      className={fieldClass}
                     >
                       <option value="DAS">DAS</option>
                       <option value="Rolling">Rolling</option>
@@ -390,23 +274,13 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
 
             {/* TAB 3: Confirm Binding (Twitch Claims) */}
             {activeTab === 'confirm' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+              <div className="flex flex-col gap-3.5">
+                <p className="m-0 text-sm text-fg-secondary">
                   This competitor claimed the profile <strong>{session.playerName}</strong> during Twitch login.
                   Confirming identity will permanently bind Twitch ID <code>{session.submittedTwitchId}</code> to their profile.
                   Future logins with this Twitch account will automatically resolve without judge review.
                 </p>
-                <div
-                  style={{
-                    background: 'var(--color-bg-surface-elevated)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                  }}
-                >
+                <div className="flex items-center gap-3 rounded-md border border-line bg-elevated p-4">
                   <PlayerAvatar
                     player={{
                       name: session.playerName,
@@ -417,8 +291,8 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                     size={42}
                   />
                   <div>
-                    <div style={{ fontWeight: 800, color: '#ffffff' }}>{session.playerName}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#a78bfa' }}>
+                    <div className="font-extrabold text-white">{session.playerName}</div>
+                    <div className="text-caption text-violet-400">
                       Twitch: @{session.submittedTwitchUsername || 'N/A'}
                     </div>
                   </div>
@@ -428,29 +302,19 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
           </div>
 
           {/* Footer */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderTop: '1px solid var(--color-border)',
-              background: 'var(--color-bg-surface-elevated)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-            }}
-          >
-            <button
+          <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated px-6 py-4">
+            <Button
               type="button"
               onClick={requestClose}
               disabled={isSubmitting}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.85rem' }}
+              variant="secondary"
+              className="text-sm"
             >
               Cancel
-            </button>
+            </Button>
 
             {activeTab === 'reassign' && (
-              <button
+              <Button
                 type="button"
                 data-testid="submit-reassign-button"
                 onClick={() => {
@@ -459,22 +323,15 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                   }
                 }}
                 disabled={isSubmitting || !selectedTargetId}
-                className="btn btn-primary"
-                style={{
-                  fontSize: '0.85rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  background: '#3b82f6',
-                  borderColor: '#2563eb',
-                }}
+                variant="primary"
+                className="inline-flex items-center gap-1.5 text-sm bg-blue-500 bg-none border-blue-600"
               >
                 <UserX size={15} /> Reassign Run
-              </button>
+              </Button>
             )}
 
             {activeTab === 'add_global' && (
-              <button
+              <Button
                 type="button"
                 data-testid="submit-add-global-button"
                 onClick={() => {
@@ -492,36 +349,24 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                   }
                 }}
                 disabled={isSubmitting || !newName.trim()}
-                className="btn btn-primary"
-                style={{
-                  fontSize: '0.85rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  background: '#10b981',
-                  borderColor: '#059669',
-                }}
+                variant="primary"
+                className="inline-flex items-center gap-1.5 text-sm bg-green bg-none border-emerald-600"
               >
                 <UserPlus size={15} /> Add Global Player
-              </button>
+              </Button>
             )}
 
             {activeTab === 'confirm' && (
-              <button
+              <Button
                 type="button"
                 data-testid="submit-confirm-button"
                 onClick={() => onResolve('CONFIRM_IDENTITY')}
                 disabled={isSubmitting}
-                className="btn btn-primary"
-                style={{
-                  fontSize: '0.85rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
+                variant="primary"
+                className="inline-flex items-center gap-1.5 text-sm"
               >
                 <UserCheck size={15} /> Confirm Binding
-              </button>
+              </Button>
             )}
           </div>
         </>

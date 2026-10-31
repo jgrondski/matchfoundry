@@ -18,6 +18,7 @@ import {
 } from '../sheetUtils';
 import { SheetTelemetryBar } from './sheet/SheetTelemetryBar';
 import { SheetMatchRow } from './sheet/SheetMatchRow';
+import { cn } from '../../../components/ui';
 
 // Re-export utilities so existing tests and callers have zero breaking changes
 export {
@@ -266,35 +267,15 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
     return Math.max(760, computed);
   }, [maxGameColumns, competitorColWidth, sizeTokens]);
 
-  const tableStyle: React.CSSProperties = {
-    width: '100%',
-    borderCollapse: 'separate',
-    borderSpacing: 0,
-    tableLayout: 'fixed',
-  };
-
-  const currentThStyle: React.CSSProperties = {
-    padding: sizeTokens.thPadding,
-    fontSize: sizeTokens.fontSizeTh,
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.04em',
-    whiteSpace: 'nowrap',
-    borderRight: '1px solid rgba(255, 255, 255, 0.05)',
-  };
+  const thClass = cn(
+    sizeTokens.thPadding,
+    'font-bold uppercase tracking-wide whitespace-nowrap border-r border-white/5'
+  );
 
   return (
     <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.85rem',
-        width: `${maxTableWidth}px`,
-        maxWidth: '100%',
-        margin: '0 auto',
-        alignItems: 'center',
-        boxSizing: 'border-box',
-      }}
+      className="flex flex-col gap-3.5 max-w-full mx-auto items-center"
+      style={{ width: `${maxTableWidth}px` }}
     >
       <SheetTelemetryBar
         tournamentName={tournament.name}
@@ -320,32 +301,20 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
 
       {/* Continuous Master Sheet Matrix Table */}
       <div
+        className="rounded-md overflow-x-auto w-full"
         style={{
           background: cardColor,
-          borderRadius: 'var(--radius-md)',
           border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
-          overflowX: 'auto',
-          width: '100%',
-          boxSizing: 'border-box',
         }}
       >
         {filteredRounds.length === 0 ? (
-          <div
-            style={{
-              padding: '3rem 1.5rem',
-              textAlign: 'center',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>No matches found matching your filters.</p>
+          <div className="py-12 px-6 text-center text-fg-secondary">
+            <p className="m-0 text-sm">No matches found matching your filters.</p>
           </div>
         ) : (
           <table
-            style={{
-              ...tableStyle,
-              width: '100%',
-              fontSize: sizeTokens.fontSizeTable,
-            }}
+            className="w-full border-separate border-spacing-0 table-fixed"
+            style={{ fontSize: sizeTokens.fontSizeTable }}
           >
             <thead>
               <tr
@@ -355,30 +324,26 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
                 }}
               >
                 <th
+                  className={cn(thClass, 'text-center px-1')}
                   style={{
-                    ...currentThStyle,
+                    fontSize: sizeTokens.fontSizeTh,
                     width: `${sizeTokens.colMatch}px`,
                     minWidth: `${sizeTokens.colMatch}px`,
                     maxWidth: `${sizeTokens.colMatch}px`,
-                    textAlign: 'center',
-                    paddingLeft: '0.2rem',
-                    paddingRight: '0.2rem',
                     color: textColor,
                   }}
                 >
                   Match #
                 </th>
                 <th
+                  className={cn(thClass, 'text-left relative', isResizingCol ? 'select-none' : 'select-auto')}
                   style={{
-                    ...currentThStyle,
+                    fontSize: sizeTokens.fontSizeTh,
                     width: `${competitorColWidth}px`,
                     minWidth: `${competitorColWidth}px`,
                     maxWidth: `${competitorColWidth}px`,
-                    textAlign: 'left',
                     paddingLeft: `${sizeTokens.competitorLeftPad}px`,
                     color: textColor,
-                    position: 'relative',
-                    userSelect: isResizingCol ? 'none' : 'auto',
                   }}
                 >
                   <span>Competitor</span>
@@ -389,43 +354,29 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
                     onTouchStart={handleResizeTouchStart}
                     onDoubleClick={handleResetColWidth}
                     title="Drag to adjust column width (double-click to reset)"
-                    style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      width: '10px',
-                      cursor: 'col-resize',
-                      zIndex: 10,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      touchAction: 'none',
-                      userSelect: 'none',
-                    }}
+                    className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize z-10 flex items-center justify-center touch-none select-none"
                   >
                     <div
+                      className={cn(
+                        'h-[65%] rounded-2xs transition-all duration-100',
+                        isResizingCol ? 'w-0.75' : 'w-0.5'
+                      )}
                       style={{
-                        width: isResizingCol ? '3px' : '2px',
-                        height: '65%',
-                        borderRadius: '1px',
                         background: isResizingCol
                           ? primaryColor
                           : colorWithAlpha(secondaryColor, 0.7, 'var(--color-border)'),
                         boxShadow: isResizingCol ? `0 0 6px ${primaryColor}` : 'none',
-                        transition: 'all 0.1s ease',
                       }}
                     />
                   </div>
                 </th>
                 <th
+                  className={cn(thClass, 'text-center pr-3.5')}
                   style={{
-                    ...currentThStyle,
+                    fontSize: sizeTokens.fontSizeTh,
                     width: `${sizeTokens.colGamesWon}px`,
                     minWidth: `${sizeTokens.colGamesWon}px`,
                     maxWidth: `${sizeTokens.colGamesWon}px`,
-                    textAlign: 'center',
-                    paddingRight: '14px',
                     color: textColor,
                   }}
                 >
@@ -434,12 +385,12 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
                 {gameNumbers.map((gNum) => (
                   <th
                     key={gNum}
+                    className={cn(thClass, 'text-center')}
                     style={{
-                      ...currentThStyle,
+                      fontSize: sizeTokens.fontSizeTh,
                       width: `${sizeTokens.colGame}px`,
                       minWidth: `${sizeTokens.colGame}px`,
                       maxWidth: `${sizeTokens.colGame}px`,
-                      textAlign: 'center',
                       color: textColor,
                     }}
                   >
@@ -447,14 +398,12 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
                   </th>
                 ))}
                 <th
+                  className={cn(thClass, 'text-center px-1')}
                   style={{
-                    ...currentThStyle,
+                    fontSize: sizeTokens.fontSizeTh,
                     width: `${sizeTokens.colComplete}px`,
                     minWidth: `${sizeTokens.colComplete}px`,
                     maxWidth: `${sizeTokens.colComplete}px`,
-                    textAlign: 'center',
-                    paddingLeft: '0.2rem',
-                    paddingRight: '0.2rem',
                     color: textColor,
                   }}
                 >
@@ -486,64 +435,34 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
                     <tr key={`header-${round.name}`}>
                       <td
                         colSpan={totalColCount}
+                        className={cn(sizeTokens.bannerPadding, 'bg-canvas')}
                         style={{
-                          padding: sizeTokens.bannerPadding,
-                          background: 'var(--color-bg-base)',
                           borderTop: roundIdx > 0 ? `2px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}` : 'none',
                           borderBottom: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
                           borderLeft: `4px solid ${roundAccentColor}`,
                         }}
                       >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: '0.5rem',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2.5">
                             <span
-                              style={{
-                                fontWeight: 800,
-                                fontSize: sizeTokens.fontSizeRoundTitle,
-                                color: 'var(--color-text-primary)',
-                                letterSpacing: '0.04em',
-                                textTransform: 'uppercase',
-                              }}
+                              className="font-extrabold text-fg tracking-wide uppercase"
+                              style={{ fontSize: sizeTokens.fontSizeRoundTitle }}
                             >
                               {round.name}
                             </span>
                             <span
-                              style={{
-                                fontSize: sizeTokens.fontSizeRoundMeta,
-                                padding: '0.12rem 0.45rem',
-                                borderRadius: 'var(--radius-sm)',
-                                background: 'rgba(255, 255, 255, 0.06)',
-                                border: '1px solid var(--color-border)',
-                                color: 'var(--color-text-secondary)',
-                                fontWeight: 600,
-                                fontFamily: 'var(--font-mono)',
-                              }}
+                              className="py-0.5 px-2 rounded-sm bg-white/6 border border-line text-fg-secondary font-semibold font-mono"
+                              style={{ fontSize: sizeTokens.fontSizeRoundMeta }}
                             >
                               Best of {inheritedBestOf}
                             </span>
-                            <span style={{ fontSize: sizeTokens.fontSizeRoundMeta, color: 'var(--color-text-muted)' }}>
+                            <span className="text-fg-muted" style={{ fontSize: sizeTokens.fontSizeRoundMeta }}>
                               • {round.filteredMatches.length} {round.filteredMatches.length === 1 ? 'Match' : 'Matches'}
                             </span>
                           </div>
                           <span
-                            className="tabular-nums"
-                            style={{
-                              fontSize: sizeTokens.fontSizeRoundMeta,
-                              fontWeight: 600,
-                              padding: '0.12rem 0.5rem',
-                              borderRadius: 'var(--radius-full)',
-                              background: 'rgba(255, 255, 255, 0.06)',
-                              color: 'var(--color-text-secondary)',
-                              border: '1px solid var(--color-border)',
-                            }}
+                            className="font-mono tabular-nums tracking-tight font-semibold py-0.5 px-2 rounded-full bg-white/6 text-fg-secondary border border-line"
+                            style={{ fontSize: sizeTokens.fontSizeRoundMeta }}
                           >
                             {completedCount} / {round.filteredMatches.length} Complete
                           </span>

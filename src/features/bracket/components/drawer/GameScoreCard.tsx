@@ -2,6 +2,7 @@ import React from 'react';
 import { Check, Trash2 } from 'lucide-react';
 import { SeededPlayer } from '../../types';
 import { colorWithAlpha, getContrastingTextColor } from '../../colorUtils';
+import { cn } from '../../../../components/ui';
 
 interface GameScoreCardProps {
   game: { p1: string; p2: string; winner: string | null };
@@ -41,36 +42,27 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
 
   return (
     <div
+      className="py-3.5 px-4 rounded-md shadow-[0_2px_6px_rgba(0,0,0,0.25)]"
       style={{
-        padding: '0.85rem 1rem',
         background: gameCardBg,
-        borderRadius: 'var(--radius-md)',
         border: isTiebreakerGame
           ? `1px solid ${colorWithAlpha(primaryColor, 0.45)}`
           : `1px solid ${colorWithAlpha(primaryColor, 0.22, 'var(--color-border)')}`,
-        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
       }}
     >
       {/* Game card top bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="flex justify-between items-center mb-2.5">
+        <div className="flex items-center gap-2">
           <span
-            style={{
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              color: isTiebreakerGame ? primaryColor : '#ffffff',
-              fontFamily: 'var(--font-mono)',
-            }}
+            className="text-caption font-bold font-mono text-white"
+            style={{ color: isTiebreakerGame ? primaryColor : undefined }}
           >
             Game {gameNum}
           </span>
           {isTiebreakerGame && (
             <span
+              className="text-3xs font-bold py-0.5 px-1.5 rounded-full"
               style={{
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                padding: '0.08rem 0.4rem',
-                borderRadius: 'var(--radius-full)',
                 background: colorWithAlpha(primaryColor, 0.15),
                 color: primaryColor,
                 border: `1px solid ${colorWithAlpha(primaryColor, 0.3)}`,
@@ -80,36 +72,15 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
             </span>
           )}
           {game.winner === 'TIE' && (
-            <span
-              style={{
-                fontSize: '0.65rem',
-                padding: '0.08rem 0.45rem',
-                borderRadius: 'var(--radius-sm)',
-                background: 'var(--color-cyan-bg)',
-                color: 'var(--color-cyan)',
-                fontWeight: 700,
-                border: '1px solid rgba(6, 182, 212, 0.3)',
-              }}
-            >
+            <span className="text-3xs py-0.5 px-2 rounded-sm bg-cyan-soft text-cyan font-bold border border-cyan/30">
               TIE (NO WIN)
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-2">
           {margin && (
-            <span
-              style={{
-                fontSize: '0.72rem',
-                color: 'var(--color-cyan)',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 600,
-                background: 'rgba(6, 182, 212, 0.1)',
-                padding: '0.1rem 0.45rem',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid rgba(6, 182, 212, 0.25)',
-              }}
-            >
+            <span className="text-xs text-cyan font-mono font-semibold bg-cyan/10 py-0.5 px-2 rounded-sm border border-cyan/25">
               Δ {margin} pts
             </span>
           )}
@@ -118,19 +89,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
               type="button"
               onClick={() => onDeleteTiebreakerGame(idx)}
               title="Delete tiebreaker game"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                padding: '0.15rem 0.45rem',
-                borderRadius: 'var(--radius-sm)',
-                background: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#fca5a5',
-                fontSize: '0.68rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="inline-flex items-center gap-1 py-0.5 px-2 rounded-sm bg-red/12 border border-red/30 text-red-300 text-2xs font-semibold cursor-pointer"
             >
               <Trash2 size={11} />
               <span>Delete</span>
@@ -140,41 +99,26 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
       </div>
 
       {/* Input Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.75rem', alignItems: 'center' }}>
+      <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
         {/* Player 1 Input */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
+          <div className="flex items-center gap-1.5 mb-1">
             <button
               type="button"
               onClick={() => p1 && onManualWinnerToggle(idx, p1.id)}
               title="Set winner"
+              className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0"
               style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
                 border: game.winner === p1?.id ? `2px solid ${primaryColor}` : '1px solid var(--color-border)',
                 background: game.winner === p1?.id ? primaryColor : 'transparent',
                 color: getContrastingTextColor(primaryColor),
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                padding: 0,
-                transition: 'all 0.15s ease',
-                flexShrink: 0,
               }}
             >
               {game.winner === p1?.id && <Check size={13} strokeWidth={3.5} />}
             </button>
             <span
-              style={{
-                fontSize: '0.75rem',
-                color: game.winner === p1?.id ? primaryColor : 'var(--color-text-secondary)',
-                fontWeight: game.winner === p1?.id ? 700 : 500,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
+              className={cn('text-xs truncate', game.winner === p1?.id ? 'font-bold' : 'font-medium')}
+              style={{ color: game.winner === p1?.id ? primaryColor : 'var(--color-text-secondary)' }}
             >
               {p1Name}
             </span>
@@ -185,42 +129,24 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
             placeholder="0"
             value={game.p1 ? Number(game.p1).toLocaleString() : ''}
             onChange={e => onScoreChange(idx, 1, e.target.value)}
-            className="tabular-nums"
+            className="font-mono tabular-nums tracking-tight w-full py-2 px-2.5 bg-black/45 rounded-sm text-white text-base font-bold text-center outline-none"
             style={{
-              width: '100%',
-              padding: '0.5rem 0.65rem',
-              background: 'rgba(0, 0, 0, 0.45)',
               border: game.winner === p1?.id ? `1px solid ${colorWithAlpha(primaryColor, 0.65)}` : '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              color: '#ffffff',
-              fontSize: '1rem',
-              fontWeight: 700,
-              fontFamily: 'var(--font-mono)',
-              textAlign: 'center',
-              outline: 'none',
               boxShadow: game.winner === p1?.id ? `0 0 10px ${colorWithAlpha(primaryColor, 0.2)}` : 'none',
             }}
           />
         </div>
 
         {/* Interactive TIE Button */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '1.25rem' }}>
+        <div className="flex flex-col items-center justify-center pt-5">
           <button
             type="button"
             onClick={() => onManualWinnerToggle(idx, 'TIE')}
             title={game.winner === 'TIE' ? 'Clear tie' : 'Declare Game as Tie (no win awarded)'}
-            style={{
-              padding: '0.25rem 0.6rem',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              letterSpacing: '0.05em',
-              borderRadius: 'var(--radius-sm)',
-              border: game.winner === 'TIE' ? '1px solid var(--color-cyan)' : '1px solid var(--color-border)',
-              background: game.winner === 'TIE' ? 'var(--color-cyan-bg)' : 'rgba(255, 255, 255, 0.03)',
-              color: game.winner === 'TIE' ? 'var(--color-cyan)' : 'var(--color-text-muted)',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
+            className={cn(
+              'py-1 px-2.5 text-2xs font-bold tracking-wider rounded-sm border cursor-pointer transition-all duration-150',
+              game.winner === 'TIE' ? 'border-cyan bg-cyan-soft text-cyan' : 'border-line bg-white/3 text-fg-muted'
+            )}
           >
             TIE
           </button>
@@ -228,16 +154,10 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
 
         {/* Player 2 Input */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem', marginBottom: '0.3rem' }}>
+          <div className="flex items-center justify-end gap-1.5 mb-1">
             <span
-              style={{
-                fontSize: '0.75rem',
-                color: game.winner === p2?.id ? primaryColor : 'var(--color-text-secondary)',
-                fontWeight: game.winner === p2?.id ? 700 : 500,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
+              className={cn('text-xs truncate', game.winner === p2?.id ? 'font-bold' : 'font-medium')}
+              style={{ color: game.winner === p2?.id ? primaryColor : 'var(--color-text-secondary)' }}
             >
               {p2Name}
             </span>
@@ -245,20 +165,11 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
               type="button"
               onClick={() => p2 && onManualWinnerToggle(idx, p2.id)}
               title="Set winner"
+              className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0"
               style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
                 border: game.winner === p2?.id ? `2px solid ${primaryColor}` : '1px solid var(--color-border)',
                 background: game.winner === p2?.id ? primaryColor : 'transparent',
                 color: getContrastingTextColor(primaryColor),
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                padding: 0,
-                transition: 'all 0.15s ease',
-                flexShrink: 0,
               }}
             >
               {game.winner === p2?.id && <Check size={13} strokeWidth={3.5} />}
@@ -270,19 +181,9 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
             placeholder="0"
             value={game.p2 ? Number(game.p2).toLocaleString() : ''}
             onChange={e => onScoreChange(idx, 2, e.target.value)}
-            className="tabular-nums"
+            className="font-mono tabular-nums tracking-tight w-full py-2 px-2.5 bg-black/45 rounded-sm text-white text-base font-bold text-center outline-none"
             style={{
-              width: '100%',
-              padding: '0.5rem 0.65rem',
-              background: 'rgba(0, 0, 0, 0.45)',
               border: game.winner === p2?.id ? `1px solid ${colorWithAlpha(primaryColor, 0.65)}` : '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              color: '#ffffff',
-              fontSize: '1rem',
-              fontWeight: 700,
-              fontFamily: 'var(--font-mono)',
-              textAlign: 'center',
-              outline: 'none',
               boxShadow: game.winner === p2?.id ? `0 0 10px ${colorWithAlpha(primaryColor, 0.2)}` : 'none',
             }}
           />

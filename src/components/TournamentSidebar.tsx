@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { usePinAuth } from '../features/auth/AuthContext';
 import { AdminLoginModal } from '../features/auth/AdminLoginModal';
+import { cn, IconButton } from './ui';
 
 export type SidebarNavView =
   | 'leaderboard'
@@ -333,77 +334,55 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
   );
   const filteredTournaments = filterTournamentsByQuery(manageableTournaments, tournamentSearchQuery);
 
+  // Shared classes for the main nav and system links.
+  const sideLinkClass = (isActive: boolean) =>
+    cn(
+      'flex items-center gap-2.5 rounded-sm border-l-3 py-2 text-caption no-underline transition-colors duration-100',
+      isCollapsed ? 'justify-center px-0' : 'justify-start px-3',
+      isActive
+        ? 'border-l-gold-bright bg-gold-soft font-bold text-gold-bright'
+        : 'border-l-transparent bg-transparent font-medium text-fg-secondary'
+    );
+  const sideButtonClass = cn(
+    'flex w-full cursor-pointer items-center gap-2.5 rounded-sm border-0 bg-white/3 py-2 text-left text-caption font-semibold',
+    isCollapsed ? 'justify-center px-0' : 'justify-start px-3'
+  );
+  const statusPillClass = cn(
+    'flex w-full items-center gap-1.5 rounded-full border text-2xs font-bold transition-all duration-150',
+    isCollapsed ? 'px-1 py-1.5' : 'px-2 py-1'
+  );
+  const quickHopLinkClass =
+    'flex items-center gap-2 rounded-sm px-2 py-1.5 text-xs font-semibold text-fg-secondary no-underline';
+  const sectionLabelClass = 'pb-1 text-3xs font-bold tracking-wider text-fg-muted uppercase';
+
   return (
     <>
       <aside
-        style={{
-          width: isCollapsed ? '60px' : '220px',
-          minWidth: isCollapsed ? '60px' : '220px',
-          height: '100vh',
-          position: 'sticky',
-          top: 0,
-          background: 'var(--color-bg-surface)',
-          borderRight: '1px solid var(--color-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          transition: 'width 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          zIndex: 90,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          userSelect: 'none',
-        }}
+        className={cn(
+          'sticky top-0 z-90 flex h-screen flex-col overflow-x-hidden overflow-y-auto border-r border-line bg-surface transition-[width,min-width] duration-200 select-none',
+          isCollapsed ? 'w-15 min-w-15' : 'w-55 min-w-55'
+        )}
       >
         {/* Brand Header */}
         <div
-          style={{
-            padding: isCollapsed ? '0.85rem 0.5rem' : '0.85rem 0.95rem',
-            borderBottom: '1px solid var(--color-border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            justifyContent: isCollapsed ? 'center' : 'flex-start',
-          }}
+          className={cn(
+            'flex items-center gap-2.5 border-b border-line-subtle py-3.5',
+            isCollapsed ? 'justify-center px-2' : 'justify-start px-4'
+          )}
         >
           <Link
             to="/"
             onClick={e => handleLinkClick(e, '/')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.55rem',
-              textDecoration: 'none',
-              overflow: 'hidden',
-            }}
+            className="flex items-center gap-2 overflow-hidden no-underline"
             title="MatchFoundry™ Home"
           >
-            <div
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '6px',
-                background: 'var(--color-gold)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: 'var(--shadow-gold)',
-                flexShrink: 0,
-              }}
-            >
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-sm bg-gold shadow-gold">
               <Layers size={16} color="#090d16" />
             </div>
             {!isCollapsed && (
-              <span
-                style={{
-                  fontWeight: 800,
-                  fontSize: '0.88rem',
-                  color: 'var(--color-text-primary)',
-                  letterSpacing: '-0.02em',
-                  whiteSpace: 'nowrap',
-                  lineHeight: 1.1,
-                }}
-              >
-                MATCH<span style={{ color: 'var(--color-gold-bright)' }}>FOUNDRY</span>
-                <sup style={{ fontSize: '0.65em', marginLeft: '1px', color: 'var(--color-gold-bright)' }}>™</sup>
+              <span className="text-sm leading-tight font-extrabold tracking-tight whitespace-nowrap text-fg">
+                MATCH<span className="text-gold-bright">FOUNDRY</span>
+                <sup className="ml-px text-3xs text-gold-bright">™</sup>
               </span>
             )}
           </Link>
@@ -413,22 +392,13 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
         {!isDbConnected && (
           <div
             onClick={() => retryConnection()}
-            style={{
-              padding: isCollapsed ? '0.4rem 0.2rem' : '0.4rem 0.75rem',
-              background: 'rgba(239, 68, 68, 0.18)',
-              borderBottom: '1px solid rgba(239, 68, 68, 0.4)',
-              color: '#f87171',
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: isCollapsed ? 'center' : 'flex-start',
-              gap: '0.4rem',
-            }}
+            className={cn(
+              'flex cursor-pointer items-center gap-1.5 border-b border-red/40 bg-red/18 py-1.5 text-2xs font-bold text-red-bright',
+              isCollapsed ? 'justify-center px-1' : 'justify-start px-3'
+            )}
             title="PostgreSQL Offline! Click to retry connection."
           >
-            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#ef4444', flexShrink: 0 }} />
+            <span className="size-1.5 shrink-0 rounded-full bg-red" />
             {!isCollapsed && <span>DB OFFLINE (RETRY)</span>}
           </div>
         )}
@@ -436,62 +406,27 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
         {/* Tournament Switcher & Mode Pill */}
         {activeTourney && (
           <div
-            style={{
-              padding: isCollapsed ? '0.65rem 0.35rem' : '0.65rem 0.75rem',
-              borderBottom: '1px solid var(--color-border-subtle)',
-              background: 'rgba(0, 0, 0, 0.15)',
-              position: 'relative',
-            }}
+            className={cn('relative border-b border-line-subtle bg-black/15 py-2.5', isCollapsed ? 'px-1.5' : 'px-3')}
             data-tournament-menu
           >
             {/* Org Shortcut Chip */}
             {currentOrg && !isCollapsed && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '0.35rem',
-                  padding: '0 0.15rem',
-                }}
-              >
+              <div className="mb-1.5 flex items-center justify-between px-0.5">
                 <Link
                   to={`/org/${currentOrg.slug}`}
                   onClick={e => handleLinkClick(e, `/org/${currentOrg.slug}`)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    minWidth: 0,
-                    textDecoration: 'none',
-                  }}
+                  className="inline-flex min-w-0 items-center gap-1.5 no-underline"
                   title={`View Organization: ${currentOrg.name}`}
                 >
                   <Building2 size={11} color="var(--color-gold-bright, #ffc905)" />
-                  <span
-                    style={{
-                      fontSize: '0.68rem',
-                      fontWeight: 700,
-                      color: 'var(--color-gold-bright, #ffc905)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
+                  <span className="truncate text-2xs font-bold tracking-wide text-gold-bright uppercase">
                     {currentOrg.shortName || currentOrg.slug.toUpperCase()}
                   </span>
                 </Link>
                 <Link
                   to={`/org/${currentOrg.slug}`}
                   onClick={e => handleLinkClick(e, `/org/${currentOrg.slug}`)}
-                  style={{
-                    fontSize: '0.65rem',
-                    color: 'var(--color-text-muted, #64748b)',
-                    textDecoration: 'none',
-                    fontWeight: 600,
-                  }}
+                  className="text-3xs font-semibold text-fg-muted no-underline"
                   title={`View ${currentOrg.name} Dashboard`}
                 >
                   Org Hub ↗
@@ -503,40 +438,19 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
             <button
               type="button"
               onClick={() => setIsTournamentMenuOpen(prev => !prev)}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: isCollapsed ? 'center' : 'space-between',
-                padding: '0.35rem 0.45rem',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--color-border)',
-                background: 'var(--color-bg-base)',
-                color: 'var(--color-text-primary)',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                textAlign: 'left',
-                overflow: 'hidden',
-              }}
+              className={cn(
+                'flex w-full cursor-pointer items-center overflow-hidden rounded-sm border border-line bg-canvas px-2 py-1.5 text-left text-caption font-semibold text-fg',
+                isCollapsed ? 'justify-center' : 'justify-between'
+              )}
               title={activeTourney.name}
             >
-              <span
-                style={{
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: isCollapsed ? 'none' : 'block',
-                }}
-              >
-                {activeTourney.name}
-              </span>
+              <span className={cn('truncate', isCollapsed ? 'hidden' : 'block')}>{activeTourney.name}</span>
               {isCollapsed ? (
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--color-gold-bright)' }}>
+                <span className="text-xs font-extrabold text-gold-bright">
                   {activeTourney.name.substring(0, 2).toUpperCase()}
                 </span>
               ) : (
-                <ChevronDown size={13} color="var(--color-text-muted)" style={{ flexShrink: 0, marginLeft: '0.3rem' }} />
+                <ChevronDown size={13} color="var(--color-text-muted)" className="ml-1 shrink-0" />
               )}
             </button>
 
@@ -544,47 +458,17 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
             {isTournamentMenuOpen && (
               <div
                 data-testid="tournament-dropdown-menu"
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: isCollapsed ? '60px' : '0.75rem',
-                  width: '260px',
-                  background: 'var(--color-bg-surface-elevated, #161922)',
-                  border: '1px solid var(--color-border, rgba(255,255,255,0.12))',
-                  borderRadius: 'var(--radius-md, 8px)',
-                  boxShadow: '0 12px 30px rgba(0, 0, 0, 0.65)',
-                  zIndex: 200,
-                  overflow: 'hidden',
-                  marginTop: '0.35rem',
-                }}
+                className={cn(
+                  'absolute top-full z-200 mt-1.5 w-65 overflow-hidden rounded-md border border-line bg-elevated shadow-[0_12px_30px_rgba(0,0,0,0.65)]',
+                  isCollapsed ? 'left-15' : 'left-3'
+                )}
               >
                 {/* 1. Circuit / Org Header */}
                 {currentOrg && (
-                  <div
-                    style={{
-                      padding: '0.6rem 0.85rem',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      borderBottom: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', minWidth: 0 }}>
-                      <Building2 size={13} color="var(--color-gold-bright, #ffc905)" style={{ flexShrink: 0 }} />
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          color: '#ffffff',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {currentOrg.name}
-                      </span>
+                  <div className="flex items-center justify-between gap-2 border-b border-line-subtle bg-white/3 px-3.5 py-2.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Building2 size={13} color="var(--color-gold-bright, #ffc905)" className="shrink-0" />
+                      <span className="truncate text-xs font-bold text-white">{currentOrg.name}</span>
                     </div>
                     <Link
                       to={`/org/${currentOrg.slug}`}
@@ -592,13 +476,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                         setIsTournamentMenuOpen(false);
                         handleLinkClick(e, `/org/${currentOrg.slug}`);
                       }}
-                      style={{
-                        fontSize: '0.68rem',
-                        color: 'var(--color-gold-bright, #ffc905)',
-                        textDecoration: 'none',
-                        fontWeight: 600,
-                        flexShrink: 0,
-                      }}
+                      className="shrink-0 text-2xs font-semibold text-gold-bright no-underline"
                       title="Open Organization Dashboard"
                     >
                       Org Hub →
@@ -607,81 +485,39 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                 )}
 
                 {/* 2. Switch Tournament List & Search */}
-                <div
-                  style={{
-                    padding: '0.45rem 0.85rem 0.25rem',
-                    fontSize: '0.66rem',
-                    fontWeight: 800,
-                    color: 'var(--color-text-muted, #64748b)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
+                <div className="flex items-center justify-between px-3.5 pt-2 pb-1 text-3xs font-extrabold tracking-wider text-fg-muted uppercase">
                   <span>Tournaments ({manageableTournaments.length})</span>
                   {tournamentSearchQuery && (
-                    <span style={{ fontSize: '0.62rem', color: 'var(--color-gold-bright, #ffc905)' }}>
-                      Filtered ({filteredTournaments.length})
-                    </span>
+                    <span className="text-3xs text-gold-bright">Filtered ({filteredTournaments.length})</span>
                   )}
                 </div>
 
                 {/* Search input field */}
-                <div style={{ padding: '0.25rem 0.65rem 0.45rem' }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      background: 'rgba(0, 0, 0, 0.35)',
-                      border: '1px solid var(--color-border, rgba(255,255,255,0.12))',
-                      borderRadius: 'var(--radius-sm, 6px)',
-                      padding: '0.25rem 0.45rem',
-                    }}
-                  >
-                    <Search size={12} color="var(--color-text-muted, #94a3b8)" style={{ flexShrink: 0 }} />
+                <div className="px-2.5 pt-1 pb-2">
+                  <div className="flex items-center gap-1.5 rounded-sm border border-line bg-black/35 px-2 py-1">
+                    <Search size={12} color="var(--color-text-muted, #94a3b8)" className="shrink-0" />
                     <input
                       type="text"
                       value={tournamentSearchQuery}
                       onChange={e => setTournamentSearchQuery(e.target.value)}
                       placeholder="Search tournaments..."
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        outline: 'none',
-                        color: '#ffffff',
-                        fontSize: '0.75rem',
-                        width: '100%',
-                      }}
+                      className="w-full border-0 bg-transparent text-xs text-white outline-none"
                     />
                     {tournamentSearchQuery && (
-                      <button
-                        type="button"
+                      <IconButton
+                        aria-label="Clear search"
                         onClick={() => setTournamentSearchQuery('')}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--color-text-muted, #94a3b8)',
-                          cursor: 'pointer',
-                          padding: '0 0.2rem',
-                          fontSize: '0.75rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                        }}
+                        className="px-1 py-0 text-xs"
                       >
                         ✕
-                      </button>
+                      </IconButton>
                     )}
                   </div>
                 </div>
 
-                <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
+                <div className="max-h-45 overflow-y-auto">
                   {filteredTournaments.length === 0 ? (
-                    <div style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-text-muted, #64748b)' }}>
-                      No tournaments found
-                    </div>
+                    <div className="p-3 text-center text-xs text-fg-muted">No tournaments found</div>
                   ) : (
                     filteredTournaments.map(t => {
                       const isSelected = Boolean(activeTourney?.id && t.id === activeTourney.id);
@@ -695,26 +531,13 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                             const targetUrl = getTournamentTargetUrl(t, activeView);
                             handleDropdownNavigate(targetUrl);
                           }}
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '0.45rem 0.85rem',
-                            fontSize: '0.78rem',
-                            color: isSelected ? 'var(--color-gold-bright, #ffc905)' : 'var(--color-text-primary, #ffffff)',
-                            background: isSelected ? 'rgba(255, 201, 5, 0.1)' : 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            fontWeight: isSelected ? 700 : 500,
-                            transition: 'background 0.12s ease',
-                          }}
+                          className={cn(
+                            'flex w-full cursor-pointer items-center justify-between border-0 px-3.5 py-2 text-left text-caption transition-colors duration-100',
+                            isSelected ? 'bg-tier-gold/10 font-bold text-gold-bright' : 'bg-transparent font-medium text-fg'
+                          )}
                         >
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {displayName}
-                          </span>
-                          {isSelected && <Check size={13} color="var(--color-gold-bright, #ffc905)" style={{ flexShrink: 0 }} />}
+                          <span className="truncate">{displayName}</span>
+                          {isSelected && <Check size={13} color="var(--color-gold-bright, #ffc905)" className="shrink-0" />}
                         </button>
                       );
                     })
@@ -722,26 +545,8 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                 </div>
 
                 {/* 3. Global Views Quick-Hop */}
-                <div
-                  style={{
-                    borderTop: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))',
-                    background: 'rgba(0, 0, 0, 0.15)',
-                    padding: '0.35rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.15rem',
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '0.25rem 0.55rem',
-                      fontSize: '0.64rem',
-                      fontWeight: 800,
-                      color: 'var(--color-text-muted, #64748b)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                    }}
-                  >
+                <div className="flex flex-col gap-0.5 border-t border-line-subtle bg-black/15 p-1.5">
+                  <div className="px-2 py-1 text-3xs font-extrabold tracking-wider text-fg-muted uppercase">
                     Global Navigation
                   </div>
                   <Link
@@ -750,17 +555,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                       setIsTournamentMenuOpen(false);
                       handleLinkClick(e, '/');
                     }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.35rem 0.55rem',
-                      borderRadius: 'var(--radius-sm, 6px)',
-                      fontSize: '0.74rem',
-                      color: 'var(--color-text-secondary, #94a3b8)',
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                    }}
+                    className={quickHopLinkClass}
                   >
                     <Trophy size={13} />
                     <span>All Tournaments</span>
@@ -772,17 +567,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                         setIsTournamentMenuOpen(false);
                         handleLinkClick(e, '/organizations');
                       }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.35rem 0.55rem',
-                        borderRadius: 'var(--radius-sm, 6px)',
-                        fontSize: '0.74rem',
-                        color: 'var(--color-text-secondary, #94a3b8)',
-                        textDecoration: 'none',
-                        fontWeight: 600,
-                      }}
+                      className={quickHopLinkClass}
                     >
                       <Building2 size={13} />
                       <span>Organizations Directory</span>
@@ -795,17 +580,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                         setIsTournamentMenuOpen(false);
                         handleLinkClick(e, '/players');
                       }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.35rem 0.55rem',
-                        borderRadius: 'var(--radius-sm, 6px)',
-                        fontSize: '0.74rem',
-                        color: 'var(--color-text-secondary, #94a3b8)',
-                        textDecoration: 'none',
-                        fontWeight: 600,
-                      }}
+                      className={quickHopLinkClass}
                     >
                       <Users size={13} />
                       <span>Global Player Directory</span>
@@ -816,32 +591,21 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
             )}
 
             {/* Tournament Mode Status Pill */}
-            <div style={{ marginTop: '0.45rem' }}>
+            <div className="mt-2">
               {!activeTourney.isLocked ? (
                 <button
                   type="button"
                   onClick={() => setIsVerifyModalOpen(true)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: isCollapsed ? 'center' : 'flex-start',
-                    gap: '0.35rem',
-                    padding: isCollapsed ? '0.35rem 0.2rem' : '0.25rem 0.5rem',
-                    borderRadius: 'var(--radius-full)',
-                    background: 'rgba(245, 158, 11, 0.15)',
-                    border: '1px solid rgba(245, 158, 11, 0.35)',
-                    color: 'var(--color-gold-bright)',
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className={cn(
+                    statusPillClass,
+                    'cursor-pointer border-gold/35 bg-gold/15 text-gold-bright',
+                    isCollapsed ? 'justify-center' : 'justify-start'
+                  )}
                   title="Qualifiers running (Draft preview). Click to lock brackets and start match play."
                 >
-                  <AlertTriangle size={11} color="var(--color-gold-bright)" style={{ flexShrink: 0 }} />
+                  <AlertTriangle size={11} color="var(--color-gold-bright)" className="shrink-0" />
                   {!isCollapsed && (
-                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <span className="truncate">
                       {activeTourney.seedingMethod === 'MANUAL' ? 'Seeding (Lock)' : 'Quals Mode (Lock)'}
                     </span>
                   )}
@@ -851,85 +615,49 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                   type="button"
                   onClick={handleUnlockClick}
                   disabled={isUnlocking}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: isCollapsed ? 'center' : 'flex-start',
-                    gap: '0.35rem',
-                    padding: isCollapsed ? '0.35rem 0.2rem' : '0.25rem 0.5rem',
-                    borderRadius: 'var(--radius-full)',
-                    background: 'rgba(56, 189, 248, 0.15)',
-                    border: '1px solid rgba(56, 189, 248, 0.35)',
-                    color: '#38bdf8',
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    cursor: isUnlocking ? 'not-allowed' : 'pointer',
-                    opacity: isUnlocking ? 0.7 : 1,
-                    transition: 'all 0.15s ease',
-                  }}
+                  className={cn(
+                    statusPillClass,
+                    'border-sky-400/35 bg-sky-400/15 text-sky-400',
+                    isCollapsed ? 'justify-center' : 'justify-start',
+                    isUnlocking ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100'
+                  )}
                   title="Match play in progress (Locked). Click to unlock back to Qualifiers."
                 >
                   {isUnlocking ? (
-                    <div
-                      style={{
-                        width: '10px',
-                        height: '10px',
-                        borderRadius: '50%',
-                        border: '1.5px solid rgba(56, 189, 248, 0.3)',
-                        borderTopColor: '#38bdf8',
-                        animation: 'spin 0.8s linear infinite',
-                        flexShrink: 0,
-                      }}
-                    />
+                    <div className="size-2.5 shrink-0 animate-spin rounded-full border-[1.5px] border-sky-400/30 border-t-sky-400" />
                   ) : (
-                    <ShieldCheck size={11} color="#38bdf8" style={{ flexShrink: 0 }} />
+                    <ShieldCheck size={11} color="#38bdf8" className="shrink-0" />
                   )}
                   {!isCollapsed && (
-                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {isUnlocking ? 'Unlocking...' : 'Match Play (Unlock)'}
-                    </span>
+                    <span className="truncate">{isUnlocking ? 'Unlocking...' : 'Match Play (Unlock)'}</span>
                   )}
                 </button>
               )}
             </div>
 
             {/* Public Spectator View Shortcut for Directors */}
-            <div style={{ marginTop: '0.35rem' }}>
+            <div className="mt-1.5">
               <Link
                 to={slug ? (currentTierSlug ? `/${slug}/${currentTierSlug}` : `/${slug}/brackets`) : '/'}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: isCollapsed ? 'center' : 'space-between',
-                  gap: '0.35rem',
-                  padding: isCollapsed ? '0.35rem 0.2rem' : '0.25rem 0.5rem',
-                  borderRadius: 'var(--radius-full)',
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid var(--color-border-subtle)',
-                  color: 'var(--color-text-secondary)',
-                  fontSize: '0.68rem',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  transition: 'all 0.15s ease',
-                }}
+                className={cn(
+                  statusPillClass,
+                  'border-line-subtle bg-white/4 font-semibold text-fg-secondary no-underline',
+                  isCollapsed ? 'justify-center' : 'justify-between'
+                )}
                 title="Open live public spectator view in new tab"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <ExternalLink size={11} color="var(--color-gold-bright)" style={{ flexShrink: 0 }} />
+                <div className="flex items-center gap-1.5">
+                  <ExternalLink size={11} color="var(--color-gold-bright)" className="shrink-0" />
                   {!isCollapsed && <span>Public View</span>}
                 </div>
-                {!isCollapsed && (
-                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>↗</span>
-                )}
+                {!isCollapsed && <span className="text-3xs text-fg-muted">↗</span>}
               </Link>
             </div>
 
             {/* Consolidated Admin Qual Timer HUD */}
-            <div style={{ marginTop: '0.45rem' }}>
+            <div className="mt-2">
               <TournamentQualTimerHud
                 tournament={activeTourney}
                 sidebar={true}
@@ -940,23 +668,10 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
         )}
 
         {/* Section Label: Tournament Views */}
-        {!isCollapsed && (
-          <div
-            style={{
-              padding: '0.65rem 0.95rem 0.25rem 0.95rem',
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              color: 'var(--color-text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}
-          >
-            Tournament
-          </div>
-        )}
+        {!isCollapsed && <div className={cn(sectionLabelClass, 'px-4 pt-2.5')}>Tournament</div>}
 
         {/* Navigation Items */}
-        <nav style={{ flex: 1, padding: '0.35rem 0.4rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+        <nav className="flex flex-1 flex-col gap-1 p-1.5">
           {navItems.map(item => {
             const isActive = activeView === item.key;
             const Icon = item.icon;
@@ -966,41 +681,13 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                 key={item.key}
                 to={item.to}
                 onClick={e => handleLinkClick(e, item.to)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.65rem',
-                  padding: isCollapsed ? '0.55rem 0' : '0.5rem 0.75rem',
-                  justifyContent: isCollapsed ? 'center' : 'flex-start',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.8rem',
-                  fontWeight: isActive ? 700 : 500,
-                  color: isActive ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
-                  background: isActive ? 'var(--color-gold-bg)' : 'transparent',
-                  borderLeft: isActive ? '3px solid var(--color-gold-bright)' : '3px solid transparent',
-                  textDecoration: 'none',
-                  transition: 'background 0.12s ease, color 0.12s ease',
-                  position: 'relative',
-                }}
+                className={cn(sideLinkClass(isActive), 'relative')}
                 title={item.label}
               >
-                <Icon size={16} style={{ flexShrink: 0 }} />
-                {!isCollapsed && (
-                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {item.label}
-                  </span>
-                )}
+                <Icon size={16} className="shrink-0" />
+                {!isCollapsed && <span className="flex-1 truncate">{item.label}</span>}
                 {!isCollapsed && item.badge && (
-                  <span
-                    style={{
-                      fontSize: '0.65rem',
-                      fontWeight: 700,
-                      padding: '0.1rem 0.4rem',
-                      borderRadius: 'var(--radius-full)',
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      color: 'var(--color-text-muted)',
-                    }}
-                  >
+                  <span className="rounded-full bg-white/8 px-1.5 py-0.5 text-3xs font-bold text-fg-muted">
                     {item.badge}
                   </span>
                 )}
@@ -1010,49 +697,18 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
         </nav>
 
         {/* Global / System Divider & Navigation */}
-        <div style={{ borderTop: '1px solid var(--color-border-subtle)', padding: '0.35rem 0.4rem' }}>
-          {!isCollapsed && (
-            <div
-              style={{
-                padding: '0.45rem 0.55rem 0.25rem 0.55rem',
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                color: 'var(--color-text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
-              System
-            </div>
-          )}
+        <div className="border-t border-line-subtle p-1.5">
+          {!isCollapsed && <div className={cn(sectionLabelClass, 'px-2 pt-2')}>System</div>}
 
           {/* All Tournaments */}
           <Link
             to="/"
             onClick={e => handleLinkClick(e, '/')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              padding: isCollapsed ? '0.55rem 0' : '0.45rem 0.75rem',
-              justifyContent: isCollapsed ? 'center' : 'flex-start',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.8rem',
-              fontWeight: activeView === 'tournaments' ? 700 : 500,
-              color: activeView === 'tournaments' ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
-              background: activeView === 'tournaments' ? 'var(--color-gold-bg)' : 'transparent',
-              borderLeft: activeView === 'tournaments' ? '3px solid var(--color-gold-bright)' : '3px solid transparent',
-              textDecoration: 'none',
-              transition: 'background 0.12s ease, color 0.12s ease',
-            }}
+            className={sideLinkClass(activeView === 'tournaments')}
             title="All Tournaments"
           >
-            <Trophy size={16} style={{ flexShrink: 0 }} />
-            {!isCollapsed && (
-              <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                Tournaments
-              </span>
-            )}
+            <Trophy size={16} className="shrink-0" />
+            {!isCollapsed && <span className="flex-1 truncate">Tournaments</span>}
           </Link>
 
           {/* Organizations Directory (System Admin Only) */}
@@ -1060,29 +716,11 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
             <Link
               to="/organizations"
               onClick={e => handleLinkClick(e, '/organizations')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.65rem',
-                padding: isCollapsed ? '0.55rem 0' : '0.45rem 0.75rem',
-                justifyContent: isCollapsed ? 'center' : 'flex-start',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.8rem',
-                fontWeight: activeView === 'organizations' ? 700 : 500,
-                color: activeView === 'organizations' ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
-                background: activeView === 'organizations' ? 'var(--color-gold-bg)' : 'transparent',
-                borderLeft: activeView === 'organizations' ? '3px solid var(--color-gold-bright)' : '3px solid transparent',
-                textDecoration: 'none',
-                transition: 'background 0.12s ease, color 0.12s ease',
-              }}
+              className={sideLinkClass(activeView === 'organizations')}
               title="Organizations Directory"
             >
-              <Building2 size={16} style={{ flexShrink: 0 }} />
-              {!isCollapsed && (
-                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  Organizations
-                </span>
-              )}
+              <Building2 size={16} className="shrink-0" />
+              {!isCollapsed && <span className="flex-1 truncate">Organizations</span>}
             </Link>
           )}
 
@@ -1091,34 +729,16 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
             <Link
               to="/players"
               onClick={e => handleLinkClick(e, '/players')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.65rem',
-                padding: isCollapsed ? '0.55rem 0' : '0.45rem 0.75rem',
-                justifyContent: isCollapsed ? 'center' : 'flex-start',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.8rem',
-                fontWeight: activeView === 'globalPlayers' ? 700 : 500,
-                color: activeView === 'globalPlayers' ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
-                background: activeView === 'globalPlayers' ? 'var(--color-gold-bg)' : 'transparent',
-                borderLeft: activeView === 'globalPlayers' ? '3px solid var(--color-gold-bright)' : '3px solid transparent',
-                textDecoration: 'none',
-                transition: 'background 0.12s ease, color 0.12s ease',
-              }}
+              className={sideLinkClass(activeView === 'globalPlayers')}
               title="Global Player Pool"
             >
-              <Globe2 size={16} style={{ flexShrink: 0 }} />
-              {!isCollapsed && (
-                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  Global Players
-                </span>
-              )}
+              <Globe2 size={16} className="shrink-0" />
+              {!isCollapsed && <span className="flex-1 truncate">Global Players</span>}
             </Link>
           )}
 
           {/* Admin Role Status / Log Out / Admin Login Shortcut */}
-          <div style={{ marginTop: '0.4rem', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.4rem' }}>
+          <div className="mt-1.5 border-t border-line-subtle pt-1.5">
             {isAuthorized ? (
               <button
                 type="button"
@@ -1128,59 +748,23 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                     navigate(slug ? `/${slug}/brackets` : '/');
                   }
                 }}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.65rem',
-                  padding: isCollapsed ? '0.55rem 0' : '0.45rem 0.75rem',
-                  justifyContent: isCollapsed ? 'center' : 'flex-start',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: isSystemAdmin ? '#38bdf8' : 'var(--color-gold-bright)',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
+                className={cn(sideButtonClass, isSystemAdmin ? 'text-sky-400' : 'text-gold-bright')}
                 title={`Logged in as ${isSystemAdmin ? 'System Admin' : 'Tournament Admin'}. Click to Log Out.`}
               >
-                <LogOut size={16} style={{ flexShrink: 0 }} />
+                <LogOut size={16} className="shrink-0" />
                 {!isCollapsed && (
-                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    Log Out ({isSystemAdmin ? 'System' : 'Admin'})
-                  </span>
+                  <span className="flex-1 truncate">Log Out ({isSystemAdmin ? 'System' : 'Admin'})</span>
                 )}
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => setIsAdminModalOpen(true)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.65rem',
-                  padding: isCollapsed ? '0.55rem 0' : '0.45rem 0.75rem',
-                  justifyContent: isCollapsed ? 'center' : 'flex-start',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: 'var(--color-text-secondary)',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
+                className={cn(sideButtonClass, 'text-fg-secondary')}
                 title="Unlock administration with PIN"
               >
-                <KeyRound size={16} color="var(--color-gold-bright)" style={{ flexShrink: 0 }} />
-                {!isCollapsed && (
-                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    Admin Access
-                  </span>
-                )}
+                <KeyRound size={16} color="var(--color-gold-bright)" className="shrink-0" />
+                {!isCollapsed && <span className="flex-1 truncate">Admin Access</span>}
               </button>
             )}
           </div>
@@ -1189,23 +773,10 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
           <button
             type="button"
             onClick={handleToggle}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              justifyContent: isCollapsed ? 'center' : 'flex-start',
-              padding: isCollapsed ? '0.55rem 0' : '0.45rem 0.75rem',
-              marginTop: '0.35rem',
-              borderRadius: 'var(--radius-sm)',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--color-text-muted)',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'color 0.12s ease, background 0.12s ease',
-            }}
+            className={cn(
+              'mt-1.5 flex w-full cursor-pointer items-center gap-2 rounded-sm border-0 bg-transparent py-2 text-xs font-semibold text-fg-muted transition-colors duration-100',
+              isCollapsed ? 'justify-center px-0' : 'justify-start px-3'
+            )}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -1236,38 +807,15 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
 
       {/* Unlock Error Notification */}
       {unlockError && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '1.5rem',
-            left: '1.5rem',
-            background: '#ef4444',
-            color: '#ffffff',
-            padding: '0.75rem 1.25rem',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-xl)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-          }}
-        >
+        <div className="fixed bottom-6 left-6 z-9999 flex items-center gap-3 rounded-md bg-red px-5 py-3 text-sm font-semibold text-white shadow-xl">
           <span>{unlockError}</span>
-          <button
+          <IconButton
+            aria-label="Dismiss error"
             onClick={() => setUnlockError(null)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#ffffff',
-              cursor: 'pointer',
-              fontWeight: 800,
-              fontSize: '1rem',
-            }}
+            className="p-0 text-base font-extrabold text-white"
           >
             ×
-          </button>
+          </IconButton>
         </div>
       )}
     </>

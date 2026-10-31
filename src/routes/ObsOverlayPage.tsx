@@ -31,35 +31,15 @@ export const ObsOverlayPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'transparent',
-          color: '#94a3b8',
-        }}
-      >
-        <span style={{ fontSize: '0.9rem' }}>Loading Tournament Broadcast Stream...</span>
+      <div className="fixed inset-0 flex items-center justify-center bg-transparent text-fg-secondary">
+        <span className="text-sm">Loading Tournament Broadcast Stream...</span>
       </div>
     );
   }
 
   if (notFound || !tournament) {
     return (
-      <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'transparent',
-          color: '#ef4444',
-        }}
-      >
+      <div className="fixed inset-0 flex items-center justify-center bg-transparent text-red">
         <h3>Tournament Not Found</h3>
       </div>
     );
@@ -78,17 +58,7 @@ export const ObsOverlayPage: React.FC = () => {
 
   if (!tier) {
     return (
-      <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'transparent',
-          color: '#94a3b8',
-        }}
-      >
+      <div className="fixed inset-0 flex items-center justify-center bg-transparent text-fg-secondary">
         <h3>No Tier Bracket Configured</h3>
       </div>
     );

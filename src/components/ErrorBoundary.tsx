@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { RefreshCw, Home, ShieldAlert } from 'lucide-react';
+import { Button } from './ui';
 
 interface Props {
   children: ReactNode;
@@ -64,130 +65,43 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div
-          role="alert"
-          style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'var(--color-bg-base, #0a0d14)',
-            color: 'var(--color-text-primary, #ffffff)',
-            padding: '2rem',
-            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          }}
-        >
-          <div
-            style={{
-              maxWidth: '680px',
-              width: '100%',
-              background: 'var(--color-bg-surface, #121722)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              borderRadius: '12px',
-              padding: '2rem',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                marginBottom: '1rem',
-                color: '#ef4444',
-              }}
-            >
+        <div role="alert" className="flex min-h-screen items-center justify-center bg-canvas p-8 font-sans text-fg">
+          <div className="w-full max-w-170 rounded-md border border-red/40 bg-surface p-8 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+            <div className="mb-4 flex items-center gap-3 text-red">
               <ShieldAlert size={28} />
-              <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700 }}>
+              <h2 className="m-0 text-xl font-bold">
                 {this.props.fallbackTitle || 'Application Rendering Error'}
               </h2>
             </div>
 
-            <p style={{ color: 'var(--color-text-secondary, #94a3b8)', fontSize: '0.95rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+            <p className="mb-5 text-base leading-normal text-fg-secondary">
               An unexpected error occurred while rendering this tournament view. The error details below can help diagnose the cause.
             </p>
 
             {this.state.error && (
-              <div
-                style={{
-                  background: '#090c12',
-                  border: '1px solid rgba(239, 68, 68, 0.25)',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  fontFamily: 'monospace',
-                  fontSize: '0.85rem',
-                  color: '#f87171',
-                  overflowX: 'auto',
-                  marginBottom: '1rem',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
+              <div className="mb-4 overflow-x-auto rounded-md border border-red/25 bg-canvas p-4 font-mono text-sm whitespace-pre-wrap text-red-bright [word-break:break-word]">
                 {this.state.error.toString()}
               </div>
             )}
 
             {this.state.errorInfo?.componentStack && (
-              <details style={{ marginBottom: '1.5rem' }}>
-                <summary
-                  style={{
-                    color: 'var(--color-text-muted, #64748b)',
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    marginBottom: '0.5rem',
-                  }}
-                >
+              <details className="mb-6">
+                <summary className="mb-2 cursor-pointer text-caption text-fg-muted select-none">
                   View Component Stack Trace
                 </summary>
-                <div
-                  style={{
-                    background: '#090c12',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '8px',
-                    padding: '0.75rem',
-                    fontFamily: 'monospace',
-                    fontSize: '0.75rem',
-                    color: '#94a3b8',
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                    whiteSpace: 'pre-wrap',
-                  }}
-                >
+                <div className="max-h-50 overflow-y-auto rounded-md border border-white/8 bg-canvas p-3 font-mono text-xs whitespace-pre-wrap text-fg-secondary">
                   {this.state.errorInfo.componentStack}
                 </div>
               </details>
             )}
 
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={this.handleReload}
-                className="btn btn-primary"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.6rem 1.25rem',
-                  fontSize: '0.9rem',
-                }}
-              >
+            <div className="flex flex-wrap gap-3">
+              <Button variant="primary" onClick={this.handleReload} className="px-5 py-2.5">
                 <RefreshCw size={16} /> Reload Page
-              </button>
-              <button
-                type="button"
-                onClick={this.handleResetStateAndReload}
-                className="btn btn-secondary"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.6rem 1.25rem',
-                  fontSize: '0.9rem',
-                }}
-              >
+              </Button>
+              <Button variant="secondary" onClick={this.handleResetStateAndReload} className="px-5 py-2.5">
                 <Home size={16} /> Return to Tournaments
-              </button>
+              </Button>
             </div>
           </div>
         </div>

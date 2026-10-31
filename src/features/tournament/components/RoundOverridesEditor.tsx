@@ -3,6 +3,7 @@ import { TournamentTier } from '../types';
 import { Plus, Trash2, Check } from 'lucide-react';
 import { getAvailableRoundsForTier } from '../roundOverrides';
 import { BestOfSelect } from '../../bracket/components/BestOfSelect';
+import { Button, cn } from '../../../components/ui';
 
 interface DraftOverrideRow {
   id: string;
@@ -16,10 +17,9 @@ interface DraftOverrideRow {
 interface RoundOverridesEditorProps {
   tier: TournamentTier;
   onChange: (overrides: Record<string | number, number>) => void;
-  inputStyle: React.CSSProperties;
 }
 
-export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier, onChange, inputStyle }) => {
+export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier, onChange }) => {
   const [draftRows, setDraftRows] = useState<DraftOverrideRow[]>(() => {
     const entries = Object.entries(tier.roundBestOfOverrides || {})
       .map(([rStr, boVal]) => {
@@ -159,51 +159,31 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
   );
 
   return (
-    <div
-      style={{
-        marginTop: '1.25rem',
-        paddingTop: '1rem',
-        borderTop: '1px solid var(--color-border-subtle)',
-        width: '100%',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '0.75rem',
-          flexWrap: 'wrap',
-          gap: '0.5rem',
-        }}
-      >
+    <div className="mt-5 w-full border-t border-line-subtle pt-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-fg">
               Round-Specific Best-of Overrides
             </span>
             <span
-              style={{
-                fontSize: '0.7rem',
-                padding: '0.1rem 0.45rem',
-                borderRadius: 'var(--radius-full)',
-                background: configuredCount > 0 ? 'var(--color-gold-bg)' : 'var(--color-bg-base)',
-                color: configuredCount > 0 ? 'var(--color-gold-bright)' : 'var(--color-text-muted)',
-                border: '1px solid var(--color-border-subtle)',
-                fontWeight: 600,
-              }}
+              className={cn(
+                'rounded-full border border-line-subtle py-0.5 px-2 text-2xs font-semibold',
+                configuredCount > 0 ? 'bg-gold-soft text-gold-bright' : 'bg-canvas text-fg-muted'
+              )}
             >
               {configuredCount} configured
             </span>
           </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '0.15rem', margin: '0.15rem 0 0 0' }}>
+          <p className="mx-0 mb-0 mt-0.5 text-xs text-fg-muted">
             Override series format for specific rounds (e.g., Finals Bo7). Unconfigured rounds inherit default <strong>Bo{tier.bestOf}</strong>.
           </p>
         </div>
 
         {/* Add button on the right side of header */}
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="sm"
           onClick={handleAdd}
           disabled={isAllConfigured}
           title={
@@ -211,32 +191,14 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
               ? 'All rounds in this bracket already have overrides configured'
               : 'Add a round-specific Best-of format override'
           }
-          className="btn btn-primary"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            padding: '0.35rem 0.75rem',
-            fontSize: '0.76rem',
-            borderRadius: 'var(--radius-sm)',
-            cursor: isAllConfigured ? 'not-allowed' : 'pointer',
-            opacity: isAllConfigured ? 0.5 : 1,
-            flexShrink: 0,
-          }}
+          className="shrink-0"
         >
           <Plus size={14} /> Add Override
-        </button>
+        </Button>
       </div>
 
       {draftRows.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-            gap: '0.65rem',
-            transition: 'all 0.3s ease',
-          }}
-        >
+        <div className="grid grid-cols-2 gap-2.5 transition-all duration-300">
           {draftRows.map(row => {
             const otherDraftKeys = new Set(
               draftRows.filter(r => r.id !== row.id).map(r => String(r.roundKey))
@@ -249,33 +211,17 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
             return (
               <div
                 key={row.id}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                  padding: '0.65rem 0.75rem',
-                  background: 'var(--color-bg-base)',
-                  borderRadius: 'var(--radius-sm)',
-                  border: row.isDirty
-                    ? '1px solid var(--color-gold-bright)'
-                    : '1px solid var(--color-border-subtle)',
-                  boxShadow: row.isDirty ? '0 0 0 1px rgba(234, 179, 8, 0.2)' : 'none',
-                  boxSizing: 'border-box',
-                  transition: 'all 0.3s ease',
-                }}
+                className={cn(
+                  'flex flex-col gap-2 rounded-sm border bg-canvas py-2.5 px-3 transition-all duration-300',
+                  row.isDirty
+                    ? 'border-gold-bright shadow-[0_0_0_1px_rgba(234,179,8,0.2)]'
+                    : 'border-line-subtle shadow-none'
+                )}
               >
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <div className="grid grid-cols-[1fr_1fr] items-start gap-2">
                   {/* Target Round dropdown */}
-                  <div style={{ minWidth: 0 }}>
-                    <label
-                      style={{
-                        fontSize: '0.7rem',
-                        color: 'var(--color-text-muted)',
-                        display: 'block',
-                        marginBottom: '0.2rem',
-                        fontWeight: 600,
-                      }}
-                    >
+                  <div className="min-w-0">
+                    <label className="mb-1 block text-2xs font-semibold text-fg-muted">
                       Target Round
                     </label>
                     <select
@@ -286,7 +232,7 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
                         const parsedKey = !isNaN(num) && String(num) === val ? num : val;
                         handleRoundChange(row.id, parsedKey);
                       }}
-                      style={{ ...inputStyle, width: '100%', fontSize: '0.78rem', padding: '0.35rem 0.5rem' }}
+                      className="w-full rounded-sm border border-line bg-canvas py-1.5 px-2 text-caption text-fg"
                     >
                       {selectableRounds.map(r => {
                         const optVal = String(r.roundIdentifier || r.roundNumber);
@@ -300,16 +246,8 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
                   </div>
 
                   {/* BestOf Combobox */}
-                  <div style={{ minWidth: 0 }}>
-                    <label
-                      style={{
-                        fontSize: '0.7rem',
-                        color: 'var(--color-text-muted)',
-                        display: 'block',
-                        marginBottom: '0.2rem',
-                        fontWeight: 600,
-                      }}
-                    >
+                  <div className="min-w-0">
+                    <label className="mb-1 block text-2xs font-semibold text-fg-muted">
                       Format
                     </label>
                     <BestOfSelect
@@ -321,9 +259,9 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
                 </div>
 
                 {/* Actions: Save & Delete */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem', borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.4rem' }}>
+                <div className="flex items-center justify-end gap-1.5 border-t border-line-subtle pt-1.5">
                   {row.isDirty && (
-                    <span style={{ fontSize: '0.7rem', color: 'var(--color-gold-bright)', marginRight: 'auto', fontWeight: 600 }}>
+                    <span className="mr-auto text-2xs font-semibold text-gold-bright">
                       Unsaved
                     </span>
                   )}
@@ -332,21 +270,12 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
                     disabled={!row.isDirty}
                     onClick={() => handleSaveRow(row.id)}
                     title={row.isDirty ? 'Save round override' : 'No unsaved changes'}
-                    style={{
-                      padding: '0.25rem 0.55rem',
-                      background: row.isDirty ? 'var(--color-gold-bg)' : 'transparent',
-                      border: `1px solid ${row.isDirty ? 'var(--color-gold-bright)' : 'var(--color-border-subtle)'}`,
-                      borderRadius: 'var(--radius-sm)',
-                      color: row.isDirty ? 'var(--color-gold-bright)' : 'var(--color-text-muted)',
-                      cursor: row.isDirty ? 'pointer' : 'not-allowed',
-                      opacity: row.isDirty ? 1 : 0.4,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      transition: 'all 0.2s ease',
-                    }}
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-sm border py-1 px-2 text-xs font-semibold transition-all duration-200',
+                      row.isDirty
+                        ? 'cursor-pointer border-gold-bright bg-gold-soft text-gold-bright opacity-100'
+                        : 'cursor-not-allowed border-line-subtle bg-transparent text-fg-muted opacity-40'
+                    )}
                   >
                     <Check size={13} />
                     <span>Save</span>
@@ -356,28 +285,7 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
                     type="button"
                     onClick={() => handleDeleteRow(row.id)}
                     title="Remove round override"
-                    style={{
-                      padding: '0.25rem 0.55rem',
-                      background: 'transparent',
-                      border: '1px solid var(--color-border-subtle)',
-                      borderRadius: 'var(--radius-sm)',
-                      color: 'var(--color-text-muted)',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.color = 'var(--color-red)';
-                      e.currentTarget.style.borderColor = 'var(--color-red)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.color = 'var(--color-text-muted)';
-                      e.currentTarget.style.borderColor = 'var(--color-border-subtle)';
-                    }}
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-sm border border-line-subtle bg-transparent py-1 px-2 text-xs font-semibold text-fg-muted transition-all duration-200 hover:border-red hover:text-red"
                   >
                     <Trash2 size={13} />
                     <span>Delete</span>

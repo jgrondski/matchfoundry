@@ -13,6 +13,7 @@ import { ShareBracketModal } from '../features/bracket/components/ShareBracketMo
 import { useBracketTier } from '../features/bracket/hooks/useBracketTier';
 import { ObsBracketView } from '../features/obs/components/ObsBracketView';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { Button, cn } from '../components/ui';
 
 /**
  * Tier 1: Route Gate (Hydration & Data Boundary)
@@ -63,32 +64,19 @@ export const PublicTierBracketPage: React.FC = () => {
 
     if (tournamentFallback && tournamentFallback.tiers.length === 0) {
       const emptyContent = (
-        <main
-          style={{
-            flex: 1,
-            padding: '3rem 1.5rem',
-            textAlign: 'center',
-            maxWidth: '600px',
-            margin: '0 auto',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '1rem',
-          }}
-        >
-          <h2 style={{ color: 'var(--color-text-primary)', fontSize: '1.4rem' }}>No Bracket Tiers Configured</h2>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+        <main className="mx-auto flex max-w-150 flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+          <h2 className="text-2xl text-fg">No Bracket Tiers Configured</h2>
+          <p className="text-sm leading-normal text-fg-secondary">
             This tournament does not have any bracket tiers yet. Qualifiers can be entered and ranked on the leaderboard, or you can create bracket tiers in Settings.
           </p>
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button onClick={() => navigate(isManageRoute ? `/${tournamentFallback.slug}/manage/qualifiers` : `/${tournamentFallback.slug}/leaderboard`)} className="btn btn-secondary">
+          <div className="mt-2 flex flex-wrap justify-center gap-3">
+            <Button variant="secondary" onClick={() => navigate(isManageRoute ? `/${tournamentFallback.slug}/manage/qualifiers` : `/${tournamentFallback.slug}/leaderboard`)}>
               🏆 View Qualifiers
-            </button>
+            </Button>
             {isManageRoute && (
-              <button onClick={() => navigate(`/${tournamentFallback.slug}/manage/settings`)} className="btn btn-primary">
+              <Button variant="primary" onClick={() => navigate(`/${tournamentFallback.slug}/manage/settings`)}>
                 ⚙️ Configure Tiers in Settings
-              </button>
+              </Button>
             )}
           </div>
         </main>
@@ -106,12 +94,12 @@ export const PublicTierBracketPage: React.FC = () => {
     }
 
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+      <div className="p-12 text-center text-fg-secondary">
         <h2>Bracket Not Found</h2>
         <p>Could not find tier "{tierSlug}" in tournament "{slug}".</p>
-        <button onClick={() => navigate('/')} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+        <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
-        </button>
+        </Button>
       </div>
     );
   }
@@ -239,27 +227,21 @@ const TierBracketView: React.FC<TierBracketViewProps> = ({
       />
 
       {localViewMode === 'feed' ? (
-        <main
-          style={{
-            flex: 1,
-            padding: '0.75rem 0.5rem',
-            width: '100%',
-            maxWidth: '520px',
-            margin: '0 auto',
-            boxSizing: 'border-box',
-          }}
-        >
-          <div style={{ marginBottom: '0.85rem', padding: '0 0.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.15rem' }}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-gold-bright)' }}>
+        <main className="mx-auto w-full max-w-130 flex-1 px-2 py-3">
+          <div className="mb-3.5 px-1 py-0">
+            <div className="mb-0.5 flex items-center gap-2">
+              <span className="text-2xs font-bold tracking-widest text-gold-bright uppercase">
                 {canManage ? 'Manage Bracket' : 'Tournament Bracket'}
               </span>
-              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.7rem' }}>•</span>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: tier.primaryColor || 'var(--color-gold-bright)' }}>
+              <span className="text-2xs text-fg-muted">•</span>
+              <span
+                className="text-2xs font-bold tracking-wide uppercase"
+                style={{ color: tier.primaryColor || 'var(--color-gold-bright)' }}
+              >
                 {tier.name}
               </span>
             </div>
-            <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#ffffff', margin: 0, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+            <h1 className="m-0 text-2xl leading-tight font-extrabold tracking-tight text-white">
               {tournament.name}
             </h1>
           </div>
@@ -273,14 +255,10 @@ const TierBracketView: React.FC<TierBracketViewProps> = ({
         </main>
       ) : (
         <main
-          style={{
-            flex: 1,
-            padding: 0,
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: localViewMode === 'fit' ? 'hidden' : 'visible',
-          }}
+          className={cn(
+            'flex min-h-0 flex-1 flex-col p-0',
+            localViewMode === 'fit' ? 'overflow-hidden' : 'overflow-visible'
+          )}
         >
           <BracketVisualizer
             tournament={tournament}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useId } from 'react';
 import { Overlay } from '../../../components/overlay';
+import { Button, buttonClasses } from '../../../components/ui';
 import QRCode from 'qrcode';
 import { Tournament, TournamentTier } from '../../tournament/types';
 import { getDefaultTierColors, colorWithAlpha } from '../colorUtils';
@@ -107,49 +108,31 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
         <>
           {/* Ambient Top Glow Stripe */}
           <div
+            className="h-1 w-full"
             style={{
-              height: '4px',
-              width: '100%',
               background: `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})`,
             }}
           />
 
           {/* Modal Header */}
-          <div style={headerStyle}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+          <div className="py-5 px-6 border-b border-line flex justify-between items-start bg-white/2 gap-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
                 <span
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    color: primaryColor,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                  }}
+                  className="text-xs font-extrabold uppercase tracking-widest flex items-center gap-1"
+                  style={{ color: primaryColor }}
                 >
                   <Layers size={13} />
                   {resolvedTier ? `${resolvedTier.name} Tier Bracket` : 'Tournament Portal'}
                 </span>
-                <span style={{ color: 'var(--color-border-subtle)', fontSize: '0.75rem' }}>•</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                <span className="text-line-subtle text-xs">•</span>
+                <span className="text-xs font-semibold text-fg-secondary">
                   Public Spectator Link
                 </span>
               </div>
               <h2
                 id={titleId}
-                style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 800,
-                  color: '#ffffff',
-                  margin: 0,
-                  letterSpacing: '-0.02em',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
+                className="text-xl font-extrabold text-white m-0 tracking-tight flex items-center gap-2"
               >
                 <Share2 size={20} color={primaryColor} />
                 Share Tournament Bracket
@@ -159,7 +142,7 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
             <button
               type="button"
               onClick={requestClose}
-              style={closeBtnStyle}
+              className="bg-white/5 border border-line text-fg-muted cursor-pointer p-1.5 rounded-md flex items-center justify-center transition-all duration-150 shrink-0"
               title="Close (Esc)"
               aria-label="Close share bracket modal"
             >
@@ -168,122 +151,75 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
           </div>
 
           {/* Modal Body */}
-          <div style={bodyStyle}>
+          <div className="py-5 px-6 overflow-y-auto flex flex-col gap-5">
             {/* Section 1: Canonical Public Link */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              <label style={labelStyle}>Canonical Spectator URL</label>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.4rem 0.65rem 0.4rem 0.85rem',
-                }}
-              >
-                <span
-                  style={{
-                    flex: 1,
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.85rem',
-                    color: 'var(--color-gold-bright)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>Canonical Spectator URL</label>
+              <div className="flex items-center gap-2 bg-black/40 border border-line rounded-md py-1.5 pr-2.5 pl-3.5">
+                <span className="flex-1 font-mono text-sm text-gold-bright truncate">
                   {cleanDisplayUrl}
                 </span>
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={() => copyToClipboard(publicUrl, 'main-url')}
-                  className="btn btn-primary"
-                  style={{
-                    padding: '0.35rem 0.75rem',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    gap: '0.35rem',
-                  }}
                 >
                   {copiedKey === 'main-url' ? <Check size={13} /> : <Copy size={13} />}
                   <span>{copiedKey === 'main-url' ? 'Copied!' : 'Copy Link'}</span>
-                </button>
+                </Button>
               </div>
-              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', margin: '0.1rem 0 0 0.1rem' }}>
+              <span className="text-xs text-fg-muted mt-0.5 mr-0 mb-0 ml-0.5">
                 Visitors on this URL receive an interactive, real-time read-only bracket without edit permissions.
               </span>
             </div>
 
             {/* Section 2: QR Code for Venue Spectators */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '1.25rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid var(--color-border-subtle)',
-                gap: '0.75rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <div className="flex flex-col items-center p-5 rounded-md bg-black/25 border border-line-subtle gap-3">
+              <div className="flex items-center gap-2">
                 <QrCode size={16} color={primaryColor} />
-                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                <span className="text-caption font-bold text-fg">
                   Venue Smartphone QR Code
                 </span>
               </div>
 
               {/* QR Image Box */}
-              <div
-                style={{
-                  padding: '0.65rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: '#ffffff',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
+              <div className="p-2.5 rounded-md bg-white shadow-[0_8px_24px_rgba(0,0,0,0.5)] flex items-center justify-center">
                 {qrDataUrl ? (
                   <img
                     src={qrDataUrl}
                     alt={`QR code for ${tournament.name} ${resolvedTier?.name || ''} bracket`}
-                    style={{ width: '180px', height: '180px', display: 'block' }}
+                    className="size-45 block"
                   />
                 ) : (
-                  <div style={{ width: '180px', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+                  <div className="size-45 flex items-center justify-center text-[#666]">
                     Generating QR...
                   </div>
                 )}
               </div>
 
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textAlign: 'center', maxWidth: '300px' }}>
+              <span className="text-xs text-fg-muted text-center max-w-75">
                 Scan with any iPhone or Android camera to open this bracket on mobile.
               </span>
             </div>
 
             {/* Section 3: Quick Broadcast & Community Snippets */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-              <label style={labelStyle}>Quick Community Snippets</label>
+            <div className="flex flex-col gap-2.5">
+              <label className={labelClass}>Quick Community Snippets</label>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem' }}>
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2.5">
                 {/* Twitch Chat Snippet */}
                 <button
                   type="button"
                   onClick={() => copyToClipboard(twitchCommandText, 'twitch-cmd')}
-                  style={snippetBtnStyle}
+                  className={snippetBtnClass}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <div className="flex items-center gap-2">
                     <MessageSquare size={14} color="#a855f7" />
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                    <span className="text-caption font-bold text-fg">
                       Twitch Chat Command
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                  <div className="flex items-center gap-1.5 text-xs text-fg-muted">
                     <span>{copiedKey === 'twitch-cmd' ? 'Copied to clipboard!' : twitchCommandText}</span>
                     {copiedKey === 'twitch-cmd' ? <Check size={12} color="#4ade80" /> : <Copy size={12} />}
                   </div>
@@ -293,15 +229,15 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
                 <button
                   type="button"
                   onClick={() => copyToClipboard(discordMarkdownText, 'discord-md')}
-                  style={snippetBtnStyle}
+                  className={snippetBtnClass}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                  <div className="flex items-center gap-2">
                     <Sparkles size={14} color="#38bdf8" />
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                    <span className="text-caption font-bold text-fg">
                       Discord Markdown Link
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                  <div className="flex items-center gap-1.5 text-xs text-fg-muted">
                     <span>{copiedKey === 'discord-md' ? 'Copied to clipboard!' : '[Tournament] Link'}</span>
                     {copiedKey === 'discord-md' ? <Check size={12} color="#4ade80" /> : <Copy size={12} />}
                   </div>
@@ -311,31 +247,23 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
           </div>
 
           {/* Modal Footer */}
-          <div style={footerStyle}>
+          <div className="py-3.5 px-6 border-t border-line bg-white/2 flex justify-between items-center">
             <a
               href={twitterIntentUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-secondary"
-              style={{
-                fontSize: '0.78rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
+              className={buttonClasses({
+                variant: 'secondary',
+                className: 'text-caption gap-1.5 hover:bg-highlight hover:border-fg-secondary',
+              })}
             >
               <ExternalLink size={13} />
               <span>Post to X / Twitter</span>
             </a>
 
-            <button
-              type="button"
-              onClick={requestClose}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.82rem', padding: '0.45rem 1.1rem' }}
-            >
+            <Button variant="secondary" onClick={requestClose} className="text-caption py-2 px-4.5">
               Done
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -343,65 +271,6 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
   );
 };
 
-const headerStyle: React.CSSProperties = {
-  padding: '1.25rem 1.5rem',
-  borderBottom: '1px solid var(--color-border)',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  background: 'rgba(255, 255, 255, 0.02)',
-  gap: '1rem',
-};
-
-const closeBtnStyle: React.CSSProperties = {
-  background: 'rgba(255, 255, 255, 0.05)',
-  border: '1px solid var(--color-border)',
-  color: 'var(--color-text-muted)',
-  cursor: 'pointer',
-  padding: '0.4rem',
-  borderRadius: 'var(--radius-md)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'all 0.15s ease',
-  flexShrink: 0,
-};
-
-const bodyStyle: React.CSSProperties = {
-  padding: '1.25rem 1.5rem',
-  overflowY: 'auto',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1.25rem',
-};
-
-const footerStyle: React.CSSProperties = {
-  padding: '0.9rem 1.5rem',
-  borderTop: '1px solid var(--color-border)',
-  background: 'rgba(255, 255, 255, 0.02)',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: '0.72rem',
-  fontWeight: 700,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
-  color: 'var(--color-text-muted)',
-};
-
-const snippetBtnStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'flex-start',
-  gap: '0.35rem',
-  padding: '0.65rem 0.85rem',
-  borderRadius: 'var(--radius-sm)',
-  background: 'rgba(255, 255, 255, 0.03)',
-  border: '1px solid var(--color-border-subtle)',
-  cursor: 'pointer',
-  textAlign: 'left',
-  transition: 'all 0.15s ease',
-};
+const labelClass = 'text-xs font-bold uppercase tracking-wider text-fg-muted';
+const snippetBtnClass =
+  'flex flex-col items-start gap-1.5 py-2.5 px-3.5 rounded-sm bg-white/3 border border-line-subtle cursor-pointer text-left transition-all duration-150';

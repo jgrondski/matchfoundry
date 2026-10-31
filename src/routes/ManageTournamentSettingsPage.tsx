@@ -6,6 +6,7 @@ import { TournamentLayout } from '../components/TournamentLayout';
 import { TournamentAdminForm } from '../features/tournament/components/TournamentAdminForm';
 import { Settings } from 'lucide-react';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { Button } from '../components/ui';
 import { DiscardChangesDialog } from '../components/overlay';
 
 /**
@@ -26,11 +27,11 @@ export const ManageTournamentSettingsPage: React.FC = () => {
   const tournament = slug ? getTournamentBySlug(slug) : undefined;
   if (!tournament) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+      <div className="p-12 text-center text-fg-secondary">
         <h2>Tournament Not Found</h2>
-        <button onClick={() => navigate('/')} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+        <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
-        </button>
+        </Button>
       </div>
     );
   }
@@ -82,22 +83,14 @@ const TournamentSettingsView: React.FC<TournamentSettingsViewProps> = ({ tournam
       activeView="settings"
       onNavigate={handleNavigateAttempt}
     >
-      <main style={{ flex: 1, padding: '2rem 1.5rem', maxWidth: '1100px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <main className="mx-auto flex w-full max-w-275 flex-1 flex-col gap-6 px-6 py-8">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
-            <span
-              style={{
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                color: 'var(--color-gold-bright)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-              }}
-            >
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-caption font-bold tracking-widest text-gold-bright uppercase">
               Tournament Administration &amp; Configuration
             </span>
           </div>
-          <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.65rem', letterSpacing: '-0.02em', margin: 0 }}>
+          <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white">
             <Settings color="var(--color-gold-bright)" size={28} />
             {tournament.name}
           </h1>

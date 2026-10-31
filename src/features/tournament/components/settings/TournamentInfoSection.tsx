@@ -2,7 +2,8 @@ import React from 'react';
 import { Shield, AlertTriangle, ShieldCheck, Sliders } from 'lucide-react';
 import { QualFormat, QualMode, PointsThreshold, DEFAULT_POINTS_THRESHOLDS, SeedingMethod } from '../../types';
 import { ClearableNumberInput } from '../../../../components/ClearableNumberInput';
-import { labelStyle, inputStyle } from './types';
+import { labelClass, inputClass } from './types';
+import { Badge, Button, cn } from '../../../../components/ui';
 
 interface TournamentInfoSectionProps {
   name: string;
@@ -58,125 +59,103 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
   onOpenPointsDrawer,
 }) => {
   return (
-    <section
-      style={{
-        background: 'var(--color-bg-surface)',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--color-border)',
-        padding: '1rem 1.25rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.85rem',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <section className="flex flex-col gap-3.5 rounded-lg border border-line bg-surface py-4 px-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-2">
+        <div className="flex items-center gap-2">
           <Shield size={18} color="var(--color-gold-bright)" />
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+          <h2 className="m-0 text-lg font-bold text-fg">
             Tournament Details
           </h2>
         </div>
 
         {/* Tournament Mode Status Indicator in Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-2">
           {!isLocked ? (
-            <span className="badge badge-gold" style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }} title="Qualifiers active. Brackets dynamically seed.">
+            <Badge variant="gold" title="Qualifiers active. Brackets dynamically seed.">
               <AlertTriangle size={12} /> Qualifiers Mode
-            </span>
+            </Badge>
           ) : (
-            <span className="badge badge-green" style={{ fontSize: '0.75rem', padding: '0.25rem 0.65rem' }} title="Brackets locked. Live match scoring active.">
+            <Badge variant="green" title="Brackets locked. Live match scoring active.">
               <ShieldCheck size={12} /> Match Play Mode
-            </span>
+            </Badge>
           )}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3.5">
         <div>
-          <label style={labelStyle}>Tournament Name</label>
+          <label className={labelClass}>Tournament Name</label>
           <input
             type="text"
             value={name}
             onChange={e => onNameChange(e.target.value)}
             required
-            style={inputStyle}
+            className={inputClass}
           />
         </div>
 
         <div>
-          <label style={labelStyle}>URL Slug</label>
+          <label className={labelClass}>URL Slug</label>
           <input
             type="text"
             value={slug}
             onChange={e => onSlugChange(e.target.value)}
             required
-            style={inputStyle}
+            className={inputClass}
           />
-          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+          <span className="text-xs text-fg-muted">
             Public routing: /{slug}
           </span>
         </div>
 
         <div>
-          <label style={labelStyle}>Event Date</label>
+          <label className={labelClass}>Event Date</label>
           <input
             type="text"
             value={date}
             onChange={e => onDateChange(e.target.value)}
             placeholder="e.g. March 21-22, 2026"
-            style={inputStyle}
+            className={inputClass}
           />
         </div>
 
         <div>
-          <label style={labelStyle}>Location</label>
+          <label className={labelClass}>Location</label>
           <input
             type="text"
             value={location}
             onChange={e => onLocationChange(e.target.value)}
             placeholder="e.g. Kansas City, MO"
-            style={inputStyle}
+            className={inputClass}
           />
         </div>
       </div>
 
       {/* Seeding Method Selector */}
-      <div style={{ borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.85rem' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          <label style={labelStyle}>Seeding Method</label>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
+      <div className="border-t border-line-subtle pt-3.5">
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass}>Seeding Method</label>
+          <div className="flex flex-wrap gap-3">
+            <Button
               disabled={isLocked}
               onClick={() => onSeedingMethodChange('QUALIFIERS')}
-              className={seedingMethod === 'QUALIFIERS' ? 'btn btn-primary' : 'btn btn-secondary'}
-              style={{
-                fontSize: '0.82rem',
-                padding: '0.4rem 0.85rem',
-                opacity: isLocked ? 0.6 : 1,
-                cursor: isLocked ? 'not-allowed' : 'pointer',
-              }}
+              variant={seedingMethod === 'QUALIFIERS' ? 'primary' : 'secondary'}
+              className="py-1.5 px-3.5 text-caption"
               title={isLocked ? 'Cannot change seeding method during match play' : 'Qualifiers Leaderboard: Players submit scores, leaderboard determines seeds'}
             >
               🏆 Qualifiers Leaderboard
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               disabled={isLocked}
               onClick={() => onSeedingMethodChange('MANUAL')}
-              className={seedingMethod === 'MANUAL' ? 'btn btn-primary' : 'btn btn-secondary'}
-              style={{
-                fontSize: '0.82rem',
-                padding: '0.4rem 0.85rem',
-                opacity: isLocked ? 0.6 : 1,
-                cursor: isLocked ? 'not-allowed' : 'pointer',
-              }}
+              variant={seedingMethod === 'MANUAL' ? 'primary' : 'secondary'}
+              className="py-1.5 px-3.5 text-caption"
               title={isLocked ? 'Cannot change seeding method during match play' : 'Direct / Manual Seeding: Enter players manually or paste a list, arrange seeds directly without quals'}
             >
               ✍️ Direct / Manual Seeding (No Quals)
-            </button>
+            </Button>
           </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+          <span className="text-xs text-fg-muted">
             {seedingMethod === 'QUALIFIERS'
               ? 'Brackets dynamically populate according to leaderboard standings.'
               : 'Qualifiers are bypassed. Organize seeds manually, paste a pre-ranked list, or randomize draw order in the Seeding manager.'}
@@ -186,21 +165,21 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
 
       {/* Qualifying Format Controls (Only active in Qualifiers Mode) */}
       {seedingMethod === 'QUALIFIERS' ? (
-        <div style={{ borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+        <div className="flex flex-col gap-3.5 border-t border-line-subtle pt-3.5">
           {/* Mode & Duration Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3.5">
             <div>
-              <label style={labelStyle}>Qualifying Mode</label>
+              <label className={labelClass}>Qualifying Mode</label>
               <select
                 value={qualMode}
                 onChange={e => onQualModeChange(e.target.value as QualMode)}
-                style={inputStyle}
+                className={inputClass}
               >
                 <option value="IN_PERSON">In-Person Live Event</option>
                 <option value="HYBRID">Hybrid (In-Person &amp; Online)</option>
                 <option value="ONLINE">100% Online Tournament</option>
               </select>
-              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+              <span className="text-xs text-fg-muted">
                 {qualMode === 'IN_PERSON'
                   ? 'Official attempts played live on venue hardware.'
                   : qualMode === 'ONLINE'
@@ -210,24 +189,20 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
             </div>
 
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <label style={labelStyle}>Qualifying Duration (Minutes)</label>
-                <div style={{ display: 'flex', gap: '0.3rem' }}>
+              <div className="flex items-center justify-between">
+                <label className={labelClass}>Qualifying Duration (Minutes)</label>
+                <div className="flex gap-1">
                   {[60, 90, 120].map(mins => (
                     <button
                       key={mins}
                       type="button"
                       onClick={() => onQualWindowMinutesChange(mins)}
-                      style={{
-                        padding: '0.1rem 0.4rem',
-                        fontSize: '0.68rem',
-                        fontWeight: qualWindowMinutes === mins ? 800 : 500,
-                        background: qualWindowMinutes === mins ? 'var(--color-gold)' : 'var(--color-bg-surface-elevated)',
-                        color: qualWindowMinutes === mins ? '#000000' : 'var(--color-text-secondary)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                      }}
+                      className={cn(
+                        'cursor-pointer rounded-xs border border-line py-0.5 px-1.5 text-2xs',
+                        qualWindowMinutes === mins
+                          ? 'bg-gold font-extrabold text-black'
+                          : 'bg-elevated font-medium text-fg-secondary'
+                      )}
                     >
                       {mins}m
                     </button>
@@ -243,18 +218,18 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
                   const val = parseInt(e.target.value, 10);
                   onQualWindowMinutesChange(isNaN(val) || val < 1 ? 1 : val);
                 }}
-                style={inputStyle}
+                className={inputClass}
               />
-              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+              <span className="text-xs text-fg-muted">
                 Default start time for the countdown timer. Can be edited at any time.
               </span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', width: '100%' }}>
+          <div className="flex w-full items-start gap-4">
             {/* Format Selection Dropdown */}
-            <div style={{ flex: '0 0 240px', minWidth: '200px' }}>
-              <label style={labelStyle}>Qualifying Format</label>
+            <div className="min-w-50 flex-[0_0_240px]">
+              <label className={labelClass}>Qualifying Format</label>
               <select
                 value={qualFormat}
                 onChange={e => {
@@ -264,7 +239,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
                     onPointsConfigChange(DEFAULT_POINTS_THRESHOLDS);
                   }
                 }}
-                style={inputStyle}
+                className={inputClass}
               >
                 <option value="HIGH_SCORE"># of Maxes</option>
                 <option value="AVERAGE_OF_X">Average of X Attempts</option>
@@ -274,15 +249,15 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
 
             {/* Conditional format inline settings on the exact same row */}
             {qualFormat === 'HIGH_SCORE' && (
-              <div style={{ flex: 1, minWidth: 0, marginTop: '1.45rem', display: 'flex', alignItems: 'center', height: '38px', color: 'var(--color-text-muted)', fontSize: '0.8rem', background: 'var(--color-bg-surface-elevated)', padding: '0 0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border-subtle)' }}>
+              <div className="mt-6 flex h-9.5 min-w-0 flex-1 items-center rounded-sm border border-line-subtle bg-elevated py-0 px-3.5 text-caption text-fg-muted">
                 <span>Ranked by number of maxouts; kickers act as the tiebreaker.</span>
               </div>
             )}
 
             {qualFormat === 'AVERAGE_OF_X' && (
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-start', gap: '0.85rem' }}>
-                <div style={{ width: '150px', flexShrink: 0 }}>
-                  <label style={labelStyle}>Attempts (X)</label>
+              <div className="flex min-w-0 flex-1 items-start gap-3.5">
+                <div className="w-37.5 shrink-0">
+                  <label className={labelClass}>Attempts (X)</label>
                   <ClearableNumberInput
                     min={1}
                     max={10}
@@ -293,56 +268,44 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
                     }}
                     error={avgCountError}
                     onErrorChange={onAvgCountErrorChange}
-                    style={inputStyle}
+                    className={inputClass}
                   />
                 </div>
-                <div style={{ flex: 1, minWidth: 0, marginTop: '1.45rem', display: 'flex', alignItems: 'center', height: '38px', fontSize: '0.8rem', color: 'var(--color-text-muted)', background: 'var(--color-bg-surface-elevated)', padding: '0 0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border-subtle)' }}>
+                <div className="mt-6 flex h-9.5 min-w-0 flex-1 items-center rounded-sm border border-line-subtle bg-elevated py-0 px-3.5 text-caption text-fg-muted">
                   <span>Ranked by average of top {qualAverageCount || 'X'} qualifying attempts.</span>
                 </div>
               </div>
             )}
 
             {qualFormat === 'POINTS' && (
-              <div style={{ flex: 1, minWidth: 0, marginTop: '1.45rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', height: '38px', background: 'var(--color-bg-surface-elevated)', padding: '0 0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border-subtle)', boxSizing: 'border-box' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-gold-bright)', background: 'rgba(245, 158, 11, 0.15)', padding: '0.15rem 0.5rem', borderRadius: 'var(--radius-full)', whiteSpace: 'nowrap' }}>
+              <div className="mt-6 flex h-9.5 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm border border-line-subtle bg-elevated py-0 px-3.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="whitespace-nowrap rounded-full bg-gold/15 py-0.5 px-2 text-xs font-bold text-gold-bright">
                     {pointsConfig.length} {pointsConfig.length === 1 ? 'cutoff' : 'cutoffs'}
                   </span>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span className="truncate text-caption text-fg-muted">
                     {pointsConfig.length > 0
                       ? [...pointsConfig].sort((a, b) => b.minScore - a.minScore).slice(0, 3).map(p => `${(p.minScore / 1000).toFixed(0)}k → +${p.points}`).join(', ') + (pointsConfig.length > 3 ? ', ...' : '')
                       : 'Attempts award points by highest cutoff reached.'}
                   </span>
                 </div>
-                <button
-                  type="button"
+                <Button
                   onClick={onOpenPointsDrawer}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.25rem 0.65rem', fontSize: '0.76rem', gap: '0.35rem', whiteSpace: 'nowrap', flexShrink: 0 }}
+                  className="shrink-0 gap-1.5 whitespace-nowrap py-1 px-2.5 text-xs"
                 >
                   <Sliders size={13} color="var(--color-gold-bright)" />
                   Configure Cutoffs
-                </button>
+                </Button>
               </div>
             )}
           </div>
         </div>
       ) : (
-        <div style={{ borderTop: '1px solid var(--color-border-subtle)', paddingTop: '0.85rem' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.65rem',
-            background: 'rgba(99, 102, 241, 0.08)',
-            border: '1px solid rgba(99, 102, 241, 0.25)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.75rem 1rem',
-            color: 'var(--color-text-secondary)',
-            fontSize: '0.82rem',
-          }}>
-            <Sliders size={18} color="var(--color-brand)" style={{ flexShrink: 0 }} />
+        <div className="border-t border-line-subtle pt-3.5">
+          <div className="flex items-center gap-2.5 rounded-md border border-indigo-500/25 bg-indigo-500/8 py-3 px-4 text-caption text-fg-secondary">
+            <Sliders size={18} color="var(--color-brand)" className="shrink-0" />
             <div>
-              <strong style={{ color: 'var(--color-text-primary)' }}>Direct Seeding Active</strong>
+              <strong className="text-fg">Direct Seeding Active</strong>
             </div>
           </div>
         </div>

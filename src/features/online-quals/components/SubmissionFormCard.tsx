@@ -3,6 +3,7 @@ import { Send, Plus, Trash2, Video, AlertCircle } from 'lucide-react';
 import type { PointsThreshold, QualFormat } from '../../tournament/types';
 import { PLAYER_NOTES_MAX_LENGTH } from '../discordMessages';
 import { summarizeQualScores, type QualScoreSummary } from '../../qualifiers/qualSummary';
+import { cn } from '../../../components/ui';
 
 const SUMMARY_DEBOUNCE_MS = 400;
 
@@ -102,36 +103,18 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
 
   return (
     <div
-      style={{
-        background: 'var(--color-bg-surface, #121820)',
-        border: '1px solid var(--color-border, #263342)',
-        borderRadius: '12px',
-        padding: '1.5rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.25rem',
-      }}
+      className="flex flex-col gap-5 rounded-md border border-line bg-surface p-6"
       data-testid="submission-form-card"
     >
       <div>
-        <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+        <h3 className="m-0 text-lg font-extrabold text-white">
           Official Score Submission
         </h3>
       </div>
 
       {errorMessage && (
         <div
-          style={{
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '8px',
-            padding: '0.75rem 1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            color: '#f87171',
-            fontSize: '0.88rem',
-          }}
+          className="flex items-center gap-2 rounded-md border border-red/30 bg-red/10 px-4 py-3 text-sm text-red-bright"
           data-testid="submission-error-banner"
         >
           <AlertCircle size={16} />
@@ -139,24 +122,17 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {/* Game Scores Block */}
         <div>
-          <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.5rem' }}>
+          <label className="mb-2 block text-sm font-bold text-slate-200">
             {isAverage ? `Top ${expectedCount} Game Scores (Average of ${expectedCount})` : 'Game Score Attempts'}
           </label>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+          <div className="flex flex-col gap-2.5">
             {currentScores.map((scoreVal, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span
-                  style={{
-                    width: '75px',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    color: 'var(--color-text-secondary, #94a3b8)',
-                  }}
-                >
+              <div key={idx} className="flex items-center gap-3">
+                <span className="w-18.75 text-sm font-bold text-fg-secondary">
                   Game {idx + 1}:
                 </span>
                 <input
@@ -173,18 +149,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
                   onBlur={() => setSummaryScores(currentScores)}
                   placeholder="0"
                   disabled={disabled}
-                  style={{
-                    flex: 1,
-                    padding: '0.65rem 0.85rem',
-                    borderRadius: '8px',
-                    background: 'var(--color-bg-base, #0a0e14)',
-                    border: '1px solid var(--color-border, #263342)',
-                    color: '#ffffff',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '1rem',
-                    fontWeight: 700,
-                    boxSizing: 'border-box',
-                  }}
+                  className="flex-1 rounded-md border border-line bg-canvas px-3.5 py-2.5 font-mono text-base font-bold text-white"
                   data-testid={`score-input-${idx}`}
                 />
                 {!isAverage && currentScores.length > 1 && (
@@ -192,13 +157,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
                     type="button"
                     onClick={() => handleRemoveAttempt(idx)}
                     disabled={disabled}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#f87171',
-                      cursor: 'pointer',
-                      padding: '0.4rem',
-                    }}
+                    className="cursor-pointer border-0 bg-transparent p-1.5 text-red-bright"
                     title="Remove attempt"
                   >
                     <Trash2 size={16} />
@@ -213,20 +172,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
               type="button"
               onClick={handleAddAttempt}
               disabled={disabled}
-              style={{
-                marginTop: '0.65rem',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid var(--color-border, #263342)',
-                borderRadius: '6px',
-                padding: '0.4rem 0.85rem',
-                color: 'var(--color-text-secondary, #94a3b8)',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
+              className="mt-2.5 inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-line bg-white/5 px-3.5 py-1.5 text-caption font-semibold text-fg-secondary"
             >
               <Plus size={14} /> Add Another Attempt
             </button>
@@ -237,19 +183,11 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
 
         {/* Twitch VOD URL Input */}
         <div>
-          <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.4rem' }}>
+          <label className="mb-1.5 block text-sm font-bold text-slate-200">
             Twitch Broadcast VOD URL *
           </label>
-          <div style={{ position: 'relative' }}>
-            <div
-              style={{
-                position: 'absolute',
-                left: '0.85rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--color-text-muted, #64748b)',
-              }}
-            >
+          <div className="relative">
+            <div className="absolute top-1/2 left-3.5 -translate-y-1/2 text-fg-muted">
               <Video size={16} />
             </div>
             <input
@@ -259,27 +197,18 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
               placeholder="https://twitch.tv/videos/2481093821?t=00h14m20s"
               disabled={disabled}
               required
-              style={{
-                width: '100%',
-                padding: '0.7rem 0.85rem 0.7rem 2.5rem',
-                borderRadius: '8px',
-                background: 'var(--color-bg-base, #0a0e14)',
-                border: '1px solid var(--color-border, #263342)',
-                color: '#ffffff',
-                fontSize: '0.92rem',
-                boxSizing: 'border-box',
-              }}
+              className="w-full rounded-md border border-line bg-canvas py-3 pr-3.5 pl-10 text-base text-white"
               data-testid="twitch-vod-input"
             />
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.3rem' }}>
+          <div className="mt-1 text-caption text-fg-secondary">
             Include timestamp if possible (e.g. <code>?t=00h14m20s</code>)
           </div>
         </div>
 
         {/* Optional public notes (posted with the submission to Discord) */}
         <div>
-          <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.4rem' }}>
+          <label className="mb-1.5 block text-sm font-bold text-slate-200">
             Notes (optional)
           </label>
           <textarea
@@ -289,45 +218,25 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
             maxLength={PLAYER_NOTES_MAX_LENGTH}
             rows={3}
             disabled={disabled}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '0.7rem 0.85rem',
-              borderRadius: '8px',
-              background: 'var(--color-bg-base, #0a0e14)',
-              border: '1px solid var(--color-border, #263342)',
-              color: '#ffffff',
-              fontSize: '0.92rem',
-              fontFamily: 'inherit',
-              resize: 'vertical',
-              boxSizing: 'border-box',
-            }}
+            className="block w-full resize-y rounded-md border border-line bg-canvas px-3.5 py-3 font-[inherit] text-base text-white"
             data-testid="player-notes-input"
           />
-          <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.3rem' }}>
+          <div className="mt-1 text-caption text-fg-secondary">
             Notes are public.
           </div>
         </div>
 
         {/* Submit Button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+        <div className="mt-2 flex justify-end">
           <button
             type="submit"
             disabled={!canSubmit}
-            style={{
-              padding: '0.8rem 1.75rem',
-              borderRadius: '8px',
-              border: 'none',
-              background: canSubmit ? 'var(--color-gold-bright, #f59e0b)' : '#334155',
-              color: canSubmit ? '#000000' : '#94a3b8',
-              fontSize: '0.95rem',
-              fontWeight: 800,
-              cursor: canSubmit ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              boxShadow: canSubmit ? '0 4px 14px rgba(245, 158, 11, 0.35)' : 'none',
-            }}
+            className={cn(
+              'flex items-center gap-2 rounded-md border-0 px-7 py-3 text-base font-extrabold',
+              canSubmit
+                ? 'cursor-pointer bg-gold-bright text-black shadow-[0_4px_14px_rgba(245,158,11,0.35)]'
+                : 'cursor-not-allowed bg-slate-700 text-fg-secondary shadow-none'
+            )}
             data-testid="submit-qual-button"
           >
             <Send size={18} />
@@ -339,53 +248,28 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
   );
 };
 
-const summaryRowStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: '1rem',
-  fontSize: '0.88rem',
-  color: 'var(--color-text-secondary, #94a3b8)',
-};
+const summaryRowClass = 'flex justify-between gap-4 text-sm text-fg-secondary';
 
-const summaryValueStyle: React.CSSProperties = {
-  fontFamily: "'JetBrains Mono', monospace",
-  fontWeight: 700,
-  color: '#ffffff',
-};
+const summaryValueClass = 'font-mono font-bold text-white';
 
-const summaryTotalStyle: React.CSSProperties = {
-  ...summaryRowStyle,
-  borderTop: '1px solid var(--color-border, #263342)',
-  paddingTop: '0.4rem',
-  marginTop: '0.15rem',
-  fontWeight: 800,
-  color: '#e2e8f0',
-};
+const summaryTotalClass = 'flex justify-between gap-4 text-sm border-t border-line pt-1.5 mt-0.5 font-extrabold text-slate-200';
 
 /** Live result of the scores entered so far, in the tournament's qual format. */
 const QualScoreSummaryPanel: React.FC<{ summary: QualScoreSummary }> = ({ summary }) => (
   <div
-    style={{
-      background: 'rgba(245, 158, 11, 0.06)',
-      border: '1px solid rgba(245, 158, 11, 0.3)',
-      borderRadius: '8px',
-      padding: '0.75rem 1rem',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.3rem',
-    }}
+    className="flex flex-col gap-1 rounded-md border border-gold/30 bg-gold/6 px-4 py-3"
     data-testid="qual-score-summary"
   >
     {summary.kind === 'MAXES' && (
       <>
-        <div style={summaryRowStyle}>
+        <div className={summaryRowClass}>
           <span>Maxes</span>
-          <span style={summaryValueStyle}>{summary.maxoutCount}</span>
+          <span className={summaryValueClass}>{summary.maxoutCount}</span>
         </div>
         {summary.kickerScore > 0 && (
-          <div style={summaryRowStyle}>
+          <div className={summaryRowClass}>
             <span>Kicker</span>
-            <span style={summaryValueStyle}>{summary.kickerScore.toLocaleString()}</span>
+            <span className={summaryValueClass}>{summary.kickerScore.toLocaleString()}</span>
           </div>
         )}
       </>
@@ -393,12 +277,12 @@ const QualScoreSummaryPanel: React.FC<{ summary: QualScoreSummary }> = ({ summar
 
     {summary.kind === 'AVERAGE' && (
       <>
-        <div style={summaryTotalStyle}>
+        <div className={summaryTotalClass}>
           <span>Average of {summary.targetCount}</span>
-          <span style={summaryValueStyle}>{summary.average.toLocaleString()}</span>
+          <span className={summaryValueClass}>{summary.average.toLocaleString()}</span>
         </div>
         {summary.scores.length < summary.targetCount && (
-          <div style={{ fontSize: '0.78rem', color: 'var(--color-text-muted, #64748b)' }}>
+          <div className="text-caption text-fg-muted">
             {summary.scores.length} of {summary.targetCount} games entered; missing games count as 0.
           </div>
         )}
@@ -408,14 +292,14 @@ const QualScoreSummaryPanel: React.FC<{ summary: QualScoreSummary }> = ({ summar
     {summary.kind === 'POINTS' && (
       <>
         {summary.breakdown.map(({ score, points }, idx) => (
-          <div key={idx} style={summaryRowStyle}>
+          <div key={idx} className={summaryRowClass}>
             <span>{score.toLocaleString()}</span>
-            <span style={summaryValueStyle}>{points} pts</span>
+            <span className={summaryValueClass}>{points} pts</span>
           </div>
         ))}
-        <div style={summaryTotalStyle}>
+        <div className={summaryTotalClass}>
           <span>Total</span>
-          <span style={summaryValueStyle}>{summary.totalPoints} pts</span>
+          <span className={summaryValueClass}>{summary.totalPoints} pts</span>
         </div>
       </>
     )}

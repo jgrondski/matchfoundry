@@ -198,7 +198,7 @@ describe('Route Cold-Mount Lifecycle & Synchronous DB Hydration Regression Suite
       expect(html).toContain('role="status"');
       expect(html).toContain('aria-live="polite"');
       expect(html).toContain('Fetching database...');
-      expect(html).toContain('#f59e0b'); // gold branding spinner color
+      expect(html).toContain('border-t-gold-bright'); // gold branding spinner color
     });
   });
 

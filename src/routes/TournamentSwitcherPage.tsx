@@ -8,6 +8,7 @@ import { CreateTournamentModal } from '../features/tournament/components/CreateT
 import { usePinAuth } from '../features/auth/AuthContext';
 import { OpenQualsCard } from '../features/online-quals/components/OpenQualsCard';
 import { ConfirmDialog } from '../components/overlay';
+import { Button, Chip } from '../components/ui';
 
 export const TournamentSwitcherPage: React.FC = () => {
   const { isSystemAdmin, session, canManage } = usePinAuth();
@@ -44,201 +45,119 @@ export const TournamentSwitcherPage: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-bg-base)', padding: '0 0 4rem' }}>
+    <div className="min-h-screen bg-canvas px-0 pt-0 pb-16">
       <TopNavSwitcher />
 
-      <div style={{ maxWidth: '1180px', width: '100%', margin: '0 auto', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '2rem', boxSizing: 'border-box' }}>
+      <div className="mx-auto flex w-full max-w-295 flex-col gap-8 px-6 py-8">
         {/* Hero Section */}
-        <header style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <div style={logoIconLargeStyle}>
+        <header className="px-4 py-6 text-center">
+          <div className="mb-4 inline-flex items-center gap-2">
+            <div className="flex size-9 items-center justify-center rounded-md bg-linear-135 from-gold-bright to-gold shadow-gold">
               <Layers size={24} color="#090d16" />
             </div>
-            <span style={{ fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-text-primary)' }}>
-              MATCH<span style={{ color: 'var(--color-gold-bright)' }}>FOUNDRY</span>
-              <sup style={{ fontSize: '0.6em', marginLeft: '2px', color: 'var(--color-gold-bright)' }}>™</sup>
+            <span className="text-2xl font-extrabold text-fg">
+              MATCH<span className="text-gold-bright">FOUNDRY</span>
+              <sup className="ml-0.5 text-[0.6em] text-gold-bright">™</sup>
             </span>
           </div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em', marginBottom: '0.75rem' }}>
+          <h1 className="mb-3 text-hero font-extrabold tracking-tight text-white">
             Tournaments
           </h1>
-          <p style={{ fontSize: '1.1rem', color: 'var(--color-text-secondary)', maxWidth: '650px', margin: '0 auto 1.5rem' }}>
+          <p className="mx-auto mt-0 mb-6 max-w-162.5 text-lg text-fg-secondary">
             Manage and view tournaments.
           </p>
 
           {isSystemAdmin && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <button
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Button
+                variant="primary"
                 onClick={() => setIsCreateModalOpen(true)}
-                className="btn btn-primary"
-                style={{ padding: '0.65rem 1.5rem', fontSize: '0.95rem', boxShadow: 'var(--shadow-gold)' }}
+                className="px-6 py-2.5 text-base shadow-gold enabled:hover:shadow-gold"
               >
                 <Plus size={18} />
                 Create New Tournament
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={handleSimulateSample}
                 disabled={isSimulating}
-                className="btn"
-                style={{
-                  padding: '0.65rem 1.5rem',
-                  fontSize: '0.95rem',
-                  background: 'rgba(59, 130, 246, 0.15)',
-                  color: '#60a5fa',
-                  border: '1px solid rgba(59, 130, 246, 0.35)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: isSimulating ? 'not-allowed' : 'pointer',
-                }}
+                className="px-6 py-2.5 text-base"
               >
                 <Sparkles size={18} />
                 {isSimulating ? 'Simulating...' : 'Simulate Sample Tournament'}
-              </button>
+              </Button>
             </div>
           )}
         </header>
 
         {/* Tournament Grid / Empty State */}
         {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '5rem 2rem' }}>
-            <div style={{ width: 44, height: 44, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--color-gold-bright)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1.25rem' }} />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Loading Tournaments</h3>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem' }}>Hydrating tournaments from PostgreSQL...</p>
+          <div className="px-8 py-20 text-center">
+            <div className="mx-auto mt-0 mb-5 size-11 animate-spin rounded-full border-3 border-white/10 border-t-gold-bright" />
+            <h3 className="mb-2 text-lg font-semibold text-fg">Loading Tournaments</h3>
+            <p className="text-base text-fg-secondary">Hydrating tournaments from PostgreSQL...</p>
           </div>
         ) : !isDbConnected ? (
-          <div
-            style={{
-              background: 'linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, rgba(185, 28, 28, 0.04) 100%)',
-              border: '1px solid rgba(239, 68, 68, 0.35)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '3.5rem 2rem',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '1rem',
-              maxWidth: '620px',
-              margin: '1rem auto 3rem',
-            }}
-          >
-            <div
-              style={{
-                width: '60px',
-                height: '60px',
-                borderRadius: '50%',
-                background: 'rgba(239, 68, 68, 0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ef4444',
-                marginBottom: '0.5rem',
-              }}
-            >
+          <div className="mx-auto mt-4 mb-12 flex max-w-155 flex-col items-center gap-4 rounded-lg border border-red/35 bg-linear-180 from-red/8 to-red-700/4 px-8 py-14 text-center">
+            <div className="mb-2 flex size-15 items-center justify-center rounded-full bg-red/15 text-red">
               <AlertTriangle size={32} />
             </div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <h2 className="text-2xl font-bold text-fg">
               PostgreSQL Database Offline
             </h2>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', maxWidth: '460px', lineHeight: 1.5 }}>
+            <p className="max-w-115 text-base leading-normal text-fg-secondary">
               {typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                 ? `Unable to connect to the database on port 5433 (${dbError || 'Connection refused'}). Tournaments cannot be loaded or modified while PostgreSQL is disconnected.`
                 : `Unable to connect to the database (${dbError || 'Connection refused'}). Tournaments cannot be loaded or modified while PostgreSQL is disconnected.`}
             </p>
             {typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
-              <div
-                style={{
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  padding: '0.5rem 1rem',
-                  borderRadius: 'var(--radius-sm)',
-                  fontSize: '0.85rem',
-                  color: '#fca5a5',
-                  fontFamily: 'monospace',
-                  marginTop: '0.25rem',
-                }}
-              >
+              <div className="mt-1 rounded-sm bg-black/40 px-4 py-2 font-mono text-sm text-red-300">
                 npm run db:up
               </div>
             )}
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.75rem' }}>
-              <button
+            <div className="mt-3 flex flex-wrap justify-center gap-3">
+              <Button
+                variant="primary"
                 onClick={() => retryConnection()}
-                className="btn btn-primary"
-                style={{ padding: '0.7rem 1.75rem', fontSize: '0.95rem' }}
+                className="px-7 py-3 text-base"
               >
                 Retry Connection
-              </button>
+              </Button>
             </div>
           </div>
         ) : tournaments.length === 0 ? (
-          <div
-            style={{
-              background: 'var(--color-bg-surface)',
-              border: '1px dashed var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '4rem 2rem',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '1rem',
-              maxWidth: '620px',
-              margin: '1rem auto 3rem',
-            }}
-          >
-            <div
-              style={{
-                width: '60px',
-                height: '60px',
-                borderRadius: '50%',
-                background: 'var(--color-gold-bg)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-gold-bright)',
-                marginBottom: '0.5rem',
-              }}
-            >
+          <div className="mx-auto mt-4 mb-12 flex max-w-155 flex-col items-center gap-4 rounded-lg border border-dashed border-line bg-surface px-8 py-16 text-center">
+            <div className="mb-2 flex size-15 items-center justify-center rounded-full bg-gold-soft text-gold-bright">
               <Trophy size={30} />
             </div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <h2 className="text-2xl font-bold text-fg">
               No Tournaments Created Yet
             </h2>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', maxWidth: '440px', lineHeight: 1.5 }}>
+            <p className="max-w-110 text-base leading-normal text-fg-secondary">
               Get started by creating your first competitive tournament, or launch an instant end-to-end simulation with authentic competitive Tetris players.
             </p>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.75rem' }}>
-              <button
+            <div className="mt-3 flex flex-wrap justify-center gap-3">
+              <Button
+                variant="primary"
                 onClick={() => setIsCreateModalOpen(true)}
-                className="btn btn-primary"
-                style={{ padding: '0.7rem 1.75rem', fontSize: '0.95rem', boxShadow: 'var(--shadow-gold)' }}
+                className="px-7 py-3 text-base shadow-gold enabled:hover:shadow-gold"
               >
                 <Plus size={18} />
                 Create New Tournament
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={handleSimulateSample}
                 disabled={isSimulating}
-                className="btn"
-                style={{
-                  padding: '0.7rem 1.75rem',
-                  fontSize: '0.95rem',
-                  background: 'rgba(59, 130, 246, 0.15)',
-                  color: '#60a5fa',
-                  border: '1px solid rgba(59, 130, 246, 0.35)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  cursor: isSimulating ? 'not-allowed' : 'pointer',
-                }}
+                className="px-7 py-3 text-base"
               >
                 <Sparkles size={18} />
                 {isSimulating ? 'Simulating...' : 'Simulate Sample Tournament'}
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+          <div className="flex flex-col gap-10">
             {/* 0. Open online quals callout (same for every viewer; hidden when none are open) */}
             <OpenQualsCard tournaments={tournaments} />
 
@@ -250,31 +169,21 @@ export const TournamentSwitcherPage: React.FC = () => {
                 );
                 if (managedTourneys.length === 0) return null;
                 return (
-                  <section
-                    style={{
-                      background: 'rgba(255, 201, 5, 0.04)',
-                      border: '1px solid rgba(255, 201, 5, 0.28)',
-                      borderRadius: 'var(--radius-lg, 12px)',
-                      padding: '1.5rem',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '1rem',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <section className="flex flex-col gap-4 rounded-lg border border-tier-gold/28 bg-tier-gold/4 p-6">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
                         <ShieldCheck size={20} color="var(--color-gold-bright)" />
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+                        <h2 className="m-0 text-xl font-extrabold text-white">
                           {managedTourneys.length > 1
                             ? `Your Managed Tournaments (${managedTourneys.length})`
                             : 'Your Managed Tournament'}
                         </h2>
                       </div>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--color-gold-bright)', fontWeight: 600 }}>
+                      <span className="text-caption font-semibold text-gold-bright">
                         🏆 Tournament Director Access Active
                       </span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(480px, 1fr))', gap: '1.5rem' }}>
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(480px,1fr))] gap-6">
                       {managedTourneys.map(tournament => (
                         <TournamentCard
                           key={`managed-${tournament.id}`}
@@ -291,89 +200,38 @@ export const TournamentSwitcherPage: React.FC = () => {
 
             {/* 2. System Admin Workspace View Mode Switcher */}
             {isSystemAdmin && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderBottom: '1px solid var(--color-border)',
-                  paddingBottom: '0.75rem',
-                  flexWrap: 'wrap',
-                  gap: '0.75rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
+                <div className="flex items-center gap-2">
                   <LayoutDashboard size={18} color="#38bdf8" />
-                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#ffffff' }}>
+                  <span className="text-base font-bold text-white">
                     System Admin Workspace:
                   </span>
                 </div>
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: 'var(--radius-full, 9999px)',
-                    padding: '3px',
-                    gap: '3px',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSystemViewTab('admin')}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      padding: '0.35rem 0.85rem',
-                      borderRadius: 'var(--radius-full, 9999px)',
-                      border: 'none',
-                      fontSize: '0.78rem',
-                      fontWeight: systemViewTab === 'admin' ? 700 : 500,
-                      background: systemViewTab === 'admin' ? 'var(--color-gold-bright, #ffc905)' : 'transparent',
-                      color: systemViewTab === 'admin' ? '#090d16' : 'var(--color-text-secondary)',
-                      cursor: 'pointer',
-                    }}
-                  >
+                <div className="flex items-center gap-2">
+                  <Chip active={systemViewTab === 'admin'} onClick={() => setSystemViewTab('admin')}>
                     <ShieldCheck size={13} />
                     <span>Organizer Tools</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSystemViewTab('public')}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      padding: '0.35rem 0.85rem',
-                      borderRadius: 'var(--radius-full, 9999px)',
-                      border: 'none',
-                      fontSize: '0.78rem',
-                      fontWeight: systemViewTab === 'public' ? 700 : 500,
-                      background: systemViewTab === 'public' ? 'var(--color-gold-bright, #ffc905)' : 'transparent',
-                      color: systemViewTab === 'public' ? '#090d16' : 'var(--color-text-secondary)',
-                      cursor: 'pointer',
-                    }}
-                  >
+                  </Chip>
+                  <Chip active={systemViewTab === 'public'} onClick={() => setSystemViewTab('public')}>
                     <Eye size={13} />
                     <span>Public Preview</span>
-                  </button>
+                  </Chip>
                 </div>
               </div>
             )}
 
             {/* 3. Public Directory (Or System Admin Full List) */}
-            <section style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <section className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
                   <Globe size={18} color="var(--color-gold-bright)" />
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#ffffff' }}>
+                  <h2 className="m-0 text-xl font-extrabold text-white">
                     {isSystemAdmin && systemViewTab === 'admin' ? 'All Managed Tournaments' : 'Active Tournaments'}
                   </h2>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(480px, 1fr))', gap: '1.5rem' }}>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(480px,1fr))] gap-6">
                 {tournaments.map(tournament => (
                   <TournamentCard
                     key={tournament.id}
@@ -417,29 +275,9 @@ export const TournamentSwitcherPage: React.FC = () => {
       />
 
       {/* Footer / Common-Law Trademark Notice */}
-      <footer
-        style={{
-          marginTop: 'auto',
-          padding: '2.5rem 1rem 1.5rem',
-          textAlign: 'center',
-          color: 'var(--color-text-muted, #64748b)',
-          fontSize: '0.8rem',
-          borderTop: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))',
-        }}
-      >
-        <p style={{ margin: 0 }}>© 2026 MatchFoundry™. All rights reserved.</p>
+      <footer className="mt-auto border-t border-line-subtle px-4 pt-10 pb-6 text-center text-caption text-fg-muted">
+        <p className="m-0">© 2026 MatchFoundry™. All rights reserved.</p>
       </footer>
     </div>
   );
-};
-
-const logoIconLargeStyle: React.CSSProperties = {
-  width: '36px',
-  height: '36px',
-  borderRadius: '8px',
-  background: 'linear-gradient(135deg, var(--color-gold-bright) 0%, var(--color-gold) 100%)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  boxShadow: 'var(--shadow-gold)',
 };

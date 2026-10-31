@@ -6,6 +6,7 @@ import { SheetSizeTokens, getMatchStatus } from '../../sheetUtils';
 import { colorWithAlpha, getAlternateShade } from '../../colorUtils';
 import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
 import { getEffectivePlayerName } from '../../../players/playerNameUtils';
+import { cn } from '../../../../components/ui';
 
 interface SheetMatchRowProps {
   match: BracketMatch;
@@ -106,8 +107,6 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
   const topBorder = topRowBorder;
   const botBorder = botRowBorder;
   const midBorder = isHovered ? `1px solid ${colorWithAlpha(primaryColor, 0.15, 'rgba(255, 255, 255, 0.04)')}` : midRowBorder;
-  const leftBorder = '1px solid transparent';
-  const rightBorder = '1px solid rgba(255, 255, 255, 0.05)';
 
   const matchNumShadow = isHovered
     ? `inset 1px 0 0 ${hoverBorderColor}, inset 0 1px 0 ${hoverBorderColor}, inset 0 -1px 0 ${hoverBorderColor}`
@@ -118,21 +117,14 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
   const row1Shadow = isHovered ? `inset 0 1px 0 ${hoverBorderColor}` : 'none';
   const row2Shadow = isHovered ? `inset 0 -1px 0 ${hoverBorderColor}` : 'none';
 
-  const baseTdStyle: React.CSSProperties = {
-    padding: sizeTokens.tdPadding,
-    verticalAlign: 'middle',
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-    borderRight: '1px solid rgba(255, 255, 255, 0.04)',
-  };
-
-  const baseTdMergedStyle: React.CSSProperties = {
-    padding: sizeTokens.tdMergedPadding,
-    verticalAlign: 'middle',
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-    borderRight: '1px solid rgba(255, 255, 255, 0.04)',
-  };
+  const tdCoreClass = 'align-middle overflow-hidden border-r border-r-white/4';
+  const tdClass = cn(sizeTokens.tdPadding, tdCoreClass);
+  const tdMergedClass = cn(sizeTokens.tdMergedPadding, tdCoreClass);
+  const rowClass = cn(
+    'transition-colors duration-100',
+    isPlayable && tournament.isLocked ? 'cursor-pointer' : 'cursor-default',
+    isPlayable ? 'opacity-100' : 'opacity-70'
+  );
 
   return (
     <>
@@ -148,41 +140,29 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
         }}
         onMouseEnter={() => onHoverMatch(match.id)}
         onMouseLeave={() => onHoverMatch(null)}
-        style={{
-          background: blockBg,
-          cursor: isPlayable && tournament.isLocked ? 'pointer' : 'default',
-          opacity: isPlayable ? 1 : 0.72,
-          transition: 'background 0.12s ease',
-        }}
+        className={rowClass}
+        style={{ background: blockBg }}
       >
         {/* Match # (RowSpan 2) */}
         <td
           rowSpan={2}
+          className={cn(tdMergedClass, 'text-center font-bold border-l border-l-transparent')}
           style={{
-            ...baseTdMergedStyle,
             borderTop: topBorder,
             borderBottom: botBorder,
-            borderLeft: leftBorder,
             boxShadow: matchNumShadow,
-            textAlign: 'center',
-            fontWeight: 700,
             width: `${sizeTokens.colMatch}px`,
             minWidth: `${sizeTokens.colMatch}px`,
             maxWidth: `${sizeTokens.colMatch}px`,
           }}
         >
           <span
+            className="py-0.5 px-1.5 rounded-sm font-bold font-mono inline-block leading-tight"
             style={{
               fontSize: sizeTokens.fontSizeMatchNum,
-              padding: '0.12rem 0.4rem',
-              borderRadius: 'var(--radius-sm)',
-              fontWeight: 700,
-              fontFamily: 'var(--font-mono)',
               background: colorWithAlpha(matchAccentColor, 0.15, 'rgba(255, 255, 255, 0.06)'),
               color: matchAccentColor,
               border: `1px solid ${colorWithAlpha(matchAccentColor, 0.4, 'rgba(255, 255, 255, 0.12)')}`,
-              display: 'inline-block',
-              lineHeight: 1.2,
             }}
           >
             #{match.matchNumber}
@@ -190,7 +170,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
         </td>
 
         {/* Player 1 Seed & Competitor Info */}
-        <td style={{ ...baseTdStyle, borderTop: topBorder, borderBottom: midBorder, boxShadow: row1Shadow, width: `${competitorColWidth}px`, minWidth: `${competitorColWidth}px`, maxWidth: `${competitorColWidth}px`, textAlign: 'left' }}>
+        <td className={cn(tdClass, 'text-left')} style={{ borderTop: topBorder, borderBottom: midBorder, boxShadow: row1Shadow, width: `${competitorColWidth}px`, minWidth: `${competitorColWidth}px`, maxWidth: `${competitorColWidth}px` }}>
           <div
             onClick={(e) => {
               if (p1?.id) {
@@ -200,36 +180,26 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
             }}
             onMouseEnter={() => p1?.id && onHoverPlayer(`p1-${match.id}`)}
             onMouseLeave={() => onHoverPlayer(null)}
+            className={cn(
+              'inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded-sm transition-all duration-100 max-w-full w-full',
+              p1?.id ? 'cursor-pointer' : '[cursor:inherit]'
+            )}
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.1rem 0.35rem',
-              borderRadius: 'var(--radius-sm)',
               background: hoveredPlayerKey === `p1-${match.id}` ? colorWithAlpha(primaryColor, 0.15, 'rgba(255, 255, 255, 0.08)') : 'transparent',
               boxShadow: hoveredPlayerKey === `p1-${match.id}` ? `0 0 0 1px ${primaryColor}` : 'none',
-              cursor: p1?.id ? 'pointer' : 'inherit',
-              transition: 'all 0.12s ease',
-              maxWidth: '100%',
-              width: '100%',
-              boxSizing: 'border-box',
             }}
             title={p1?.id ? "View competitor tournament profile" : undefined}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', width: `${sizeTokens.countrySeedWidth}px`, flexShrink: 0 }}>
-              {(p1?.country || (p1 as any)?.avatarUrl) && <PlayerAvatar player={p1 as any} country={p1?.country} style={{ fontSize: sizeTokens.flagSize, lineHeight: 1 }} />}
+            <span className="inline-flex items-center gap-1.5 shrink-0" style={{ width: `${sizeTokens.countrySeedWidth}px` }}>
+              {(p1?.country || (p1 as any)?.avatarUrl) && <PlayerAvatar player={p1 as any} country={p1?.country} className="leading-none" style={{ fontSize: sizeTokens.flagSize }} />}
               {p1?.seed && (
                 <span
+                  className="py-0 px-1 rounded-sm font-mono font-bold leading-tight"
                   style={{
                     fontSize: sizeTokens.fontSizeSeed,
-                    padding: '0.06rem 0.28rem',
-                    borderRadius: 'var(--radius-sm)',
                     background: colorWithAlpha(matchAccentColor, 0.12, 'rgba(255, 255, 255, 0.08)'),
                     color: matchAccentColor,
                     border: `1px solid ${colorWithAlpha(matchAccentColor, 0.25, 'rgba(255, 255, 255, 0.1)')}`,
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 700,
-                    lineHeight: 1.1,
                   }}
                 >
                   #{p1.seed}
@@ -237,38 +207,25 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
               )}
             </span>
             <span
+              className={cn(
+                'truncate flex-1 min-w-0',
+                isComplete ? (p1IsWinner ? 'font-extrabold' : 'font-normal') : (p1IsWinner ? 'font-bold' : 'font-medium'),
+                hoveredPlayerKey === `p1-${match.id}` ? 'opacity-100' : isComplete && p2IsWinner ? 'opacity-45' : 'opacity-100'
+              )}
               style={{
-                fontWeight: isComplete ? (p1IsWinner ? 800 : 400) : (p1IsWinner ? 700 : 500),
                 fontSize: sizeTokens.fontSizePlayerName,
                 color: hoveredPlayerKey === `p1-${match.id}`
                   ? primaryColor
                   : p1IsWinner
                   ? primaryColor
                   : 'var(--color-text-primary)',
-                opacity: hoveredPlayerKey === `p1-${match.id}` ? 1 : isComplete && p2IsWinner ? 0.45 : 1,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                flex: 1,
-                minWidth: 0,
               }}
             >
               {p1Name}
             </span>
             {match.player1.isManualOverride && (
               <span
-                style={{
-                  fontSize: '0.6rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.04em',
-                  padding: '0.05rem 0.28rem',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(245, 158, 11, 0.18)',
-                  color: '#fbbf24',
-                  border: '1px solid rgba(245, 158, 11, 0.4)',
-                  textTransform: 'uppercase',
-                  lineHeight: 1.1,
-                }}
+                className="text-3xs font-bold tracking-wide py-0 px-1 rounded-sm bg-gold/18 text-gold-bright border border-gold/40 uppercase leading-tight"
                 title="Position manually placed by tournament organizer"
               >
                 OVERRIDE
@@ -279,14 +236,11 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
 
         {/* Player 1 Games Won Score */}
         <td
+          className={cn(tdClass, 'text-center pr-3.5', p1IsWinner ? 'font-extrabold' : 'font-semibold')}
           style={{
-            ...baseTdStyle,
             borderTop: topBorder,
             borderBottom: midBorder,
             boxShadow: row1Shadow,
-            textAlign: 'center',
-            paddingRight: '14px',
-            fontWeight: p1IsWinner ? 800 : 600,
             fontSize: sizeTokens.fontSizeGamesWon,
             width: `${sizeTokens.colGamesWon}px`,
             minWidth: `${sizeTokens.colGamesWon}px`,
@@ -294,20 +248,18 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
           }}
         >
           <span
-            className="tabular-nums"
+            className={cn(
+              'font-mono tabular-nums tracking-tight inline-block py-0.5 px-1.5 rounded-sm leading-tight',
+              isComplete && p2IsWinner ? 'opacity-45' : 'opacity-100'
+            )}
             style={{
-              display: 'inline-block',
-              padding: '0.08rem 0.4rem',
-              borderRadius: 'var(--radius-sm)',
               background: p1IsWinner
                 ? colorWithAlpha(primaryColor, 0.22, 'rgba(255, 255, 255, 0.08)')
                 : 'transparent',
               color: p1IsWinner
                 ? primaryColor
                 : 'var(--color-text-primary)',
-              opacity: isComplete && p2IsWinner ? 0.45 : 1,
               border: p1IsWinner ? `1px solid ${colorWithAlpha(primaryColor, 0.55, 'transparent')}` : '1px solid transparent',
-              lineHeight: 1.2,
             }}
           >
             {p1ScoreDisplay}
@@ -328,46 +280,41 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
           return (
             <td
               key={gNum}
+              className={cn(
+                sizeTokens.gameCellPadding,
+                tdCoreClass,
+                'text-right overflow-visible',
+                isBeyondBestOf ? 'text-fg-muted' : 'text-fg'
+              )}
               style={{
-                ...baseTdStyle,
                 borderTop: topBorder,
                 borderBottom: midBorder,
                 boxShadow: row1Shadow,
-                textAlign: 'right',
-                padding: sizeTokens.gameCellPadding,
                 width: `${sizeTokens.colGame}px`,
                 minWidth: `${sizeTokens.colGame}px`,
                 maxWidth: `${sizeTokens.colGame}px`,
-                color: isBeyondBestOf ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
-                overflow: 'visible',
               }}
             >
               {isBeyondBestOf ? (
-                <span style={{ opacity: 0.25 }}>—</span>
+                <span className="opacity-25">—</span>
               ) : p1Pts !== null && p1Pts !== undefined ? (
                 <span
-                  className="tabular-nums"
+                  className={cn(
+                    'font-mono tabular-nums tracking-tight py-0.5 px-1.5 m-0 rounded-sm inline-block leading-tight whitespace-nowrap',
+                    isLoserScore ? 'opacity-45' : 'opacity-100',
+                    p1WonGame ? 'font-bold' : 'font-normal'
+                  )}
                   style={{
-                    padding: '0.1rem 0.32rem',
-                    margin: 0,
-                    borderRadius: 'var(--radius-sm)',
                     background: p1WonGame ? colorWithAlpha(matchAccentColor, 0.16, 'rgba(255, 255, 255, 0.08)') : 'transparent',
                     color: p1WonGame ? matchAccentColor : 'var(--color-text-primary)',
-                    opacity: isLoserScore ? 0.45 : 1,
-                    fontWeight: p1WonGame ? 700 : 400,
                     fontSize: sizeTokens.fontSizeGameScore,
-                    fontFamily: 'var(--font-mono)',
                     border: p1WonGame ? `1px solid ${colorWithAlpha(matchAccentColor, 0.38, 'transparent')}` : '1px solid transparent',
-                    display: 'inline-block',
-                    lineHeight: 1.2,
-                    boxSizing: 'border-box',
-                    whiteSpace: 'nowrap',
                   }}
                 >
                   {p1Pts.toLocaleString()}
                 </span>
               ) : (
-                <span style={{ color: 'rgba(255, 255, 255, 0.15)', fontSize: '0.8rem', marginRight: '6px' }}>·</span>
+                <span className="text-white/15 text-caption mr-1.5">·</span>
               )}
             </td>
           );
@@ -376,13 +323,11 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
         {/* Complete Status (RowSpan 2) */}
         <td
           rowSpan={2}
+          className={cn(tdMergedClass, 'text-center border-r-white/5')}
           style={{
-            ...baseTdMergedStyle,
             borderTop: topBorder,
             borderBottom: botBorder,
-            borderRight: rightBorder,
             boxShadow: completeShadow,
-            textAlign: 'center',
             width: `${sizeTokens.colComplete}px`,
             minWidth: `${sizeTokens.colComplete}px`,
             maxWidth: `${sizeTokens.colComplete}px`,
@@ -390,18 +335,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
         >
           {status.type === 'complete' && (
             <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                background: 'rgba(34, 197, 94, 0.16)',
-                border: '1px solid rgba(34, 197, 94, 0.4)',
-                color: '#4ade80',
-                margin: '0 auto',
-              }}
+              className="inline-flex items-center justify-center size-5 rounded-full bg-green-500/16 border border-green-500/40 text-green-400 my-0 mx-auto"
               title="Complete"
             >
               <Check size={12} strokeWidth={3} />
@@ -409,26 +343,18 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
           )}
           {status.type === 'in_progress' && (
             <span
+              className="font-bold py-0.5 px-2 rounded-full inline-flex items-center gap-1 leading-tight"
               style={{
                 fontSize: sizeTokens.fontSizeStatusBadge,
-                fontWeight: 700,
-                padding: '0.12rem 0.45rem',
-                borderRadius: 'var(--radius-full)',
                 background: colorWithAlpha(primaryColor, 0.18, 'rgba(245, 158, 11, 0.18)'),
                 color: primaryColor,
                 border: `1px solid ${colorWithAlpha(primaryColor, 0.45, 'rgba(245, 158, 11, 0.45)')}`,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                lineHeight: 1.2,
               }}
               title="In Progress"
             >
               <span
+                className="size-1.25 rounded-full"
                 style={{
-                  width: '5px',
-                  height: '5px',
-                  borderRadius: '50%',
                   background: primaryColor,
                   boxShadow: `0 0 5px ${primaryColor}`,
                 }}
@@ -438,11 +364,8 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
           )}
           {status.type === 'not_started' && (
             <span
-              style={{
-                color: 'var(--color-text-muted)',
-                fontSize: sizeTokens.fontSizeStatusBadge,
-                opacity: 0.35,
-              }}
+              className="text-fg-muted opacity-35"
+              style={{ fontSize: sizeTokens.fontSizeStatusBadge }}
               title="Waiting"
             >
               —
@@ -463,15 +386,11 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
         }}
         onMouseEnter={() => onHoverMatch(match.id)}
         onMouseLeave={() => onHoverMatch(null)}
-        style={{
-          background: blockBg,
-          cursor: isPlayable && tournament.isLocked ? 'pointer' : 'default',
-          opacity: isPlayable ? 1 : 0.72,
-          transition: 'background 0.12s ease',
-        }}
+        className={rowClass}
+        style={{ background: blockBg }}
       >
         {/* Player 2 Seed & Competitor Info */}
-        <td style={{ ...baseTdStyle, borderBottom: botBorder, boxShadow: row2Shadow, width: `${competitorColWidth}px`, minWidth: `${competitorColWidth}px`, maxWidth: `${competitorColWidth}px`, textAlign: 'left' }}>
+        <td className={cn(tdClass, 'text-left')} style={{ borderBottom: botBorder, boxShadow: row2Shadow, width: `${competitorColWidth}px`, minWidth: `${competitorColWidth}px`, maxWidth: `${competitorColWidth}px` }}>
           <div
             onClick={(e) => {
               if (p2?.id) {
@@ -481,36 +400,26 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
             }}
             onMouseEnter={() => p2?.id && onHoverPlayer(`p2-${match.id}`)}
             onMouseLeave={() => onHoverPlayer(null)}
+            className={cn(
+              'inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded-sm transition-all duration-100 max-w-full w-full',
+              p2?.id ? 'cursor-pointer' : '[cursor:inherit]'
+            )}
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              padding: '0.1rem 0.35rem',
-              borderRadius: 'var(--radius-sm)',
               background: hoveredPlayerKey === `p2-${match.id}` ? colorWithAlpha(primaryColor, 0.15, 'rgba(255, 255, 255, 0.08)') : 'transparent',
               boxShadow: hoveredPlayerKey === `p2-${match.id}` ? `0 0 0 1px ${primaryColor}` : 'none',
-              cursor: p2?.id ? 'pointer' : 'inherit',
-              transition: 'all 0.12s ease',
-              maxWidth: '100%',
-              width: '100%',
-              boxSizing: 'border-box',
             }}
             title={p2?.id ? "View competitor tournament profile" : undefined}
           >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', width: `${sizeTokens.countrySeedWidth}px`, flexShrink: 0 }}>
-              {(p2?.country || (p2 as any)?.avatarUrl) && <PlayerAvatar player={p2 as any} country={p2?.country} style={{ fontSize: sizeTokens.flagSize, lineHeight: 1 }} />}
+            <span className="inline-flex items-center gap-1.5 shrink-0" style={{ width: `${sizeTokens.countrySeedWidth}px` }}>
+              {(p2?.country || (p2 as any)?.avatarUrl) && <PlayerAvatar player={p2 as any} country={p2?.country} className="leading-none" style={{ fontSize: sizeTokens.flagSize }} />}
               {p2?.seed && (
                 <span
+                  className="py-0 px-1 rounded-sm font-mono font-bold leading-tight"
                   style={{
                     fontSize: sizeTokens.fontSizeSeed,
-                    padding: '0.06rem 0.28rem',
-                    borderRadius: 'var(--radius-sm)',
                     background: colorWithAlpha(matchAccentColor, 0.12, 'rgba(255, 255, 255, 0.08)'),
                     color: matchAccentColor,
                     border: `1px solid ${colorWithAlpha(matchAccentColor, 0.25, 'rgba(255, 255, 255, 0.1)')}`,
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 700,
-                    lineHeight: 1.1,
                   }}
                 >
                   #{p2.seed}
@@ -518,38 +427,25 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
               )}
             </span>
             <span
+              className={cn(
+                'truncate flex-1 min-w-0',
+                isComplete ? (p2IsWinner ? 'font-extrabold' : 'font-normal') : (p2IsWinner ? 'font-bold' : 'font-medium'),
+                hoveredPlayerKey === `p2-${match.id}` ? 'opacity-100' : isComplete && p1IsWinner ? 'opacity-45' : 'opacity-100'
+              )}
               style={{
-                fontWeight: isComplete ? (p2IsWinner ? 800 : 400) : (p2IsWinner ? 700 : 500),
                 fontSize: sizeTokens.fontSizePlayerName,
                 color: hoveredPlayerKey === `p2-${match.id}`
                   ? primaryColor
                   : p2IsWinner
                   ? primaryColor
                   : 'var(--color-text-primary)',
-                opacity: hoveredPlayerKey === `p2-${match.id}` ? 1 : isComplete && p1IsWinner ? 0.45 : 1,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                flex: 1,
-                minWidth: 0,
               }}
             >
               {p2Name}
             </span>
             {match.player2.isManualOverride && (
               <span
-                style={{
-                  fontSize: '0.6rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.04em',
-                  padding: '0.05rem 0.28rem',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'rgba(245, 158, 11, 0.18)',
-                  color: '#fbbf24',
-                  border: '1px solid rgba(245, 158, 11, 0.4)',
-                  textTransform: 'uppercase',
-                  lineHeight: 1.1,
-                }}
+                className="text-3xs font-bold tracking-wide py-0 px-1 rounded-sm bg-gold/18 text-gold-bright border border-gold/40 uppercase leading-tight"
                 title="Position manually placed by tournament organizer"
               >
                 OVERRIDE
@@ -560,13 +456,10 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
 
         {/* Player 2 Games Won Score */}
         <td
+          className={cn(tdClass, 'text-center pr-3.5', p2IsWinner ? 'font-extrabold' : 'font-semibold')}
           style={{
-            ...baseTdStyle,
             borderBottom: botBorder,
             boxShadow: row2Shadow,
-            textAlign: 'center',
-            paddingRight: '14px',
-            fontWeight: p2IsWinner ? 800 : 600,
             fontSize: sizeTokens.fontSizeGamesWon,
             width: `${sizeTokens.colGamesWon}px`,
             minWidth: `${sizeTokens.colGamesWon}px`,
@@ -574,20 +467,18 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
           }}
         >
           <span
-            className="tabular-nums"
+            className={cn(
+              'font-mono tabular-nums tracking-tight inline-block py-0.5 px-1.5 rounded-sm leading-tight',
+              isComplete && p1IsWinner ? 'opacity-45' : 'opacity-100'
+            )}
             style={{
-              display: 'inline-block',
-              padding: '0.08rem 0.4rem',
-              borderRadius: 'var(--radius-sm)',
               background: p2IsWinner
                 ? colorWithAlpha(primaryColor, 0.22, 'rgba(255, 255, 255, 0.08)')
                 : 'transparent',
               color: p2IsWinner
                 ? primaryColor
                 : 'var(--color-text-primary)',
-              opacity: isComplete && p1IsWinner ? 0.45 : 1,
               border: p2IsWinner ? `1px solid ${colorWithAlpha(primaryColor, 0.55, 'transparent')}` : '1px solid transparent',
-              lineHeight: 1.2,
             }}
           >
             {p2ScoreDisplay}
@@ -608,45 +499,40 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
           return (
             <td
               key={gNum}
+              className={cn(
+                sizeTokens.gameCellPadding,
+                tdCoreClass,
+                'text-right overflow-visible',
+                isBeyondBestOf ? 'text-fg-muted' : 'text-fg'
+              )}
               style={{
-                ...baseTdStyle,
                 borderBottom: botBorder,
                 boxShadow: row2Shadow,
-                textAlign: 'right',
-                padding: sizeTokens.gameCellPadding,
                 width: `${sizeTokens.colGame}px`,
                 minWidth: `${sizeTokens.colGame}px`,
                 maxWidth: `${sizeTokens.colGame}px`,
-                color: isBeyondBestOf ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
-                overflow: 'visible',
               }}
             >
               {isBeyondBestOf ? (
-                <span style={{ opacity: 0.25 }}>—</span>
+                <span className="opacity-25">—</span>
               ) : p2Pts !== null && p2Pts !== undefined ? (
                 <span
-                  className="tabular-nums"
+                  className={cn(
+                    'font-mono tabular-nums tracking-tight py-0.5 px-1.5 m-0 rounded-sm inline-block leading-tight whitespace-nowrap',
+                    isLoserScore ? 'opacity-45' : 'opacity-100',
+                    p2WonGame ? 'font-bold' : 'font-normal'
+                  )}
                   style={{
-                    padding: '0.1rem 0.32rem',
-                    margin: 0,
-                    borderRadius: 'var(--radius-sm)',
                     background: p2WonGame ? colorWithAlpha(matchAccentColor, 0.16, 'rgba(255, 255, 255, 0.08)') : 'transparent',
                     color: p2WonGame ? matchAccentColor : 'var(--color-text-primary)',
-                    opacity: isLoserScore ? 0.45 : 1,
-                    fontWeight: p2WonGame ? 700 : 400,
                     fontSize: sizeTokens.fontSizeGameScore,
-                    fontFamily: 'var(--font-mono)',
                     border: p2WonGame ? `1px solid ${colorWithAlpha(matchAccentColor, 0.38, 'transparent')}` : '1px solid transparent',
-                    display: 'inline-block',
-                    lineHeight: 1.2,
-                    boxSizing: 'border-box',
-                    whiteSpace: 'nowrap',
                   }}
                 >
                   {p2Pts.toLocaleString()}
                 </span>
               ) : (
-                <span style={{ color: 'rgba(255, 255, 255, 0.15)', fontSize: '0.8rem', marginRight: '6px' }}>·</span>
+                <span className="text-white/15 text-caption mr-1.5">·</span>
               )}
             </td>
           );

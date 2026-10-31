@@ -1,6 +1,7 @@
 import React, { useId } from 'react';
 import { AlertTriangle, KeyRound, X, ArrowRight, ShieldAlert } from 'lucide-react';
 import { Overlay } from '../../../../components/overlay';
+import { Button, IconButton } from '../../../../components/ui';
 
 export interface SharedTournamentInfo {
   id: string;
@@ -39,91 +40,34 @@ export const SharedPinWarningModal: React.FC<SharedPinWarningModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              background: 'linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.03) 100%)',
-              borderBottom: '1px solid rgba(245, 158, 11, 0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1rem',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '8px',
-                  background: 'rgba(245, 158, 11, 0.2)',
-                  border: '1px solid rgba(245, 158, 11, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#f59e0b',
-                  flexShrink: 0,
-                }}
-              >
+          <div className="flex items-center justify-between gap-4 border-b border-gold/25 bg-linear-180 from-gold/12 to-gold/3 py-5 px-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-md border border-gold/40 bg-gold/20 text-gold">
                 <ShieldAlert size={20} />
               </div>
               <div>
-                <h3
-                  id={titleId}
-                  style={{
-                    fontSize: '1.05rem',
-                    fontWeight: 700,
-                    color: '#ffffff',
-                    margin: 0,
-                    letterSpacing: '-0.01em',
-                  }}
-                >
+                <h3 id={titleId} className="m-0 text-base font-bold tracking-tight text-white">
                   Shared Tournament PIN Warning
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: '#fbbf24', margin: '0.15rem 0 0' }}>
+                <p className="mx-0 mb-0 mt-0.5 text-xs text-gold-bright">
                   Multi-Tournament Access Overlap Detected
                 </p>
               </div>
             </div>
-            <button
-              type="button"
+            <IconButton
+              aria-label="Close"
               onClick={requestClose}
               disabled={isSubmitting}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted, #8b949e)',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                padding: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '4px',
-                transition: 'color 0.15s ease',
-              }}
+              className="flex rounded-xs"
               title="Cancel and close"
             >
               <X size={18} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Content Body */}
-          <div
-            style={{
-              padding: '1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1.15rem',
-            }}
-          >
-            <p
-              style={{
-                fontSize: '0.88rem',
-                color: 'var(--color-text-primary, #ffffff)',
-                lineHeight: 1.5,
-                margin: 0,
-              }}
-            >
+          <div className="flex flex-col gap-4.5 p-6">
+            <p className="m-0 text-sm leading-normal text-fg">
               The PIN you entered matches the PIN configured on{' '}
               <strong>
                 {sharedTournaments.length === 1
@@ -133,47 +77,19 @@ export const SharedPinWarningModal: React.FC<SharedPinWarningModalProps> = ({
             </p>
 
             {/* List of Shared Tournaments */}
-            <div
-              style={{
-                background: 'rgba(0, 0, 0, 0.35)',
-                border: '1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08))',
-                borderRadius: 'var(--radius-md, 8px)',
-                padding: '0.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.4rem',
-                maxHeight: '160px',
-                overflowY: 'auto',
-              }}
-            >
+            <div className="flex max-h-40 flex-col gap-1.5 overflow-y-auto rounded-md border border-line-subtle bg-black/35 p-2">
               {sharedTournaments.map(t => (
                 <div
                   key={t.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.45rem 0.75rem',
-                    borderRadius: 'var(--radius-sm, 6px)',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.04)',
-                  }}
+                  className="flex items-center justify-between rounded-sm border border-white/4 bg-white/3 py-2 px-3"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="flex items-center gap-2">
                     <KeyRound size={13} color="#f59e0b" />
-                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff' }}>
+                    <span className="text-caption font-semibold text-white">
                       {t.name}
                     </span>
                   </div>
-                  <code
-                    style={{
-                      fontSize: '0.72rem',
-                      color: '#94a3b8',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      padding: '0.15rem 0.4rem',
-                      borderRadius: '4px',
-                    }}
-                  >
+                  <code className="rounded-xs bg-black/30 py-0.5 px-1.5 text-xs text-fg-secondary">
                     /{t.slug}
                   </code>
                 </div>
@@ -181,88 +97,41 @@ export const SharedPinWarningModal: React.FC<SharedPinWarningModalProps> = ({
             </div>
 
             {/* Impact Explainer */}
-            <div
-              style={{
-                background: 'rgba(245, 158, 11, 0.08)',
-                border: '1px solid rgba(245, 158, 11, 0.25)',
-                borderRadius: 'var(--radius-md, 8px)',
-                padding: '0.85rem 1rem',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.4rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#fbbf24', fontSize: '0.78rem', fontWeight: 700 }}>
+            <div className="flex flex-col gap-1.5 rounded-md border border-gold/25 bg-gold/8 py-3.5 px-4">
+              <div className="flex items-center gap-1.5 text-caption font-bold text-gold-bright">
                 <AlertTriangle size={14} />
                 <span>How shared PINs work:</span>
               </div>
-              <p
-                style={{
-                  fontSize: '0.78rem',
-                  color: 'var(--color-text-secondary, #cbd5e1)',
-                  margin: 0,
-                  lineHeight: 1.45,
-                }}
-              >
+              <p className="m-0 text-caption leading-normal text-fg-secondary">
                 Tournament Admins logging in with this PIN will authenticate once and be granted management access to <strong>all matching tournaments</strong>. They will see both tournaments in their manager left navigation dropdown and home workspace.
               </p>
             </div>
 
-            <p
-              style={{
-                fontSize: '0.82rem',
-                color: 'var(--color-text-muted, #94a3b8)',
-                margin: 0,
-              }}
-            >
+            <p className="m-0 text-caption text-fg-muted">
               If you want this tournament to have strictly isolated administration, click <strong>Cancel</strong> and choose a unique PIN. Otherwise, click <strong>Continue</strong> to save the shared PIN.
             </p>
           </div>
 
           {/* Modal Actions */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              background: 'var(--color-bg-surface-elevated, #0d1117)',
-              borderTop: '1px solid var(--color-border, #30363d)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-            }}
-          >
-            <button
-              type="button"
+          <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated py-4 px-6">
+            <Button
               onClick={requestClose}
               disabled={isSubmitting}
-              className="btn btn-secondary"
-              style={{
-                fontSize: '0.82rem',
-                padding: '0.5rem 1rem',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              }}
+              className="py-2 px-4 text-caption"
               data-testid="shared-pin-cancel-btn"
             >
               Cancel
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="primary"
               onClick={onConfirm}
               disabled={isSubmitting}
-              className="btn btn-primary"
-              style={{
-                fontSize: '0.82rem',
-                padding: '0.5rem 1.25rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              }}
+              className="gap-2 py-2 px-5 text-caption"
               data-testid="shared-pin-continue-btn"
             >
               <span>{isSubmitting ? 'Saving...' : 'Continue (Share PIN)'}</span>
               <ArrowRight size={14} />
-            </button>
+            </Button>
           </div>
         </>
       )}

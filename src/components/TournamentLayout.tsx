@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from './ui';
 import { Tournament, TournamentTier } from '../features/tournament/types';
 import { TournamentSidebar, SidebarNavView } from './TournamentSidebar';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -23,30 +24,14 @@ export const TournamentLayout: React.FC<TournamentLayoutProps> = ({
   onNavigate,
 }) => {
   return (
-    <div
-      className={className}
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        background: 'var(--color-bg-base)',
-        width: '100%',
-      }}
-    >
+    <div className={cn('flex min-h-screen w-full bg-canvas', className)}>
       <TournamentSidebar
         tournament={tournament}
         activeTier={activeTier}
         activeView={activeView}
         onNavigate={onNavigate}
       />
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          ...contentStyle,
-        }}
-      >
+      <div className="flex min-w-0 flex-1 flex-col" style={{ ...contentStyle }}>
         <ErrorBoundary fallbackTitle="View Failed to Render">
           {children}
         </ErrorBoundary>

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { usePinAuth } from '../features/auth/AuthContext';
 import { useTournament } from '../features/tournament/store';
 import { KeyRound, ShieldAlert, ArrowLeft, Eye, EyeOff, Check, LogOut, Info } from 'lucide-react';
+import { Button, buttonClasses, cn } from '../components/ui';
 
 export const AdminLoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -85,72 +86,27 @@ export const AdminLoginPage: React.FC = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: 'var(--color-bg-base, #0d1117)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1.5rem',
-        fontFamily: 'Inter, system-ui, sans-serif',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '430px',
-          backgroundColor: 'var(--color-bg-surface, #161b22)',
-          border: '1px solid var(--color-border, #30363d)',
-          borderRadius: '12px',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
-          padding: '2rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.25rem',
-        }}
-      >
+    <div className="flex min-h-screen flex-col items-center justify-center bg-canvas p-6 font-sans">
+      <div className="flex w-full max-w-107.5 flex-col gap-5 rounded-md border border-line bg-surface p-8 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
         {/* Back Link */}
         <Link
           to="/"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            color: 'var(--color-text-muted, #8b949e)',
-            fontSize: '0.8rem',
-            textDecoration: 'none',
-            alignSelf: 'flex-start',
-            transition: 'color 0.15s ease',
-          }}
+          className="inline-flex items-center gap-1.5 self-start text-caption text-fg-muted no-underline transition-colors duration-150"
         >
           <ArrowLeft size={14} />
           <span>Back to All Tournaments</span>
         </Link>
 
         {/* Top Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, var(--color-gold-bright, #ffd700), #f59e0b)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#000',
-              boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
-            }}
-          >
+        <div className="flex items-center gap-3.5">
+          <div className="flex size-10.5 items-center justify-center rounded-md bg-linear-135 from-gold-bright to-gold text-black shadow-[0_4px_12px_rgba(245,158,11,0.3)]">
             <KeyRound size={22} />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#ffffff' }}>
+            <h1 className="m-0 text-xl font-extrabold text-white">
               Staff & Admin Login
             </h1>
-            <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.8rem', color: 'var(--color-text-muted, #8b949e)' }}>
+            <p className="mx-0 mt-0.5 mb-0 text-caption text-fg-muted">
               MatchFoundry™ Access Control
             </p>
           </div>
@@ -159,19 +115,14 @@ export const AdminLoginPage: React.FC = () => {
         {/* Existing Session Alert if active */}
         {session && (
           <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.65rem',
-              padding: '0.85rem 1rem',
-              backgroundColor: isSystemAdmin ? 'rgba(56, 189, 248, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-              border: isSystemAdmin ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid rgba(245, 158, 11, 0.35)',
-              borderRadius: '8px',
-            }}
+            className={cn(
+              'flex flex-col gap-2.5 rounded-md border px-4 py-3.5',
+              isSystemAdmin ? 'border-sky-400/35 bg-sky-400/10' : 'border-gold/35 bg-gold/10'
+            )}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: isSystemAdmin ? '#38bdf8' : 'var(--color-gold-bright)' }}>
+                <div className={cn('text-caption font-bold', isSystemAdmin ? 'text-sky-400' : 'text-gold-bright')}>
                   Active Session:{' '}
                   {isSystemAdmin
                     ? '🛡️ System Admin (All Access)'
@@ -179,7 +130,7 @@ export const AdminLoginPage: React.FC = () => {
                     ? `🏆 Tournament Admin (${session.tournamentSlugs.length} Tournaments: ${session.tournamentSlugs.join(', ')})`
                     : `🏆 Tournament Admin (${session.tournamentSlug || 'Scoped'})`}
                 </div>
-                <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
+                <div className="text-xs text-fg-muted">
                   {isSystemAdmin
                     ? 'You have global access across all tournaments.'
                     : session.tournamentSlugs && session.tournamentSlugs.length > 1
@@ -187,21 +138,22 @@ export const AdminLoginPage: React.FC = () => {
                     : 'You are authenticated for this tournament. Enter credentials below to switch.'}
                 </div>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={handleLogout}
-                className="btn btn-secondary"
-                style={{ padding: '0.3rem 0.6rem', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}
+                className="flex shrink-0 items-center gap-1 px-2.5 py-1 text-xs"
               >
                 <LogOut size={12} /> Log Out
-              </button>
+              </Button>
             </div>
             {!isSystemAdmin && session.tournamentSlug && (
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
+              <div className="mt-1 flex gap-2">
                 <Link
                   to={`/${session.tournamentSlug}/manage/qualifiers`}
-                  className="btn btn-primary"
-                  style={{ fontSize: '0.76rem', padding: '0.35rem 0.75rem', textDecoration: 'none' }}
+                  className={buttonClasses({
+                    variant: 'primary',
+                    className: 'px-3 py-1.5 text-xs hover:-translate-y-px hover:shadow-gold-hover hover:brightness-110',
+                  })}
                 >
                   Go to {session.tournamentSlug} Workspace →
                 </Link>
@@ -212,89 +164,36 @@ export const AdminLoginPage: React.FC = () => {
 
         {/* Reason / Context Alert */}
         {needSystem && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.65rem 0.85rem',
-              backgroundColor: 'rgba(245, 158, 11, 0.12)',
-              border: '1px solid rgba(245, 158, 11, 0.35)',
-              borderRadius: '8px',
-              color: 'var(--color-gold-bright)',
-              fontSize: '0.82rem',
-            }}
-          >
-            <Info size={16} style={{ flexShrink: 0 }} />
+          <div className="flex items-center gap-2 rounded-md border border-gold/35 bg-gold/12 px-3.5 py-2.5 text-caption text-gold-bright">
+            <Info size={16} className="shrink-0" />
             <span>System Admin Key required to access this administrative section.</span>
           </div>
         )}
 
         {error && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              borderRadius: '8px',
-              color: '#f87171',
-              fontSize: '0.85rem',
-            }}
-          >
-            <ShieldAlert size={18} style={{ flexShrink: 0 }} />
+          <div className="flex items-center gap-2 rounded-md border border-red/40 bg-red/15 px-4 py-3 text-sm text-red-bright">
+            <ShieldAlert size={18} className="shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {successMsg && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1rem',
-              backgroundColor: 'rgba(16, 185, 129, 0.15)',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              borderRadius: '8px',
-              color: '#34d399',
-              fontSize: '0.85rem',
-            }}
-          >
-            <Check size={18} style={{ flexShrink: 0 }} />
+          <div className="flex items-center gap-2 rounded-md border border-green/40 bg-green/15 px-4 py-3 text-sm text-green-bright">
+            <Check size={18} className="shrink-0" />
             <span>{successMsg}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {/* Tournament Scope Selector */}
           <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                color: 'var(--color-text-secondary, #c9d1d9)',
-                marginBottom: '0.4rem',
-              }}
-            >
+            <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
               Tournament Scope (Optional for System Admin)
             </label>
             <select
               value={selectedTourneySlug}
               onChange={e => setSelectedTourneySlug(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.65rem 0.75rem',
-                backgroundColor: 'var(--color-bg-base, #0d1117)',
-                border: '1px solid var(--color-border, #30363d)',
-                borderRadius: '8px',
-                color: '#ffffff',
-                fontSize: '0.9rem',
-                outline: 'none',
-              }}
+              className="w-full rounded-md border border-line bg-canvas px-3 py-2.5 text-sm text-white outline-none"
             >
               <option value="">Global / System Admin (All Tournaments)</option>
               {availableTournaments.map(t => (
@@ -307,52 +206,22 @@ export const AdminLoginPage: React.FC = () => {
 
           {/* PIN Input */}
           <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                color: 'var(--color-text-secondary, #c9d1d9)',
-                marginBottom: '0.4rem',
-              }}
-            >
+            <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
               Security Key / PIN
             </label>
-            <div style={{ position: 'relative' }}>
+            <div className="relative">
               <input
                 type={showPin ? 'text' : 'password'}
                 value={pin}
                 onChange={e => setPin(e.target.value)}
                 autoFocus
                 placeholder="Enter PIN or Key"
-                style={{
-                  width: '100%',
-                  padding: '0.65rem 2.5rem 0.65rem 0.75rem',
-                  backgroundColor: 'var(--color-bg-base, #0d1117)',
-                  border: '1px solid var(--color-border, #30363d)',
-                  borderRadius: '8px',
-                  color: '#ffffff',
-                  fontSize: '1rem',
-                  letterSpacing: '0.08em',
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                }}
+                className="w-full rounded-md border border-line bg-canvas py-2.5 pr-10 pl-3 text-base tracking-widest text-white outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowPin(!showPin)}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--color-text-muted, #8b949e)',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  display: 'flex',
-                }}
+                className="absolute top-1/2 right-2.5 flex -translate-y-1/2 cursor-pointer border-0 bg-transparent p-1 text-fg-muted"
                 tabIndex={-1}
               >
                 {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -364,35 +233,20 @@ export const AdminLoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting || !pin.trim()}
-            style={{
-              padding: '0.75rem',
-              backgroundColor: 'var(--color-gold-bright, #ffd700)',
-              color: '#000000',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 700,
-              fontSize: '0.92rem',
-              cursor: isSubmitting || !pin.trim() ? 'not-allowed' : 'pointer',
-              opacity: isSubmitting || !pin.trim() ? 0.6 : 1,
-              transition: 'opacity 0.15s ease',
-            }}
+            className={cn(
+              'rounded-md border-0 bg-gold-bright p-3 text-base font-bold text-black transition-opacity duration-150',
+              isSubmitting || !pin.trim() ? 'cursor-not-allowed opacity-60' : 'cursor-pointer opacity-100'
+            )}
           >
             {isSubmitting ? 'Authenticating...' : 'Unlock Administration'}
           </button>
         </form>
 
         {/* Back Link */}
-        <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+        <div className="mt-2 text-center">
           <Link
             to={selectedTourneySlug ? `/${selectedTourneySlug}/brackets` : '/'}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontSize: '0.8rem',
-              color: 'var(--color-text-muted, #8b949e)',
-              textDecoration: 'none',
-            }}
+            className="inline-flex items-center gap-1.5 text-caption text-fg-muted no-underline"
           >
             <ArrowLeft size={14} />
             <span>Return to Public Tournament View</span>
@@ -401,8 +255,8 @@ export const AdminLoginPage: React.FC = () => {
       </div>
 
       {/* Footer / Common-Law Trademark Notice */}
-      <footer style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--color-text-muted, #64748b)' }}>
-        <p style={{ margin: 0 }}>© 2026 MatchFoundry™. All rights reserved.</p>
+      <footer className="mt-8 text-center text-xs text-fg-muted">
+        <p className="m-0">© 2026 MatchFoundry™. All rights reserved.</p>
       </footer>
     </div>
   );

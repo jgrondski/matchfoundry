@@ -22,6 +22,7 @@ import {
 import { LoadingScreen } from '../components/LoadingScreen';
 import { isPlaceholderSubmissionStatus } from '../features/online-quals/onlineQualsStatus';
 import { ConfirmDialog } from '../components/overlay';
+import { Button, cn } from '../components/ui';
 
 export const ManageTournamentPlayersPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -121,11 +122,11 @@ export const ManageTournamentPlayersPage: React.FC = () => {
 
   if (!tournament) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+      <div className="p-12 text-center text-fg-secondary">
         <h2>Tournament Not Found</h2>
-        <button onClick={() => navigate('/')} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+        <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
-        </button>
+        </Button>
       </div>
     );
   }
@@ -155,117 +156,105 @@ export const ManageTournamentPlayersPage: React.FC = () => {
 
   return (
     <TournamentLayout tournament={tournament} activeView="players">
-      <main style={{ flex: 1, padding: '2rem 1.5rem', maxWidth: '1100px', width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <main className="mx-auto flex w-full max-w-275 flex-1 flex-col gap-6 px-6 py-8">
         {/* Header Section */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.2rem' }}>
-              <span
-                style={{
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  color: 'var(--color-gold-bright)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
+            <div className="mb-1 flex items-center gap-2">
+              <span className="text-caption font-bold tracking-widest text-gold-bright uppercase">
                 Competitor Roster
               </span>
             </div>
-            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.65rem', letterSpacing: '-0.02em', margin: 0 }}>
+            <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white">
               <Users color="var(--color-gold-bright)" size={28} />
               {tournament.name}
             </h1>
-            <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>
+            <p className="mt-1.5 text-sm text-fg-muted">
               Manage registered competitors and seeding for this tournament.
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="secondary"
               onClick={() => setIsImportModalOpen(true)}
-              className="btn btn-secondary"
-              style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', gap: '0.45rem' }}
+              className="gap-2 px-4 py-2 text-sm"
             >
               <Download size={15} color="var(--color-gold-bright)" />
               Import from Global Pool
-            </button>
+            </Button>
             {availableGlobalPlayers.length > 0 && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={handleImportAllGlobal}
-                className="btn btn-secondary"
-                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', gap: '0.45rem' }}
+                className="gap-2 px-4 py-2 text-sm"
                 title={`Import all ${availableGlobalPlayers.length} available players from global catalog`}
               >
                 <DownloadCloud size={15} color="#38bdf8" />
                 Import All Available ({availableGlobalPlayers.length})
-              </button>
+              </Button>
             )}
             {tournament.seedingMethod === 'MANUAL' && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={() => navigate(`/${tournament.slug}/manage/seeding`)}
-                className="btn btn-secondary"
-                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', gap: '0.45rem' }}
+                className="gap-2 px-4 py-2 text-sm"
                 title="Open Seeding Manager to arrange seeds and tier cutoffs"
               >
                 <Layers size={15} color="var(--color-brand)" />
                 Arrange Seeds & Brackets
-              </button>
+              </Button>
             )}
-            <button
-              type="button"
+            <Button
+              variant="primary"
               onClick={() => setIsRegisterModalOpen(true)}
-              className="btn btn-primary"
-              style={{ padding: '0.5rem 1.15rem', fontSize: '0.85rem', gap: '0.45rem' }}
+              className="gap-2 px-4.5 py-2 text-sm"
             >
               <UserPlus size={15} />
               Register Competitor
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Capacity & Roster Metrics */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-          <div style={{ padding: '1rem 1.25rem', background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+          <div className="rounded-md border border-line bg-surface px-5 py-4">
+            <div className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
               Registered Competitors
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: currentPlayers.length > 0 ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)', marginTop: '0.2rem' }}>
+            <div className={cn('mt-1 text-3xl font-extrabold', currentPlayers.length > 0 ? 'text-gold-bright' : 'text-fg-secondary')}>
               {currentPlayers.length}
             </div>
           </div>
 
-          <div style={{ padding: '1rem 1.25rem', background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
+          <div className="rounded-md border border-line bg-surface px-5 py-4">
+            <div className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
               Total Bracket Capacity
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text-primary)', marginTop: '0.2rem' }}>
+            <div className="mt-1 text-3xl font-extrabold text-fg">
               {totalCapacity > 0 ? totalCapacity : '—'}
             </div>
           </div>
 
-          <div style={{ padding: '1rem 1.25rem', background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.04em' }}>
+          <div className="rounded-md border border-line bg-surface px-5 py-4">
+            <div className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
               Roster Status
             </div>
-            <div style={{ fontSize: '1.05rem', fontWeight: 700, marginTop: '0.45rem' }}>
+            <div className="mt-2 text-base font-bold">
               {totalCapacity === 0 ? (
-                <span style={{ color: 'var(--color-text-muted)' }}>
+                <span className="text-fg-muted">
                   No tiers configured ({currentPlayers.length} in qualifiers)
                 </span>
               ) : currentPlayers.length < totalCapacity ? (
-                <span style={{ color: 'var(--color-gold-bright)' }}>
+                <span className="text-gold-bright">
                   Underfilled ({currentPlayers.length}/{totalCapacity})
                 </span>
               ) : currentPlayers.length === totalCapacity ? (
-                <span style={{ color: '#4ade80' }}>
+                <span className="text-green-400">
                   Full Capacity ({totalCapacity}/{totalCapacity})
                 </span>
               ) : (
-                <span style={{ color: '#60a5fa' }}>
+                <span className="text-blue-400">
                   Ready ({totalCapacity} in brackets + {currentPlayers.length - totalCapacity} DNQ)
                 </span>
               )}
@@ -274,106 +263,83 @@ export const ManageTournamentPlayersPage: React.FC = () => {
         </div>
 
         {/* Competitor Table Container */}
-        <div style={{ background: 'var(--color-bg-surface)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <div style={{ position: 'relative', width: '280px' }}>
+        <div className="flex flex-col gap-4 overflow-hidden rounded-lg border border-line bg-surface p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="relative w-70">
               <input
                 type="text"
                 placeholder="Search competitors by name, country, or playstyle..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.45rem 0.75rem 0.45rem 2.1rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--color-border)',
-                  background: 'var(--color-bg-base)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: '0.85rem',
-                }}
+                className="w-full rounded-sm border border-line bg-canvas py-2 pr-3 pl-8.5 text-sm text-fg"
               />
               <Search
                 size={15}
                 color="var(--color-text-muted)"
-                style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)' }}
+                className="absolute top-1/2 left-2.5 -translate-y-1/2"
               />
             </div>
 
-            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+            <span className="text-caption text-fg-muted">
               Showing {filteredPlayers.length} of {currentPlayers.length} registered {currentPlayers.length === 1 ? 'competitor' : 'competitors'}
             </span>
           </div>
 
           {currentPlayers.length === 0 ? (
-            <div
-              style={{
-                padding: '3rem 1.5rem',
-                background: 'var(--color-bg-base)',
-                borderRadius: 'var(--radius-md)',
-                border: '1px dashed var(--color-border)',
-                textAlign: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.85rem',
-              }}
-            >
+            <div className="flex flex-col items-center gap-3.5 rounded-md border border-dashed border-line bg-canvas px-6 py-12 text-center">
               <Users size={36} color="var(--color-text-muted)" />
-              <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+              <p className="m-0 text-base text-fg-secondary">
                 No competitors registered in this tournament yet.
               </p>
-              <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: 0, maxWidth: '420px' }}>
+              <p className="m-0 max-w-105 text-caption text-fg-muted">
                 Register competitors directly or import them from the global player pool to begin recording qualifier scores.
               </p>
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                <button
-                  type="button"
+              <div className="mt-2 flex flex-wrap justify-center gap-3">
+                <Button
+                  variant="secondary"
                   onClick={() => setIsImportModalOpen(true)}
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  className="flex items-center gap-1.5 text-sm"
                 >
                   <Download size={14} color="var(--color-gold-bright)" />
                   Import from Global Pool
-                </button>
+                </Button>
                 {availableGlobalPlayers.length > 0 && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     onClick={handleImportAllGlobal}
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                    className="flex items-center gap-1.5 text-sm"
                   >
                     <DownloadCloud size={14} color="#38bdf8" />
                     Import All Available ({availableGlobalPlayers.length})
-                  </button>
+                  </Button>
                 )}
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
                   onClick={() => setIsRegisterModalOpen(true)}
-                  className="btn btn-primary"
-                  style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  className="flex items-center gap-1.5 text-sm"
                 >
                   <UserPlus size={14} />
                   Register Competitor
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
+            <div className="overflow-x-auto rounded-md border border-line">
+              <table className="w-full border-collapse text-left text-sm">
                 <thead>
-                  <tr style={{ background: 'var(--color-bg-surface-elevated)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>
-                    <th style={{ padding: '0.75rem 1rem', width: '45px', textAlign: 'center' }}>#</th>
-                    <th style={{ padding: '0.75rem 1rem', minWidth: '180px' }}>Competitor</th>
-                    <th style={{ padding: '0.75rem 1rem', width: '100px' }}>Country</th>
-                    <th style={{ padding: '0.75rem 1rem', width: '120px' }}>Playstyle</th>
-                    <th style={{ padding: '0.75rem 1rem', width: '140px' }}>Personal Best</th>
-                    <th style={{ padding: '0.75rem 1rem', width: '110px', textAlign: 'right' }}>Actions</th>
+                  <tr className="border-b border-line bg-elevated text-fg-muted">
+                    <th className="w-11.25 px-4 py-3 text-center">#</th>
+                    <th className="min-w-45 px-4 py-3">Competitor</th>
+                    <th className="w-25 px-4 py-3">Country</th>
+                    <th className="w-30 px-4 py-3">Playstyle</th>
+                    <th className="w-35 px-4 py-3">Personal Best</th>
+                    <th className="w-27.5 px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredPlayers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                      <td colSpan={6} className="p-8 text-center text-fg-muted">
                         No competitors matching "{searchTerm}".
                       </td>
                     </tr>
@@ -381,16 +347,13 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                     filteredPlayers.map((player, pIdx) => (
                       <tr
                         key={player.id}
-                        style={{
-                          borderBottom: '1px solid var(--color-border-subtle)',
-                          background: pIdx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.015)',
-                        }}
+                        className={cn('border-b border-line-subtle', pIdx % 2 === 0 ? 'bg-transparent' : 'bg-white/2')}
                       >
-                        <td style={{ padding: '0.75rem 1rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                        <td className="px-4 py-3 text-center text-fg-muted">
                           {pIdx + 1}
                         </td>
-                        <td style={{ padding: '0.75rem 1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
                             <PlayerAvatar player={player} />
                             <button
                               type="button"
@@ -398,68 +361,48 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                                 setSelectedPlayerForDrawer(player);
                                 setIsPlayerDrawerOpen(true);
                               }}
-                              style={{
-                                background: 'none',
-                                border: 'none',
-                                padding: 0,
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                fontWeight: 600,
-                                color: 'var(--color-text-primary)',
-                                fontSize: 'inherit',
-                                transition: 'color 0.15s ease',
-                              }}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.color = 'var(--color-gold-bright)';
-                                e.currentTarget.style.textDecoration = 'underline';
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.color = 'var(--color-text-primary)';
-                                e.currentTarget.style.textDecoration = 'none';
-                              }}
+                              className="cursor-pointer border-0 bg-transparent p-0 text-left text-[length:inherit] font-semibold text-fg transition-colors duration-150 hover:text-gold-bright hover:underline"
                               title="Click to view detailed competitor profile, audit log, and match stats"
                             >
                               {getEffectivePlayerName(player)}
                             </button>
                           </div>
                         </td>
-                        <td style={{ padding: '0.75rem 1rem' }}>
+                        <td className="px-4 py-3">
                           {player.country ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.15rem 0.45rem', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-surface-highlight)', fontSize: '0.75rem', fontWeight: 700 }}>
+                            <span className="inline-flex items-center gap-1.5 rounded-sm bg-highlight px-2 py-0.5 text-xs font-bold">
                               <PlayerAvatar player={player} country={player.country} />
                               <span>{player.country}</span>
                             </span>
                           ) : '—'}
                         </td>
-                        <td style={{ padding: '0.75rem 1rem' }}>
+                        <td className="px-4 py-3">
                           <PlaystyleChip style={player.playstyle} />
                         </td>
-                        <td className="tabular-nums" style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 600 }}>
+                        <td className="px-4 py-3 font-mono font-semibold tabular-nums tracking-tight">
                           {player.personalBest ? player.personalBest.toLocaleString() : '—'}
                         </td>
-                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
-                            <button
-                              type="button"
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              variant="secondary"
                               onClick={() => {
                                 setEditingPlayer(player);
                                 setIsEditModalOpen(true);
                               }}
-                              className="btn btn-secondary"
-                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs"
                               title="Edit competitor profile"
                             >
                               <Edit2 size={13} /> Edit
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
+                              variant="secondary"
                               onClick={() => setPlayerToRemove(player)}
-                              className="btn btn-secondary"
-                              style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem', color: 'var(--color-red)', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-red"
                               title="Remove competitor from tournament roster"
                             >
                               <UserX size={14} /> Remove
-                            </button>
+                            </Button>
                           </div>
                         </td>
                       </tr>

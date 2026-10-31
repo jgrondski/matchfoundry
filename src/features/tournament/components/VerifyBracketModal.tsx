@@ -3,6 +3,7 @@ import { Tournament } from '../types';
 import { useTournament } from '../store';
 import { Lock, ShieldAlert, CheckCircle2, X } from 'lucide-react';
 import { Overlay } from '../../../components/overlay';
+import { Button, IconButton } from '../../../components/ui';
 
 interface VerifyBracketModalProps {
   isOpen: boolean;
@@ -46,101 +47,54 @@ export const VerifyBracketModal: React.FC<VerifyBracketModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              background: 'var(--color-bg-surface-elevated)',
-              borderBottom: '1px solid var(--color-border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: 'var(--color-gold-bg)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--color-gold-bright)',
-                }}
-              >
+          <div className="flex items-center justify-between border-b border-line bg-elevated py-5 px-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-md bg-gold-soft text-gold-bright">
                 <Lock size={18} />
               </div>
               <div>
-                <h3 id={titleId} style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                <h3 id={titleId} className="text-lg font-bold text-fg">
                   Lock Brackets &amp; Begin Match Play
                 </h3>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                <p className="text-xs text-fg-muted">
                   Double-confirmation seed freeze
                 </p>
               </div>
             </div>
-            <button
-              onClick={requestClose}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '0.25rem',
-              }}
-            >
+            <IconButton aria-label="Close" onClick={requestClose}>
               <X size={18} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Content */}
-          <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="flex flex-col gap-5 p-6">
             {step === 1 ? (
               <>
-                <div
-                  style={{
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '1rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <div style={{ fontWeight: 700, color: 'var(--color-gold-bright)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div className="flex flex-col gap-2 rounded-md border border-gold/30 bg-gold/10 p-4">
+                  <div className="flex items-center gap-1.5 text-sm font-bold text-gold-bright">
                     <ShieldAlert size={16} />
                     Freeze Seeding &amp; Initialize Match Play Mode
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--color-text-primary)', lineHeight: 1.4 }}>
+                  <p className="text-sm leading-snug text-fg">
                     Locking brackets will freeze current qualifier standings into static match entities across all <strong>{tournament.tiers.length} tiers</strong> ({totalPlayers} competitors).
                   </p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
+                  <p className="text-caption leading-snug text-fg-secondary">
                     Subsequent qualifier score edits will be recorded in the qualifiers table, but will <strong>not</strong> re-seed or mutate the locked match pairings.
                   </p>
                 </div>
 
                 {/* Tiers Summary */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
+                <div className="flex flex-col gap-2">
+                  <span className="text-caption font-semibold uppercase text-fg-secondary">
                     Tiers to lock:
                   </span>
                   {tournament.tiers.map(t => (
                     <div
                       key={t.id}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '0.5rem 0.75rem',
-                        background: 'var(--color-bg-surface-highlight)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '0.85rem',
-                      }}
+                      className="flex items-center justify-between rounded-sm bg-highlight py-2 px-3 text-sm"
                     >
-                      <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{t.name}</span>
-                      <span style={{ color: 'var(--color-text-muted)' }}>
+                      <span className="font-semibold text-fg">{t.name}</span>
+                      <span className="text-fg-muted">
                         {t.playerCount} players • {t.bracketType} (Bo{t.bestOf})
                       </span>
                     </div>
@@ -148,37 +102,14 @@ export const VerifyBracketModal: React.FC<VerifyBracketModalProps> = ({
                 </div>
               </>
             ) : (
-              <div
-                style={{
-                  background: 'var(--color-bg-surface-elevated)',
-                  border: '1px solid var(--color-gold)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1.25rem',
-                  textAlign: 'center',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                }}
-              >
-                <div
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    background: 'var(--color-gold-bg)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-gold-bright)',
-                  }}
-                >
+              <div className="flex flex-col items-center gap-3 rounded-md border border-gold bg-elevated p-5 text-center">
+                <div className="flex size-12 items-center justify-center rounded-full bg-gold-soft text-gold-bright">
                   <Lock size={24} />
                 </div>
-                <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff' }}>
+                <h4 className="text-lg font-bold text-white">
                   Final Match Play Confirmation
                 </h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', maxWidth: '380px' }}>
+                <p className="max-w-95 text-sm text-fg-secondary">
                   Are you ready to officially begin match play? Floor judges and score submission drawers will become active immediately.
                 </p>
               </div>
@@ -186,54 +117,28 @@ export const VerifyBracketModal: React.FC<VerifyBracketModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              background: 'var(--color-bg-surface-elevated)',
-              borderTop: '1px solid var(--color-border)',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-            }}
-          >
-            <button
-              onClick={requestClose}
-              className="btn btn-secondary"
-              style={{ padding: '0.5rem 1rem' }}
-            >
+          <div className="flex justify-end gap-3 border-t border-line bg-elevated py-4 px-6">
+            <Button onClick={requestClose} className="py-2 px-4">
               Cancel
-            </button>
+            </Button>
             {step === 1 ? (
-              <button
-                onClick={() => setStep(2)}
-                className="btn btn-primary"
-                style={{ padding: '0.5rem 1.25rem' }}
-              >
+              <Button variant="primary" onClick={() => setStep(2)} className="py-2 px-5">
                 Proceed to Lock
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
+                variant="primary"
                 onClick={handleConfirm}
                 disabled={isLocking}
-                className="btn btn-primary"
-                style={{ padding: '0.5rem 1.25rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                className="gap-2 py-2 px-5"
               >
                 {isLocking ? (
-                  <div
-                    style={{
-                      width: '14px',
-                      height: '14px',
-                      borderRadius: '50%',
-                      border: '2px solid rgba(255,255,255,0.3)',
-                      borderTopColor: '#ffffff',
-                      animation: 'spin 0.8s linear infinite',
-                    }}
-                  />
+                  <div className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 ) : (
                   <CheckCircle2 size={16} />
                 )}
                 <span>{isLocking ? 'Locking Seeds...' : 'Yes, Lock Seeds & Begin Matches'}</span>
-              </button>
+              </Button>
             )}
           </div>
         </>

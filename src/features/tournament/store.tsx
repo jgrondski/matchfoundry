@@ -2048,25 +2048,10 @@ export const TournamentProvider: React.FC<{
       {!isDbConnected && (
         <div
           role="alert"
-          style={{
-            backgroundColor: '#991b1b',
-            backgroundImage: 'linear-gradient(90deg, #991b1b 0%, #7f1d1d 100%)',
-            color: '#ffffff',
-            padding: '10px 16px',
-            fontSize: '13px',
-            fontWeight: 600,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            position: 'sticky',
-            top: 0,
-            zIndex: 99999,
-            boxShadow: '0 4px 14px rgba(0, 0, 0, 0.5)',
-            borderBottom: '1px solid rgba(239, 68, 68, 0.4)',
-          }}
+          className="sticky top-0 z-99999 flex items-center justify-between border-b border-red/40 bg-red-800 bg-linear-90 from-red-800 to-red-900 py-2.5 px-4 text-caption font-semibold text-white shadow-[0_4px_14px_rgba(0,0,0,0.5)]"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '15px' }}>🔴</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-base">🔴</span>
             <span>
               <strong>PostgreSQL Database Offline:</strong>{' '}
               {typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? (
@@ -2078,18 +2063,7 @@ export const TournamentProvider: React.FC<{
           </div>
           <button
             onClick={() => retryConnection()}
-            style={{
-              background: '#ffffff',
-              color: '#991b1b',
-              border: 'none',
-              borderRadius: '4px',
-              padding: '4px 12px',
-              fontWeight: 700,
-              fontSize: '12px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              marginLeft: '12px',
-            }}
+            className="ml-3 cursor-pointer whitespace-nowrap rounded-xs border-0 bg-white py-1 px-3 text-xs font-bold text-red-800"
           >
             Retry Connection
           </button>
@@ -2098,36 +2072,15 @@ export const TournamentProvider: React.FC<{
       {apiError && (
         <div
           role="alert"
-          style={{
-            backgroundColor: '#dc2626',
-            color: '#ffffff',
-            padding: '12px 20px',
-            fontSize: '14px',
-            fontWeight: 600,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            position: 'sticky',
-            top: 0,
-            zIndex: 99999,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
-          }}
+          className="sticky top-0 z-99999 flex items-center justify-between bg-red-600 py-3 px-5 text-sm font-semibold text-white shadow-md"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="flex items-center gap-2">
             <span>⚠️</span>
             <span>{apiError}</span>
           </div>
           <button
             onClick={clearApiError}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#ffffff',
-              fontWeight: 700,
-              fontSize: '16px',
-              cursor: 'pointer',
-              padding: '4px 8px',
-            }}
+            className="cursor-pointer border-0 bg-transparent py-1 px-2 text-base font-bold text-white"
             title="Dismiss error"
           >
             ✕

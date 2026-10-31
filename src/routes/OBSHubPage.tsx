@@ -19,6 +19,7 @@ import {
   Zap,
   LayoutGrid,
 } from 'lucide-react';
+import { Button, cn } from '../components/ui';
 
 export const OBSHubPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -31,11 +32,11 @@ export const OBSHubPage: React.FC = () => {
   const tournament = slug ? getTournamentBySlug(slug) : undefined;
   if (!tournament) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+      <div className="p-12 text-center text-fg-secondary">
         <h2>Tournament Not Found</h2>
-        <button onClick={() => navigate('/')} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+        <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
-        </button>
+        </Button>
       </div>
     );
   }
@@ -56,70 +57,30 @@ export const OBSHubPage: React.FC = () => {
 
   return (
     <TournamentLayout tournament={tournament} activeView="obs">
-      <main
-        style={{
-          flex: 1,
-          padding: '2rem 1.5rem',
-          maxWidth: '1200px',
-          width: '100%',
-          margin: '0 auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '2.25rem',
-        }}
-      >
+      <main className="mx-auto flex w-full max-w-300 flex-1 flex-col gap-9 px-6 py-8">
         {/* Hub Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.25rem' }}>
+        <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.25rem' }}>
-              <span
-                style={{
-                  fontSize: '0.78rem',
-                  fontWeight: 800,
-                  color: 'var(--color-gold-bright)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
+            <div className="mb-1 flex items-center gap-2">
+              <span className="text-caption font-extrabold tracking-widest text-gold-bright uppercase">
                 Broadcast &amp; OBS Studio Hub
               </span>
             </div>
-            <h1
-              style={{
-                fontSize: '1.85rem',
-                fontWeight: 800,
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.65rem',
-                letterSpacing: '-0.02em',
-                margin: 0,
-              }}
-            >
+            <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white">
               <Video color="var(--color-gold-bright)" size={28} />
               {tournament.name}
             </h1>
-            <p style={{ fontSize: '0.88rem', color: 'var(--color-text-muted)', margin: '0.35rem 0 0 0', maxWidth: '680px' }}>
+            <p className="mx-0 mt-1.5 mb-0 max-w-170 text-sm text-fg-muted">
               Clean, transparent browser sources tailored for OBS Studio, vMix, and Twitch streams. Click to copy or test in a popout window.
             </p>
           </div>
 
           {/* Chroma Preset Selector */}
-          <div
-            style={{
-              background: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)',
-              padding: '0.65rem 0.95rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.4rem',
-            }}
-          >
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div className="flex flex-col gap-1.5 rounded-md border border-line bg-surface px-4 py-2.5">
+            <div className="text-xs font-bold tracking-wide text-fg-muted uppercase">
               Chroma Background
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div className="flex items-center gap-1.5">
               {[
                 { id: 'none' as const, label: 'Transparent', color: 'transparent' },
                 { id: 'green' as const, label: 'Green', color: '#00ff00' },
@@ -132,22 +93,15 @@ export const OBSHubPage: React.FC = () => {
                     key={opt.id}
                     type="button"
                     onClick={() => setSelectedChroma(opt.id)}
-                    style={{
-                      padding: '0.3rem 0.65rem',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.75rem',
-                      fontWeight: isSelected ? 700 : 500,
-                      background: isSelected ? 'var(--color-gold-bg)' : 'var(--color-bg-base)',
-                      border: isSelected ? '1px solid var(--color-gold)' : '1px solid var(--color-border)',
-                      color: isSelected ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-1.5 rounded-sm border px-2.5 py-1 text-xs',
+                      isSelected
+                        ? 'border-gold bg-gold-soft font-bold text-gold-bright'
+                        : 'border-line bg-canvas font-medium text-fg-secondary'
+                    )}
                   >
                     {opt.color !== 'transparent' && (
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: opt.color, border: '1px solid rgba(255,255,255,0.4)' }} />
+                      <span className="size-2 rounded-full border border-white/40" style={{ background: opt.color }} />
                     )}
                     <span>{opt.label}</span>
                   </button>
@@ -158,66 +112,53 @@ export const OBSHubPage: React.FC = () => {
         </div>
 
         {/* Section 1: Tournament-Wide Overlays (Original Neutral Palette) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2 border-b border-line pb-2">
             <Sparkles size={16} color="var(--color-gold-bright)" />
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+            <h2 className="m-0 text-base font-bold text-fg">
               Tournament-Wide Broadcast Overlays
             </h2>
           </div>
 
-          <div className="obs-cards-grid">
+          <div className="grid grid-cols-1 gap-4.5 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3">
             {/* Leaderboard Overlay */}
             {(() => {
               const url = `/${tournament.slug}/leaderboard?obs=true${chromaParam}`;
               const key = 'leaderboard-overlay';
               const isCopied = copiedKey === key;
               return (
-                <div style={neutralCardStyle}>
+                <div className={neutralCardClass}>
                   {/* Title Row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <Trophy size={18} color="var(--color-gold-bright)" style={{ flexShrink: 0 }} />
-                    <h3 style={{ fontSize: '0.96rem', fontWeight: 700, margin: 0, color: '#ffffff', lineHeight: 1.35 }}>
+                  <div className="flex items-center gap-2.5">
+                    <Trophy size={18} color="var(--color-gold-bright)" className="shrink-0" />
+                    <h3 className="m-0 text-base leading-snug font-bold text-white">
                       Qualifying Leaderboard
                     </h3>
                   </div>
 
                   {/* Bottom Row: Chip on Left, Actions on Right */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.65rem' }}>
-                    <span
-                      style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(245, 158, 11, 0.15)',
-                        color: 'var(--color-gold-bright)',
-                        border: '1px solid rgba(245, 158, 11, 0.35)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
+                  <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
+                    <span className="rounded-sm border border-gold/35 bg-gold/15 px-2 py-1 text-2xs font-bold whitespace-nowrap text-gold-bright">
                       Live Table
                     </span>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <button
-                        type="button"
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="primary"
                         onClick={() => copyUrl(url, key)}
-                        className="btn btn-primary"
-                        style={{ fontSize: '0.76rem', padding: '0.4rem 0.75rem', gap: '0.35rem' }}
+                        className="gap-1.5 px-3 py-1.5 text-xs"
                       >
                         {isCopied ? <Check size={13} /> : <Copy size={13} />}
                         <span>{isCopied ? 'Copied URL!' : 'Copy URL'}</span>
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="primary"
                         onClick={() => openPopout(url)}
-                        className="btn btn-primary"
-                        style={{ fontSize: '0.76rem', padding: '0.4rem 0.65rem' }}
+                        className="px-2.5 py-1.5 text-xs"
                         title="Open popout window"
                       >
                         <ExternalLink size={13} />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -230,51 +171,38 @@ export const OBSHubPage: React.FC = () => {
               const key = 'standings-overlay';
               const isCopied = copiedKey === key;
               return (
-                <div style={neutralCardStyle}>
+                <div className={neutralCardClass}>
                   {/* Title Row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                    <BarChart3 size={18} color="#38bdf8" style={{ flexShrink: 0 }} />
-                    <h3 style={{ fontSize: '0.96rem', fontWeight: 700, margin: 0, color: '#ffffff', lineHeight: 1.35 }}>
+                  <div className="flex items-center gap-2.5">
+                    <BarChart3 size={18} color="#38bdf8" className="shrink-0" />
+                    <h3 className="m-0 text-base leading-snug font-bold text-white">
                       Tournament Standings
                     </h3>
                   </div>
 
                   {/* Bottom Row: Chip on Left, Actions on Right */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.65rem' }}>
-                    <span
-                      style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(56, 189, 248, 0.15)',
-                        color: '#38bdf8',
-                        border: '1px solid rgba(56, 189, 248, 0.35)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
+                  <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
+                    <span className="rounded-sm border border-sky-400/35 bg-sky-400/15 px-2 py-1 text-2xs font-bold whitespace-nowrap text-sky-400">
                       Final Results
                     </span>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                      <button
-                        type="button"
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="primary"
                         onClick={() => copyUrl(url, key)}
-                        className="btn btn-primary"
-                        style={{ fontSize: '0.76rem', padding: '0.4rem 0.75rem', gap: '0.35rem' }}
+                        className="gap-1.5 px-3 py-1.5 text-xs"
                       >
                         {isCopied ? <Check size={13} /> : <Copy size={13} />}
                         <span>{isCopied ? 'Copied URL!' : 'Copy URL'}</span>
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        variant="primary"
                         onClick={() => openPopout(url)}
-                        className="btn btn-primary"
-                        style={{ fontSize: '0.76rem', padding: '0.4rem 0.65rem' }}
+                        className="px-2.5 py-1.5 text-xs"
                         title="Open popout window"
                       >
                         <ExternalLink size={13} />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -284,10 +212,10 @@ export const OBSHubPage: React.FC = () => {
         </div>
 
         {/* Section 2: Bracket Tier Overlays (Themed by Tier Palette) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem' }}>
+        <div className="flex flex-col gap-7">
+          <div className="flex items-center gap-2 border-b border-line pb-2">
             <Video size={16} color="var(--color-gold-bright)" />
-            <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+            <h2 className="m-0 text-base font-bold text-fg">
               Bracket Overlays by Tier
             </h2>
           </div>
@@ -378,43 +306,30 @@ export const OBSHubPage: React.FC = () => {
             return (
               <div
                 key={tier.id}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.85rem',
-                  padding: '1.15rem 1.25rem',
-                  borderRadius: 'var(--radius-lg)',
-                  background: 'rgba(255, 255, 255, 0.015)',
-                  border: `1px solid ${colorWithAlpha(primaryColor, 0.22)}`,
-                }}
+                className="flex flex-col gap-3.5 rounded-lg bg-white/2 px-5 py-4.5"
+                style={{ border: `1px solid ${colorWithAlpha(primaryColor, 0.22)}` }}
               >
                 {/* Tier Title Bar */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.65rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5">
                     <span
+                      className="size-3 shrink-0 rounded-full"
                       style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
                         background: primaryColor,
                         boxShadow: `0 0 10px ${colorWithAlpha(primaryColor, 0.65)}`,
-                        flexShrink: 0,
                       }}
                     />
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                    <h3 className="m-0 text-base font-extrabold text-white">
                       <span style={{ color: primaryColor }}>{tier.name}</span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--color-text-muted)', marginLeft: '0.55rem' }}>
+                      <span className="ml-2 text-caption font-medium text-fg-muted">
                         ({tier.playerCount} Players • Best of {tier.bestOf})
                       </span>
                     </h3>
                   </div>
 
                   <span
+                    className="rounded-full px-2.5 py-1 text-2xs font-bold"
                     style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: 'var(--radius-full)',
                       background: colorWithAlpha(primaryColor, 0.12),
                       color: primaryColor,
                       border: `1px solid ${colorWithAlpha(primaryColor, 0.35)}`,
@@ -425,7 +340,7 @@ export const OBSHubPage: React.FC = () => {
                 </div>
 
                 {/* Cards Grid: strictly maximum 3 cards per row */}
-                <div className="obs-cards-grid">
+                <div className="grid grid-cols-1 gap-4.5 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3">
                   {cards.map(c => {
                     const key = `${tier.id}-${c.keySuffix}`;
                     const isCopied = copiedKey === key;
@@ -433,73 +348,51 @@ export const OBSHubPage: React.FC = () => {
                     return (
                       <div
                         key={c.keySuffix}
+                        className="flex min-h-28.75 flex-col gap-3 rounded-md px-5 py-4.5 shadow-[0_3px_10px_rgba(0,0,0,0.35)] transition-[border-color,transform] duration-150"
                         style={{
-                          ...getThemedCardStyle(primaryColor, cardBg),
+                          background: `linear-gradient(135deg, ${colorWithAlpha(cardBg, 0.95)} 0%, ${colorWithAlpha(primaryColor, 0.08)} 100%)`,
+                          border: `1px solid ${colorWithAlpha(primaryColor, 0.3)}`,
                           borderLeft: `4px solid ${primaryColor}`,
                         }}
                       >
                         {/* Title Row with Icon */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
-                          <Icon size={17} color={primaryColor} style={{ marginTop: '0.12rem', flexShrink: 0 }} />
-                          <h4
-                            style={{
-                              fontSize: '0.92rem',
-                              fontWeight: 700,
-                              margin: 0,
-                              color: '#ffffff',
-                              lineHeight: 1.35,
-                              whiteSpace: 'normal',
-                            }}
-                          >
+                        <div className="flex items-start gap-2.5">
+                          <Icon size={17} color={primaryColor} className="mt-0.5 shrink-0" />
+                          <h4 className="m-0 text-base leading-snug font-bold whitespace-normal text-white">
                             {c.title}
                           </h4>
                         </div>
 
                         {/* Bottom Row: Chip on Left, Action Buttons on Right */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: '0.5rem',
-                            marginTop: 'auto',
-                            paddingTop: '0.75rem',
-                          }}
-                        >
+                        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
                           <span
+                            className="rounded-sm px-2 py-1 text-3xs font-bold whitespace-nowrap"
                             style={{
-                              fontSize: '0.66rem',
-                              fontWeight: 700,
-                              padding: '0.2rem 0.45rem',
-                              borderRadius: 'var(--radius-sm)',
                               background: colorWithAlpha(primaryColor, 0.14),
                               color: primaryColor,
                               border: `1px solid ${colorWithAlpha(primaryColor, 0.35)}`,
-                              whiteSpace: 'nowrap',
                             }}
                           >
                             {c.badge}
                           </span>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                            <button
-                              type="button"
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="primary"
                               onClick={() => copyUrl(c.url, key)}
-                              className="btn btn-primary"
-                              style={{ fontSize: '0.76rem', padding: '0.4rem 0.75rem', gap: '0.35rem' }}
+                              className="gap-1.5 px-3 py-1.5 text-xs"
                             >
                               {isCopied ? <Check size={13} /> : <Copy size={13} />}
                               <span>{isCopied ? 'Copied URL!' : 'Copy URL'}</span>
-                            </button>
-                            <button
-                              type="button"
+                            </Button>
+                            <Button
+                              variant="primary"
                               onClick={() => openPopout(c.url)}
-                              className="btn btn-primary"
-                              style={{ fontSize: '0.76rem', padding: '0.4rem 0.65rem' }}
+                              className="px-2.5 py-1.5 text-xs"
                               title="Open popout window"
                             >
                               <ExternalLink size={13} />
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -515,31 +408,4 @@ export const OBSHubPage: React.FC = () => {
   );
 };
 
-const neutralCardStyle: React.CSSProperties = {
-  background: 'var(--color-bg-surface)',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-md)',
-  padding: '1.1rem 1.25rem',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.75rem',
-  minHeight: '115px',
-  boxShadow: 'var(--shadow-sm)',
-  boxSizing: 'border-box',
-};
-
-function getThemedCardStyle(primaryColor: string, cardBg: string): React.CSSProperties {
-  return {
-    background: `linear-gradient(135deg, ${colorWithAlpha(cardBg, 0.95)} 0%, ${colorWithAlpha(primaryColor, 0.08)} 100%)`,
-    border: `1px solid ${colorWithAlpha(primaryColor, 0.3)}`,
-    borderRadius: 'var(--radius-md)',
-    padding: '1.1rem 1.25rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-    minHeight: '115px',
-    boxShadow: `0 3px 10px rgba(0, 0, 0, 0.35)`,
-    transition: 'border-color 0.15s ease, transform 0.15s ease',
-    boxSizing: 'border-box',
-  };
-}
+const neutralCardClass = 'flex min-h-28.75 flex-col gap-3 rounded-md border border-line bg-surface px-5 py-4.5 shadow-sm';

@@ -151,9 +151,13 @@ export interface SheetSizeTokens {
   colComplete: number;
   competitorLeftPad: number;
   countrySeedWidth: number;
+  /** Tailwind padding classes (py-* px-*). Merge single-side overrides with cn(). */
   thPadding: string;
+  /** Tailwind padding classes (py-* px-*). */
   tdPadding: string;
+  /** Tailwind padding classes (py-* px-*). */
   tdMergedPadding: string;
+  /** Tailwind padding classes (py-* px-*). */
   gameCellPadding: string;
   fontSizeTable: string;
   fontSizeTh: string;
@@ -164,6 +168,7 @@ export interface SheetSizeTokens {
   fontSizeGameScore: string;
   fontSizeStatusBadge: string;
   flagSize: string;
+  /** Tailwind padding classes (py-* px-*). */
   bannerPadding: string;
   fontSizeRoundTitle: string;
   fontSizeRoundMeta: string;
@@ -177,10 +182,10 @@ export const SHEET_SIZE_CONFIG: Record<SheetDensitySize, SheetSizeTokens> = {
     colComplete: 68,
     competitorLeftPad: 58,
     countrySeedWidth: 42,
-    thPadding: '0.28rem 0.45rem',
-    tdPadding: '0.16rem 0.45rem',
-    tdMergedPadding: '0.16rem 0.45rem',
-    gameCellPadding: '0.16rem 0.25rem',
+    thPadding: 'py-1 px-2',
+    tdPadding: 'py-0.5 px-2',
+    tdMergedPadding: 'py-0.5 px-2',
+    gameCellPadding: 'py-0.5 px-1',
     fontSizeTable: '0.74rem',
     fontSizeTh: '0.65rem',
     fontSizeMatchNum: '0.65rem',
@@ -190,7 +195,7 @@ export const SHEET_SIZE_CONFIG: Record<SheetDensitySize, SheetSizeTokens> = {
     fontSizeGameScore: '0.72rem',
     fontSizeStatusBadge: '0.62rem',
     flagSize: '0.85rem',
-    bannerPadding: '0.32rem 0.7rem',
+    bannerPadding: 'py-1.5 px-3',
     fontSizeRoundTitle: '0.74rem',
     fontSizeRoundMeta: '0.65rem',
   },
@@ -201,10 +206,10 @@ export const SHEET_SIZE_CONFIG: Record<SheetDensitySize, SheetSizeTokens> = {
     colComplete: 76,
     competitorLeftPad: 72,
     countrySeedWidth: 50,
-    thPadding: '0.42rem 0.65rem',
-    tdPadding: '0.24rem 0.6rem',
-    tdMergedPadding: '0.24rem 0.6rem',
-    gameCellPadding: '0.24rem 0.35rem',
+    thPadding: 'py-1.5 px-2.5',
+    tdPadding: 'py-1 px-2.5',
+    tdMergedPadding: 'py-1 px-2.5',
+    gameCellPadding: 'py-1 px-1.5',
     fontSizeTable: '0.82rem',
     fontSizeTh: '0.72rem',
     fontSizeMatchNum: '0.72rem',
@@ -214,7 +219,7 @@ export const SHEET_SIZE_CONFIG: Record<SheetDensitySize, SheetSizeTokens> = {
     fontSizeGameScore: '0.80rem',
     fontSizeStatusBadge: '0.7rem',
     flagSize: '0.95rem',
-    bannerPadding: '0.45rem 0.85rem',
+    bannerPadding: 'py-2 px-3.5',
     fontSizeRoundTitle: '0.82rem',
     fontSizeRoundMeta: '0.72rem',
   },
@@ -225,10 +230,10 @@ export const SHEET_SIZE_CONFIG: Record<SheetDensitySize, SheetSizeTokens> = {
     colComplete: 86,
     competitorLeftPad: 82,
     countrySeedWidth: 58,
-    thPadding: '0.55rem 0.8rem',
-    tdPadding: '0.34rem 0.75rem',
-    tdMergedPadding: '0.34rem 0.75rem',
-    gameCellPadding: '0.32rem 0.45rem',
+    thPadding: 'py-2 px-3',
+    tdPadding: 'py-1.5 px-3',
+    tdMergedPadding: 'py-1.5 px-3',
+    gameCellPadding: 'py-1.5 px-2',
     fontSizeTable: '0.92rem',
     fontSizeTh: '0.8rem',
     fontSizeMatchNum: '0.82rem',
@@ -238,7 +243,7 @@ export const SHEET_SIZE_CONFIG: Record<SheetDensitySize, SheetSizeTokens> = {
     fontSizeGameScore: '0.92rem',
     fontSizeStatusBadge: '0.78rem',
     flagSize: '1.15rem',
-    bannerPadding: '0.58rem 1rem',
+    bannerPadding: 'py-2.5 px-4',
     fontSizeRoundTitle: '0.94rem',
     fontSizeRoundMeta: '0.8rem',
   },
@@ -249,10 +254,10 @@ export const SHEET_SIZE_CONFIG: Record<SheetDensitySize, SheetSizeTokens> = {
     colComplete: 98,
     competitorLeftPad: 96,
     countrySeedWidth: 66,
-    thPadding: '0.7rem 0.95rem',
-    tdPadding: '0.46rem 0.9rem',
-    tdMergedPadding: '0.46rem 0.9rem',
-    gameCellPadding: '0.44rem 0.55rem',
+    thPadding: 'py-3 px-4',
+    tdPadding: 'py-2 px-3.5',
+    tdMergedPadding: 'py-2 px-3.5',
+    gameCellPadding: 'py-2 px-2',
     fontSizeTable: '1.04rem',
     fontSizeTh: '0.88rem',
     fontSizeMatchNum: '0.92rem',
@@ -262,7 +267,7 @@ export const SHEET_SIZE_CONFIG: Record<SheetDensitySize, SheetSizeTokens> = {
     fontSizeGameScore: '1.04rem',
     fontSizeStatusBadge: '0.86rem',
     flagSize: '1.32rem',
-    bannerPadding: '0.72rem 1.15rem',
+    bannerPadding: 'py-3 px-4.5',
     fontSizeRoundTitle: '1.06rem',
     fontSizeRoundMeta: '0.88rem',
   },

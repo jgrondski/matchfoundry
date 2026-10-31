@@ -32,6 +32,7 @@ import { DataSimulationSection } from './settings/DataSimulationSection';
 import { TournamentSecuritySection } from './settings/TournamentSecuritySection';
 import { AdminFormModals } from './settings/AdminFormModals';
 import { usePinAuth } from '../../auth/AuthContext';
+import { Button, cn } from '../../../components/ui';
 
 interface TournamentAdminFormProps {
   tournament: Tournament;
@@ -624,22 +625,10 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
   });
 
   return (
-    <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+    <form onSubmit={handleSave} className="flex flex-col gap-8">
       {/* Top Banner & Save Indicator */}
       {saveSuccess && (
-        <div
-          style={{
-            background: 'var(--color-green-bg)',
-            border: '1px solid var(--color-green)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1rem',
-            color: '#34d399',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            fontWeight: 600,
-          }}
-        >
+        <div className="flex items-center gap-3 rounded-md border border-green bg-green-soft p-4 font-semibold text-green-bright">
           <CheckCircle2 size={20} />
           Tournament configuration &amp; tiers saved successfully!
         </div>
@@ -647,41 +636,27 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
 
       {/* Tournament Phase & Bracket Lock Banner */}
       <div
-        style={{
-          background: tournament.isLocked
-            ? 'linear-gradient(90deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.18) 100%)'
-            : 'linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.18) 100%)',
-          border: tournament.isLocked ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(245, 158, 11, 0.35)',
-          borderRadius: 'var(--radius-md)',
-          padding: '0.6rem 1.15rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '0.75rem',
-        }}
+        className={cn(
+          'flex flex-wrap items-center justify-between gap-3 rounded-md border bg-linear-90 py-2.5 px-4.5',
+          tournament.isLocked
+            ? 'border-green/35 from-green/12 to-emerald-600/18'
+            : 'border-gold/35 from-gold/12 to-amber-600/18'
+        )}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <div className="flex items-center gap-2.5">
           <div
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              background: tournament.isLocked ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: tournament.isLocked ? '#34d399' : 'var(--color-gold-bright)',
-              flexShrink: 0,
-            }}
+            className={cn(
+              'flex size-7.5 shrink-0 items-center justify-center rounded-full',
+              tournament.isLocked ? 'bg-green/20 text-green-bright' : 'bg-gold/20 text-gold-bright'
+            )}
           >
             {tournament.isLocked ? <ShieldCheck size={16} /> : <Lock size={16} />}
           </div>
           <div>
-            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: tournament.isLocked ? '#34d399' : 'var(--color-gold-bright)', marginRight: '0.5rem' }}>
+            <span className={cn('mr-2 text-sm font-bold', tournament.isLocked ? 'text-green-bright' : 'text-gold-bright')}>
               {tournament.isLocked ? 'MATCH PLAY MODE (LOCKED)' : 'QUALIFIERS MODE (DRAFT PREVIEW)'}
             </span>
-            <span style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>
+            <span className="text-caption text-fg-secondary">
               {tournament.isLocked
                 ? 'Bracket seeds are frozen and match play is live.'
                 : 'Bracket seeds update dynamically with qualifiers.'}
@@ -689,15 +664,14 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-2">
           {settingsUnlockError && (
-            <span style={{ color: 'var(--color-red)', fontSize: '0.75rem', fontWeight: 600 }}>
+            <span className="text-xs font-semibold text-red">
               {settingsUnlockError}
             </span>
           )}
           {tournament.isLocked ? (
-            <button
-              type="button"
+            <Button
               onClick={async () => {
                 const res = await unlockBrackets(tournament.id);
                 if (!res.success && res.error) {
@@ -706,23 +680,21 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
                   setSettingsUnlockError(null);
                 }
               }}
-              className="btn btn-secondary"
-              style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+              className="py-1.5 px-3 text-caption"
               title="Revert tournament to Qualifiers Mode"
             >
               <Unlock size={14} />
               Unlock Brackets
-            </button>
+            </Button>
           ) : (
-            <button
-              type="button"
+            <Button
+              variant="primary"
               onClick={() => setIsSettingsVerifyModalOpen(true)}
-              className="btn btn-primary"
-              style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+              className="py-1.5 px-3 text-caption"
             >
               <Lock size={14} />
               Lock Brackets and Begin Match Play
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -730,42 +702,34 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       {/* Online Qualifying open/close (saved immediately via its own endpoint, not the form Save) */}
       {!tournament.isLocked && (tournament.qualMode || 'HYBRID') !== 'IN_PERSON' && (
         <div
-          style={{
-            background: 'var(--color-bg-surface)',
-            border: tournament.onlineQualsOpen ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.6rem 1.15rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-          }}
+          className={cn(
+            'flex flex-wrap items-center justify-between gap-3 rounded-md border bg-surface py-2.5 px-4.5',
+            tournament.onlineQualsOpen ? 'border-green/35' : 'border-line'
+          )}
           data-testid="online-quals-toggle-bar"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <Globe size={18} color={tournament.onlineQualsOpen ? '#34d399' : 'var(--color-text-muted)'} style={{ flexShrink: 0 }} />
+          <div className="flex items-center gap-2.5">
+            <Globe size={18} color={tournament.onlineQualsOpen ? '#34d399' : 'var(--color-text-muted)'} className="shrink-0" />
             <div>
-              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: tournament.onlineQualsOpen ? '#34d399' : 'var(--color-text-primary)', marginRight: '0.5rem' }}>
+              <span className={cn('mr-2 text-sm font-bold', tournament.onlineQualsOpen ? 'text-green-bright' : 'text-fg')}>
                 {tournament.onlineQualsOpen ? 'ONLINE QUALIFYING OPEN' : 'ONLINE QUALIFYING CLOSED'}
               </span>
-              <span style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary)' }}>
+              <span className="text-caption text-fg-secondary">
                 {tournament.onlineQualsOpen
                   ? 'Listed on the front page.'
                   : 'Hidden from the front page; online runs cannot be started.'}
               </span>
             </div>
           </div>
-          <button
-            type="button"
+          <Button
             onClick={() => {
               void setOnlineQualsOpen(tournament.id, !tournament.onlineQualsOpen);
             }}
-            className={tournament.onlineQualsOpen ? 'btn btn-secondary' : 'btn btn-primary'}
-            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}
+            variant={tournament.onlineQualsOpen ? 'secondary' : 'primary'}
+            className="py-1.5 px-3 text-caption"
           >
             {tournament.onlineQualsOpen ? 'Close Online Quals' : 'Open Online Quals'}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -850,32 +814,12 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       )}
 
       {/* Save Button Bar */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          gap: '1rem',
-          position: 'sticky',
-          bottom: '1rem',
-          background: 'var(--color-bg-surface-elevated)',
-          padding: '0.75rem 1.25rem',
-          borderRadius: 'var(--radius-md)',
-          border: '1px solid var(--color-border)',
-          boxShadow: 'var(--shadow-lg)',
-          zIndex: 10,
-        }}
-      >
+      <div className="sticky bottom-4 z-10 flex items-center justify-end gap-4 rounded-md border border-line bg-elevated py-3 px-5 shadow-lg">
         <span
-          style={{
-            fontSize: '0.85rem',
-            color: isDirty ? 'var(--color-gold-bright)' : 'var(--color-text-muted)',
-            fontWeight: 600,
-            marginRight: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-          }}
+          className={cn(
+            'mr-auto flex items-center gap-1.5 text-sm font-semibold',
+            isDirty ? 'text-gold-bright' : 'text-fg-muted'
+          )}
         >
           {isDirty ? (
             <>
@@ -888,43 +832,33 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           )}
         </span>
 
-        <button
-          type="button"
+        <Button
           onClick={handleDiscardChanges}
           disabled={!isDirty}
-          className="btn btn-secondary"
-          style={{
-            padding: '0.65rem 1.25rem',
-            fontSize: '0.9rem',
-            opacity: !isDirty ? 0.4 : 1,
-            cursor: !isDirty ? 'not-allowed' : 'pointer',
-          }}
+          className="py-2.5 px-5 text-sm"
           title={!isDirty ? 'No changes to discard' : 'Revert unsaved changes'}
         >
           Discard Changes
-        </button>
+        </Button>
 
         {tierConfigError && (
-          <span style={{ color: 'var(--color-red)', fontSize: '0.8rem', fontWeight: 600 }}>
+          <span className="text-caption font-semibold text-red">
             {tierConfigError}
           </span>
         )}
-        <button
+        <Button
           type="submit"
+          variant="primary"
           disabled={!isDirty || isSaving || Boolean(tierConfigError)}
           title={tierConfigError || undefined}
-          className="btn btn-primary"
-          style={{
-            padding: '0.65rem 1.75rem',
-            fontSize: '0.95rem',
-            boxShadow: isDirty ? 'var(--shadow-gold)' : 'none',
-            opacity: !isDirty || isSaving || tierConfigError ? 0.45 : 1,
-            cursor: !isDirty || isSaving || tierConfigError ? 'not-allowed' : 'pointer',
-          }}
+          className={cn(
+            'py-2.5 px-7 text-base',
+            isDirty ? 'shadow-gold enabled:hover:shadow-gold' : 'shadow-none'
+          )}
         >
           <Save size={18} />
           {isSaving ? 'Saving...' : 'Save Configuration'}
-        </button>
+        </Button>
       </div>
 
       {/* Modals */}

@@ -1,5 +1,6 @@
 import React, { useId } from 'react';
 import { Overlay } from '../../../components/overlay';
+import { Button, cn } from '../../../components/ui';
 import { Tournament, TournamentTier, MatchScoreRecord } from '../../tournament/types';
 import { BracketMatch } from '../types';
 import {
@@ -95,135 +96,64 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
         <>
           {/* Ambient Top Glow Stripe */}
           <div
+            className="h-1 w-full"
             style={{
-              height: '4px',
-              width: '100%',
               background: `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})`,
             }}
           />
 
           {/* Modal Header */}
-          <div style={headerStyle}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div className="py-5 px-6 border-b border-line flex justify-between items-start bg-white/2 gap-4">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span
-                  style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    color: primaryColor,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                  }}
+                  className="text-2xs font-extrabold uppercase tracking-widest flex items-center gap-1"
+                  style={{ color: primaryColor }}
                 >
                   <Layers size={13} />
                   {tier.name} Tier
                 </span>
-                <span style={{ color: 'var(--color-border-subtle)', fontSize: '0.75rem' }}>•</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                <span className="text-line-subtle text-xs">•</span>
+                <span className="text-xs font-semibold text-fg-secondary">
                   {stageLabel}
                 </span>
-                <span style={{ color: 'var(--color-border-subtle)', fontSize: '0.75rem' }}>•</span>
-                <span
-                  style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    padding: '0.15rem 0.5rem',
-                    borderRadius: 'var(--radius-sm)',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
+                <span className="text-line-subtle text-xs">•</span>
+                <span className="text-xs font-bold py-0.5 px-2 rounded-sm bg-white/5 text-fg-muted">
                   Best of {bestOf}
                 </span>
               </div>
               <h2
                 id={titleId}
-                style={{
-                  fontSize: '1.25rem',
-                  fontWeight: 800,
-                  color: '#ffffff',
-                  margin: 0,
-                  letterSpacing: '-0.02em',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
+                className="text-xl font-extrabold text-white m-0 tracking-tight flex items-center gap-2"
               >
                 <span>{roundName}</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                <span className="text-sm font-semibold text-fg-muted">
                   (Match #{match.id.slice(-4)})
                 </span>
               </h2>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div className="flex items-center gap-3">
               {/* Status Pill */}
               {isComplete ? (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.25rem 0.65rem',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    background: 'rgba(34, 197, 94, 0.15)',
-                    border: '1px solid rgba(34, 197, 94, 0.35)',
-                    color: '#4ade80',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
-                  }}
-                >
+                <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-extrabold bg-green-500/15 border border-green-500/35 text-green-400 uppercase tracking-wide">
                   <CheckCircle2 size={13} />
                   Final
                 </span>
               ) : inProgress ? (
                 <span
+                  className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-extrabold uppercase tracking-wide"
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.25rem 0.65rem',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
                     background: colorWithAlpha(primaryColor, 0.15),
                     border: `1px solid ${colorWithAlpha(primaryColor, 0.35)}`,
                     color: primaryColor,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em',
                   }}
                 >
-                  <span
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: primaryColor,
-                      display: 'inline-block',
-                    }}
-                  />
+                  <span className="size-1.5 rounded-full inline-block" style={{ background: primaryColor }} />
                   In Progress
                 </span>
               ) : (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    padding: '0.25rem 0.65rem',
-                    borderRadius: 'var(--radius-full)',
-                    fontSize: '0.72rem',
-                    fontWeight: 700,
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid var(--color-border)',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
+                <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-bold bg-white/5 border border-line text-fg-muted">
                   Upcoming
                 </span>
               )}
@@ -231,7 +161,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
               <button
                 type="button"
                 onClick={requestClose}
-                style={closeBtnStyle}
+                className="bg-white/5 border border-line text-fg-muted cursor-pointer p-1.5 rounded-md flex items-center justify-center transition-all duration-150 shrink-0"
                 title="Close (Esc)"
                 aria-label="Close match telemetry modal"
               >
@@ -241,27 +171,19 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
           </div>
 
           {/* Modal Scrollable Body */}
-          <div style={bodyStyle}>
+          <div className="py-5 px-6 overflow-y-auto flex flex-col gap-5">
             {/* Competitor Matchup Duel Banner */}
             <div
+              className="flex items-center py-5 px-6 gap-4 rounded-md"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '1.25rem 1.5rem',
-                gap: '1rem',
-                borderRadius: 'var(--radius-md)',
                 background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.08)} 0%, rgba(0, 0, 0, 0.35) 100%)`,
                 border: `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-border)')}`,
               }}
             >
               {/* Player 1 Card */}
               <div
+                className="flex-1 text-center min-w-0 py-3.5 px-2 rounded-md transition-all duration-150"
                 style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  minWidth: 0,
-                  padding: '0.85rem 0.5rem',
-                  borderRadius: 'var(--radius-md)',
                   background: p1Won
                     ? colorWithAlpha(primaryColor, 0.12)
                     : 'rgba(255, 255, 255, 0.02)',
@@ -271,50 +193,30 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                   boxShadow: p1Won
                     ? `0 0 16px ${colorWithAlpha(primaryColor, 0.35)}`
                     : 'none',
-                  transition: 'all 0.15s ease',
                 }}
               >
                 {/* Competitor Glowing Avatar Ring */}
                 <div
+                  className="size-11.5 rounded-full flex items-center justify-center mt-0 mx-auto mb-2 text-lg transition-all duration-200"
                   style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '50%',
                     background: `linear-gradient(135deg, ${colorWithAlpha(primaryColor, 0.25)} 0%, rgba(0, 0, 0, 0.5) 100%)`,
                     border: `2px solid ${p1Won ? primaryColor : colorWithAlpha(primaryColor, 0.4)}`,
                     boxShadow: p1Won ? `0 0 14px ${colorWithAlpha(primaryColor, 0.45)}` : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 0.45rem auto',
-                    fontSize: '1.15rem',
-                    transition: 'all 0.2s ease',
                   }}
                 >
                   {p1?.country || (p1 as any)?.avatarUrl ? (
                     <PlayerAvatar player={p1 as any} country={p1?.country} />
                   ) : (
-                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: primaryColor }}>
+                    <span className="text-sm font-extrabold" style={{ color: primaryColor }}>
                       {(p1?.name || 'TBD').slice(0, 2).toUpperCase()}
                     </span>
                   )}
                 </div>
 
                 {/* Seed tag */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
+                <div className="flex items-center justify-center gap-1.5 mb-1.5">
                   {p1?.seed !== undefined && (
-                    <span
-                      style={{
-                        fontSize: '0.68rem',
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 700,
-                        padding: '0.1rem 0.4rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(255, 255, 255, 0.06)',
-                        color: 'var(--color-text-muted)',
-                        border: '1px solid var(--color-border)',
-                      }}
-                    >
+                    <span className="text-2xs font-mono font-bold py-0.5 px-1.5 rounded-sm bg-white/6 text-fg-muted border border-line">
                       #{p1.seed}
                     </span>
                   )}
@@ -322,18 +224,8 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
 
                 {/* Player Name */}
                 <div
-                  style={{
-                    fontSize: '1.15rem',
-                    fontWeight: 700,
-                    color: p1Won ? primaryColor : '#ffffff',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem',
-                  }}
+                  className="text-lg font-bold text-white truncate flex items-center justify-center gap-1.5"
+                  style={{ color: p1Won ? primaryColor : undefined }}
                   title={p1?.name || 'TBD'}
                 >
                   <span>{p1?.name || (match.player1.sourceMatchId ? `Winner of #${match.player1.sourceMatchId.slice(-4)}` : 'TBD')}</span>
@@ -341,13 +233,12 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
 
                 {/* Giant Games Won Score */}
                 <div
-                  className="tabular-nums"
+                  className={cn(
+                    'font-mono tabular-nums tracking-tight text-hero font-black leading-tight mt-1.5',
+                    p1Wins > 0 ? 'text-white' : 'text-fg-muted'
+                  )}
                   style={{
-                    fontSize: '2.5rem',
-                    fontWeight: 900,
-                    lineHeight: 1.1,
-                    marginTop: '0.35rem',
-                    color: p1Won ? primaryColor : p1Wins > 0 ? '#ffffff' : 'var(--color-text-muted)',
+                    color: p1Won ? primaryColor : undefined,
                     textShadow: p1Won ? `0 0 16px ${colorWithAlpha(primaryColor, 0.4)}` : 'none',
                   }}
                 >
@@ -358,7 +249,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                   <button
                     type="button"
                     onClick={() => onSelectPlayer(p1.id, p1.name, p1.country)}
-                    style={{ ...linkBtnStyle, marginTop: '0.45rem' }}
+                    className={cn(linkBtnClass, 'mt-2')}
                     title={`View ${p1.name} profile`}
                   >
                     <Eye size={12} />
@@ -368,54 +259,19 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
               </div>
 
               {/* Center VS & Format Column */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  padding: '0 0.5rem',
-                  flexShrink: 0,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: '0.85rem',
-                    fontWeight: 800,
-                    letterSpacing: '0.1em',
-                    color: 'var(--color-text-muted)',
-                    marginBottom: '0.4rem',
-                  }}
-                >
+              <div className="flex flex-col items-center px-2 shrink-0">
+                <span className="text-sm font-extrabold tracking-widest text-fg-muted mb-1.5">
                   VS
                 </span>
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: 'var(--radius-full)',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    color: 'var(--color-text-primary)',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
+                <span className="text-xs font-bold py-1 px-2.5 rounded-full bg-white/8 text-fg border border-line">
                   Best of {bestOf}
                 </span>
                 {isComplete && (
                   <div
+                    className="flex items-center gap-1.5 mt-2 py-1 px-2 rounded-full text-2xs font-extrabold uppercase tracking-wide"
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      marginTop: '0.5rem',
-                      padding: '0.2rem 0.55rem',
-                      borderRadius: 'var(--radius-full)',
                       background: colorWithAlpha(primaryColor, 0.15),
                       color: primaryColor,
-                      fontSize: '0.68rem',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
                       border: `1px solid ${colorWithAlpha(primaryColor, 0.35)}`,
                     }}
                   >
@@ -427,12 +283,8 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
 
               {/* Player 2 Card */}
               <div
+                className="flex-1 text-center min-w-0 py-3.5 px-2 rounded-md transition-all duration-150"
                 style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  minWidth: 0,
-                  padding: '0.85rem 0.5rem',
-                  borderRadius: 'var(--radius-md)',
                   background: p2Won
                     ? colorWithAlpha(primaryColor, 0.12)
                     : 'rgba(255, 255, 255, 0.02)',
@@ -442,50 +294,30 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                   boxShadow: p2Won
                     ? `0 0 16px ${colorWithAlpha(primaryColor, 0.35)}`
                     : 'none',
-                  transition: 'all 0.15s ease',
                 }}
               >
                 {/* Competitor Glowing Avatar Ring */}
                 <div
+                  className="size-11.5 rounded-full flex items-center justify-center mt-0 mx-auto mb-2 text-lg transition-all duration-200"
                   style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '50%',
                     background: `linear-gradient(135deg, ${colorWithAlpha(primaryColor, 0.25)} 0%, rgba(0, 0, 0, 0.5) 100%)`,
                     border: `2px solid ${p2Won ? primaryColor : colorWithAlpha(primaryColor, 0.4)}`,
                     boxShadow: p2Won ? `0 0 14px ${colorWithAlpha(primaryColor, 0.45)}` : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 0.45rem auto',
-                    fontSize: '1.15rem',
-                    transition: 'all 0.2s ease',
                   }}
                 >
                   {p2?.country || (p2 as any)?.avatarUrl ? (
                     <PlayerAvatar player={p2 as any} country={p2?.country} />
                   ) : (
-                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: primaryColor }}>
+                    <span className="text-sm font-extrabold" style={{ color: primaryColor }}>
                       {(p2?.name || 'TBD').slice(0, 2).toUpperCase()}
                     </span>
                   )}
                 </div>
 
                 {/* Seed tag */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
+                <div className="flex items-center justify-center gap-1.5 mb-1.5">
                   {p2?.seed !== undefined && (
-                    <span
-                      style={{
-                        fontSize: '0.68rem',
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 700,
-                        padding: '0.1rem 0.4rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(255, 255, 255, 0.06)',
-                        color: 'var(--color-text-muted)',
-                        border: '1px solid var(--color-border)',
-                      }}
-                    >
+                    <span className="text-2xs font-mono font-bold py-0.5 px-1.5 rounded-sm bg-white/6 text-fg-muted border border-line">
                       #{p2.seed}
                     </span>
                   )}
@@ -493,18 +325,8 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
 
                 {/* Player Name */}
                 <div
-                  style={{
-                    fontSize: '1.15rem',
-                    fontWeight: 700,
-                    color: p2Won ? primaryColor : '#ffffff',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.35rem',
-                  }}
+                  className="text-lg font-bold text-white truncate flex items-center justify-center gap-1.5"
+                  style={{ color: p2Won ? primaryColor : undefined }}
                   title={p2?.name || 'TBD'}
                 >
                   <span>{p2?.name || (match.player2.sourceMatchId ? `Winner of #${match.player2.sourceMatchId.slice(-4)}` : 'TBD')}</span>
@@ -512,13 +334,12 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
 
                 {/* Giant Games Won Score */}
                 <div
-                  className="tabular-nums"
+                  className={cn(
+                    'font-mono tabular-nums tracking-tight text-hero font-black leading-tight mt-1.5',
+                    p2Wins > 0 ? 'text-white' : 'text-fg-muted'
+                  )}
                   style={{
-                    fontSize: '2.5rem',
-                    fontWeight: 900,
-                    lineHeight: 1.1,
-                    marginTop: '0.35rem',
-                    color: p2Won ? primaryColor : p2Wins > 0 ? '#ffffff' : 'var(--color-text-muted)',
+                    color: p2Won ? primaryColor : undefined,
                     textShadow: p2Won ? `0 0 16px ${colorWithAlpha(primaryColor, 0.4)}` : 'none',
                   }}
                 >
@@ -529,7 +350,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                   <button
                     type="button"
                     onClick={() => onSelectPlayer(p2.id, p2.name, p2.country)}
-                    style={{ ...linkBtnStyle, marginTop: '0.45rem' }}
+                    className={cn(linkBtnClass, 'mt-2')}
                     title={`View ${p2.name} profile`}
                   >
                     <Eye size={12} />
@@ -541,19 +362,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
 
             {/* Forfeit Notice (if applicable) */}
             {isForfeit && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.65rem',
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#f87171',
-                  fontSize: '0.85rem',
-                }}
-              >
+              <div className="flex items-center gap-2.5 py-3 px-4 rounded-md bg-red/10 border border-red/30 text-red-bright text-sm">
                 <ShieldAlert size={18} />
                 <span>
                   <strong>Match Forfeited:</strong> Uncontested victory awarded to{' '}
@@ -563,34 +372,22 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
             )}
 
             {/* Section: Game-by-Game Score Telemetry */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3
-                  style={{
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: 'var(--color-text-muted)',
-                    margin: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                  }}
-                >
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-fg-muted m-0 flex items-center gap-1.5">
                   <Swords size={14} color={primaryColor} />
                   Game-by-Game Telemetry
                 </h3>
 
                 {record?.games && record.games.length > 0 && (
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                  <span className="text-xs text-fg-muted">
                     {record.games.length} {record.games.length === 1 ? 'Game' : 'Games'} Logged
                   </span>
                 )}
               </div>
 
               {record?.games && record.games.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div className="flex flex-col gap-2.5">
                   {record.games.map((game, idx) => {
                     const gameNum = game.gameNumber || idx + 1;
                     const isTiebreakerGame = gameNum > bestOf;
@@ -603,36 +400,27 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                     return (
                       <div
                         key={idx}
+                        className="py-3.5 px-4 rounded-md shadow-[0_2px_6px_rgba(0,0,0,0.25)]"
                         style={{
-                          padding: '0.85rem 1rem',
                           background: getAlternateShade(cardColor, 3),
-                          borderRadius: 'var(--radius-md)',
                           border: isTiebreakerGame
                             ? `1px solid ${colorWithAlpha(primaryColor, 0.45)}`
                             : `1px solid ${colorWithAlpha(primaryColor, 0.22, 'var(--color-border)')}`,
-                          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
                         }}
                       >
                         {/* Game card top bar */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div className="flex justify-between items-center mb-2.5">
+                          <div className="flex items-center gap-2">
                             <span
-                              style={{
-                                fontSize: '0.8rem',
-                                fontWeight: 700,
-                                color: isTiebreakerGame ? primaryColor : '#ffffff',
-                                fontFamily: 'var(--font-mono)',
-                              }}
+                              className="text-caption font-bold font-mono text-white"
+                              style={{ color: isTiebreakerGame ? primaryColor : undefined }}
                             >
                               Game {gameNum}
                             </span>
                             {isTiebreakerGame && (
                               <span
+                                className="text-3xs font-bold py-0.5 px-1.5 rounded-full"
                                 style={{
-                                  fontSize: '0.65rem',
-                                  fontWeight: 700,
-                                  padding: '0.08rem 0.4rem',
-                                  borderRadius: 'var(--radius-full)',
                                   background: colorWithAlpha(primaryColor, 0.15),
                                   color: primaryColor,
                                   border: `1px solid ${colorWithAlpha(primaryColor, 0.3)}`,
@@ -642,96 +430,58 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                               </span>
                             )}
                             {game.winnerPlayerId === 'TIE' && (
-                              <span
-                                style={{
-                                  fontSize: '0.65rem',
-                                  padding: '0.08rem 0.45rem',
-                                  borderRadius: 'var(--radius-sm)',
-                                  background: 'var(--color-cyan-bg)',
-                                  color: 'var(--color-cyan)',
-                                  fontWeight: 700,
-                                  border: '1px solid rgba(6, 182, 212, 0.3)',
-                                }}
-                              >
+                              <span className="text-3xs py-0.5 px-2 rounded-sm bg-cyan-soft text-cyan font-bold border border-cyan/30">
                                 TIE
                               </span>
                             )}
                           </div>
 
                           {margin !== null && (
-                            <span
-                              style={{
-                                fontSize: '0.72rem',
-                                color: 'var(--color-cyan)',
-                                fontFamily: 'var(--font-mono)',
-                                fontWeight: 600,
-                                background: 'rgba(6, 182, 212, 0.1)',
-                                padding: '0.1rem 0.45rem',
-                                borderRadius: 'var(--radius-sm)',
-                                border: '1px solid rgba(6, 182, 212, 0.25)',
-                              }}
-                            >
+                            <span className="text-xs text-cyan font-mono font-semibold bg-cyan/10 py-0.5 px-2 rounded-sm border border-cyan/25">
                               Δ {margin.toLocaleString()} pts
                             </span>
                           )}
                         </div>
 
                         {/* Competitor Score Boxes */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.75rem', alignItems: 'center' }}>
+                        <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
                           {/* Player 1 Side */}
                           <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
+                            <div className="flex items-center gap-1.5 mb-1">
                               {p1WonGame && (
                                 <span
+                                  className="size-4.5 rounded-full inline-flex items-center justify-center shrink-0"
                                   style={{
-                                    width: '18px',
-                                    height: '18px',
-                                    borderRadius: '50%',
                                     background: primaryColor,
                                     color: getContrastingTextColor(primaryColor),
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0,
                                   }}
                                 >
                                   <Check size={11} strokeWidth={3.5} />
                                 </span>
                               )}
                               <span
-                                style={{
-                                  fontSize: '0.78rem',
-                                  color: p1WonGame ? primaryColor : 'var(--color-text-secondary)',
-                                  fontWeight: p1WonGame ? 700 : 500,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
+                                className={cn('text-caption truncate', p1WonGame ? 'font-bold' : 'font-medium')}
+                                style={{ color: p1WonGame ? primaryColor : 'var(--color-text-secondary)' }}
                               >
                                 {p1?.name || 'Player 1'}
                               </span>
                             </div>
                             <div
-                              className="tabular-nums"
+                              className={cn(
+                                'font-mono tabular-nums tracking-tight w-full py-2 px-2.5 rounded-sm text-base text-center',
+                                !p1WonGame && p2WonGame ? 'opacity-45' : 'opacity-100',
+                                p1WonGame ? 'font-extrabold' : 'font-medium'
+                              )}
                               style={{
-                                width: '100%',
-                                padding: '0.5rem 0.65rem',
                                 background: p1WonGame
                                   ? colorWithAlpha(primaryColor, 0.18)
                                   : 'rgba(0, 0, 0, 0.45)',
                                 border: p1WonGame
                                   ? `1px solid ${colorWithAlpha(primaryColor, 0.55)}`
                                   : '1px solid var(--color-border)',
-                                borderRadius: 'var(--radius-sm)',
                                 color: p1WonGame
                                   ? primaryColor
                                   : 'var(--color-text-primary)',
-                                opacity: !p1WonGame && p2WonGame ? 0.45 : 1,
-                                fontSize: '1.05rem',
-                                fontWeight: p1WonGame ? 800 : 500,
-                                fontFamily: 'var(--font-mono)',
-                                textAlign: 'center',
-                                boxSizing: 'border-box',
                               }}
                             >
                               {num1 !== null ? num1.toLocaleString() : '—'}
@@ -739,37 +489,25 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                           </div>
 
                           {/* Middle VS */}
-                          <div style={{ color: 'var(--color-border-subtle)', fontSize: '0.75rem', fontWeight: 600 }}>
+                          <div className="text-line-subtle text-xs font-semibold">
                             vs
                           </div>
 
                           {/* Player 2 Side */}
                           <div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem', marginBottom: '0.3rem' }}>
+                            <div className="flex items-center justify-end gap-1.5 mb-1">
                               <span
-                                style={{
-                                  fontSize: '0.78rem',
-                                  color: p2WonGame ? primaryColor : 'var(--color-text-secondary)',
-                                  fontWeight: p2WonGame ? 700 : 500,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                }}
+                                className={cn('text-caption truncate', p2WonGame ? 'font-bold' : 'font-medium')}
+                                style={{ color: p2WonGame ? primaryColor : 'var(--color-text-secondary)' }}
                               >
                                 {p2?.name || 'Player 2'}
                               </span>
                               {p2WonGame && (
                                 <span
+                                  className="size-4.5 rounded-full inline-flex items-center justify-center shrink-0"
                                   style={{
-                                    width: '18px',
-                                    height: '18px',
-                                    borderRadius: '50%',
                                     background: primaryColor,
                                     color: getContrastingTextColor(primaryColor),
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0,
                                   }}
                                 >
                                   <Check size={11} strokeWidth={3.5} />
@@ -777,26 +515,21 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                               )}
                             </div>
                             <div
-                              className="tabular-nums"
+                              className={cn(
+                                'font-mono tabular-nums tracking-tight w-full py-2 px-2.5 rounded-sm text-base text-center',
+                                !p2WonGame && p1WonGame ? 'opacity-45' : 'opacity-100',
+                                p2WonGame ? 'font-extrabold' : 'font-medium'
+                              )}
                               style={{
-                                width: '100%',
-                                padding: '0.5rem 0.65rem',
                                 background: p2WonGame
                                   ? colorWithAlpha(primaryColor, 0.18)
                                   : 'rgba(0, 0, 0, 0.45)',
                                 border: p2WonGame
                                   ? `1px solid ${colorWithAlpha(primaryColor, 0.55)}`
                                   : '1px solid var(--color-border)',
-                                borderRadius: 'var(--radius-sm)',
                                 color: p2WonGame
                                   ? primaryColor
                                   : 'var(--color-text-primary)',
-                                opacity: !p2WonGame && p1WonGame ? 0.45 : 1,
-                                fontSize: '1.05rem',
-                                fontWeight: p2WonGame ? 800 : 500,
-                                fontFamily: 'var(--font-mono)',
-                                textAlign: 'center',
-                                boxSizing: 'border-box',
                               }}
                             >
                               {num2 !== null ? num2.toLocaleString() : '—'}
@@ -808,24 +541,12 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                   })}
                 </div>
               ) : (
-                <div
-                  style={{
-                    padding: '1.75rem 1rem',
-                    borderRadius: 'var(--radius-md)',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px dashed var(--color-border)',
-                    textAlign: 'center',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                  }}
-                >
+                <div className="py-7 px-4 rounded-md bg-white/2 border border-dashed border-line text-center flex flex-col items-center gap-2">
                   <Clock size={24} color="var(--color-text-muted)" />
-                  <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                  <span className="text-sm font-semibold text-fg-secondary">
                     No Game Scores Logged Yet
                   </span>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', maxWidth: '340px' }}>
+                  <span className="text-caption text-fg-muted max-w-85">
                     {p1 && p2
                       ? 'Match is ready for match play. Results will populate in real time as the floor judge records scores.'
                       : 'Awaiting earlier round match conclusions to determine competitors.'}
@@ -836,19 +557,14 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
           </div>
 
           {/* Modal Footer */}
-          <div style={footerStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>
+          <div className="py-3.5 px-6 border-t border-line bg-white/2 flex justify-between items-center">
+            <div className="flex items-center gap-1.5 text-fg-muted text-xs">
               <span>Public Spectator View • Live Telemetry</span>
             </div>
 
-            <button
-              type="button"
-              onClick={requestClose}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.82rem', padding: '0.45rem 1.1rem' }}
-            >
+            <Button variant="secondary" onClick={requestClose} className="text-caption py-2 px-4.5">
               Close
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -856,58 +572,5 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
   );
 };
 
-const headerStyle: React.CSSProperties = {
-  padding: '1.25rem 1.5rem',
-  borderBottom: '1px solid var(--color-border)',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-  background: 'rgba(255, 255, 255, 0.02)',
-  gap: '1rem',
-};
-
-const closeBtnStyle: React.CSSProperties = {
-  background: 'rgba(255, 255, 255, 0.05)',
-  border: '1px solid var(--color-border)',
-  color: 'var(--color-text-muted)',
-  cursor: 'pointer',
-  padding: '0.4rem',
-  borderRadius: 'var(--radius-md)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'all 0.15s ease',
-  flexShrink: 0,
-};
-
-const bodyStyle: React.CSSProperties = {
-  padding: '1.25rem 1.5rem',
-  overflowY: 'auto',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1.25rem',
-};
-
-const footerStyle: React.CSSProperties = {
-  padding: '0.9rem 1.5rem',
-  borderTop: '1px solid var(--color-border)',
-  background: 'rgba(255, 255, 255, 0.02)',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-};
-
-const linkBtnStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: 'var(--color-gold-bright)',
-  fontSize: '0.72rem',
-  fontWeight: 600,
-  cursor: 'pointer',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '0.3rem',
-  padding: '0.2rem 0.4rem',
-  borderRadius: 'var(--radius-xs)',
-  transition: 'all 0.15s ease',
-};
+const linkBtnClass =
+  'bg-transparent border-0 text-gold-bright text-xs font-semibold cursor-pointer inline-flex items-center gap-1 py-1 px-1.5 rounded-xs transition-all duration-150';

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { KeyRound, Eye, EyeOff, ShieldCheck, Check, AlertCircle } from 'lucide-react';
 import { usePinAuth, getAuthHeaders } from '../../../auth/AuthContext';
 import { SharedPinWarningModal, SharedTournamentInfo } from './SharedPinWarningModal';
-import { labelStyle, inputStyle } from './types';
+import { labelClass, inputClass } from './types';
+import { Button, IconButton, cn } from '../../../../components/ui';
 
 interface TournamentSecuritySectionProps {
   tournamentId: string;
@@ -109,109 +110,60 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
   };
 
   return (
-    <section
-      style={{
-        background: 'var(--color-bg-surface)',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--color-border)',
-        padding: '1rem 1.25rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1rem',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface py-4 px-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <KeyRound size={18} color="var(--color-gold-bright)" />
-          <h2 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>
+          <h2 className="m-0 text-base font-bold text-fg">
             Access Security & PIN Management
           </h2>
         </div>
         {isSystemAdmin && (
-          <span
-            style={{
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              padding: '0.2rem 0.5rem',
-              borderRadius: 'var(--radius-full)',
-              background: 'rgba(56, 189, 248, 0.15)',
-              border: '1px solid rgba(56, 189, 248, 0.35)',
-              color: '#38bdf8',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-            }}
-          >
+          <span className="flex items-center gap-1 rounded-full border border-sky-400/35 bg-sky-400/15 py-0.5 px-2 text-2xs font-bold text-sky-400">
             <ShieldCheck size={12} />
             System Admin Scope
           </span>
         )}
       </div>
 
-      <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>
+      <p className="m-0 text-caption leading-snug text-fg-secondary">
         Tournament PIN protects floor judge and management views (<code>/{tournamentSlug}/manage/*</code>).
       </p>
 
       {/* Reveal Existing PIN (System Admin Only) */}
       {isSystemAdmin && (
-        <div
-          style={{
-            padding: '0.75rem',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--color-bg-surface-elevated)',
-            border: '1px solid var(--color-border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap',
-          }}
-        >
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line-subtle bg-elevated p-3">
           <div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+            <div className="text-caption font-semibold text-fg">
               Current Tournament PIN:
             </div>
-            <div style={{ fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
+            <div className="text-xs text-fg-muted">
               Encrypted with AES-256-GCM.
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div className="flex items-center gap-2.5">
             {showRevealed && (
-              <span
-                style={{
-                  fontFamily: 'monospace',
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  color: 'var(--color-gold-bright)',
-                  letterSpacing: '0.12em',
-                  background: 'rgba(0, 0, 0, 0.4)',
-                  padding: '0.25rem 0.65rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--color-border)',
-                }}
-              >
+              <span className="rounded-sm border border-line bg-black/40 py-1 px-2.5 font-mono text-base font-bold tracking-widest text-gold-bright">
                 {revealedPin}
               </span>
             )}
-            <button
-              type="button"
+            <Button
               onClick={handleToggleReveal}
               disabled={isRevealing}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.78rem', padding: '0.35rem 0.65rem', gap: '0.35rem' }}
+              className="gap-1.5 py-1.5 px-2.5 text-caption"
             >
               {showRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
               <span>{isRevealing ? 'Decrypting...' : showRevealed ? 'Hide PIN' : 'Reveal PIN'}</span>
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Update PIN Controls (Div container to prevent nested form interference) */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-        <label style={labelStyle}>Set New Tournament PIN</label>
-        <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: '1', minWidth: '180px' }}>
+      <div className="flex flex-col gap-2.5">
+        <label className={labelClass}>Set New Tournament PIN</label>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative min-w-45 flex-1">
             <input
               type={showNewPin ? 'text' : 'password'}
               value={newPin}
@@ -224,53 +176,33 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
                 }
               }}
               placeholder="Enter new 4-8 digit PIN"
-              style={{
-                ...inputStyle,
-                paddingRight: '2.5rem',
-                letterSpacing: '0.08em',
-              }}
+              className={cn(inputClass, 'pr-10 tracking-widest')}
             />
-            <button
-              type="button"
+            <IconButton
+              aria-label={showNewPin ? 'Hide PIN' : 'Show PIN'}
               onClick={() => setShowNewPin(!showNewPin)}
-              style={{
-                position: 'absolute',
-                right: '8px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '4px',
-                display: 'flex',
-              }}
+              className="absolute right-2 top-1/2 flex -translate-y-1/2"
               tabIndex={-1}
             >
               {showNewPin ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
+            </IconButton>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="primary"
             onClick={e => handleUpdatePin(e)}
             disabled={isUpdating || !newPin.trim()}
-            className="btn btn-primary"
-            style={{ fontSize: '0.82rem', padding: '0.5rem 1rem' }}
+            className="py-2 px-4 text-caption"
           >
             {isUpdating ? 'Saving...' : 'Update PIN'}
-          </button>
+          </Button>
         </div>
 
         {updateFeedback && (
           <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              fontSize: '0.78rem',
-              color: updateFeedback.type === 'success' ? '#34d399' : '#f87171',
-              marginTop: '0.25rem',
-            }}
+            className={cn(
+              'mt-1 flex items-center gap-2 text-caption',
+              updateFeedback.type === 'success' ? 'text-green-bright' : 'text-red-bright'
+            )}
           >
             {updateFeedback.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
             <span>{updateFeedback.message}</span>

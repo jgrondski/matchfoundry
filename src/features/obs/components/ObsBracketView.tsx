@@ -3,6 +3,7 @@ import { Tournament, TournamentTier } from '../../tournament/types';
 import { BracketVisualizer } from '../../bracket/components/BracketVisualizer';
 import { BracketViewMode } from '../../bracket/bracketLayout';
 import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
+import { cn } from '../../../components/ui';
 
 export interface ObsBracketViewProps {
   tournament: Tournament;
@@ -39,19 +40,13 @@ export const ObsBracketView: React.FC<ObsBracketViewProps> = ({
 
   return (
     <div
-      className="obs-bracket-container"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        width: '100vw',
-        height: '100vh',
-        background: chromaBg,
-        overflow: viewMode === 'fit' ? 'hidden' : 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
+      className={cn(
+        'obs-bracket-container fixed inset-0 w-screen h-screen flex flex-col',
+        viewMode === 'fit' ? 'overflow-hidden' : 'overflow-auto'
+      )}
+      style={{ background: chromaBg }}
     >
-      <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 100 }}>
+      <div className="absolute top-4 right-4 z-100">
         <TournamentQualTimerHud tournament={tournament} isObsMode={true} readOnly={true} />
       </div>
       <BracketVisualizer

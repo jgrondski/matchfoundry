@@ -8,6 +8,12 @@ import {
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { isAbandonedRun } from '../sessionDerivation';
+import { Button, cn } from '../../../components/ui';
+
+const pillClass = 'cursor-pointer rounded-full border px-3 py-1.5 text-caption font-bold';
+const pillIdleClass = 'border-line bg-surface text-fg-secondary';
+const thClass = 'px-4 py-3.5 text-xs font-bold uppercase text-fg-muted';
+const tdClass = 'px-4 py-3.5';
 
 export interface ReviewQueueTableProps {
   sessions: ReviewQueueSessionSummary[];
@@ -60,46 +66,22 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+    <div className="flex w-full flex-col gap-4">
       {/* Controls Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '0.75rem',
-        }}
-      >
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Filter Pills */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => setFilter('PENDING')}
-            style={{
-              padding: '0.4rem 0.75rem',
-              borderRadius: 'var(--radius-full)',
-              border: filter === 'PENDING' ? '1px solid var(--color-gold-bright)' : '1px solid var(--color-border)',
-              background: filter === 'PENDING' ? 'rgba(245, 158, 11, 0.2)' : 'var(--color-bg-surface)',
-              color: filter === 'PENDING' ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
+            className={cn(pillClass, 'inline-flex items-center gap-1.5', filter === 'PENDING' ? 'border-gold-bright bg-gold/20 text-gold-bright' : pillIdleClass)}
           >
             Pending Review
             <span
-              style={{
-                fontSize: '0.7rem',
-                padding: '0.05rem 0.4rem',
-                borderRadius: 'var(--radius-full)',
-                background: pendingCount > 0 ? 'var(--color-gold-bright)' : 'rgba(255,255,255,0.1)',
-                color: pendingCount > 0 ? '#000000' : 'var(--color-text-muted)',
-                fontWeight: 800,
-              }}
+              className={cn(
+                'rounded-full px-1.5 text-2xs font-extrabold',
+                pendingCount > 0 ? 'bg-gold-bright text-black' : 'bg-white/10 text-fg-muted'
+              )}
             >
               {pendingCount}
             </span>
@@ -109,31 +91,12 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
             type="button"
             onClick={() => setFilter('UNFINISHED')}
             data-testid="unfinished-filter"
-            style={{
-              padding: '0.4rem 0.75rem',
-              borderRadius: 'var(--radius-full)',
-              border: filter === 'UNFINISHED' ? '1px solid #f87171' : '1px solid var(--color-border)',
-              background: filter === 'UNFINISHED' ? 'rgba(239, 68, 68, 0.15)' : 'var(--color-bg-surface)',
-              color: filter === 'UNFINISHED' ? '#fca5a5' : 'var(--color-text-secondary)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
+            className={cn(pillClass, 'inline-flex items-center gap-1.5', filter === 'UNFINISHED' ? 'border-red-bright bg-red/15 text-red-300' : pillIdleClass)}
           >
             Unfinished ({unfinishedCount})
             {abandonedCount > 0 && (
               <span
-                style={{
-                  fontSize: '0.7rem',
-                  padding: '0.05rem 0.4rem',
-                  borderRadius: 'var(--radius-full)',
-                  background: '#ef4444',
-                  color: '#ffffff',
-                  fontWeight: 800,
-                }}
+                className="rounded-full bg-red px-1.5 text-2xs font-extrabold text-white"
                 title={`${abandonedCount} abandoned: still unfinished more than an hour past the window`}
               >
                 {abandonedCount} abandoned
@@ -144,19 +107,7 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
           <button
             type="button"
             onClick={() => setFilter('ONLINE')}
-            style={{
-              padding: '0.4rem 0.75rem',
-              borderRadius: 'var(--radius-full)',
-              border: filter === 'ONLINE' ? '1px solid #a855f7' : '1px solid var(--color-border)',
-              background: filter === 'ONLINE' ? 'rgba(168, 85, 247, 0.2)' : 'var(--color-bg-surface)',
-              color: filter === 'ONLINE' ? '#c084fc' : 'var(--color-text-secondary)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
+            className={cn(pillClass, 'inline-flex items-center gap-1.5', filter === 'ONLINE' ? 'border-purple-500 bg-purple-500/20 text-purple-400' : pillIdleClass)}
           >
             Online ({onlineCount})
           </button>
@@ -164,19 +115,7 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
           <button
             type="button"
             onClick={() => setFilter('IN_PERSON')}
-            style={{
-              padding: '0.4rem 0.75rem',
-              borderRadius: 'var(--radius-full)',
-              border: filter === 'IN_PERSON' ? '1px solid #3b82f6' : '1px solid var(--color-border)',
-              background: filter === 'IN_PERSON' ? 'rgba(59, 130, 246, 0.2)' : 'var(--color-bg-surface)',
-              color: filter === 'IN_PERSON' ? '#60a5fa' : 'var(--color-text-secondary)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
+            className={cn(pillClass, 'inline-flex items-center gap-1.5', filter === 'IN_PERSON' ? 'border-blue-500 bg-blue-500/20 text-blue-400' : pillIdleClass)}
           >
             In-Person ({inPersonCount})
           </button>
@@ -184,83 +123,52 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
           <button
             type="button"
             onClick={() => setFilter('ALL')}
-            style={{
-              padding: '0.4rem 0.75rem',
-              borderRadius: 'var(--radius-full)',
-              border: filter === 'ALL' ? '1px solid #ffffff' : '1px solid var(--color-border)',
-              background: filter === 'ALL' ? 'rgba(255, 255, 255, 0.1)' : 'var(--color-bg-surface)',
-              color: filter === 'ALL' ? '#ffffff' : 'var(--color-text-secondary)',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
+            className={cn(pillClass, filter === 'ALL' ? 'border-white bg-white/10 text-white' : pillIdleClass)}
           >
             All Runs ({sessions.length})
           </button>
         </div>
 
         {/* Search Input */}
-        <div style={{ position: 'relative', minWidth: '220px' }}>
+        <div className="relative min-w-55">
           <Search
             size={14}
-            style={{
-              position: 'absolute',
-              left: '0.65rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--color-text-muted)',
-            }}
+            className="absolute top-1/2 left-2.5 -translate-y-1/2 text-fg-muted"
           />
           <input
             type="text"
             placeholder="Search competitor, Twitch, authword..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{
-              padding: '0.4rem 0.65rem 0.4rem 2rem',
-              background: 'var(--color-bg-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)',
-              color: '#ffffff',
-              fontSize: '0.8rem',
-              width: '100%',
-              boxSizing: 'border-box',
-            }}
+            className="w-full rounded-md border border-line bg-surface py-1.5 pr-2.5 pl-8 text-caption text-white"
           />
         </div>
       </div>
 
       {/* Table Canvas */}
-      <div
-        style={{
-          background: 'var(--color-bg-surface)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-md)',
-          overflow: 'hidden',
-        }}
-      >
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+      <div className="overflow-hidden rounded-md border border-line bg-surface">
+        <table className="w-full border-collapse text-left text-sm">
           <thead>
-            <tr style={{ background: 'var(--color-bg-surface-elevated)', borderBottom: '1px solid var(--color-border)' }}>
-              <th style={{ padding: '0.85rem 1rem', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>
+            <tr className="border-b border-line bg-elevated">
+              <th className={thClass}>
                 Competitor &amp; Identity
               </th>
-              <th style={{ padding: '0.85rem 1rem', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'center' }}>
+              <th className={cn(thClass, 'text-center')}>
                 NES Authword
               </th>
-              <th style={{ padding: '0.85rem 1rem', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'center' }}>
+              <th className={cn(thClass, 'text-center')}>
                 Qual Total Time
               </th>
-              <th style={{ padding: '0.85rem 1rem', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'right' }}>
+              <th className={cn(thClass, 'text-right')}>
                 Submitted Scores
               </th>
-              <th style={{ padding: '0.85rem 1rem', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'center' }}>
+              <th className={cn(thClass, 'text-center')}>
                 VOD Link
               </th>
-              <th style={{ padding: '0.85rem 1rem', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'center' }}>
+              <th className={cn(thClass, 'text-center')}>
                 Status
               </th>
-              <th style={{ padding: '0.85rem 1rem', fontWeight: 700, color: 'var(--color-text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'right' }}>
+              <th className={cn(thClass, 'text-right')}>
                 Actions
               </th>
             </tr>
@@ -268,7 +176,7 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
           <tbody>
             {filteredSessions.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                <td colSpan={7} className="px-6 py-12 text-center text-fg-muted">
                   No Qualifiers Found.
                 </td>
               </tr>
@@ -283,14 +191,11 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                 return (
                   <tr
                     key={session.playerId}
-                    style={{
-                      borderBottom: '1px solid var(--color-border-subtle)',
-                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.015)',
-                    }}
+                    className={cn('border-b border-line-subtle', idx % 2 === 0 ? 'bg-transparent' : 'bg-white/2')}
                   >
                     {/* Competitor & Identity */}
-                    <td style={{ padding: '0.85rem 1rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <td className={tdClass}>
+                      <div className="flex items-center gap-2.5">
                         <PlayerAvatar
                           player={{
                             name: session.playerName,
@@ -301,54 +206,27 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                           size={32}
                         />
                         <div>
-                          <div style={{ fontWeight: 700, color: '#ffffff' }}>
+                          <div className="font-bold text-white">
                             {session.playerName}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
+                          <div className="mt-0.5 flex items-center gap-1.5">
                             {session.submittedTwitchUsername && (
-                              <span style={{ fontSize: '0.75rem', color: '#a78bfa' }}>
+                              <span className="text-xs text-violet-400">
                                 @{session.submittedTwitchUsername}
                               </span>
                             )}
                             {session.identityStatus === 'VERIFIED_MATCH' && (
-                              <span
-                                style={{
-                                  fontSize: '0.68rem',
-                                  padding: '0.05rem 0.35rem',
-                                  borderRadius: 'var(--radius-sm)',
-                                  background: 'rgba(34, 197, 94, 0.15)',
-                                  color: '#4ade80',
-                                  fontWeight: 700,
-                                }}
-                              >
+                              <span className="rounded-sm px-1.5 text-2xs font-bold bg-green-500/15 text-green-400">
                                 Verified Match
                               </span>
                             )}
                             {session.identityStatus === 'CLAIMED_PENDING_REVIEW' && (
-                              <span
-                                style={{
-                                  fontSize: '0.68rem',
-                                  padding: '0.05rem 0.35rem',
-                                  borderRadius: 'var(--radius-sm)',
-                                  background: 'rgba(245, 158, 11, 0.15)',
-                                  color: 'var(--color-gold-bright)',
-                                  fontWeight: 700,
-                                }}
-                              >
+                              <span className="rounded-sm px-1.5 text-2xs font-bold bg-gold/15 text-gold-bright">
                                 Claimed
                               </span>
                             )}
                             {session.identityStatus === 'PROVISIONAL_NEW' && (
-                              <span
-                                style={{
-                                  fontSize: '0.68rem',
-                                  padding: '0.05rem 0.35rem',
-                                  borderRadius: 'var(--radius-sm)',
-                                  background: 'rgba(56, 189, 248, 0.15)',
-                                  color: '#38bdf8',
-                                  fontWeight: 700,
-                                }}
-                              >
+                              <span className="rounded-sm px-1.5 text-2xs font-bold bg-sky-400/15 text-sky-400">
                                 Walk-In
                               </span>
                             )}
@@ -358,66 +236,38 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                     </td>
 
                     {/* NES Authword */}
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                    <td className={cn(tdClass, 'text-center')}>
                       {session.authWord ? (
-                        <span
-                          style={{
-                            fontFamily: 'monospace',
-                            fontSize: '0.95rem',
-                            fontWeight: 800,
-                            letterSpacing: '0.1em',
-                            color: 'var(--color-gold-bright)',
-                            background: 'rgba(245, 158, 11, 0.12)',
-                            border: '1px solid rgba(245, 158, 11, 0.3)',
-                            borderRadius: 'var(--radius-sm)',
-                            padding: '0.2rem 0.5rem',
-                          }}
-                        >
+                        <span className="rounded-sm border border-gold/30 bg-gold/12 px-2 py-1 font-mono text-base font-extrabold tracking-widest text-gold-bright">
                           {session.authWord}
                         </span>
                       ) : (
-                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', fontWeight: 600 }}>
+                        <span className="text-base font-semibold text-fg-muted">
                           -
                         </span>
                       )}
                     </td>
 
                     {/* Qual Total Time */}
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                    <td className={cn(tdClass, 'text-center')}>
                       {session.submissionSource === 'IN_PERSON' ? (
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#ffffff' }}>
+                        <span className="font-mono font-bold text-white">
                           {qualWindowMinutes}m
                         </span>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: isOvertime ? '#ef4444' : '#ffffff' }}>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={cn('font-mono font-bold', isOvertime ? 'text-red' : 'text-white')}>
                             {elapsedMin}m {elapsedSec}s
                           </span>
                           {isOvertime && (
-                            <span
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 700,
-                                color: '#ef4444',
-                                background: 'rgba(239, 68, 68, 0.15)',
-                                padding: '0.05rem 0.35rem',
-                                borderRadius: 'var(--radius-sm)',
-                              }}
-                            >
+                            <span className="rounded-sm bg-red/15 px-1.5 text-2xs font-bold text-red">
                               ⚠️ Overtime
                             </span>
                           )}
                           {session.playerNotes && (
                             <span
                               title={session.playerNotes}
-                              style={{
-                                fontSize: '0.68rem',
-                                fontWeight: 700,
-                                color: '#c084fc',
-                                background: 'rgba(168, 85, 247, 0.15)',
-                                padding: '0.05rem 0.35rem',
-                                borderRadius: 'var(--radius-sm)',
-                              }}
+                              className="rounded-sm bg-purple-500/15 px-1.5 text-2xs font-bold text-purple-400"
                             >
                               📝 Notes
                             </span>
@@ -427,28 +277,28 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                     </td>
 
                     {/* Scores */}
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                    <td className={cn(tdClass, 'text-right')}>
                       {session.scores && session.scores.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.15rem' }}>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#ffffff', fontSize: '0.95rem' }}>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="font-mono text-base font-extrabold text-white">
                             {Math.max(...session.scores).toLocaleString()}
                           </span>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                          <span className="text-xs text-fg-muted">
                             {session.scores.length} {session.scores.length === 1 ? 'game' : 'games'}: (
                             {session.scores.map(s => s.toLocaleString()).join(', ')})
                           </span>
                         </div>
                       ) : (
-                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+                        <span className="text-caption text-fg-muted">
                           In Progress
                         </span>
                       )}
                     </td>
 
                     {/* VOD Link */}
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                    <td className={cn(tdClass, 'text-center')}>
                       {session.submissionSource === 'IN_PERSON' ? (
-                        <span style={{ color: '#60a5fa', fontSize: '0.78rem', fontWeight: 600 }}>
+                        <span className="text-caption font-semibold text-blue-400">
                           In Person
                         </span>
                       ) : session.twitchVodUrl ? (
@@ -456,46 +306,26 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                           href={session.twitchVodUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{
-                            color: '#a78bfa',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            fontSize: '0.78rem',
-                            textDecoration: 'none',
-                          }}
+                          className="inline-flex items-center gap-1 text-caption text-violet-400 no-underline"
                         >
                           VOD <ExternalLink size={12} />
                         </a>
                       ) : (
-                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>—</span>
+                        <span className="text-caption text-fg-muted">—</span>
                       )}
                     </td>
 
                     {/* Status */}
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                    <td className={cn(tdClass, 'text-center')}>
                       <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          padding: '0.15rem 0.5rem',
-                          borderRadius: 'var(--radius-sm)',
-                          background:
-                            session.status === 'VERIFIED'
-                              ? 'rgba(34, 197, 94, 0.15)'
-                              : session.status === 'DNQ' || session.status === 'DQ'
-                              ? 'rgba(239, 68, 68, 0.15)'
-                              : 'rgba(245, 158, 11, 0.15)',
-                          color:
-                            session.status === 'VERIFIED'
-                              ? '#4ade80'
-                              : session.status === 'DNQ' || session.status === 'DQ'
-                              ? '#f87171'
-                              : 'var(--color-gold-bright)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                        }}
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-bold',
+                          session.status === 'VERIFIED'
+                            ? 'bg-green-500/15 text-green-400'
+                            : session.status === 'DNQ' || session.status === 'DQ'
+                            ? 'bg-red/15 text-red-bright'
+                            : 'bg-gold/15 text-gold-bright'
+                        )}
                       >
                         {session.status === 'VERIFIED' && <CheckCircle2 size={12} />}
                         {session.status === 'SUBMITTED' && <Clock size={12} />}
@@ -507,16 +337,7 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                       </span>
                       {isAbandoned && (
                         <div
-                          style={{
-                            marginTop: '0.3rem',
-                            fontSize: '0.68rem',
-                            fontWeight: 700,
-                            color: '#ef4444',
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            padding: '0.05rem 0.35rem',
-                            borderRadius: 'var(--radius-sm)',
-                            display: 'inline-block',
-                          }}
+                          className="mt-1 inline-block rounded-sm bg-red/15 px-1.5 text-2xs font-bold text-red"
                           title="Still unfinished more than an hour past the qual window"
                           data-testid="abandoned-run-flag"
                         >
@@ -526,48 +347,35 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                     </td>
 
                     {/* Actions */}
-                    <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                    <td className={cn(tdClass, 'text-right')}>
+                      <div className="flex items-center justify-end gap-1.5">
                         {session.status === 'IN_PROGRESS' && onDiscardRun && (
-                          <button
+                          <Button
                             type="button"
                             onClick={() => onDiscardRun(session)}
-                            className="btn btn-secondary"
+                            variant="secondary"
                             data-testid="discard-run-button"
-                            style={{
-                              fontSize: '0.75rem',
-                              padding: '0.25rem 0.5rem',
-                              color: '#f87171',
-                              borderColor: 'rgba(239, 68, 68, 0.35)',
-                            }}
+                            className="border-red/35 px-2 py-1 text-xs text-red-bright enabled:hover:border-red/35"
                           >
                             Discard
-                          </button>
+                          </Button>
                         )}
-                        <button
+                        <Button
                           type="button"
                           onClick={() => onOpenIdentityModal(session)}
-                          className="btn btn-secondary"
-                          style={{
-                            fontSize: '0.75rem',
-                            padding: '0.25rem 0.5rem',
-                            color: 'var(--color-gold-bright)',
-                            borderColor: 'rgba(245, 158, 11, 0.3)',
-                          }}
+                          variant="secondary"
+                          className="border-gold/30 px-2 py-1 text-xs text-gold-bright enabled:hover:border-gold/30"
                         >
                           Identity
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           type="button"
                           onClick={() => onOpenAdjudicate(session)}
-                          className="btn btn-primary"
-                          style={{
-                            fontSize: '0.75rem',
-                            padding: '0.25rem 0.65rem',
-                          }}
+                          variant="primary"
+                          className="px-2.5 py-1 text-xs"
                         >
                           Review
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>

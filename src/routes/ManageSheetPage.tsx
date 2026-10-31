@@ -8,6 +8,7 @@ import { OrganizerSheetMatrix } from '../features/bracket/components/OrganizerSh
 import { getContrastingTextColor } from '../features/bracket/colorUtils';
 import { GitBranch } from 'lucide-react';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { Button, buttonClasses, Chip, cn } from '../components/ui';
 
 /**
  * Tier 1: Route Gate (Hydration & Data Boundary)
@@ -27,11 +28,11 @@ export const ManageSheetPage: React.FC = () => {
   const tournament = slug ? getTournamentBySlug(slug) : undefined;
   if (!tournament) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+      <div className="p-12 text-center text-fg-secondary">
         <h2>Tournament Not Found</h2>
-        <button onClick={() => navigate('/')} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+        <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
-        </button>
+        </Button>
       </div>
     );
   }
@@ -60,18 +61,18 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
   if (!tier) {
     return (
       <TournamentLayout tournament={tournament} activeView="sheet">
-        <main style={{ flex: 1, padding: '3rem 1.5rem', textAlign: 'center', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-          <h2 style={{ color: 'var(--color-text-primary)', fontSize: '1.4rem' }}>No Bracket Tiers Configured</h2>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+        <main className="mx-auto flex max-w-150 flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+          <h2 className="text-2xl text-fg">No Bracket Tiers Configured</h2>
+          <p className="text-sm leading-normal text-fg-secondary">
             This tournament does not have any bracket tiers yet. Qualifiers can be entered and ranked on the leaderboard, or you can create bracket tiers in Settings.
           </p>
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button onClick={() => navigate(`/${tournament.slug}/leaderboard`)} className="btn btn-secondary">
+          <div className="mt-2 flex flex-wrap justify-center gap-3">
+            <Button variant="secondary" onClick={() => navigate(`/${tournament.slug}/leaderboard`)}>
               🏆 View Qualifiers
-            </button>
-            <button onClick={() => navigate(`/${tournament.slug}/manage/settings`)} className="btn btn-primary">
+            </Button>
+            <Button variant="primary" onClick={() => navigate(`/${tournament.slug}/manage/settings`)}>
               ⚙️ Configure Tiers in Settings
-            </button>
+            </Button>
           </div>
         </main>
       </TournamentLayout>
@@ -90,32 +91,9 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
       activeView="sheet"
     >
       {/* In-Page Tier Selector Bar */}
-      <div
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 40,
-          padding: '0.65rem 1.25rem',
-          background: 'var(--color-bg-surface)',
-          borderBottom: '1px solid var(--color-border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '0.75rem',
-          userSelect: 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <span
-            style={{
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              color: 'var(--color-text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}
-          >
+      <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-5 py-2.5 select-none">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold tracking-wider text-fg-muted uppercase">
             Tier:
           </span>
           {sortedTiers.map(t => {
@@ -124,56 +102,33 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
             const contrastColor = getContrastingTextColor(tierColor);
 
             return (
-              <button
+              <Chip
                 key={t.id}
-                type="button"
+                active={isActive}
+                accent={{ color: tierColor, textColor: contrastColor }}
                 onClick={() => handleSelectTier(t.slug)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '0.78rem',
-                  fontWeight: isActive ? 800 : 600,
-                  background: isActive ? tierColor : 'var(--color-bg-base)',
-                  color: isActive ? contrastColor : 'var(--color-text-secondary)',
-                  border: isActive ? `1px solid ${tierColor}` : '1px solid var(--color-border)',
-                  cursor: isActive ? 'default' : 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: isActive ? `0 0 10px ${tierColor}40` : 'none',
-                }}
               >
                 <span
-                  style={{
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    background: isActive ? contrastColor : tierColor,
-                    display: 'inline-block',
-                  }}
+                  className="inline-block size-1.75 rounded-full"
+                  style={{ background: isActive ? contrastColor : tierColor }}
                 />
                 <span>{t.name}</span>
-                <span style={{ fontSize: '0.7rem', opacity: isActive ? 0.9 : 0.7, fontWeight: 500 }}>
+                <span className={cn('text-2xs font-medium', isActive ? 'opacity-90' : 'opacity-70')}>
                   ({t.playerCount})
                 </span>
-              </button>
+              </Chip>
             );
           })}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             to={`/${tournament.slug}/manage/bracket/${tier.slug}`}
-            className="btn btn-secondary"
-            style={{
-              padding: '0.35rem 0.75rem',
-              fontSize: '0.75rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: 'var(--color-text-secondary)',
-            }}
+            className={buttonClasses({
+              variant: 'secondary',
+              size: 'sm',
+              className: 'text-fg-secondary hover:border-fg-secondary hover:bg-highlight',
+            })}
             title="Open Visual Bracket for this Tier"
           >
             <GitBranch size={13} />
@@ -182,7 +137,7 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
         </div>
       </div>
 
-      <main style={{ flex: 1, padding: '1.25rem 2rem', maxWidth: '100%', width: '100%', margin: '0 auto', overflowX: 'auto' }}>
+      <main className="mx-auto w-full max-w-full flex-1 overflow-x-auto px-8 py-5">
         <OrganizerSheetMatrix
           key={tier.id}
           tournament={tournament}

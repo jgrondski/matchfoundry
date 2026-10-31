@@ -96,52 +96,34 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
 
   return (
     <div
-      style={{
-        width: '100vw',
-        height: '100vh',
-        background: chromaBg,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1.5rem',
-        boxSizing: 'border-box',
-      }}
+      className="w-screen h-screen flex items-center justify-center p-6"
+      style={{ background: chromaBg }}
     >
       <div
+        className="w-full max-w-160 rounded-lg overflow-hidden font-sans"
         style={{
-          width: '100%',
-          maxWidth: '640px',
           background: `linear-gradient(180deg, ${cardColor} 0%, #0c0d12 100%)`,
           border: `2px solid ${colorWithAlpha(primaryColor, 0.45)}`,
-          borderRadius: '16px',
           boxShadow: `0 12px 40px rgba(0, 0, 0, 0.8), 0 0 24px ${colorWithAlpha(primaryColor, 0.2)}`,
-          overflow: 'hidden',
-          fontFamily: 'Inter, system-ui, sans-serif',
         }}
       >
         {/* Header Bar */}
         <div
+          className="py-3.5 px-5 flex items-center justify-between"
           style={{
-            padding: '0.85rem 1.25rem',
             background: `linear-gradient(90deg, ${colorWithAlpha(primaryColor, 0.18)} 0%, rgba(0, 0, 0, 0.4) 100%)`,
             borderBottom: `1px solid ${colorWithAlpha(primaryColor, 0.3)}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="flex items-center gap-2">
             <Trophy size={16} color={primaryColor} />
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ffffff', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span className="text-sm font-extrabold text-white uppercase tracking-wide">
               {tournament.name}
             </span>
             {resolvedTier && (
               <span
+                className="text-xs font-bold py-0.5 px-2 rounded-full"
                 style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 700,
-                  padding: '0.12rem 0.5rem',
-                  borderRadius: '999px',
                   background: colorWithAlpha(primaryColor, 0.2),
                   color: primaryColor,
                   border: `1px solid ${colorWithAlpha(primaryColor, 0.4)}`,
@@ -152,28 +134,14 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="flex items-center gap-2">
             <TournamentQualTimerHud tournament={tournament} isObsMode={true} readOnly={true} compact={true} />
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted, #94a3b8)' }}>
+            <span className="text-xs font-bold text-fg-muted">
               Best of {bestOf}
             </span>
             {isDraft && (
-              <span
-                style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  padding: '0.12rem 0.5rem',
-                  borderRadius: '999px',
-                  background: 'rgba(245, 158, 11, 0.25)',
-                  color: 'var(--color-gold-bright, #ffc905)',
-                  border: '1px solid rgba(245, 158, 11, 0.6)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                }}
-              >
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--color-gold-bright, #ffc905)' }} />
+              <span className="text-2xs font-extrabold uppercase py-0.5 px-2 rounded-full bg-gold/25 text-gold-bright border border-gold/60 inline-flex items-center gap-1">
+                <span className="size-1.25 rounded-full bg-gold-bright" />
                 Projected Match
               </span>
             )}
@@ -181,24 +149,24 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
         </div>
 
         {/* Competitor Matchup Grid */}
-        <div style={{ padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="py-5 px-6 flex items-center gap-4">
           {/* Player 1 */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div className="flex-1 flex items-center gap-3.5">
             {p1Profile ? (
               <PlayerAvatar player={p1Profile} size={44} country={p1Profile.country} />
             ) : (
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontWeight: 700 }}>
+              <div className="size-11 rounded-full bg-white/8 flex items-center justify-center text-fg-muted font-bold">
                 1
               </div>
             )}
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {targetMatch?.player1?.player?.seed && (
-                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: primaryColor }}>
+                  <span className="text-xs font-extrabold" style={{ color: primaryColor }}>
                     #{targetMatch.player1.player.seed}
                   </span>
                 )}
-                <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span className="text-base font-extrabold text-white truncate">
                   {getEffectivePlayerName(p1Profile || p1) || (targetMatch?.slotA ? `Seed ${targetMatch.slotA}` : 'TBD')}
                 </span>
               </div>
@@ -206,41 +174,26 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
           </div>
 
           {/* Center VS & Score Pill */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', padding: '0 0.5rem' }}>
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: 'rgba(0, 0, 0, 0.6)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                borderRadius: '8px',
-                padding: '0.35rem 0.85rem',
-                fontFamily: 'monospace',
-                fontSize: '1.35rem',
-                fontWeight: 900,
-                color: '#ffffff',
-                letterSpacing: '0.05em',
-              }}
-            >
-              <span style={{ color: p1Wins > p2Wins ? primaryColor : '#ffffff' }}>{p1Wins}</span>
-              <span style={{ opacity: 0.4, fontSize: '1rem' }}>-</span>
-              <span style={{ color: p2Wins > p1Wins ? primaryColor : '#ffffff' }}>{p2Wins}</span>
+          <div className="flex flex-col items-center gap-1.5 px-2">
+            <div className="inline-flex items-center gap-2 bg-black/60 border border-white/12 rounded-md py-1.5 px-3.5 font-mono text-xl font-black text-white tracking-wider">
+              <span className="text-white" style={{ color: p1Wins > p2Wins ? primaryColor : undefined }}>{p1Wins}</span>
+              <span className="opacity-40 text-base">-</span>
+              <span className="text-white" style={{ color: p2Wins > p1Wins ? primaryColor : undefined }}>{p2Wins}</span>
             </div>
-            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--color-text-muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div className="text-2xs font-bold text-fg-muted uppercase tracking-widest">
               {targetMatch?.roundIdentifier || 'Match'}
             </div>
           </div>
 
           {/* Player 2 */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.85rem', textAlign: 'right' }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.4rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '1.05rem', fontWeight: 800, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div className="flex-1 flex items-center justify-end gap-3.5 text-right">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                <span className="text-base font-extrabold text-white truncate">
                   {getEffectivePlayerName(p2Profile || p2) || (targetMatch?.slotB ? `Seed ${targetMatch.slotB}` : 'TBD')}
                 </span>
                 {targetMatch?.player2?.player?.seed && (
-                  <span style={{ fontSize: '0.72rem', fontWeight: 800, color: primaryColor }}>
+                  <span className="text-xs font-extrabold" style={{ color: primaryColor }}>
                     #{targetMatch.player2.player.seed}
                   </span>
                 )}
@@ -249,7 +202,7 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
             {p2Profile ? (
               <PlayerAvatar player={p2Profile} size={44} country={p2Profile.country} />
             ) : (
-              <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontWeight: 700 }}>
+              <div className="size-11 rounded-full bg-white/8 flex items-center justify-center text-fg-muted font-bold">
                 2
               </div>
             )}

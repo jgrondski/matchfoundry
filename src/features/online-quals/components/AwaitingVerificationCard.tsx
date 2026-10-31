@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Clock, ExternalLink, BarChart3 } from 'lucide-react';
 import type { OnlineQualSessionSummary } from '../../../api/qualifiers';
+import { Button } from '../../../components/ui';
 
 export interface AwaitingVerificationCardProps {
   session: OnlineQualSessionSummary;
@@ -23,73 +24,30 @@ export const AwaitingVerificationCard: React.FC<AwaitingVerificationCardProps> =
 
   return (
     <div
-      style={{
-        background: 'var(--color-bg-surface, #121820)',
-        border: '2px solid rgba(34, 197, 94, 0.4)',
-        borderRadius: '14px',
-        padding: '2rem',
-        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem',
-      }}
+      className="flex flex-col gap-6 rounded-lg border-2 border-green-500/40 bg-surface p-8 shadow-[0_12px_32px_rgba(0,0,0,0.45)]"
       data-testid="awaiting-verification-card"
     >
       {/* Top Banner */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-        <div
-          style={{
-            background: 'rgba(34, 197, 94, 0.15)',
-            border: '1px solid rgba(34, 197, 94, 0.4)',
-            borderRadius: '50%',
-            width: '46px',
-            height: '46px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#4ade80',
-            flexShrink: 0,
-          }}
-        >
+      <div className="flex items-center gap-3.5">
+        <div className="flex size-11.5 shrink-0 items-center justify-center rounded-full border border-green-500/40 bg-green-500/15 text-green-400">
           <CheckCircle2 size={26} />
         </div>
         <div>
-          <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: '#ffffff' }}>
+          <h3 className="m-0 text-xl font-black text-white">
             {headerTitle}
           </h3>
-          <p style={{ margin: '0.2rem 0 0', fontSize: '0.88rem', color: 'var(--color-text-secondary, #94a3b8)' }}>
+          <p className="mx-0 mt-1 mb-0 text-sm text-fg-secondary">
             Your submission has been securely recorded and locked against further edits.
           </p>
         </div>
       </div>
 
       {/* Provisional Leaderboard Status Pill */}
-      <div
-        style={{
-          background: 'rgba(245, 158, 11, 0.1)',
-          border: '1px solid rgba(245, 158, 11, 0.35)',
-          borderRadius: '10px',
-          padding: '1rem 1.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-        }}
-      >
-        <Clock size={20} color="#fbbf24" style={{ flexShrink: 0 }} />
-        <div style={{ fontSize: '0.9rem', color: '#fef3c7', lineHeight: 1.5 }}>
+      <div className="flex items-center gap-3 rounded-md border border-gold/35 bg-gold/10 px-5 py-4">
+        <Clock size={20} color="#fbbf24" className="shrink-0" />
+        <div className="text-sm leading-normal text-[#fef3c7]">
           <strong>Provisional Placement:</strong> Your run is displayed on the public leaderboard marked{' '}
-          <span
-            style={{
-              background: '#090d13',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
-              color: '#fbbf24',
-              padding: '0.15rem 0.5rem',
-              borderRadius: '4px',
-              fontFamily: "'JetBrains Mono', monospace",
-              fontWeight: 700,
-              fontSize: '0.82rem',
-            }}
-          >
+          <span className="rounded-xs border border-gold/40 bg-canvas px-2 py-0.5 font-mono text-caption font-bold text-gold-bright">
             ⏳ Awaiting Verification
           </span>
           . Tournament adjudicators will verify your NES Authword and stream recording.
@@ -97,115 +55,59 @@ export const AwaitingVerificationCard: React.FC<AwaitingVerificationCardProps> =
       </div>
 
       {/* Submission Audit Summary Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '1rem',
-          background: 'var(--color-bg-base, #0a0e14)',
-          border: '1px solid var(--color-border, #263342)',
-          borderRadius: '10px',
-          padding: '1.25rem',
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4 rounded-md border border-line bg-canvas p-5">
         <div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', textTransform: 'uppercase' }}>
+          <div className="text-caption uppercase text-fg-secondary">
             Assigned Authword
           </div>
-          <div
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '1.25rem',
-              fontWeight: 900,
-              color: 'var(--color-gold-bright, #fbbf24)',
-              letterSpacing: '0.1em',
-              marginTop: '0.2rem',
-            }}
-          >
+          <div className="mt-1 font-mono text-xl font-black tracking-widest text-gold-bright">
             {session.authWord}
           </div>
         </div>
 
         <div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', textTransform: 'uppercase' }}>
+          <div className="text-caption uppercase text-fg-secondary">
             Submitted Scores
           </div>
-          <div
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '1.15rem',
-              fontWeight: 700,
-              color: '#ffffff',
-              marginTop: '0.2rem',
-            }}
-          >
+          <div className="mt-1 font-mono text-lg font-bold text-white">
             {session.scores.length > 0 ? session.scores.map(s => s.toLocaleString()).join(', ') : 'None'}
           </div>
         </div>
 
         {session.twitchVodUrl && (
-          <div style={{ gridColumn: 'span 2' }}>
-            <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', textTransform: 'uppercase' }}>
+          <div className="col-span-2">
+            <div className="text-caption uppercase text-fg-secondary">
               Broadcast VOD Link
             </div>
             <a
               href={session.twitchVodUrl}
               target="_blank"
               rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                color: '#38bdf8',
-                fontSize: '0.88rem',
-                textDecoration: 'none',
-                marginTop: '0.25rem',
-                wordBreak: 'break-all',
-              }}
+              className="mt-1 inline-flex items-center gap-1.5 break-all text-sm text-sky-400 no-underline"
             >
               <span>{session.twitchVodUrl}</span>
-              <ExternalLink size={14} style={{ flexShrink: 0 }} />
+              <ExternalLink size={14} className="shrink-0" />
             </a>
           </div>
         )}
       </div>
 
       {/* Action Links */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-3">
         {onDone && (
-          <button
+          <Button
             type="button"
             onClick={onDone}
-            className="btn btn-secondary"
-            style={{
-              padding: '0.75rem 1.25rem',
-              borderRadius: '8px',
-              fontSize: '0.92rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
+            variant="secondary"
+            className="gap-2 rounded-md px-5 py-3 text-base font-bold"
             data-testid="qual-done-button"
           >
             Done / Qualify Another Player
-          </button>
+          </Button>
         )}
         <Link
           to={`/${tournamentSlug}/leaderboard`}
-          style={{
-            padding: '0.75rem 1.5rem',
-            borderRadius: '8px',
-            background: 'var(--color-gold-bright, #f59e0b)',
-            color: '#000000',
-            fontWeight: 800,
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontSize: '0.92rem',
-          }}
+          className="inline-flex items-center gap-2 rounded-md bg-gold-bright px-6 py-3 text-base font-extrabold text-black no-underline"
           data-testid="view-leaderboard-link"
         >
           <BarChart3 size={18} />
