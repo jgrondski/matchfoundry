@@ -1,6 +1,29 @@
 import React, { useState, useId, useRef } from 'react';
 import { UserCheck, UserPlus, X, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Overlay } from '../../../components/overlay';
+import { IconButton, cn } from '../../../components/ui';
+
+const tabClass = (active: boolean) =>
+  cn(
+    'flex flex-1 cursor-pointer items-center justify-center gap-2 border-0 p-3.5 text-sm font-bold',
+    active ? 'border-b-2 border-gold-bright bg-surface text-white' : 'bg-transparent text-fg-secondary'
+  );
+
+const labelClass = 'mb-1.5 block text-sm font-semibold text-white';
+
+const fieldClass = 'w-full rounded-md border border-line bg-canvas p-3 text-base text-white';
+
+const cancelClass = (isSubmitting: boolean) =>
+  cn(
+    'rounded-md border border-line bg-transparent px-5 py-2.5 font-semibold text-fg-secondary',
+    isSubmitting ? 'cursor-not-allowed' : 'cursor-pointer'
+  );
+
+const submitClass = (enabled: boolean) =>
+  cn(
+    'rounded-md border-0 bg-gold-bright px-6 py-2.5 font-extrabold text-black',
+    enabled ? 'cursor-pointer' : 'cursor-not-allowed'
+  );
 
 export interface UnclaimedPlayerOption {
   id: string;
@@ -84,106 +107,50 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--color-border, #263342)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--color-bg-elevated, #1a222d)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div className="flex items-center justify-between border-b border-line bg-elevated px-6 py-5">
+            <div className="flex items-center gap-2.5">
               <ShieldCheck size={22} color="var(--color-gold-bright, #fbbf24)" />
-              <h3 id={titleId} style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+              <h3 id={titleId} className="m-0 text-lg font-extrabold text-white">
                 Competitor Identity Resolution
               </h3>
             </div>
-            <button
+            <IconButton
               onClick={requestClose}
               disabled={isSubmitting}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-secondary, #94a3b8)',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                padding: '0.25rem',
-              }}
+              aria-label="Cancel"
+              className="text-fg-secondary"
               title="Cancel"
             >
               <X size={20} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Twitch Profile Pill */}
-          <div
-            style={{
-              padding: '0.85rem 1.5rem',
-              background: 'rgba(168, 85, 247, 0.08)',
-              borderBottom: '1px solid rgba(168, 85, 247, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-            }}
-          >
+          <div className="flex items-center gap-3 border-b border-purple-500/20 bg-purple-500/8 px-6 py-3.5">
             {twitchUser.profileImageUrl ? (
               <img
                 src={twitchUser.profileImageUrl}
                 alt={twitchUser.displayName}
-                style={{ width: '32px', height: '32px', borderRadius: '50%' }}
+                className="size-8 rounded-full"
               />
             ) : (
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: '#a855f7',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                }}
-              >
+              <div className="flex size-8 items-center justify-center rounded-full bg-purple-500 text-sm font-bold text-white">
                 {twitchUser.displayName.slice(0, 1).toUpperCase()}
               </div>
             )}
-            <div style={{ fontSize: '0.88rem' }}>
-              <span style={{ color: 'var(--color-text-secondary, #94a3b8)' }}>Connected as: </span>
-              <strong style={{ color: '#ffffff' }}>{twitchUser.displayName}</strong>
-              <span style={{ color: '#a855f7', marginLeft: '0.4rem' }}>@{twitchUser.login}</span>
+            <div className="text-sm">
+              <span className="text-fg-secondary">Connected as: </span>
+              <strong className="text-white">{twitchUser.displayName}</strong>
+              <span className="ml-1.5 text-purple-500">@{twitchUser.login}</span>
             </div>
           </div>
 
           {/* Tab Switcher */}
-          <div
-            style={{
-              display: 'flex',
-              borderBottom: '1px solid var(--color-border, #263342)',
-              background: 'var(--color-bg-base, #0a0e14)',
-            }}
-          >
+          <div className="flex border-b border-line bg-canvas">
             <button
               type="button"
               onClick={() => setActiveTab('claim')}
-              style={{
-                flex: 1,
-                padding: '0.85rem',
-                border: 'none',
-                borderBottom: activeTab === 'claim' ? '2px solid var(--color-gold-bright, #f59e0b)' : 'none',
-                background: activeTab === 'claim' ? 'var(--color-bg-surface, #121820)' : 'transparent',
-                color: activeTab === 'claim' ? '#ffffff' : 'var(--color-text-secondary, #94a3b8)',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-              }}
+              className={tabClass(activeTab === 'claim')}
               data-testid="tab-claim-roster"
             >
               <UserCheck size={18} />
@@ -192,21 +159,7 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('new')}
-              style={{
-                flex: 1,
-                padding: '0.85rem',
-                border: 'none',
-                borderBottom: activeTab === 'new' ? '2px solid var(--color-gold-bright, #f59e0b)' : 'none',
-                background: activeTab === 'new' ? 'var(--color-bg-surface, #121820)' : 'transparent',
-                color: activeTab === 'new' ? '#ffffff' : 'var(--color-text-secondary, #94a3b8)',
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem',
-              }}
+              className={tabClass(activeTab === 'new')}
               data-testid="tab-register-new"
             >
               <UserPlus size={18} />
@@ -215,22 +168,9 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
           </div>
 
           {/* Tab Body */}
-          <div style={{ padding: '1.5rem' }}>
+          <div className="p-6">
             {errorMessage && (
-              <div
-                style={{
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  borderRadius: '8px',
-                  padding: '0.75rem 1rem',
-                  marginBottom: '1rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  color: '#f87171',
-                  fontSize: '0.88rem',
-                }}
-              >
+              <div className="mb-4 flex items-center gap-2 rounded-md border border-red/30 bg-red/10 px-4 py-3 text-sm text-red-bright">
                 <AlertTriangle size={16} />
                 <span>{errorMessage}</span>
               </div>
@@ -238,40 +178,24 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
 
             {activeTab === 'claim' ? (
               <form onSubmit={handleClaim}>
-                <p style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '1rem' }}>
+                <p className="mb-4 text-sm text-fg-secondary">
                   If you registered with tournament organizers in advance, select your competitor name below to claim
                   your roster slot. Your run will start immediately as <strong>Claimed (Pending Review)</strong>.
                 </p>
 
                 {unclaimedPlayers.length === 0 ? (
-                  <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                  <div className="p-6 text-center text-fg-muted">
                     No unclaimed players on this tournament roster. Please register as a walk-in competitor.
                   </div>
                 ) : (
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        color: '#ffffff',
-                        marginBottom: '0.5rem',
-                      }}
-                    >
+                  <div className="mb-6">
+                    <label className="mb-2 block text-sm font-semibold text-white">
                       Select Your Roster Profile
                     </label>
                     <select
                       value={selectedPlayerId}
                       onChange={e => setSelectedPlayerId(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        background: 'var(--color-bg-base, #0a0e14)',
-                        border: '1px solid var(--color-border, #263342)',
-                        color: '#ffffff',
-                        fontSize: '0.95rem',
-                      }}
+                      className={fieldClass}
                       data-testid="claim-roster-select"
                     >
                       {unclaimedPlayers.map(p => (
@@ -283,35 +207,19 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
                   </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <div className="flex justify-end gap-3">
                   <button
                     type="button"
                     onClick={requestClose}
                     disabled={isSubmitting}
-                    style={{
-                      padding: '0.65rem 1.25rem',
-                      borderRadius: '8px',
-                      border: '1px solid var(--color-border, #263342)',
-                      background: 'transparent',
-                      color: 'var(--color-text-secondary, #94a3b8)',
-                      fontWeight: 600,
-                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                    }}
+                    className={cancelClass(isSubmitting)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={!selectedPlayerId || isSubmitting}
-                    style={{
-                      padding: '0.65rem 1.5rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'var(--color-gold-bright, #f59e0b)',
-                      color: '#000000',
-                      fontWeight: 800,
-                      cursor: selectedPlayerId && !isSubmitting ? 'pointer' : 'not-allowed',
-                    }}
+                    className={submitClass(Boolean(selectedPlayerId && !isSubmitting))}
                     data-testid="submit-claim-button"
                   >
                     {isSubmitting ? 'Claiming...' : 'Claim Profile & Proceed'}
@@ -320,21 +228,13 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
               </form>
             ) : (
               <form onSubmit={handleRegister}>
-                <p style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary, #94a3b8)', marginBottom: '1rem' }}>
+                <p className="mb-4 text-sm text-fg-secondary">
                   New walk-in competitor? Create your competitor alias below. You will be registered on the roster and
                   placed as <strong>Provisional New</strong> until confirmed by tournament judges.
                 </p>
 
-                <div style={{ marginBottom: '1rem' }}>
-                  <label
-                    style={{
-                      display: 'block',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      color: '#ffffff',
-                      marginBottom: '0.4rem',
-                    }}
-                  >
+                <div className="mb-4">
+                  <label className={labelClass}>
                     Competitive Alias / Screen Name *
                   </label>
                   <input
@@ -343,31 +243,14 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
                     onChange={e => setName(e.target.value)}
                     placeholder="e.g. SharkyDAS"
                     required
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      borderRadius: '8px',
-                      background: 'var(--color-bg-base, #0a0e14)',
-                      border: '1px solid var(--color-border, #263342)',
-                      color: '#ffffff',
-                      fontSize: '0.95rem',
-                      boxSizing: 'border-box',
-                    }}
+                    className={fieldClass}
                     data-testid="register-name-input"
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div className="mb-6 grid grid-cols-2 gap-4">
                   <div>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        color: '#ffffff',
-                        marginBottom: '0.4rem',
-                      }}
-                    >
+                    <label className={labelClass}>
                       Country Code (ISO 2-Letter)
                     </label>
                     <input
@@ -376,45 +259,19 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
                       onChange={e => setCountry(e.target.value.toUpperCase().slice(0, 2))}
                       placeholder="US"
                       maxLength={2}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        background: 'var(--color-bg-base, #0a0e14)',
-                        border: '1px solid var(--color-border, #263342)',
-                        color: '#ffffff',
-                        fontSize: '0.95rem',
-                        boxSizing: 'border-box',
-                      }}
+                      className={fieldClass}
                       data-testid="register-country-input"
                     />
                   </div>
 
                   <div>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        color: '#ffffff',
-                        marginBottom: '0.4rem',
-                      }}
-                    >
+                    <label className={labelClass}>
                       NES Playstyle
                     </label>
                     <select
                       value={playstyle}
                       onChange={e => setPlaystyle(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        background: 'var(--color-bg-base, #0a0e14)',
-                        border: '1px solid var(--color-border, #263342)',
-                        color: '#ffffff',
-                        fontSize: '0.95rem',
-                        boxSizing: 'border-box',
-                      }}
+                      className={fieldClass}
                       data-testid="register-playstyle-select"
                     >
                       <option value="DAS">DAS</option>
@@ -425,35 +282,19 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <div className="flex justify-end gap-3">
                   <button
                     type="button"
                     onClick={requestClose}
                     disabled={isSubmitting}
-                    style={{
-                      padding: '0.65rem 1.25rem',
-                      borderRadius: '8px',
-                      border: '1px solid var(--color-border, #263342)',
-                      background: 'transparent',
-                      color: 'var(--color-text-secondary, #94a3b8)',
-                      fontWeight: 600,
-                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                    }}
+                    className={cancelClass(isSubmitting)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={!name.trim() || isSubmitting}
-                    style={{
-                      padding: '0.65rem 1.5rem',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: 'var(--color-gold-bright, #f59e0b)',
-                      color: '#000000',
-                      fontWeight: 800,
-                      cursor: name.trim() && !isSubmitting ? 'pointer' : 'not-allowed',
-                    }}
+                    className={submitClass(Boolean(name.trim() && !isSubmitting))}
                     data-testid="submit-register-button"
                   >
                     {isSubmitting ? 'Registering...' : 'Register & Proceed'}

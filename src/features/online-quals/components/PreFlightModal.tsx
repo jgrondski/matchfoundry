@@ -4,6 +4,13 @@ import type { PointsThreshold } from '../../tournament/types';
 import { qualFormatLabel } from '../../qualifiers/qualFormatLabel';
 import { PointsInfoTip } from '../../qualifiers/components/PointsInfoTip';
 import { Overlay } from '../../../components/overlay';
+import { IconButton, cn } from '../../../components/ui';
+
+const checkItemClass = (checked: boolean) =>
+  cn(
+    'flex cursor-pointer items-start gap-3 rounded-md border p-3.5',
+    checked ? 'border-green-500/40 bg-green-500/8' : 'border-line bg-white/3'
+  );
 
 export interface PreFlightModalProps {
   isOpen: boolean;
@@ -54,54 +61,32 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--color-border, #263342)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'var(--color-bg-elevated, #1a222d)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div className="flex items-center justify-between border-b border-line bg-elevated px-6 py-5">
+            <div className="flex items-center gap-2.5">
               <ShieldCheck size={22} color="var(--color-gold-bright, #fbbf24)" />
-              <h3 id={titleId} style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+              <h3 id={titleId} className="m-0 text-lg font-extrabold text-white">
                 Qualifier Checklist
               </h3>
             </div>
-            <button
+            <IconButton
               onClick={requestClose}
               disabled={isStarting}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-secondary, #94a3b8)',
-                cursor: isStarting ? 'not-allowed' : 'pointer',
-                padding: '0.25rem',
-              }}
+              aria-label="Close"
+              className="text-fg-secondary"
               title="Close"
             >
               <X size={20} />
-            </button>
+            </IconButton>
           </div>
 
           {/* Body */}
-          <div style={{ padding: '1.5rem', overflowY: 'auto', maxHeight: '70vh' }}>
+          <div className="max-h-[70vh] overflow-y-auto p-6">
             {/* Rules Summary Box */}
-            <div
-              style={{
-                background: 'rgba(245, 158, 11, 0.08)',
-                border: '1px solid rgba(245, 158, 11, 0.3)',
-                borderRadius: '8px',
-                padding: '1rem',
-                marginBottom: '1.5rem',
-              }}
-            >
-              <div style={{ fontWeight: 700, color: 'var(--color-gold-bright, #fbbf24)', marginBottom: '0.25rem' }}>
+            <div className="mb-6 rounded-md border border-gold/30 bg-gold/8 p-4">
+              <div className="mb-1 font-bold text-gold-bright">
                 {tournamentName}
               </div>
-              <div style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary, #94a3b8)', lineHeight: 1.5 }}>
+              <div className="text-sm leading-normal text-fg-secondary">
                 <strong>Window:</strong> {qualWindowMinutes} minutes &bull; <strong>Format:</strong> {qualFormatLabel(qualFormat, qualAverageCount)}
                 {qualFormat === 'POINTS' && (
                   <>
@@ -112,35 +97,24 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
               </div>
             </div>
 
-            <p style={{ fontSize: '0.9rem', color: '#e2e8f0', marginBottom: '1rem', fontWeight: 600 }}>
+            <p className="mb-4 text-sm font-semibold text-slate-200">
               Before launching your official run, please verify every requirement:
             </p>
 
             {/* Checklist Items */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            <div className="flex flex-col gap-3.5">
               {/* Item 1: Stream Live */}
               <label
                 onClick={() => setCheckLive(!checkLive)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  background: checkLive ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-                  border: `1px solid ${checkLive ? 'rgba(34, 197, 94, 0.4)' : 'var(--color-border, #263342)'}`,
-                  borderRadius: '8px',
-                  padding: '0.85rem',
-                }}
+                className={checkItemClass(checkLive)}
               >
-                <div
-                  style={{ cursor: 'pointer', color: checkLive ? '#22c55e' : 'var(--color-text-muted, #64748b)' }}
-                >
+                <div className={cn('cursor-pointer', checkLive ? 'text-green-500' : 'text-fg-muted')}>
                   {checkLive ? <CheckSquare size={20} /> : <Square size={20} />}
                 </div>
-                <div style={{ fontSize: '0.88rem', color: '#f0f6fc' }}>
+                <div className="text-sm text-fg">
                   <div>
                     My Twitch stream is currently <strong>LIVE</strong> at{' '}
-                    <span style={{ color: '#a855f7' }}>twitch.tv/{twitchUsername}</span>.
+                    <span className="text-purple-500">twitch.tv/{twitchUsername}</span>.
                   </div>
                 </div>
               </label>
@@ -148,23 +122,12 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
               {/* Item 2: Store past broadcasts */}
               <label
                 onClick={() => setCheckVodStorage(!checkVodStorage)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  background: checkVodStorage ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-                  border: `1px solid ${checkVodStorage ? 'rgba(34, 197, 94, 0.4)' : 'var(--color-border, #263342)'}`,
-                  borderRadius: '8px',
-                  padding: '0.85rem',
-                }}
+                className={checkItemClass(checkVodStorage)}
               >
-                <div
-                  style={{ cursor: 'pointer', color: checkVodStorage ? '#22c55e' : 'var(--color-text-muted, #64748b)' }}
-                >
+                <div className={cn('cursor-pointer', checkVodStorage ? 'text-green-500' : 'text-fg-muted')}>
                   {checkVodStorage ? <CheckSquare size={20} /> : <Square size={20} />}
                 </div>
-                <div style={{ fontSize: '0.88rem', color: '#f0f6fc' }}>
+                <div className="text-sm text-fg">
                   <div>
                     <strong>Store past broadcasts</strong> is toggled <strong>ON</strong> in Creator Dashboard.
                   </div>
@@ -174,23 +137,12 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
               {/* Item 3: On-stream countdown timer (the portal does not display one) */}
               <label
                 onClick={() => setCheckStreamTimer(!checkStreamTimer)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  background: checkStreamTimer ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-                  border: `1px solid ${checkStreamTimer ? 'rgba(34, 197, 94, 0.4)' : 'var(--color-border, #263342)'}`,
-                  borderRadius: '8px',
-                  padding: '0.85rem',
-                }}
+                className={checkItemClass(checkStreamTimer)}
               >
-                <div
-                  style={{ cursor: 'pointer', color: checkStreamTimer ? '#22c55e' : 'var(--color-text-muted, #64748b)' }}
-                >
+                <div className={cn('cursor-pointer', checkStreamTimer ? 'text-green-500' : 'text-fg-muted')}>
                   {checkStreamTimer ? <CheckSquare size={20} /> : <Square size={20} />}
                 </div>
-                <div style={{ fontSize: '0.88rem', color: '#f0f6fc' }}>
+                <div className="text-sm text-fg">
                   <div>
                     A visible <strong>{qualWindowMinutes}-minute countdown timer</strong> is on my Twitch scene.
                   </div>
@@ -200,27 +152,16 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
               {/* Item 4: Authword rule */}
               <label
                 onClick={() => setCheckAuthwordRule(!checkAuthwordRule)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  background: checkAuthwordRule ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-                  border: `1px solid ${checkAuthwordRule ? 'rgba(34, 197, 94, 0.4)' : 'var(--color-border, #263342)'}`,
-                  borderRadius: '8px',
-                  padding: '0.85rem',
-                }}
+                className={checkItemClass(checkAuthwordRule)}
               >
-                <div
-                  style={{ cursor: 'pointer', color: checkAuthwordRule ? '#22c55e' : 'var(--color-text-muted, #64748b)' }}
-                >
+                <div className={cn('cursor-pointer', checkAuthwordRule ? 'text-green-500' : 'text-fg-muted')}>
                   {checkAuthwordRule ? <CheckSquare size={20} /> : <Square size={20} />}
                 </div>
-                <div style={{ fontSize: '0.88rem', color: '#f0f6fc' }}>
+                <div className="text-sm text-fg">
                   <div>
                     I understand the <strong>NES Authword proof rule</strong>.
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.2rem' }}>
+                  <div className="mt-1 text-caption text-fg-secondary">
                     Before starting the timer, play a game to 10k, top out, and enter authword in the high score post-game.
                   </div>
                 </div>
@@ -229,27 +170,16 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
               {/* Item 5: Time window */}
               <label
                 onClick={() => setCheckTimeLimit(!checkTimeLimit)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.75rem',
-                  cursor: 'pointer',
-                  background: checkTimeLimit ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
-                  border: `1px solid ${checkTimeLimit ? 'rgba(34, 197, 94, 0.4)' : 'var(--color-border, #263342)'}`,
-                  borderRadius: '8px',
-                  padding: '0.85rem',
-                }}
+                className={checkItemClass(checkTimeLimit)}
               >
-                <div
-                  style={{ cursor: 'pointer', color: checkTimeLimit ? '#22c55e' : 'var(--color-text-muted, #64748b)' }}
-                >
+                <div className={cn('cursor-pointer', checkTimeLimit ? 'text-green-500' : 'text-fg-muted')}>
                   {checkTimeLimit ? <CheckSquare size={20} /> : <Square size={20} />}
                 </div>
-                <div style={{ fontSize: '0.88rem', color: '#f0f6fc' }}>
+                <div className="text-sm text-fg">
                   <div>
                     I understand the <strong>{qualWindowMinutes}-minute window</strong>.
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.2rem' }}>
+                  <div className="mt-1 text-caption text-fg-secondary">
                     After authword, start the timer and begin playing. Any game in progress at the end of the timer will count.
                   </div>
                 </div>
@@ -258,47 +188,25 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              borderTop: '1px solid var(--color-border, #263342)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '0.75rem',
-              background: 'var(--color-bg-elevated, #1a222d)',
-            }}
-          >
+          <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated px-6 py-5">
             <button
               onClick={requestClose}
               disabled={isStarting}
-              style={{
-                padding: '0.65rem 1.25rem',
-                borderRadius: '8px',
-                border: '1px solid var(--color-border, #263342)',
-                background: 'transparent',
-                color: 'var(--color-text-secondary, #94a3b8)',
-                fontWeight: 600,
-                cursor: isStarting ? 'not-allowed' : 'pointer',
-              }}
+              className={cn(
+                'rounded-md border border-line bg-transparent px-5 py-2.5 font-semibold text-fg-secondary',
+                isStarting ? 'cursor-not-allowed' : 'cursor-pointer'
+              )}
             >
               Cancel
             </button>
             <button
               onClick={onConfirm}
               disabled={!allChecked || isStarting}
-              style={{
-                padding: '0.65rem 1.5rem',
-                borderRadius: '8px',
-                border: 'none',
-                background: allChecked ? 'var(--color-gold-bright, #f59e0b)' : '#334155',
-                color: allChecked ? '#000000' : '#94a3b8',
-                fontWeight: 800,
-                cursor: allChecked && !isStarting ? 'pointer' : 'not-allowed',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}
+              className={cn(
+                'flex items-center gap-2 rounded-md border-0 px-6 py-2.5 font-extrabold',
+                allChecked ? 'bg-gold-bright text-black' : 'bg-slate-700 text-fg-secondary',
+                allChecked && !isStarting ? 'cursor-pointer' : 'cursor-not-allowed'
+              )}
               data-testid="confirm-begin-button"
             >
               {isStarting ? 'Launching Run...' : 'Confirm & Begin Qual'}

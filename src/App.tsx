@@ -82,55 +82,24 @@ export const App: React.FC = () => {
 
   if (configError) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'var(--color-bg-base, #0d1117)',
-          color: 'var(--color-text-primary, #ffffff)',
-          padding: '2rem',
-          fontFamily: 'Inter, system-ui, sans-serif',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '560px',
-            background: 'var(--color-bg-surface, #161b22)',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
-            borderRadius: '12px',
-            padding: '2rem',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem', color: '#f87171' }}>
+      <div className="flex min-h-screen items-center justify-center bg-canvas p-8 font-sans text-fg">
+        <div className="max-w-140 rounded-md border border-red/40 bg-surface p-8 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+          <div className="mb-5 flex items-center gap-3 text-red-bright">
             <AlertTriangle size={28} />
-            <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Database Configuration Missing</h2>
+            <h2 className="m-0 text-xl font-bold">Database Configuration Missing</h2>
           </div>
-          <p style={{ color: 'var(--color-text-secondary, #8b949e)', fontSize: '0.95rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+          <p className="mb-6 text-base leading-normal text-fg-secondary">
             {configError}
           </p>
-          <div
-            style={{
-              background: '#0d1117',
-              border: '1px solid #30363d',
-              borderRadius: '8px',
-              padding: '1rem',
-              fontFamily: 'monospace',
-              fontSize: '0.88rem',
-              color: '#58a6ff',
-              marginBottom: '1.5rem',
-            }}
-          >
+          <div className="mb-6 rounded-md border border-[#30363d] bg-canvas p-4 font-mono text-sm text-[#58a6ff]">
             <div># 1. Copy environment template:</div>
-            <div style={{ color: '#e6edf3', marginBottom: '0.75rem' }}>cp .env.example .env</div>
+            <div className="mb-3 text-fg">cp .env.example .env</div>
             <div># 2. Start PostgreSQL container:</div>
-            <div style={{ color: '#e6edf3', marginBottom: '0.75rem' }}>npm run db:up</div>
+            <div className="mb-3 text-fg">npm run db:up</div>
             <div># 3. Push schema:</div>
-            <div style={{ color: '#e6edf3' }}>npm run db:push</div>
+            <div className="text-fg">npm run db:push</div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#8b949e', fontSize: '0.82rem' }}>
+          <div className="flex items-center gap-2 text-caption text-[#8b949e]">
             <Database size={16} />
             <span>PostgreSQL via Drizzle ORM is required for all application state.</span>
           </div>

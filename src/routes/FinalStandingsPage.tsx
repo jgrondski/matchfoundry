@@ -6,6 +6,7 @@ import { SpectatorLayout } from '../components/SpectatorLayout';
 import { FinalStandingsTable } from '../features/tournament/components/FinalStandingsTable';
 import { ShareBracketModal } from '../features/bracket/components/ShareBracketModal';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { Button, cn } from '../components/ui';
 
 export const FinalStandingsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -37,11 +38,11 @@ export const FinalStandingsPage: React.FC = () => {
   const tournament = slug ? getTournamentBySlug(slug) : undefined;
   if (!tournament) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+      <div className="p-12 text-center text-fg-secondary">
         <h2>Tournament Not Found</h2>
-        <button onClick={() => navigate('/')} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+        <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
-        </button>
+        </Button>
       </div>
     );
   }
@@ -50,8 +51,8 @@ export const FinalStandingsPage: React.FC = () => {
 
   if (isObsMode) {
     return (
-      <div className="obs-mode-canvas" style={{ width: '100%', minHeight: '100vh', background: 'transparent', padding: '2rem 1.5rem', boxSizing: 'border-box' }}>
-        <div style={{ maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
+      <div className="obs-mode-canvas min-h-screen w-full bg-transparent px-6 py-8">
+        <div className="mx-auto w-full max-w-300">
           <FinalStandingsTable tournament={tournament} isObsMode={true} />
         </div>
       </div>
@@ -60,22 +61,12 @@ export const FinalStandingsPage: React.FC = () => {
 
   const mainContent = (
     <main
-      style={
+      className={cn(
+        'mx-auto flex-1 px-6',
         isStandingsGated
-          ? {
-              flex: 1,
-              padding: '3rem 1.5rem',
-              textAlign: 'center',
-              maxWidth: '600px',
-              margin: '0 auto',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '1rem',
-            }
-          : { flex: 1, padding: '2rem 1.5rem', maxWidth: '1200px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }
-      }
+          ? 'flex max-w-150 flex-col items-center justify-center gap-4 py-12 text-center'
+          : 'w-full max-w-300 py-8'
+      )}
     >
       <FinalStandingsTable tournament={tournament} />
     </main>

@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle2, Sparkles, Play, Trash2 } from 'lucide-react';
 
 import { SeedingMethod } from '../../types';
+import { Button, cn } from '../../../../components/ui';
 
 interface DataSimulationSectionProps {
   seedingMethod?: SeedingMethod;
@@ -32,57 +33,27 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
   const hasRecordedMatches = recordedMatchCount > 0;
 
   return (
-    <section
-      style={{
-        background: 'var(--color-bg-surface)',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--color-border)',
-        padding: '1rem 1.25rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.85rem',
-      }}
-    >
-      <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.65rem' }}>
-        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+    <section className="flex flex-col gap-3.5 rounded-lg border border-line bg-surface py-4 px-5">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-line pb-2">
+        <h2 className="m-0 text-lg font-bold text-fg">
           Data Management &amp; Simulation
         </h2>
 
         {/* Right-aligned Data Status Summary */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-          <div
-            style={{
-              padding: '0.3rem 0.65rem',
-              background: 'var(--color-bg-surface-elevated)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--color-border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex items-center gap-2 rounded-sm border border-line-subtle bg-elevated py-1 px-2.5">
+            <span className="text-xs font-semibold text-fg-muted">
               {isManual ? 'Registered Seeds' : 'Qualifier Attempts'}
             </span>
-            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: seedCount > 0 ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>
+            <span className={cn('font-mono text-base font-extrabold', seedCount > 0 ? 'text-gold-bright' : 'text-fg-secondary')}>
               {seedCount}
             </span>
           </div>
-          <div
-            style={{
-              padding: '0.3rem 0.65rem',
-              background: 'var(--color-bg-surface-elevated)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--color-border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+          <div className="flex items-center gap-2 rounded-sm border border-line-subtle bg-elevated py-1 px-2.5">
+            <span className="text-xs font-semibold text-fg-muted">
               Recorded Matches
             </span>
-            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: recordedMatchCount > 0 ? 'var(--color-gold-bright)' : 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>
+            <span className={cn('font-mono text-base font-extrabold', recordedMatchCount > 0 ? 'text-gold-bright' : 'text-fg-secondary')}>
               {recordedMatchCount}
             </span>
           </div>
@@ -91,63 +62,30 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
 
       {/* Feedback message banner if any */}
       {simFeedback && (
-        <div
-          style={{
-            padding: '0.6rem 0.85rem',
-            background: 'rgba(34, 197, 94, 0.12)',
-            border: '1px solid rgba(34, 197, 94, 0.4)',
-            borderRadius: 'var(--radius-sm)',
-            color: '#4ade80',
-            fontSize: '0.82rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            animation: 'fadeIn 0.2s ease-out',
-          }}
-        >
+        <div className="flex animate-fade-in items-center gap-2 rounded-sm border border-green-500/40 bg-green-500/12 py-2.5 px-3.5 text-caption text-green-400">
           <CheckCircle2 size={15} />
           <span>{simFeedback}</span>
         </div>
       )}
 
       {/* Sandbox Simulation & Maintenance Controls Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.85rem' }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3.5">
         {/* Sandbox Simulation */}
-        <div
-          style={{
-            padding: '0.75rem 0.95rem',
-            background: 'var(--color-bg-surface-elevated)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border-subtle)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.55rem',
-          }}
-        >
+        <div className="flex flex-col gap-2 rounded-md border border-line-subtle bg-elevated py-3 px-4">
           <div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <div className="text-sm font-bold text-fg">
               Sandbox Simulation
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+            <div className="text-xs text-fg-muted">
               {isManual ? 'Generate simulated player seeds or run full tournament matches.' : 'Seed simulated scores or run full tournament matches.'}
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-            <button
-              type="button"
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
               onClick={onSeedQualifiers}
               disabled={hasSeeds || hasRecordedMatches}
-              className="btn btn-secondary"
-              style={{
-                padding: '0.4rem 0.85rem',
-                fontSize: '0.8rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                opacity: (hasSeeds || hasRecordedMatches) ? 0.45 : 1,
-                cursor: (hasSeeds || hasRecordedMatches) ? 'not-allowed' : 'pointer',
-              }}
+              className="gap-1.5 py-1.5 px-3.5 text-caption"
               title={
                 hasRecordedMatches
                   ? 'Match play has begun. Clear match scores or all tournament data to re-seed.'
@@ -156,24 +94,14 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
                   : (isManual ? 'Generate realistic competitors and manual seed order' : 'Generate realistic competitors and qualifier attempts')
               }
             >
-              <Sparkles size={14} style={{ color: 'var(--color-gold-bright)' }} />
+              <Sparkles size={14} className="text-gold-bright" />
               {isManual ? 'Generate Seeds' : 'Seed Qualifiers'}
-            </button>
+            </Button>
 
-            <button
-              type="button"
+            <Button
               onClick={onSimulate}
               disabled={!hasTiers || hasRecordedMatches}
-              className="btn btn-secondary"
-              style={{
-                padding: '0.4rem 0.85rem',
-                fontSize: '0.8rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                opacity: (!hasTiers || hasRecordedMatches) ? 0.45 : 1,
-                cursor: (!hasTiers || hasRecordedMatches) ? 'not-allowed' : 'pointer',
-              }}
+              className="gap-1.5 py-1.5 px-3.5 text-caption"
               title={
                 !hasTiers
                   ? 'Add at least one bracket tier first before simulating tournament matches'
@@ -184,61 +112,37 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
                   : (isManual ? 'Generate seeds, lock brackets, and simulate all tournament matches' : 'Seed qualifiers, lock brackets, and simulate all tournament matches')
               }
             >
-              <Play size={14} style={{ color: '#60a5fa' }} />
+              <Play size={14} className="text-blue-400" />
               {hasSeeds ? 'Simulate Matches' : 'Seed & Simulate'}
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Data Maintenance */}
-        <div
-          style={{
-            padding: '0.75rem 0.95rem',
-            background: 'var(--color-bg-surface-elevated)',
-            borderRadius: 'var(--radius-md)',
-            border: '1px solid var(--color-border-subtle)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.55rem',
-          }}
-        >
+        <div className="flex flex-col gap-2 rounded-md border border-line-subtle bg-elevated py-3 px-4">
           <div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <div className="text-sm font-bold text-fg">
               Data Maintenance
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+            <div className="text-xs text-fg-muted">
               {isManual ? 'Clear match results or registered player seeds.' : 'Clear match results or qualifier submissions.'}
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
-            <button
-              type="button"
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
               onClick={() => onRequestDataAction('MATCHES')}
               disabled={recordedMatchCount === 0}
-              className="btn btn-secondary"
-              style={{
-                padding: '0.38rem 0.75rem',
-                fontSize: '0.78rem',
-                opacity: recordedMatchCount === 0 ? 0.4 : 1,
-                cursor: recordedMatchCount === 0 ? 'not-allowed' : 'pointer',
-              }}
+              className="py-1.5 px-3 text-caption"
               title={recordedMatchCount === 0 ? 'No recorded match scores to clear' : 'Clear all recorded match scores'}
             >
               Clear Matches ({recordedMatchCount})
-            </button>
+            </Button>
 
-            <button
-              type="button"
+            <Button
               onClick={() => onRequestDataAction('QUALS')}
               disabled={seedCount === 0 || hasRecordedMatches}
-              className="btn btn-secondary"
-              style={{
-                padding: '0.38rem 0.75rem',
-                fontSize: '0.78rem',
-                opacity: (seedCount === 0 || hasRecordedMatches) ? 0.4 : 1,
-                cursor: (seedCount === 0 || hasRecordedMatches) ? 'not-allowed' : 'pointer',
-              }}
+              className="py-1.5 px-3 text-caption"
               title={
                 hasRecordedMatches
                   ? 'Cannot clear qualifier data while match scores exist. Execute "Clear Matches" first.'
@@ -248,23 +152,17 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
               }
             >
               {isManual ? `Clear Seeds (${seedCount})` : `Clear Quals (${seedCount})`}
-            </button>
+            </Button>
 
-            <button
-              type="button"
+            <Button
+              variant="danger"
               onClick={() => onRequestDataAction('ALL')}
               disabled={seedCount === 0 && recordedMatchCount === 0}
-              className="btn btn-danger"
-              style={{
-                padding: '0.38rem 0.75rem',
-                fontSize: '0.78rem',
-                opacity: (seedCount === 0 && recordedMatchCount === 0) ? 0.4 : 1,
-                cursor: (seedCount === 0 && recordedMatchCount === 0) ? 'not-allowed' : 'pointer',
-              }}
+              className="py-1.5 px-3 text-caption"
               title={seedCount === 0 && recordedMatchCount === 0 ? 'No data to clear' : 'Clear all tournament data'}
             >
               <Trash2 size={13} /> Clear All
-            </button>
+            </Button>
           </div>
         </div>
       </div>

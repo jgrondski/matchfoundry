@@ -7,6 +7,7 @@ import { LeaderboardTable } from '../features/qualifiers/components/LeaderboardT
 import { ManualSeedingManager } from '../features/tournament/components/seeding/ManualSeedingManager';
 import { ShareBracketModal } from '../features/bracket/components/ShareBracketModal';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { Button } from '../components/ui';
 
 export const PublicLeaderboardPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -38,11 +39,11 @@ export const PublicLeaderboardPage: React.FC = () => {
   const tournament = slug ? getTournamentBySlug(slug) : undefined;
   if (!tournament) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+      <div className="p-12 text-center text-fg-secondary">
         <h2>Tournament Not Found</h2>
-        <button onClick={() => navigate('/')} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+        <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
-        </button>
+        </Button>
       </div>
     );
   }
@@ -51,8 +52,8 @@ export const PublicLeaderboardPage: React.FC = () => {
   if (tournament.seedingMethod === 'MANUAL') {
     if (isObsMode) {
       return (
-        <div className="obs-mode-canvas" style={{ width: '100%', minHeight: '100vh', background: 'transparent', padding: '2rem 1.5rem', boxSizing: 'border-box' }}>
-          <div style={{ maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
+        <div className="obs-mode-canvas min-h-screen w-full bg-transparent px-6 py-8">
+          <div className="mx-auto w-full max-w-300">
             <ManualSeedingManager tournament={tournament} canManage={false} isObsMode={true} />
           </div>
         </div>
@@ -62,7 +63,7 @@ export const PublicLeaderboardPage: React.FC = () => {
     if (isManageRoute) {
       return (
         <TournamentLayout tournament={tournament} activeView="leaderboard">
-          <main style={{ flex: 1, padding: '2rem 1.5rem', maxWidth: '1200px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+          <main className="mx-auto w-full max-w-300 flex-1 px-6 py-8">
             <ManualSeedingManager tournament={tournament} canManage={true} />
           </main>
         </TournamentLayout>
@@ -75,7 +76,7 @@ export const PublicLeaderboardPage: React.FC = () => {
         activeView="leaderboard"
         onOpenShare={() => setIsShareModalOpen(true)}
       >
-        <main style={{ flex: 1, padding: '2rem 1.5rem', maxWidth: '1200px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+        <main className="mx-auto w-full max-w-300 flex-1 px-6 py-8">
           <ManualSeedingManager tournament={tournament} canManage={false} />
         </main>
 
@@ -90,8 +91,8 @@ export const PublicLeaderboardPage: React.FC = () => {
 
   if (isObsMode) {
     return (
-      <div className="obs-mode-canvas" style={{ width: '100%', minHeight: '100vh', background: 'transparent', padding: '2rem 1.5rem', boxSizing: 'border-box' }}>
-        <div style={{ maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
+      <div className="obs-mode-canvas min-h-screen w-full bg-transparent px-6 py-8">
+        <div className="mx-auto w-full max-w-300">
           <LeaderboardTable tournament={tournament} isObsMode={true} />
         </div>
       </div>
@@ -101,7 +102,7 @@ export const PublicLeaderboardPage: React.FC = () => {
   if (isManageRoute) {
     return (
       <TournamentLayout tournament={tournament} activeView="leaderboard">
-        <main style={{ flex: 1, padding: '2rem 1.5rem', maxWidth: '1200px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+        <main className="mx-auto w-full max-w-300 flex-1 px-6 py-8">
           <LeaderboardTable tournament={tournament} canManage={true} />
         </main>
       </TournamentLayout>
@@ -114,7 +115,7 @@ export const PublicLeaderboardPage: React.FC = () => {
       activeView="leaderboard"
       onOpenShare={() => setIsShareModalOpen(true)}
     >
-      <main style={{ flex: 1, padding: '2rem 1.5rem', maxWidth: '1200px', width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+      <main className="mx-auto w-full max-w-300 flex-1 px-6 py-8">
         <LeaderboardTable tournament={tournament} canManage={false} />
       </main>
 

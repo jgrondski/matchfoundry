@@ -13,6 +13,10 @@ import { ReviewQueueTable } from './ReviewQueueTable';
 import { AdjudicationModal } from './AdjudicationModal';
 import { IdentityResolutionModal } from './IdentityResolutionModal';
 import { ConfirmDialog } from '../../../components/overlay';
+import { cn } from '../../../components/ui';
+
+const metricCardClass = 'flex items-center justify-between rounded-md border border-line bg-surface p-4.5';
+const metricLabelClass = 'text-xs font-bold uppercase text-fg-muted';
 
 export interface ReviewQueueViewProps {
   tournament: Tournament;
@@ -252,32 +256,16 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
   const isQualsClosed = Boolean(tournament.isLocked);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
+    <div className="flex w-full flex-col gap-6">
       {/* Top Banner / Metrics */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1rem',
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
         {/* Pending Review Metric */}
-        <div
-          style={{
-            background: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1.15rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+        <div className={metricCardClass}>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+            <div className={metricLabelClass}>
               Pending Review
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 900, color: pendingUnverifiedCount > 0 ? 'var(--color-gold-bright)' : '#ffffff', marginTop: '0.2rem' }}>
+            <div className={cn('mt-1 text-3xl font-black', pendingUnverifiedCount > 0 ? 'text-gold-bright' : 'text-white')}>
               {pendingUnverifiedCount}
             </div>
           </div>
@@ -285,45 +273,24 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         </div>
 
         {/* Qualifiers Status Metric */}
-        <div
-          style={{
-            background: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1.15rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+        <div className={metricCardClass}>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+            <div className={metricLabelClass}>
               Qualifiers State
             </div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: isQualsClosed ? '#ef4444' : '#4ade80', marginTop: '0.2rem' }}>
+            <div className={cn('mt-1 text-xl font-extrabold', isQualsClosed ? 'text-red' : 'text-green-400')}>
               {isQualsClosed ? 'Closed (Brackets Locked)' : 'Open / Receiving'}
             </div>
           </div>
         </div>
 
         {/* Batch Actions: Verify All */}
-        <div
-          style={{
-            background: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1.15rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-          }}
-        >
+        <div className={cn(metricCardClass, 'gap-4')}>
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+            <div className={metricLabelClass}>
               Batch Verify
             </div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', marginTop: '0.3rem' }}>
+            <div className="mt-1 text-sm text-fg-secondary">
               {pendingUnverifiedCount > 0
                 ? `${pendingUnverifiedCount} run${pendingUnverifiedCount === 1 ? '' : 's'} awaiting review`
                 : 'All runs verified'}
@@ -334,21 +301,13 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
             data-testid="verify-all-button"
             disabled={pendingUnverifiedCount === 0 || isSubmitting}
             onClick={() => setIsVerifyAllModalOpen(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              padding: '0.55rem 0.95rem',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              borderRadius: 'var(--radius-md)',
-              background: pendingUnverifiedCount > 0 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-              border: `1px solid ${pendingUnverifiedCount > 0 ? 'rgba(234, 179, 8, 0.45)' : 'var(--color-border)'}`,
-              color: pendingUnverifiedCount > 0 ? 'var(--color-gold-bright)' : 'var(--color-text-muted)',
-              cursor: pendingUnverifiedCount > 0 && !isSubmitting ? 'pointer' : 'not-allowed',
-              transition: 'all 0.15s ease',
-              whiteSpace: 'nowrap',
-            }}
+            className={cn(
+              'inline-flex items-center gap-2 whitespace-nowrap rounded-md border px-4 py-2 text-caption font-bold transition-all duration-150',
+              pendingUnverifiedCount > 0
+                ? 'border-[rgba(234,179,8,0.45)] bg-[rgba(234,179,8,0.15)] text-gold-bright'
+                : 'border-line bg-white/5 text-fg-muted',
+              pendingUnverifiedCount > 0 && !isSubmitting ? 'cursor-pointer' : 'cursor-not-allowed'
+            )}
           >
             <CheckCheck size={16} />
             Verify All
@@ -359,26 +318,17 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       {/* Status Notice */}
       {statusMessage && (
         <div
-          style={{
-            padding: '0.75rem 1rem',
-            borderRadius: 'var(--radius-md)',
-            background: statusMessage.startsWith('Error')
-              ? 'rgba(239, 68, 68, 0.15)'
-              : 'rgba(34, 197, 94, 0.15)',
-            border: statusMessage.startsWith('Error')
-              ? '1px solid rgba(239, 68, 68, 0.4)'
-              : '1px solid rgba(34, 197, 94, 0.4)',
-            color: statusMessage.startsWith('Error') ? '#fca5a5' : '#86efac',
-            fontSize: '0.85rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
+          className={cn(
+            'flex items-center justify-between rounded-md border px-4 py-3 text-sm',
+            statusMessage.startsWith('Error')
+              ? 'border-red/40 bg-red/15 text-red-300'
+              : 'border-green-500/40 bg-green-500/15 text-green-300'
+          )}
         >
           <span>{statusMessage}</span>
           <button
             onClick={() => setStatusMessage(null)}
-            style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}
+            className="cursor-pointer border-0 bg-transparent text-inherit"
           >
             <X size={16} />
           </button>

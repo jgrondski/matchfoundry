@@ -4,6 +4,7 @@ import { Trophy, Building2, Users, Zap, ArrowRight, ShieldCheck, LogOut, KeyRoun
 import { useTournament } from '../features/tournament/store';
 import { useOrganization } from '../features/organizations/store';
 import { usePinAuth } from '../features/auth/AuthContext';
+import { cn } from './ui';
 
 export const TopNavSwitcher: React.FC = () => {
   const location = useLocation();
@@ -52,51 +53,17 @@ export const TopNavSwitcher: React.FC = () => {
   };
 
   return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '0.75rem 1.5rem',
-        background: 'rgba(9, 13, 22, 0.85)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))',
-        width: '100%',
-        boxSizing: 'border-box',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '1180px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'relative',
-          boxSizing: 'border-box',
-        }}
-      >
+    <header className="sticky top-0 z-1000 flex w-full items-center justify-center border-b border-line-subtle bg-canvas/85 px-6 py-3 backdrop-blur-md">
+      <div className="relative flex w-full max-w-295 items-center justify-between">
         {/* Left: Brand / Switcher Home Link */}
         <Link
           to="/"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            textDecoration: 'none',
-            color: 'var(--color-text-primary, #ffffff)',
-            fontWeight: 800,
-            fontSize: '1rem',
-            letterSpacing: '-0.02em',
-          }}
+          className="inline-flex items-center gap-2 text-base font-extrabold tracking-tight text-fg no-underline"
         >
           <Trophy size={18} color="var(--color-gold-bright, #ffc905)" />
           <span>
-            MATCH<span style={{ color: 'var(--color-gold-bright, #ffc905)' }}>FOUNDRY</span>
-            <sup style={{ fontSize: '0.65em', marginLeft: '1px', color: 'var(--color-gold-bright, #ffc905)' }}>™</sup>
+            MATCH<span className="text-gold-bright">FOUNDRY</span>
+            <sup className="ml-px text-3xs text-gold-bright">™</sup>
           </span>
         </Link>
 
@@ -104,21 +71,11 @@ export const TopNavSwitcher: React.FC = () => {
         {showAdminNav ? (
           <nav
             aria-label="Global System Navigation"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${navTabs.length}, minmax(0, 1fr))`,
-              alignItems: 'center',
-              padding: '0.3rem',
-              background: 'var(--color-bg-surface-elevated, #161922)',
-              borderRadius: 'var(--radius-full, 9999px)',
-              border: '1px solid var(--color-border, rgba(255,255,255,0.1))',
-              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
-              gap: '0.25rem',
-              width: '100%',
-              maxWidth: navTabs.length === 2 ? '360px' : '520px',
-              margin: '0 auto',
-              boxSizing: 'border-box',
-            }}
+            className={cn(
+              'mx-auto grid w-full items-center gap-1 rounded-full border border-line bg-elevated p-1 shadow-[0_4px_14px_rgba(0,0,0,0.35)]',
+              navTabs.length === 2 ? 'max-w-90' : 'max-w-130'
+            )}
+            style={{ gridTemplateColumns: `repeat(${navTabs.length}, minmax(0, 1fr))` }}
           >
             {navTabs.map(tab => {
               const Icon = tab.icon;
@@ -126,37 +83,21 @@ export const TopNavSwitcher: React.FC = () => {
                 <Link
                   key={tab.to}
                   to={tab.to}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.45rem 0.75rem',
-                    borderRadius: 'var(--radius-full, 9999px)',
-                    fontSize: '0.85rem',
-                    fontWeight: tab.isActive ? 700 : 500,
-                    color: tab.isActive ? '#090d16' : 'var(--color-text-secondary, #94a3b8)',
-                    background: tab.isActive
-                      ? 'var(--color-gold-bright, #ffc905)'
-                      : 'transparent',
-                    textDecoration: 'none',
-                    transition: 'all 0.18s ease',
-                    boxShadow: tab.isActive ? '0 2px 8px rgba(255, 201, 5, 0.4)' : 'none',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className={cn(
+                    'inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm whitespace-nowrap no-underline transition-all duration-200',
+                    tab.isActive
+                      ? 'bg-gold-bright font-bold text-canvas shadow-[0_2px_8px_rgba(255,201,5,0.4)]'
+                      : 'bg-transparent font-medium text-fg-secondary shadow-none'
+                  )}
                 >
-                  <Icon size={16} color={tab.isActive ? '#090d16' : 'currentColor'} style={{ flexShrink: 0 }} />
+                  <Icon size={16} color={tab.isActive ? '#090d16' : 'currentColor'} className="shrink-0" />
                   <span>{tab.label}</span>
                   {tab.count !== null && (
                     <span
-                      style={{
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        padding: '0.1rem 0.45rem',
-                        borderRadius: 'var(--radius-full, 9999px)',
-                        background: tab.isActive ? 'rgba(0, 0, 0, 0.2)' : 'rgba(255, 255, 255, 0.08)',
-                        color: tab.isActive ? '#090d16' : 'var(--color-text-muted, #64748b)',
-                      }}
+                      className={cn(
+                        'rounded-full px-2 py-0.5 text-2xs font-bold',
+                        tab.isActive ? 'bg-black/20 text-canvas' : 'bg-white/8 text-fg-muted'
+                      )}
                     >
                       {tab.count}
                     </span>
@@ -166,64 +107,36 @@ export const TopNavSwitcher: React.FC = () => {
             })}
           </nav>
         ) : (
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
         )}
 
         {/* Right: Auth Controls (Login / Log Out & Role Indicator) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+        <div className="flex items-center gap-2.5">
           {/* Active Tournament Quick-Return Teleport Chip (if applicable) */}
           {activeTournament && (
             <Link
               to={activeTournament.isLocked && activeTournament.tiers?.length
                 ? `/${activeTournament.slug}/manage/bracket/${activeTournament.tiers[0].slug}`
                 : `/${activeTournament.slug}/manage/qualifiers`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-                padding: '0.35rem 0.75rem',
-                borderRadius: 'var(--radius-full, 9999px)',
-                background: 'rgba(255, 201, 5, 0.1)',
-                border: '1px solid rgba(255, 201, 5, 0.3)',
-                color: 'var(--color-gold-bright, #ffc905)',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                textDecoration: 'none',
-                transition: 'all 0.18s ease',
-              }}
+              className="inline-flex items-center gap-2 rounded-full border border-tier-gold/30 bg-tier-gold/10 px-3 py-1.5 text-caption font-bold text-gold-bright no-underline transition-all duration-200"
               title={`Return to active tournament: ${activeTournament.name}`}
             >
-              <Zap size={12} color="var(--color-gold-bright, #ffc905)" style={{ flexShrink: 0 }} />
-              <span
-                style={{
-                  maxWidth: '140px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {activeTournament.name}
-              </span>
-              <ArrowRight size={12} color="var(--color-gold-bright, #ffc905)" style={{ flexShrink: 0 }} />
+              <Zap size={12} color="var(--color-gold-bright, #ffc905)" className="shrink-0" />
+              <span className="max-w-35 truncate">{activeTournament.name}</span>
+              <ArrowRight size={12} color="var(--color-gold-bright, #ffc905)" className="shrink-0" />
             </Link>
           )}
 
           {/* Role Status & Log Out Button */}
           {session ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+            <div className="flex items-center gap-2">
               <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  padding: '0.3rem 0.65rem',
-                  borderRadius: 'var(--radius-full, 9999px)',
-                  background: isSystemAdmin ? 'rgba(56, 189, 248, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                  border: isSystemAdmin ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)',
-                  color: isSystemAdmin ? '#38bdf8' : 'var(--color-gold-bright, #ffc905)',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                }}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold',
+                  isSystemAdmin
+                    ? 'border-sky-400/40 bg-sky-400/15 text-sky-400'
+                    : 'border-gold/40 bg-gold/15 text-gold-bright'
+                )}
                 title={
                   isSystemAdmin
                     ? 'Authenticated with System Admin Key'
@@ -245,20 +158,7 @@ export const TopNavSwitcher: React.FC = () => {
               <button
                 type="button"
                 onClick={handleLogout}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  padding: '0.3rem 0.65rem',
-                  borderRadius: 'var(--radius-full, 9999px)',
-                  background: 'rgba(255, 255, 255, 0.06)',
-                  border: '1px solid var(--color-border, rgba(255,255,255,0.15))',
-                  color: 'var(--color-text-secondary, #94a3b8)',
-                  fontSize: '0.74rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-white/6 px-2.5 py-1 text-xs font-semibold text-fg-secondary transition-all duration-150"
                 title="Log out and reset session to public spectator"
               >
                 <LogOut size={12} />
@@ -268,20 +168,7 @@ export const TopNavSwitcher: React.FC = () => {
           ) : (
             <Link
               to="/admin"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.35rem 0.8rem',
-                borderRadius: 'var(--radius-full, 9999px)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid var(--color-border, rgba(255,255,255,0.12))',
-                color: 'var(--color-text-secondary, #94a3b8)',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                textDecoration: 'none',
-                transition: 'all 0.15s ease',
-              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white/5 px-3 py-1.5 text-caption font-semibold text-fg-secondary no-underline transition-all duration-150"
               title="Staff & Organizer Login"
             >
               <KeyRound size={13} color="var(--color-gold-bright, #ffc905)" />

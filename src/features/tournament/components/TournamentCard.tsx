@@ -19,6 +19,12 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { usePinAuth } from '../../auth/AuthContext';
+import { Badge, Button, buttonClasses, cn } from '../../../components/ui';
+
+const PRIMARY_LINK_HOVER = 'hover:brightness-110 hover:shadow-gold-hover hover:-translate-y-px';
+const SECONDARY_LINK_HOVER = 'hover:bg-highlight hover:border-fg-secondary';
+const publicLinkClass = 'gap-1.5 py-2 px-3.5 text-caption';
+const adminLinkClass = 'gap-1.5 py-2 px-3 text-caption';
 
 interface TournamentCardProps {
   tournament: Tournament;
@@ -57,38 +63,18 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   return (
     <div
       data-testid={`tournament-card-${tournament.slug}`}
-      style={{
-        background: 'var(--color-bg-surface, #131722)',
-        borderRadius: 'var(--radius-lg, 12px)',
-        border: '1px solid var(--color-border, rgba(255, 255, 255, 0.12))',
-        padding: '1.75rem',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        gap: '1.5rem',
-        boxShadow: 'var(--shadow-md, 0 4px 12px rgba(0,0,0,0.4))',
-        transition: 'transform 0.15s ease, border-color 0.15s ease',
-      }}
+      className="flex flex-col justify-between gap-6 rounded-lg border border-line bg-surface p-7 shadow-md transition-[transform,border-color] duration-150"
     >
       <div>
         {/* Top Badges & Delete */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex flex-wrap items-center gap-2">
             {showOrgBadge && org && (
               <Link
                 to={`/org/${org.slug}`}
                 onClick={e => e.stopPropagation()}
-                className="badge"
-                style={{
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  background: 'rgba(255, 255, 255, 0.07)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  color: org.branding?.themeColors?.primaryColor || 'var(--color-gold-bright, #ffc905)',
-                  cursor: 'pointer',
-                }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/12 bg-white/7 py-1 px-2.5 text-xs font-semibold uppercase tracking-wide no-underline"
+                style={{ color: org.branding?.themeColors?.primaryColor || 'var(--color-gold-bright, #ffc905)' }}
                 title={`Hosted by ${org.name}`}
               >
                 <Building2 size={12} />
@@ -97,16 +83,16 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             )}
 
             {!tournament.isLocked ? (
-              <span className="badge badge-gold">
+              <Badge variant="gold">
                 <AlertTriangle size={12} /> Qualifiers Mode
-              </span>
+              </Badge>
             ) : (
-              <span className="badge badge-green">
+              <Badge variant="green">
                 <ShieldCheck size={12} /> Match Play Mode
-              </span>
+              </Badge>
             )}
 
-            <span className="badge badge-muted">
+            <Badge variant="muted">
               {tournament.qualFormat === 'HIGH_SCORE'
                 ? '# of Maxes'
                 : tournament.qualFormat === 'AVERAGE_OF_X'
@@ -114,24 +100,18 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
                 : tournament.qualFormat === 'POINTS'
                 ? 'Points'
                 : 'Average'}
-            </span>
+            </Badge>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div className="flex items-center gap-2.5">
             {onDeleteClick && (
-              <button
-                type="button"
+              <Button
                 onClick={() => onDeleteClick(tournament)}
                 disabled={isDeleteDisabled}
-                className="btn btn-secondary"
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  color: isDeleteDisabled ? 'var(--color-text-muted, #64748b)' : 'var(--color-red, #ef4444)',
-                  borderColor: isDeleteDisabled ? 'var(--color-border, rgba(255,255,255,0.1))' : 'rgba(239, 68, 68, 0.4)',
-                  opacity: isDeleteDisabled ? 0.35 : 1,
-                  cursor: isDeleteDisabled ? 'not-allowed' : 'pointer',
-                }}
+                className={cn(
+                  'py-1 px-2 text-xs',
+                  isDeleteDisabled ? 'border-line text-fg-muted' : 'border-red/40 text-red enabled:hover:border-red/40'
+                )}
                 title={
                   isDeleteDisabled
                     ? 'Cannot delete tournament with active match or qualifier scores. Clear data in Settings first.'
@@ -139,27 +119,27 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
                 }
               >
                 <Trash2 size={13} />
-              </button>
+              </Button>
             )}
           </div>
         </div>
 
         {/* Tournament Name */}
-        <h2 style={{ fontSize: '1.6rem', fontWeight: 700, color: '#ffffff', marginBottom: '0.5rem' }}>
+        <h2 className="mb-2 text-2xl font-bold text-white">
           {tournament.name}
         </h2>
 
         {/* Metadata Details */}
-        <div style={{ display: 'flex', gap: '1.25rem', color: 'var(--color-text-secondary, #94a3b8)', fontSize: '0.85rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div className="mb-5 flex flex-wrap gap-5 text-sm text-fg-secondary">
+          <span className="flex items-center gap-1.5">
             <Calendar size={15} color="var(--color-gold-bright, #ffc905)" />
             {tournament.date}
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <span className="flex items-center gap-1.5">
             <MapPin size={15} color="var(--color-gold-bright, #ffc905)" />
             {tournament.location}
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <span className="flex items-center gap-1.5">
             <Users size={15} color="var(--color-gold-bright, #ffc905)" />
             {hasTiers
               ? `${totalPlayers} Players`
@@ -169,11 +149,11 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
         {/* Tier Pills List */}
         {hasTiers ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted, #64748b)', letterSpacing: '0.05em' }}>
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-fg-muted">
               Brackets ({tournament.tiers.length})
             </span>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div className="flex flex-wrap gap-2">
               {tournament.tiers.map(tier => {
                 const tierColor = tier.primaryColor || '#ffc905';
                 const tierLink = variant === 'admin'
@@ -183,32 +163,16 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
                   <Link
                     key={tier.id}
                     to={tierLink}
+                    className="inline-flex items-center gap-2 rounded-sm py-1.5 px-2.5 text-caption font-semibold no-underline transition-all duration-150"
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.45rem',
-                      padding: '0.35rem 0.65rem',
-                      borderRadius: 'var(--radius-sm, 6px)',
                       background: colorWithAlpha(tierColor, 0.12),
                       border: `1px solid ${colorWithAlpha(tierColor, 0.35)}`,
                       color: tierColor,
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      transition: 'all 0.15s ease',
                     }}
                   >
-                    <span
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        background: tierColor,
-                        display: 'inline-block',
-                      }}
-                    />
+                    <span className="inline-block size-2 rounded-full" style={{ background: tierColor }} />
                     <span>{tier.name}</span>
-                    <span style={{ fontSize: '0.7rem', opacity: 0.85, fontWeight: 400 }}>
+                    <span className="text-2xs font-normal opacity-85">
                       ({tier.playerCount}p • Bo{tier.bestOf})
                     </span>
                   </Link>
@@ -217,7 +181,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             </div>
           </div>
         ) : (
-          <div style={{ padding: '0.85rem', background: 'var(--color-bg-base, #0c0d12)', borderRadius: 'var(--radius-md, 8px)', border: '1px dashed var(--color-border, rgba(255,255,255,0.1))', color: 'var(--color-text-muted, #64748b)', fontSize: '0.85rem' }}>
+          <div className="rounded-md border border-dashed border-line bg-canvas p-3.5 text-sm text-fg-muted">
             No bracket tiers configured.{variant === 'admin' && ' Visit Settings to set up tournament tiers.'}
           </div>
         )}
@@ -225,27 +189,24 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
       {/* Action Buttons Row */}
       {variant === 'public' ? (
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', borderTop: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))', paddingTop: '1rem', alignItems: 'center' }}>
+        <div className="flex flex-wrap items-center gap-2 border-t border-line-subtle pt-4">
           <Link
             to={hasTiers && defaultTier ? `/${tournament.slug}/${defaultTier.slug}` : `/${tournament.slug}/brackets`}
-            className="btn btn-primary"
-            style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            className={buttonClasses({ variant: 'primary', className: cn(publicLinkClass, PRIMARY_LINK_HOVER) })}
           >
             <GitBranch size={14} /> Live Brackets
           </Link>
 
           <Link
             to={`/${tournament.slug}/leaderboard`}
-            className="btn btn-secondary"
-            style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            className={buttonClasses({ variant: 'secondary', className: cn(publicLinkClass, SECONDARY_LINK_HOVER) })}
           >
             <BarChart3 size={14} /> {tournament.seedingMethod === 'MANUAL' ? 'Seeding' : 'Qualifiers'}
           </Link>
 
           <Link
             to={`/${tournament.slug}/standings`}
-            className="btn btn-secondary"
-            style={{ padding: '0.55rem 0.85rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            className={buttonClasses({ variant: 'secondary', className: cn(publicLinkClass, SECONDARY_LINK_HOVER) })}
           >
             <Trophy size={14} color="var(--color-gold-bright, #ffc905)" /> Standings
           </Link>
@@ -253,18 +214,10 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           {hasManageAccess && (
             <Link
               to={`/${tournament.slug}/manage/qualifiers`}
-              className="btn btn-secondary"
-              style={{
-                padding: '0.55rem 0.85rem',
-                fontSize: '0.8rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                marginLeft: 'auto',
-                borderColor: 'rgba(255, 201, 5, 0.4)',
-                color: 'var(--color-gold-bright, #ffc905)',
-                background: 'rgba(255, 201, 5, 0.08)',
-              }}
+              className={buttonClasses({
+                variant: 'secondary',
+                className: cn(publicLinkClass, 'ml-auto border-tier-gold/40 bg-tier-gold/8 text-gold-bright'),
+              })}
               title="Open Tournament Director Management Portal"
             >
               <Settings size={14} /> Manage
@@ -272,12 +225,11 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', borderTop: '1px solid var(--color-border-subtle, rgba(255,255,255,0.06))', paddingTop: '1rem', alignItems: 'center' }}>
+        <div className="flex flex-wrap items-center gap-2 border-t border-line-subtle pt-4">
           {hasTiers && defaultTier && (
             <Link
               to={`/${tournament.slug}/manage/bracket/${defaultTier.slug}`}
-              className="btn btn-primary"
-              style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+              className={buttonClasses({ variant: 'primary', className: cn(adminLinkClass, PRIMARY_LINK_HOVER) })}
             >
               <GitBranch size={14} /> Brackets
             </Link>
@@ -285,48 +237,38 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
           <Link
             to={hasTiers && defaultTier ? `/${tournament.slug}/manage/sheet?tier=${defaultTier.slug}` : `/${tournament.slug}/manage/sheet`}
-            className="btn btn-secondary"
-            style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            className={buttonClasses({ variant: 'secondary', className: cn(adminLinkClass, SECONDARY_LINK_HOVER) })}
           >
             <Sheet size={14} /> Sheet
           </Link>
 
           <Link
             to={`/${tournament.slug}/manage/qualifiers`}
-            className={!hasTiers ? 'btn btn-primary' : 'btn btn-secondary'}
-            style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            className={buttonClasses({
+              variant: !hasTiers ? 'primary' : 'secondary',
+              className: cn(adminLinkClass, !hasTiers ? PRIMARY_LINK_HOVER : SECONDARY_LINK_HOVER),
+            })}
           >
             <BarChart3 size={14} /> Qualifiers
           </Link>
 
           <Link
             to={`/${tournament.slug}/manage/standings`}
-            className="btn btn-secondary"
-            style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            className={buttonClasses({ variant: 'secondary', className: cn(adminLinkClass, SECONDARY_LINK_HOVER) })}
           >
             <Trophy size={14} color="var(--color-gold-bright, #ffc905)" /> Standings
           </Link>
 
           <Link
             to={`/${tournament.slug}/manage/settings`}
-            className="btn btn-secondary"
-            style={{ padding: '0.55rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+            className={buttonClasses({ variant: 'secondary', className: cn(adminLinkClass, SECONDARY_LINK_HOVER) })}
           >
             <Settings size={14} /> Settings
           </Link>
 
           <Link
             to={hasTiers && defaultTier ? `/${tournament.slug}/${defaultTier.slug}` : `/${tournament.slug}/brackets`}
-            className="btn btn-secondary"
-            style={{
-              padding: '0.55rem 0.75rem',
-              fontSize: '0.8rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              marginLeft: 'auto',
-              color: 'var(--color-text-muted, #94a3b8)',
-            }}
+            className={buttonClasses({ variant: 'secondary', className: cn(adminLinkClass, 'ml-auto text-fg-muted', SECONDARY_LINK_HOVER) })}
             title="Open public spectator view"
           >
             <ExternalLink size={13} /> Public View

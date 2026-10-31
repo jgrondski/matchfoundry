@@ -3,6 +3,10 @@ import { QualFormat, PointsThreshold, DEFAULT_POINTS_THRESHOLDS } from '../types
 import { ClearableNumberInput } from '../../../components/ClearableNumberInput';
 import { PointsThresholdsDrawer } from './PointsThresholdsDrawer';
 import { Sliders } from 'lucide-react';
+import { Button } from '../../../components/ui';
+
+const labelClass = 'mb-1.5 block text-caption font-semibold text-fg-secondary';
+const inputClass = 'w-full rounded-sm border border-line bg-canvas py-2.5 px-3 text-sm text-fg outline-none';
 
 interface QualFormatEditorProps {
   qualFormat: QualFormat;
@@ -53,14 +57,14 @@ export const QualFormatEditor: React.FC<QualFormatEditorProps> = ({
   const activePoints = pointsConfig || DEFAULT_POINTS_THRESHOLDS;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem', alignItems: 'flex-start' }}>
+    <div className="flex flex-col gap-3.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] items-start gap-3.5">
         <div>
-          <label style={labelStyle}>Qualifying Format</label>
+          <label className={labelClass}>Qualifying Format</label>
           <select
             value={qualFormat}
             onChange={e => handleFormatSelect(e.target.value as QualFormat)}
-            style={inputStyle}
+            className={inputClass}
           >
             <option value="HIGH_SCORE"># of Maxes</option>
             <option value="AVERAGE_OF_X">Average of X Attempts</option>
@@ -70,7 +74,7 @@ export const QualFormatEditor: React.FC<QualFormatEditorProps> = ({
 
         {qualFormat === 'AVERAGE_OF_X' && (
           <div>
-            <label style={labelStyle}>Target Attempt Count (X)</label>
+            <label className={labelClass}>Target Attempt Count (X)</label>
             <ClearableNumberInput
               min={1}
               max={10}
@@ -81,9 +85,9 @@ export const QualFormatEditor: React.FC<QualFormatEditorProps> = ({
               }}
               error={avgCountError}
               onErrorChange={onAvgCountErrorChange}
-              style={inputStyle}
+              className={inputClass}
             />
-            <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted, #64748b)', marginTop: '0.25rem', display: 'block' }}>
+            <span className="mt-1 block text-xs text-fg-muted">
               e.g. 2 for Average of 2, 3 for Average of 3
             </span>
           </div>
@@ -91,56 +95,33 @@ export const QualFormatEditor: React.FC<QualFormatEditorProps> = ({
       </div>
 
       {qualFormat === 'POINTS' && (
-        <div
-          style={{
-            background: 'var(--color-bg-surface-elevated, #161922)',
-            padding: '1rem 1.25rem',
-            borderRadius: 'var(--radius-md, 8px)',
-            border: '1px solid var(--color-border-subtle, rgba(255, 255, 255, 0.08))',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-          }}
-        >
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line-subtle bg-elevated py-4 px-5">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--color-text-primary, #ffffff)' }}>
+            <div className="flex items-center gap-2">
+              <span className="text-base font-bold text-fg">
                 Points Threshold System
               </span>
-              <span
-                style={{
-                  padding: '0.15rem 0.5rem',
-                  borderRadius: 'var(--radius-full, 999px)',
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  color: 'var(--color-gold-bright, #ffc905)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                }}
-              >
+              <span className="rounded-full bg-gold/15 py-0.5 px-2 text-xs font-bold text-gold-bright">
                 {activePoints.length} {activePoints.length === 1 ? 'cutoff' : 'cutoffs'} configured
               </span>
             </div>
-            <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted, #64748b)', margin: '0.25rem 0 0 0' }}>
+            <p className="mx-0 mb-0 mt-1 text-caption text-fg-muted">
               Attempts award points non-cumulatively based on highest cutoff reached.
               {activePoints.length > 0 && (
-                <span style={{ marginLeft: '0.35rem', color: 'var(--color-text-secondary, #94a3b8)' }}>
+                <span className="ml-1.5 text-fg-secondary">
                   ({[...activePoints].sort((a, b) => b.minScore - a.minScore).slice(0, 4).map(p => `${(p.minScore / 1000).toFixed(0)}k → +${p.points}`).join(', ')}{activePoints.length > 4 ? ', ...' : ''})
                 </span>
               )}
             </p>
           </div>
 
-          <button
-            type="button"
+          <Button
             onClick={() => setIsPointsDrawerOpen(true)}
-            className="btn btn-secondary"
-            style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}
+            className="gap-1.5 whitespace-nowrap py-2 px-3.5 text-caption"
           >
             <Sliders size={14} color="var(--color-gold-bright, #ffc905)" />
             Configure Points Cutoffs
-          </button>
+          </Button>
         </div>
       )}
 
@@ -154,24 +135,4 @@ export const QualFormatEditor: React.FC<QualFormatEditorProps> = ({
       />
     </div>
   );
-};
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '0.8rem',
-  fontWeight: 600,
-  color: 'var(--color-text-secondary, #94a3b8)',
-  marginBottom: '0.35rem',
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '0.65rem 0.75rem',
-  borderRadius: 'var(--radius-sm, 6px)',
-  border: '1px solid var(--color-border, rgba(255, 255, 255, 0.12))',
-  background: 'var(--color-bg-base, #0c0d12)',
-  color: 'var(--color-text-primary, #ffffff)',
-  fontSize: '0.85rem',
-  outline: 'none',
-  boxSizing: 'border-box',
 };

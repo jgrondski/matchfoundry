@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { Tournament } from '../../types';
+import { buttonClasses } from '../../../../components/ui';
 
 interface TournamentRosterSectionProps {
   tournament: Tournament;
@@ -13,47 +14,29 @@ export const TournamentRosterSection: React.FC<TournamentRosterSectionProps> = (
   totalCapacity,
 }) => {
   return (
-    <section
-      style={{
-        background: 'var(--color-bg-surface)',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--color-border)',
-        padding: '0.85rem 1.25rem',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '0.75rem',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface py-3.5 px-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
           <Users size={18} color="var(--color-gold-bright)" />
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>
+          <h2 className="m-0 text-base font-bold text-fg">
             Player Roster
           </h2>
         </div>
-        <span
-          style={{
-            padding: '0.2rem 0.6rem',
-            borderRadius: 'var(--radius-full)',
-            background: 'rgba(245, 158, 11, 0.15)',
-            color: 'var(--color-gold-bright)',
-            fontSize: '0.75rem',
-            fontWeight: 700,
-          }}
-        >
+        <span className="rounded-full bg-gold/15 py-1 px-2.5 text-xs font-bold text-gold-bright">
           {(tournament.playersPool || []).length} / {totalCapacity} Capacity Registered
         </span>
-        <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+        <span className="text-caption text-fg-muted">
           Manage registrations &amp; pool imports in Players.
         </span>
       </div>
 
       <Link
         to={`/${tournament.slug}/manage/players`}
-        className="btn btn-primary"
-        style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem', gap: '0.4rem', textDecoration: 'none' }}
+        className={buttonClasses({
+          variant: 'primary',
+          className:
+            'gap-1.5 py-1.5 px-3.5 text-caption no-underline hover:brightness-110 hover:shadow-gold-hover hover:-translate-y-px',
+        })}
       >
         <Users size={14} /> Go to Players
       </Link>

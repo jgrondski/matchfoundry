@@ -3,6 +3,7 @@ import { SeededPlayer } from '../../types';
 import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
 import { BestOfSelect } from '../BestOfSelect';
 import { colorWithAlpha } from '../../colorUtils';
+import { cn } from '../../../../components/ui';
 
 interface MatchupBannerProps {
   p1?: SeededPlayer | null;
@@ -39,20 +40,16 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
 }) => {
   return (
     <div
+      className="flex items-center py-5 px-6 gap-4"
       style={{
-        ...matchupCardStyle,
         background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.10)} 0%, rgba(0, 0, 0, 0.35) 100%)`,
         borderBottom: `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-border)')}`,
       }}
     >
       {/* Player 1 Section */}
       <div
+        className="flex-1 text-center min-w-0 py-3 px-2 rounded-md transition-all duration-150"
         style={{
-          flex: 1,
-          textAlign: 'center',
-          minWidth: 0,
-          padding: '0.75rem 0.5rem',
-          borderRadius: 'var(--radius-md)',
           background: p1Wins >= winThreshold
             ? colorWithAlpha(primaryColor, 0.12)
             : 'rgba(255, 255, 255, 0.02)',
@@ -62,95 +59,54 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
           boxShadow: p1Wins >= winThreshold
             ? `0 0 16px ${colorWithAlpha(primaryColor, 0.3)}`
             : 'none',
-          transition: 'all 0.15s ease',
         }}
       >
         {/* Competitor Glowing Avatar Ring */}
         <div
+          className="size-10.5 rounded-full flex items-center justify-center mt-0 mx-auto mb-2 text-base transition-all duration-200"
           style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '50%',
             background: `linear-gradient(135deg, ${colorWithAlpha(primaryColor, 0.25)} 0%, rgba(0, 0, 0, 0.5) 100%)`,
             border: `2px solid ${p1Wins >= winThreshold ? primaryColor : colorWithAlpha(primaryColor, 0.4)}`,
             boxShadow: p1Wins >= winThreshold ? `0 0 14px ${colorWithAlpha(primaryColor, 0.45)}` : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 0.45rem auto',
-            fontSize: '1.05rem',
-            transition: 'all 0.2s ease',
           }}
         >
           {p1?.country || (p1 as any)?.avatarUrl ? (
             <PlayerAvatar player={p1 as any} country={p1?.country} />
           ) : (
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: primaryColor }}>
+            <span className="text-sm font-extrabold" style={{ color: primaryColor }}>
               {p1Name.slice(0, 2).toUpperCase()}
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
+        <div className="flex items-center justify-center gap-1.5 mb-1.5">
           {p1Seed !== undefined && (
-            <span
-              style={{
-                fontSize: '0.68rem',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 700,
-                padding: '0.1rem 0.4rem',
-                borderRadius: 'var(--radius-sm)',
-                background: 'rgba(255, 255, 255, 0.06)',
-                color: 'var(--color-text-muted)',
-                border: '1px solid var(--color-border)',
-              }}
-            >
+            <span className="text-2xs font-mono font-bold py-0.5 px-1.5 rounded-sm bg-white/6 text-fg-muted border border-line">
               #{p1Seed}
             </span>
           )}
         </div>
 
         <div
-          style={{
-            fontSize: '1.15rem',
-            fontWeight: 700,
-            color: p1Wins >= winThreshold ? primaryColor : '#ffffff',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.35rem',
-          }}
+          className="text-lg font-bold text-white truncate flex items-center justify-center gap-1.5"
+          style={{ color: p1Wins >= winThreshold ? primaryColor : undefined }}
           title={p1Name}
         >
           <span>{p1Name}</span>
           {isP1Override && (
-            <span
-              style={{
-                fontSize: '0.62rem',
-                padding: '0.1rem 0.35rem',
-                background: 'rgba(234, 88, 12, 0.2)',
-                color: '#ea580c',
-                border: '1px solid rgba(234, 88, 12, 0.4)',
-                borderRadius: '3px',
-                fontWeight: 700,
-              }}
-            >
+            <span className="text-3xs py-0.5 px-1.5 bg-orange-600/20 text-orange-600 border border-orange-600/40 rounded-xs font-bold">
               OVERRIDE
             </span>
           )}
         </div>
 
         <div
-          className="tabular-nums"
+          className={cn(
+            'font-mono tabular-nums tracking-tight text-hero font-black leading-tight mt-1',
+            p1Wins > 0 ? 'text-white' : 'text-fg-muted'
+          )}
           style={{
-            fontSize: '2.5rem',
-            fontWeight: 900,
-            lineHeight: 1.1,
-            marginTop: '0.25rem',
-            color: p1Wins >= winThreshold ? primaryColor : p1Wins > 0 ? '#ffffff' : 'var(--color-text-muted)',
+            color: p1Wins >= winThreshold ? primaryColor : undefined,
             textShadow: p1Wins >= winThreshold ? `0 0 16px ${colorWithAlpha(primaryColor, 0.4)}` : 'none',
           }}
         >
@@ -159,24 +115,8 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
       </div>
 
       {/* Center VS & Format Column */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          padding: '0 0.5rem',
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            fontSize: '0.75rem',
-            fontWeight: 800,
-            letterSpacing: '0.1em',
-            color: 'var(--color-text-muted)',
-            marginBottom: '0.4rem',
-          }}
-        >
+      <div className="flex flex-col items-center px-2 shrink-0">
+        <span className="text-xs font-extrabold tracking-widest text-fg-muted mb-1.5">
           VS
         </span>
         <BestOfSelect
@@ -184,27 +124,15 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
           onChange={onBestOfChange}
           compact={true}
         />
-        <span
-          style={{
-            fontSize: '0.65rem',
-            color: 'var(--color-text-muted)',
-            marginTop: '0.4rem',
-            fontWeight: 600,
-            fontFamily: 'var(--font-mono)',
-          }}
-        >
+        <span className="text-3xs text-fg-muted mt-1.5 font-semibold font-mono">
           First to {winThreshold}
         </span>
       </div>
 
       {/* Player 2 Section */}
       <div
+        className="flex-1 text-center min-w-0 py-3 px-2 rounded-md transition-all duration-150"
         style={{
-          flex: 1,
-          textAlign: 'center',
-          minWidth: 0,
-          padding: '0.75rem 0.5rem',
-          borderRadius: 'var(--radius-md)',
           background: p2Wins >= winThreshold
             ? colorWithAlpha(primaryColor, 0.12)
             : 'rgba(255, 255, 255, 0.02)',
@@ -214,95 +142,54 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
           boxShadow: p2Wins >= winThreshold
             ? `0 0 16px ${colorWithAlpha(primaryColor, 0.3)}`
             : 'none',
-          transition: 'all 0.15s ease',
         }}
       >
         {/* Competitor Glowing Avatar Ring */}
         <div
+          className="size-10.5 rounded-full flex items-center justify-center mt-0 mx-auto mb-2 text-base transition-all duration-200"
           style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '50%',
             background: `linear-gradient(135deg, ${colorWithAlpha(primaryColor, 0.25)} 0%, rgba(0, 0, 0, 0.5) 100%)`,
             border: `2px solid ${p2Wins >= winThreshold ? primaryColor : colorWithAlpha(primaryColor, 0.4)}`,
             boxShadow: p2Wins >= winThreshold ? `0 0 14px ${colorWithAlpha(primaryColor, 0.45)}` : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 0.45rem auto',
-            fontSize: '1.05rem',
-            transition: 'all 0.2s ease',
           }}
         >
           {p2?.country || (p2 as any)?.avatarUrl ? (
             <PlayerAvatar player={p2 as any} country={p2?.country} />
           ) : (
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: primaryColor }}>
+            <span className="text-sm font-extrabold" style={{ color: primaryColor }}>
               {p2Name.slice(0, 2).toUpperCase()}
             </span>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', marginBottom: '0.35rem' }}>
+        <div className="flex items-center justify-center gap-1.5 mb-1.5">
           {p2Seed !== undefined && (
-            <span
-              style={{
-                fontSize: '0.68rem',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 700,
-                padding: '0.1rem 0.4rem',
-                borderRadius: 'var(--radius-sm)',
-                background: 'rgba(255, 255, 255, 0.06)',
-                color: 'var(--color-text-muted)',
-                border: '1px solid var(--color-border)',
-              }}
-            >
+            <span className="text-2xs font-mono font-bold py-0.5 px-1.5 rounded-sm bg-white/6 text-fg-muted border border-line">
               #{p2Seed}
             </span>
           )}
         </div>
 
         <div
-          style={{
-            fontSize: '1.15rem',
-            fontWeight: 700,
-            color: p2Wins >= winThreshold ? primaryColor : '#ffffff',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.35rem',
-          }}
+          className="text-lg font-bold text-white truncate flex items-center justify-center gap-1.5"
+          style={{ color: p2Wins >= winThreshold ? primaryColor : undefined }}
           title={p2Name}
         >
           <span>{p2Name}</span>
           {isP2Override && (
-            <span
-              style={{
-                fontSize: '0.62rem',
-                padding: '0.1rem 0.35rem',
-                background: 'rgba(234, 88, 12, 0.2)',
-                color: '#ea580c',
-                border: '1px solid rgba(234, 88, 12, 0.4)',
-                borderRadius: '3px',
-                fontWeight: 700,
-              }}
-            >
+            <span className="text-3xs py-0.5 px-1.5 bg-orange-600/20 text-orange-600 border border-orange-600/40 rounded-xs font-bold">
               OVERRIDE
             </span>
           )}
         </div>
 
         <div
-          className="tabular-nums"
+          className={cn(
+            'font-mono tabular-nums tracking-tight text-hero font-black leading-tight mt-1',
+            p2Wins > 0 ? 'text-white' : 'text-fg-muted'
+          )}
           style={{
-            fontSize: '2.5rem',
-            fontWeight: 900,
-            lineHeight: 1.1,
-            marginTop: '0.25rem',
-            color: p2Wins >= winThreshold ? primaryColor : p2Wins > 0 ? '#ffffff' : 'var(--color-text-muted)',
+            color: p2Wins >= winThreshold ? primaryColor : undefined,
             textShadow: p2Wins >= winThreshold ? `0 0 16px ${colorWithAlpha(primaryColor, 0.4)}` : 'none',
           }}
         >
@@ -311,11 +198,4 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
       </div>
     </div>
   );
-};
-
-const matchupCardStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  padding: '1.25rem 1.5rem',
-  gap: '1rem',
 };

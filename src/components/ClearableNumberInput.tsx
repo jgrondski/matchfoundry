@@ -119,7 +119,7 @@ export const ClearableNumberInput: React.FC<ClearableNumberInputProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: style?.width || '100%' }}>
+    <div className="flex w-full flex-col" style={{ width: style?.width || undefined }}>
       <input
         ref={inputRef}
         id={id}
@@ -142,15 +142,7 @@ export const ClearableNumberInput: React.FC<ClearableNumberInputProps> = ({
         }}
       />
       {activeError && (
-        <div
-          role="alert"
-          style={{
-            color: 'var(--color-red)',
-            fontSize: '0.75rem',
-            marginTop: '0.35rem',
-            fontWeight: 500,
-          }}
-        >
+        <div role="alert" className="mt-1.5 text-xs font-medium text-red">
           {activeError}
         </div>
       )}

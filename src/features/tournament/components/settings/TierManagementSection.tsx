@@ -7,7 +7,11 @@ import { BestOfSelect } from '../../../bracket/components/BestOfSelect';
 import { BracketThemeEditor } from '../../../bracket/components/BracketThemeEditor';
 import { RoundOverridesEditor } from '../RoundOverridesEditor';
 import { ClearableNumberInput } from '../../../../components/ClearableNumberInput';
-import { labelStyle, inputStyle } from './types';
+import { labelClass, inputClass } from './types';
+import { Button, cn } from '../../../../components/ui';
+
+const tierLabelClass = cn(labelClass, 'mb-1.5 flex h-6.5 items-end');
+const tierLabelTruncateClass = cn(tierLabelClass, 'truncate');
 
 interface TierManagementSectionProps {
   tiers: TournamentTier[];
@@ -31,55 +35,28 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
   onRequestDeleteTier,
 }) => {
   return (
-    <section
-      style={{
-        background: 'var(--color-bg-surface)',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--color-border)',
-        padding: '1.15rem 1.35rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1rem',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.65rem' }}>
+    <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface py-4.5 px-5.5">
+      <div className="flex items-center justify-between border-b border-line pb-2.5">
         <div>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+          <h2 className="text-lg font-bold text-fg">
             Bracket Tiers
           </h2>
-          <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
+          <p className="text-caption text-fg-muted">
             Organize 1 to N tiered brackets (Gold, Silver, Bronze) with automatic cutoff ranges and customized themes.
           </p>
         </div>
       </div>
 
       {/* Tiers List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+      <div className="flex flex-col gap-3.5">
         {tiers.length === 0 ? (
-          <div
-            style={{
-              padding: '2.5rem 1rem',
-              background: 'var(--color-bg-base)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px dashed var(--color-border)',
-              textAlign: 'center',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '0.75rem',
-            }}
-          >
-            <p style={{ fontSize: '0.95rem', color: 'var(--color-text-secondary)' }}>
+          <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-line bg-canvas py-10 px-4 text-center">
+            <p className="text-base text-fg-secondary">
               No bracket tiers configured for this tournament.
             </p>
-            <button
-              type="button"
-              onClick={onAddTier}
-              className="btn btn-primary"
-              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}
-            >
+            <Button variant="primary" onClick={onAddTier}>
               <Plus size={16} /> Add First Bracket Tier
-            </button>
+            </Button>
           </div>
         ) : (
           tiers.map((tier, idx) => {
@@ -93,64 +70,38 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
             return (
               <div
                 key={tier.id}
+                className="flex flex-col gap-3.5 rounded-md py-4 px-4.5 shadow-sm"
                 style={{
                   background: `linear-gradient(135deg, var(--color-bg-surface-elevated) 0%, ${colorWithAlpha(priColor, 0.05)} 100%)`,
-                  borderRadius: 'var(--radius-md)',
                   border: `1px solid ${colorWithAlpha(priColor, 0.28)}`,
                   borderLeft: `5px solid ${priColor}`,
-                  padding: '0.95rem 1.15rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.85rem',
-                  boxShadow: 'var(--shadow-sm)',
                 }}
               >
                 {/* Header: Priority, Name, Swatch Pill, Cutoff Badge & Controls */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2.5">
                     <span
+                      className="size-3 shrink-0 rounded-full"
                       style={{
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
                         background: priColor,
                         boxShadow: `0 0 10px ${colorWithAlpha(priColor, 0.65)}`,
-                        flexShrink: 0,
                       }}
                     />
-                    <span
-                      style={{
-                        fontWeight: 800,
-                        fontSize: '0.98rem',
-                        color: priColor,
-                      }}
-                    >
+                    <span className="text-base font-extrabold" style={{ color: priColor }}>
                       {tier.name}
                     </span>
-                    <span
-                      style={{
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'var(--color-bg-surface-highlight)',
-                        fontWeight: 700,
-                        fontSize: '0.74rem',
-                        color: 'var(--color-text-secondary)',
-                      }}
-                    >
+                    <span className="rounded-sm bg-highlight py-0.5 px-2 text-xs font-bold text-fg-secondary">
                       Priority #{tier.priority}
                     </span>
 
                     {/* Auto-derived cutoff badge */}
                     {badge && (
                       <span
+                        className="rounded-full py-0.5 px-2.5 text-xs font-bold"
                         style={{
-                          padding: '0.18rem 0.6rem',
-                          borderRadius: 'var(--radius-full)',
                           background: colorWithAlpha(priColor, 0.14),
                           border: `1px solid ${colorWithAlpha(priColor, 0.35)}`,
                           color: priColor,
-                          fontWeight: 700,
-                          fontSize: '0.74rem',
                         }}
                       >
                         Cutoff: Ranks {badge.start} – {badge.end}
@@ -159,86 +110,74 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
 
                     {/* Header Theme Preview Swatches */}
                     <div
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        padding: '0.15rem 0.45rem',
-                        background: 'var(--color-bg-base)',
-                        borderRadius: 'var(--radius-full)',
-                        border: `1px solid ${colorWithAlpha(priColor, 0.25)}`,
-                      }}
+                      className="inline-flex items-center gap-1 rounded-full bg-canvas py-0.5 px-2"
+                      style={{ border: `1px solid ${colorWithAlpha(priColor, 0.25)}` }}
                       title={`Theme: Primary (${priColor}), Secondary (${secColor}), Card (${cardBg}), Text (${txtColor})`}
                     >
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: priColor, border: '1px solid rgba(0,0,0,0.4)' }} />
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: secColor, border: '1px solid rgba(0,0,0,0.4)' }} />
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: cardBg, border: '1px solid rgba(255,255,255,0.2)' }} />
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: txtColor, border: '1px solid rgba(0,0,0,0.4)' }} />
+                      <span className="size-2 rounded-full border border-black/40" style={{ background: priColor }} />
+                      <span className="size-2 rounded-full border border-black/40" style={{ background: secColor }} />
+                      <span className="size-2 rounded-full border border-white/20" style={{ background: cardBg }} />
+                      <span className="size-2 rounded-full border border-black/40" style={{ background: txtColor }} />
                     </div>
                   </div>
 
                   {/* Move up / down / delete */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <button
-                      type="button"
+                  <div className="flex items-center gap-1.5">
+                    <Button
                       onClick={() => onMoveTier(idx, 'up')}
                       disabled={idx === 0}
-                      className="btn btn-secondary"
-                      style={{ padding: '0.22rem 0.45rem', opacity: idx === 0 ? 0.3 : 1 }}
+                      className="py-1 px-2"
                       title="Move tier up in priority"
                     >
                       <ArrowUp size={13} />
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
                       onClick={() => onMoveTier(idx, 'down')}
                       disabled={idx === tiers.length - 1}
-                      className="btn btn-secondary"
-                      style={{ padding: '0.22rem 0.45rem', opacity: idx === tiers.length - 1 ? 0.3 : 1 }}
+                      className="py-1 px-2"
                       title="Move tier down in priority"
                     >
                       <ArrowDown size={13} />
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      variant="danger"
                       onClick={() => onRequestDeleteTier(idx, tier)}
-                      className="btn btn-danger"
-                      style={{ padding: '0.22rem 0.45rem' }}
+                      className="py-1 px-2"
                       title="Delete bracket tier"
                     >
                       <Trash2 size={13} />
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
                 {/* Form Fields Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.65rem', alignItems: 'end' }}>
-                  <div style={{ minWidth: 0 }}>
-                    <label style={{ ...labelStyle, height: '1.6rem', display: 'flex', alignItems: 'flex-end', marginBottom: '0.35rem' }}>Tier Name</label>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] items-end gap-2.5">
+                  <div className="min-w-0">
+                    <label className={tierLabelClass}>Tier Name</label>
                     <input
                       type="text"
                       value={tier.name}
                       onChange={e => onUpdateTier(idx, { name: e.target.value })}
-                      style={inputStyle}
+                      className={inputClass}
                     />
                   </div>
 
-                  <div style={{ minWidth: 0 }}>
-                    <label style={{ ...labelStyle, height: '1.6rem', display: 'flex', alignItems: 'flex-end', marginBottom: '0.35rem' }}>URL Slug</label>
+                  <div className="min-w-0">
+                    <label className={tierLabelClass}>URL Slug</label>
                     <input
                       type="text"
                       value={tier.slug}
                       onChange={e => onUpdateTier(idx, { slug: e.target.value })}
-                      style={inputStyle}
+                      className={inputClass}
                     />
                   </div>
 
-                  <div style={{ minWidth: 0 }}>
-                    <label style={{ ...labelStyle, height: '1.6rem', display: 'flex', alignItems: 'flex-end', marginBottom: '0.35rem' }}>Elimination Style</label>
+                  <div className="min-w-0">
+                    <label className={tierLabelClass}>Elimination Style</label>
                     <select
                       value={tier.eliminationType || 'SINGLE'}
                       onChange={e => onUpdateTier(idx, { eliminationType: e.target.value as 'SINGLE' | 'DOUBLE' })}
-                      style={inputStyle}
+                      className={inputClass}
                     >
                       <option value="SINGLE">Single Elimination</option>
                       <option value="DOUBLE">Double Elimination</option>
@@ -246,8 +185,8 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                   </div>
 
                   {tier.eliminationType === 'DOUBLE' ? (
-                    <div style={{ minWidth: 0 }}>
-                      <label style={{ ...labelStyle, height: '1.6rem', display: 'flex', alignItems: 'flex-end', marginBottom: '0.35rem' }}>Bracket Routing</label>
+                    <div className="min-w-0">
+                      <label className={tierLabelClass}>Bracket Routing</label>
                       <select
                         value={tier.bracketRouting || 'TRADITIONAL_TREE'}
                         onChange={e => {
@@ -258,7 +197,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                             finalsCutoff: routing === 'ACCELERATED_HYBRID' ? (tier.finalsCutoff || 16) : undefined,
                           });
                         }}
-                        style={inputStyle}
+                        className={inputClass}
                       >
                         <option value="TRADITIONAL_TREE">Traditional Tree</option>
                         <option value="FLAT_STAGED">Flat Staged</option>
@@ -266,12 +205,12 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                       </select>
                     </div>
                   ) : (
-                    <div style={{ minWidth: 0 }}>
-                      <label style={{ ...labelStyle, height: '1.6rem', display: 'flex', alignItems: 'flex-end', marginBottom: '0.35rem' }}>Bracket Routing</label>
+                    <div className="min-w-0">
+                      <label className={tierLabelClass}>Bracket Routing</label>
                       <select
                         value={tier.bracketType}
                         onChange={e => onUpdateTier(idx, { bracketType: e.target.value as 'TRADITIONAL' | 'FLAT' })}
-                        style={inputStyle}
+                        className={inputClass}
                       >
                         <option value="TRADITIONAL">Traditional Bracket</option>
                         <option value="FLAT">Flat Bracket</option>
@@ -280,35 +219,20 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                   )}
 
                   {tier.eliminationType === 'DOUBLE' && tier.bracketRouting === 'FLAT_STAGED' && (
-                    <div style={{ minWidth: 0 }}>
-                      <label
-                        style={{
-                          ...labelStyle,
-                          height: '1.6rem',
-                          display: 'flex',
-                          alignItems: 'flex-end',
-                          marginBottom: '0.35rem',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          overflow: 'hidden'
-                        }}
-                        title="Flat Width (Matches Per Round)"
-                      >
+                    <div className="min-w-0">
+                      <label className={tierLabelTruncateClass} title="Flat Width (Matches Per Round)">
                         Flat Width
                       </label>
                       <select
                         value={tier.flatWidth || 4}
                         onChange={e => onUpdateTier(idx, { flatWidth: parseInt(e.target.value, 10) })}
-                        style={{
-                          ...inputStyle,
-                          borderColor: getDoubleEliminationConfigError(tier.playerCount, tier) ? '#ef4444' : undefined,
-                        }}
+                        className={cn(inputClass, getDoubleEliminationConfigError(tier.playerCount, tier) && 'border-red')}
                       >
                         <option value={4}>4 Wide</option>
                         <option value={8}>8 Wide</option>
                       </select>
                       {getDoubleEliminationConfigError(tier.playerCount, tier) && (
-                        <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '0.25rem' }}>
+                        <div className="mt-1 text-xs text-red">
                           {getDoubleEliminationConfigError(tier.playerCount, tier)}
                         </div>
                       )}
@@ -316,32 +240,20 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                   )}
 
                   {tier.eliminationType === 'DOUBLE' && tier.bracketRouting === 'ACCELERATED_HYBRID' && (
-                    <div style={{ minWidth: 0 }}>
-                      <label
-                        style={{
-                          ...labelStyle,
-                          height: '1.6rem',
-                          display: 'flex',
-                          alignItems: 'flex-end',
-                          marginBottom: '0.35rem',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          overflow: 'hidden'
-                        }}
-                        title="Finals Cutoff"
-                      >
+                    <div className="min-w-0">
+                      <label className={tierLabelTruncateClass} title="Finals Cutoff">
                         Finals Cutoff
                       </label>
                       <select
                         value={tier.finalsCutoff || 16}
                         onChange={e => onUpdateTier(idx, { finalsCutoff: parseInt(e.target.value, 10) })}
-                        style={inputStyle}
+                        className={inputClass}
                       >
                         <option value={8}>Top 8</option>
                         <option value={16}>Top 16</option>
                       </select>
                       {getDoubleEliminationConfigError(tier.playerCount, tier) && (
-                        <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '0.25rem' }}>
+                        <div className="mt-1 text-xs text-red">
                           {getDoubleEliminationConfigError(tier.playerCount, tier)}
                         </div>
                       )}
@@ -349,26 +261,14 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                   )}
 
                   {tier.eliminationType !== 'DOUBLE' && tier.bracketType === 'FLAT' && (
-                    <div style={{ minWidth: 0 }}>
-                      <label
-                        style={{
-                          ...labelStyle,
-                          height: '1.6rem',
-                          display: 'flex',
-                          alignItems: 'flex-end',
-                          marginBottom: '0.35rem',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          overflow: 'hidden'
-                        }}
-                        title="Flat Width (Matches Per Round)"
-                      >
+                    <div className="min-w-0">
+                      <label className={tierLabelTruncateClass} title="Flat Width (Matches Per Round)">
                         Flat Width (Per Round)
                       </label>
                       <select
                         value={tier.flatWidth || getValidFlatWidths(tier.playerCount)[0] || 2}
                         onChange={e => onUpdateTier(idx, { flatWidth: parseInt(e.target.value, 10) })}
-                        style={inputStyle}
+                        className={inputClass}
                       >
                         {getValidFlatWidths(tier.playerCount).map(w => (
                           <option key={w} value={w}>
@@ -379,19 +279,19 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                     </div>
                   )}
 
-                  <div style={{ minWidth: 0 }}>
-                    <label style={{ ...labelStyle, height: '1.6rem', display: 'flex', alignItems: 'flex-end', marginBottom: '0.35rem' }}>Participant Count</label>
+                  <div className="min-w-0">
+                    <label className={tierLabelClass}>Participant Count</label>
                     <ClearableNumberInput
                       min={2}
                       max={64}
                       value={tier.playerCount}
                       onChange={val => onUpdateTier(idx, { playerCount: val ?? 2 })}
-                      style={inputStyle}
+                      className={inputClass}
                     />
                   </div>
 
-                  <div style={{ minWidth: 0 }}>
-                    <label style={{ ...labelStyle, height: '1.6rem', display: 'flex', alignItems: 'flex-end', marginBottom: '0.35rem' }}>Best-of Default</label>
+                  <div className="min-w-0">
+                    <label className={tierLabelClass}>Best-of Default</label>
                     <BestOfSelect
                       value={tier.bestOf}
                       onChange={val => onUpdateTier(idx, { bestOf: val })}
@@ -403,7 +303,6 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                 <RoundOverridesEditor
                   tier={tier}
                   onChange={newOverrides => onUpdateTier(idx, { roundBestOfOverrides: newOverrides })}
-                  inputStyle={inputStyle}
                 />
 
                 {/* Bracket Palette & Theming Accordion */}
@@ -419,100 +318,63 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
 
                   return (
                     <div
-                      style={{
-                        marginTop: '0.75rem',
-                        borderRadius: 'var(--radius-md)',
-                        background: 'var(--color-bg-surface)',
-                        border: `1px solid ${isThemeOpen ? colorWithAlpha(priColor, 0.4) : 'var(--color-border-subtle)'}`,
-                        overflow: 'hidden',
-                        transition: 'all 0.2s ease',
-                      }}
+                      className={cn(
+                        'mt-3 overflow-hidden rounded-md border bg-surface transition-all duration-200',
+                        !isThemeOpen && 'border-line-subtle'
+                      )}
+                      style={{ borderColor: isThemeOpen ? colorWithAlpha(priColor, 0.4) : undefined }}
                     >
                       {/* Accordion Header Toggle */}
                       <button
                         type="button"
                         onClick={() => onToggleThemeCollapse(tier.id)}
-                        style={{
-                          width: '100%',
-                          padding: '0.65rem 1rem',
-                          background: isThemeOpen ? 'var(--color-bg-surface)' : 'var(--color-bg-surface-elevated)',
-                          border: 'none',
-                          borderBottom: isThemeOpen ? `1px solid ${colorWithAlpha(priColor, 0.25)}` : 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.75rem',
-                          textAlign: 'left',
-                          transition: 'background 0.15s ease',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.backgroundColor = 'var(--color-bg-surface-elevated)';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.backgroundColor = isThemeOpen ? 'var(--color-bg-surface)' : 'var(--color-bg-surface-elevated)';
-                        }}
+                        className={cn(
+                          'flex w-full cursor-pointer items-center justify-between gap-3 border-0 py-2.5 px-4 text-left transition-colors duration-150 hover:bg-elevated',
+                          isThemeOpen ? 'border-b bg-surface' : 'bg-elevated'
+                        )}
+                        style={{ borderBottomColor: isThemeOpen ? colorWithAlpha(priColor, 0.25) : undefined }}
                         aria-expanded={isThemeOpen}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex items-center gap-2">
                             <Palette size={15} color={priColor} />
-                            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--color-text-primary)' }}>
+                            <span className="text-sm font-bold text-fg">
                               Bracket Theme &amp; Palette
                             </span>
                           </div>
 
                           {/* Palette Color Swatches Preview */}
                           <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              padding: '0.15rem 0.5rem',
-                              background: 'var(--color-bg-base)',
-                              borderRadius: 'var(--radius-full)',
-                              border: '1px solid var(--color-border-subtle)',
-                            }}
+                            className="flex items-center gap-1.5 rounded-full border border-line-subtle bg-canvas py-0.5 px-2"
                             title={`Current theme: Primary (${priColor}), Secondary (${secColor}), Card (${cardBg}), Text (${txtColor}), Canvas (${canvasBg}), Lower Bracket (${lowerColor})`}
                           >
-                            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: priColor, border: '1px solid rgba(0,0,0,0.3)', flexShrink: 0 }} />
-                            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: secColor, border: '1px solid rgba(0,0,0,0.3)', flexShrink: 0 }} />
-                            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: cardBg, border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
-                            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: txtColor, border: '1px solid rgba(0,0,0,0.3)', flexShrink: 0 }} />
-                            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: canvasBg, border: '1px solid rgba(255,255,255,0.15)', flexShrink: 0 }} />
-                            <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: lowerColor, border: '1px solid rgba(0,0,0,0.3)', flexShrink: 0 }} />
-                            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginLeft: '0.2rem', fontFamily: 'var(--font-mono)' }}>
+                            <span className="size-2.25 shrink-0 rounded-full border border-black/30" style={{ background: priColor }} />
+                            <span className="size-2.25 shrink-0 rounded-full border border-black/30" style={{ background: secColor }} />
+                            <span className="size-2.25 shrink-0 rounded-full border border-white/15" style={{ background: cardBg }} />
+                            <span className="size-2.25 shrink-0 rounded-full border border-black/30" style={{ background: txtColor }} />
+                            <span className="size-2.25 shrink-0 rounded-full border border-white/15" style={{ background: canvasBg }} />
+                            <span className="size-2.25 shrink-0 rounded-full border border-black/30" style={{ background: lowerColor }} />
+                            <span className="ml-1 font-mono text-2xs text-fg-muted">
                               {tier.textSize ? `${tier.textSize}` : 'normal'}
                             </span>
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-fg-muted">
                             {isThemeOpen ? 'Click to collapse' : 'Click to customize colors & text size'}
                           </span>
                           <ChevronDown
                             size={16}
                             color="var(--color-text-muted)"
-                            style={{
-                              transform: isThemeOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                              transition: 'transform 0.2s ease',
-                            }}
+                            className={cn('transition-transform duration-200', isThemeOpen ? 'rotate-180' : 'rotate-0')}
                           />
                         </div>
                       </button>
 
                       {/* Accordion Content */}
                       {isThemeOpen && (
-                        <div
-                          style={{
-                            padding: '1.25rem',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '1.25rem',
-                            animation: 'fadeIn 0.15s ease-out',
-                          }}
-                        >
+                        <div className="flex animate-fade-in flex-col gap-5 p-5">
                           <BracketThemeEditor
                             themeColors={{
                               primaryColor: priColor,
@@ -567,21 +429,10 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
         )}
 
         {tiers.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start', paddingTop: '0.25rem' }}>
-            <button
-              type="button"
-              onClick={onAddTier}
-              className="btn btn-primary"
-              style={{
-                padding: '0.55rem 1.15rem',
-                fontSize: '0.85rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-              }}
-            >
+          <div className="flex justify-start pt-1">
+            <Button variant="primary" onClick={onAddTier} className="gap-2 py-2 px-4.5 text-sm">
               <Plus size={16} /> Add Tier
-            </button>
+            </Button>
           </div>
         )}
       </div>

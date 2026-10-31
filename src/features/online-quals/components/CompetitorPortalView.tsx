@@ -21,6 +21,11 @@ import type { OnlineQualSessionSummary } from '../../../api/qualifiers';
 import { TournamentContext } from '../../tournament/store';
 import { isOnlineQualsOpen } from '../onlineQualsStatus';
 import { ConfirmDialog } from '../../../components/overlay';
+import { cn } from '../../../components/ui';
+
+const speedbumpClass = 'mb-8 flex items-center gap-4 rounded-md border border-gold/35 bg-gold/10 p-6';
+const outlineButtonClass =
+  'inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-line bg-transparent px-3.5 py-1.5 text-caption font-semibold text-fg-secondary';
 
 export interface CompetitorPortalViewProps {
   tournament: Tournament;
@@ -503,25 +508,12 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
   const cleanTwitchUsername = enteredTwitchHandle.trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?twitch\.tv\//i, '');
 
   return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem 1.25rem' }} data-testid="competitor-portal">
+    <div className="mx-auto max-w-215 px-5 py-8" data-testid="competitor-portal">
       {/* Tournament Qual Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem', position: 'relative' }}>
+      <div className="mb-8">
+        <div className="relative mb-2 flex items-center gap-2.5">
           <span
-            style={{
-              background: 'rgba(245, 158, 11, 0.15)',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
-              color: 'var(--color-gold-bright, #fbbf24)',
-              padding: '0.25rem 0.65rem',
-              borderRadius: '9999px',
-              fontSize: '0.78rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-            }}
+            className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/15 px-2.5 py-1 text-caption font-extrabold uppercase tracking-wider text-gold-bright"
             data-testid="qual-format-badge"
           >
             {formatLabel}
@@ -529,10 +521,10 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
           </span>
         </div>
 
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#ffffff', margin: '0 0 0.5rem', letterSpacing: '-0.02em' }}>
+        <h1 className="mx-0 mt-0 mb-2 text-4xl font-black tracking-tight text-white">
           {tournament.name}
         </h1>
-        <p style={{ margin: 0, fontSize: '1rem', color: 'var(--color-text-secondary, #94a3b8)', lineHeight: 1.5 }}>
+        <p className="m-0 text-base leading-normal text-fg-secondary">
           Stream live, prove it with your Authword, submit scores.
         </p>
       </div>
@@ -540,20 +532,10 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       {/* Global Error Banner */}
       {errorMessage && (
         <div
-          style={{
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.35)',
-            borderRadius: '10px',
-            padding: '1rem 1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            color: '#f87171',
-            marginBottom: '1.5rem',
-          }}
+          className="mb-6 flex items-center gap-3 rounded-md border border-red/35 bg-red/10 px-5 py-4 text-red-bright"
           data-testid="portal-error-banner"
         >
-          <AlertCircle size={20} style={{ flexShrink: 0 }} />
+          <AlertCircle size={20} className="shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
@@ -561,44 +543,23 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       {/* Status Notice Banner */}
       {statusNotice && (
         <div
-          style={{
-            background: 'rgba(34, 197, 94, 0.1)',
-            border: '1px solid rgba(34, 197, 94, 0.35)',
-            borderRadius: '10px',
-            padding: '1rem 1.25rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            color: '#4ade80',
-            marginBottom: '1.5rem',
-          }}
+          className="mb-6 flex items-center gap-3 rounded-md border border-green-500/35 bg-green-500/10 px-5 py-4 text-green-400"
           data-testid="portal-status-notice"
         >
-          <CheckCircle size={20} style={{ flexShrink: 0 }} />
+          <CheckCircle size={20} className="shrink-0" />
           <span>{statusNotice}</span>
         </div>
       )}
 
       {/* Qualifiers Closed Speedbump */}
       {isQualsClosed && (
-        <div
-          style={{
-            background: 'rgba(245, 158, 11, 0.1)',
-            border: '1px solid rgba(245, 158, 11, 0.35)',
-            borderRadius: '10px',
-            padding: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            marginBottom: '2rem',
-          }}
-        >
-          <ShieldAlert size={28} color="#fbbf24" style={{ flexShrink: 0 }} />
+        <div className={speedbumpClass}>
+          <ShieldAlert size={28} color="#fbbf24" className="shrink-0" />
           <div>
-            <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fbbf24', fontWeight: 800 }}>
+            <h4 className="m-0 text-lg font-extrabold text-gold-bright">
               Qualifiers Closed
             </h4>
-            <p style={{ margin: '0.25rem 0 0', color: 'var(--color-text-secondary, #94a3b8)', fontSize: '0.9rem' }}>
+            <p className="mx-0 mt-1 mb-0 text-sm text-fg-secondary">
               Qualifying is closed or brackets have locked. Submissions are no longer accepted.
             </p>
           </div>
@@ -607,24 +568,15 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
 
       {!isQualsClosed && !canStartRun && !activeSession && (
         <div
-          style={{
-            background: 'rgba(245, 158, 11, 0.1)',
-            border: '1px solid rgba(245, 158, 11, 0.35)',
-            borderRadius: '10px',
-            padding: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            marginBottom: '2rem',
-          }}
+          className={speedbumpClass}
           data-testid="online-quals-not-open"
         >
-          <ShieldAlert size={28} color="#fbbf24" style={{ flexShrink: 0 }} />
+          <ShieldAlert size={28} color="#fbbf24" className="shrink-0" />
           <div>
-            <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fbbf24', fontWeight: 800 }}>
+            <h4 className="m-0 text-lg font-extrabold text-gold-bright">
               Online Qualifying Not Open
             </h4>
-            <p style={{ margin: '0.25rem 0 0', color: 'var(--color-text-secondary, #94a3b8)', fontSize: '0.9rem' }}>
+            <p className="mx-0 mt-1 mb-0 text-sm text-fg-secondary">
               Online qualifying is not currently open for this tournament. New runs can't be started.
             </p>
           </div>
@@ -634,69 +586,40 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       {/* STEP 1: Streamlined Competitor Intake (No OAuth / No premature DB persistence) */}
       {isRestoring && !activeSession ? (
         <div
-          style={{
-            background: 'var(--color-bg-surface, #121820)',
-            border: '1px solid var(--color-border, #263342)',
-            borderRadius: '14px',
-            padding: '2.5rem',
-            textAlign: 'center',
-            color: 'var(--color-text-secondary, #94a3b8)',
-          }}
+          className="rounded-lg border border-line bg-surface p-10 text-center text-fg-secondary"
           data-testid="restoring-run"
         >
           Restoring your run...
         </div>
       ) : !activeSession ? (
         <div
-          style={{
-            background: 'var(--color-bg-surface, #121820)',
-            border: '1px solid var(--color-border, #263342)',
-            borderRadius: '14px',
-            padding: '2.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '1.5rem',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
-          }}
+          className="flex flex-col items-center gap-6 rounded-lg border border-line bg-surface p-10 shadow-[0_10px_30px_rgba(0,0,0,0.4)]"
           data-testid="competitor-checkin-card"
         >
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: 'rgba(245, 158, 11, 0.15)',
-              border: '1px solid rgba(245, 158, 11, 0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--color-gold-bright, #fbbf24)',
-            }}
-          >
+          <div className="flex size-16 items-center justify-center rounded-full border border-gold/40 bg-gold/15 text-gold-bright">
             <Gamepad2 size={32} />
           </div>
 
-          <div style={{ textAlign: 'center', maxWidth: '520px' }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#ffffff', margin: '0 0 0.5rem' }}>
+          <div className="max-w-130 text-center">
+            <h2 className="mx-0 mt-0 mb-2 text-2xl font-black text-white">
               Competitor Qualification Check-In
             </h2>
-            <p style={{ margin: 0, color: 'var(--color-text-secondary, #94a3b8)', fontSize: '0.95rem', lineHeight: 1.6 }}>
+            <p className="m-0 text-base leading-relaxed text-fg-secondary">
               Enter your details to receive your NES Authword and launch your run.
             </p>
           </div>
 
           <form
             onSubmit={handleOpenPreFlight}
-            style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem', width: '100%', maxWidth: '420px' }}
+            className="flex w-full max-w-105 flex-col gap-4.5"
           >
             {/* Player Name / Alias */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.45rem' }}>
+              <label className="mb-2 block text-sm font-bold text-slate-200">
                 Player Name / Alias *
               </label>
-              <div style={{ position: 'relative' }}>
-                <div style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted, #64748b)' }}>
+              <div className="relative">
+                <div className="absolute top-1/2 left-3.5 -translate-y-1/2 text-fg-muted">
                   <User size={18} />
                 </div>
                 <input
@@ -706,16 +629,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                   placeholder="e.g. Sharky"
                   disabled={isSubmitting || !canStartRun}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 0.85rem 0.75rem 2.6rem',
-                    borderRadius: '8px',
-                    background: 'var(--color-bg-base, #0a0e14)',
-                    border: '1px solid var(--color-border, #263342)',
-                    color: '#ffffff',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box',
-                  }}
+                  className="w-full rounded-md border border-line bg-canvas py-3 pr-3.5 pl-10.5 text-base text-white"
                   data-testid="player-name-input"
                 />
               </div>
@@ -723,11 +637,11 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
 
             {/* Twitch Channel / Handle */}
             <div>
-              <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '0.45rem' }}>
+              <label className="mb-2 block text-sm font-bold text-slate-200">
                 Twitch Channel / Handle *
               </label>
-              <div style={{ position: 'relative' }}>
-                <div style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: '#a855f7' }}>
+              <div className="relative">
+                <div className="absolute top-1/2 left-3.5 -translate-y-1/2 text-purple-500">
                   <Tv size={18} />
                 </div>
                 <input
@@ -737,20 +651,11 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                   placeholder="e.g. ITZsharky1"
                   disabled={isSubmitting || !canStartRun}
                   required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem 0.85rem 0.75rem 2.6rem',
-                    borderRadius: '8px',
-                    background: 'var(--color-bg-base, #0a0e14)',
-                    border: '1px solid var(--color-border, #263342)',
-                    color: '#ffffff',
-                    fontSize: '1rem',
-                    boxSizing: 'border-box',
-                  }}
+                  className="w-full rounded-md border border-line bg-canvas py-3 pr-3.5 pl-10.5 text-base text-white"
                   data-testid="twitch-handle-input"
                 />
               </div>
-              <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted, #64748b)', marginTop: '0.3rem', display: 'block' }}>
+              <span className="mt-1 block text-caption text-fg-muted">
                 Channel name or link (e.g., ITZsharky1). Direct links are automatically parsed.
               </span>
             </div>
@@ -758,90 +663,50 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
             <button
               type="submit"
               disabled={isSubmitting || !canStartRun}
-              style={{
-                marginTop: '0.5rem',
-                background: 'var(--color-gold-bright, #f59e0b)',
-                color: '#000000',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.85rem 1.5rem',
-                fontSize: '1rem',
-                fontWeight: 800,
-                cursor: !canStartRun ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.6rem',
-                boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
-                transition: 'all 0.15s ease',
-              }}
+              className={cn(
+                'mt-2 flex items-center justify-center gap-2.5 rounded-md border-0 bg-gold-bright px-6 py-3.5 text-base font-extrabold text-black shadow-[0_4px_14px_rgba(245,158,11,0.4)] transition-all duration-150',
+                !canStartRun ? 'cursor-not-allowed' : 'cursor-pointer'
+              )}
               data-testid="start-preflight-button"
             >
               <Play size={18} fill="#000000" />
               Review Rules &amp; Checklist
             </button>
-            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted, #64748b)', textAlign: 'center' }}>
+            <span className="text-center text-caption text-fg-muted">
               Already started? Enter the same name and Twitch to resume.
             </span>
           </form>
         </div>
       ) : (
         /* Authenticated Active Competitor Workspace */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="flex flex-col gap-6">
           {/* Competitor Identity Bar (only shown during active run before qual is done) */}
           {activeSession.status !== 'SUBMITTED' && activeSession.status !== 'VERIFIED' && (
             <div
-              style={{
-                background: 'var(--color-bg-surface, #121820)',
-                border: '1px solid var(--color-border, #263342)',
-                borderRadius: '12px',
-                padding: '1rem 1.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '1rem',
-              }}
+              className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-surface px-6 py-4"
               data-testid="competitor-identity-bar"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                <div
-                  style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '50%',
-                    background: 'rgba(245, 158, 11, 0.15)',
-                    border: '1px solid rgba(245, 158, 11, 0.4)',
-                    color: 'var(--color-gold-bright, #fbbf24)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 800,
-                    fontSize: '1.1rem',
-                  }}
-                >
+              <div className="flex items-center gap-3.5">
+                <div className="flex size-10.5 items-center justify-center rounded-full border border-gold/40 bg-gold/15 text-lg font-extrabold text-gold-bright">
                   {(resolvedPlayer?.name || activeSession.playerName || enteredPlayerName || 'C').slice(0, 1).toUpperCase()}
                 </div>
 
                 <div>
-                  <strong style={{ fontSize: '1.1rem', color: '#ffffff' }}>
+                  <strong className="text-lg text-white">
                     {resolvedPlayer?.name || activeSession.playerName || enteredPlayerName}
                   </strong>
                   {(activeSession.submittedTwitchUsername || enteredTwitchHandle) && (
-                    <div style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary, #94a3b8)', marginTop: '0.15rem' }}>
-                      Twitch: <span style={{ color: '#a855f7' }}>@{activeSession.submittedTwitchUsername || cleanTwitchUsername}</span>
+                    <div className="mt-0.5 text-caption text-fg-secondary">
+                      Twitch: <span className="text-purple-500">@{activeSession.submittedTwitchUsername || cleanTwitchUsername}</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+              <div className="flex flex-wrap items-center gap-2.5">
               {resumeToken && (
                 <span
-                  style={{
-                    fontSize: '0.78rem',
-                    color: draftStatus === 'error' ? '#f87171' : 'var(--color-text-muted, #64748b)',
-                  }}
+                  className={cn('text-caption', draftStatus === 'error' ? 'text-red-bright' : 'text-fg-muted')}
                   data-testid="draft-save-status"
                 >
                   {draftStatus === 'saving' && 'Saving...'}
@@ -854,19 +719,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                   type="button"
                   onClick={handleCopyRunLink}
                   data-testid="copy-run-link-button"
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid var(--color-border, #263342)',
-                    borderRadius: '6px',
-                    padding: '0.4rem 0.85rem',
-                    color: 'var(--color-text-secondary, #94a3b8)',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                  }}
+                  className={outlineButtonClass}
                   title="Bookmark or open this link to get back to your run on any device"
                 >
                   <Link2 size={13} /> {linkCopied ? 'Copied!' : 'Copy Run Link'}
@@ -876,19 +729,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                 type="button"
                 onClick={handleRequestSwitchCompetitor}
                 data-testid="switch-competitor-button"
-                style={{
-                  background: 'transparent',
-                  border: '1px solid var(--color-border, #263342)',
-                  borderRadius: '6px',
-                  padding: '0.4rem 0.85rem',
-                  color: 'var(--color-text-secondary, #94a3b8)',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
+                className={outlineButtonClass}
                 title="Clear active session from this browser"
               >
                 <LogOut size={13} /> Switch Competitor
@@ -907,7 +748,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
             />
           ) : (
             /* ACTIVE RUN (IN_PROGRESS) */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="flex flex-col gap-6">
               {/* HUD: Authword (session time is recorded for judges but not shown to competitors) */}
               <AuthwordHudCard authWord={activeSession.authWord} />
 

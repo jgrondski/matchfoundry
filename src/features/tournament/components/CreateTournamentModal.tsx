@@ -7,6 +7,10 @@ import { createEmptyTournament } from '../defaults';
 import { ClearableNumberInput } from '../../../components/ClearableNumberInput';
 import { X, Building2 } from 'lucide-react';
 import { Overlay } from '../../../components/overlay';
+import { Button, IconButton, cn } from '../../../components/ui';
+
+const modalLabelClass = 'mb-1.5 block text-caption font-semibold text-fg-secondary';
+const modalInputClass = 'w-full rounded-sm border border-line bg-canvas py-2.5 px-3 text-sm text-fg outline-none';
 
 interface CreateTournamentModalProps {
   isOpen: boolean;
@@ -139,43 +143,21 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
     >
       {({ requestClose }) => (
         <>
-          <div
-            style={{
-              padding: '1.25rem 1.5rem',
-              background: 'var(--color-bg-surface-elevated, #1a202c)',
-              borderBottom: '1px solid var(--color-border, rgba(255, 255, 255, 0.12))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <h3 id={titleId} style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+          <div className="flex items-center justify-between border-b border-line bg-elevated py-5 px-6">
+            <h3 id={titleId} className="m-0 text-lg font-bold text-white">
               Create New Tournament
             </h3>
-            <button
-              onClick={requestClose}
-              style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted, #64748b)', cursor: 'pointer' }}
-            >
+            <IconButton aria-label="Close" onClick={requestClose}>
               <X size={18} />
-            </button>
+            </IconButton>
           </div>
 
-          <form onSubmit={handleCreateSubmit} style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4 p-6">
             {/* Host Organization Selector */}
             <div>
-              <label style={modalLabelStyle}>Host Organization</label>
+              <label className={modalLabelClass}>Host Organization</label>
               {fixedOrgId ? (
-                <div
-                  style={{
-                    ...modalInputStyle,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    color: 'var(--color-text-primary, #ffffff)',
-                    fontWeight: 600,
-                  }}
-                >
+                <div className={cn(modalInputClass, 'flex items-center gap-2 bg-white/4 font-semibold text-fg')}>
                   <Building2 size={16} color="var(--color-gold-bright, #ffc905)" />
                   <span>{currentOrg?.name || 'Current Organization'} ({currentOrg?.shortName || currentOrg?.slug})</span>
                 </div>
@@ -183,7 +165,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                 <select
                   value={newTourneyOrgId}
                   onChange={e => handleOrgChange(e.target.value)}
-                  style={modalInputStyle}
+                  className={modalInputClass}
                 >
                   {organizations.map(org => (
                     <option key={org.id} value={org.id}>
@@ -195,58 +177,58 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
             </div>
 
             <div>
-              <label style={modalLabelStyle}>Tournament Name</label>
+              <label className={modalLabelClass}>Tournament Name</label>
               <input
                 type="text"
                 value={newTourneyName}
                 onChange={e => handleNameChange(e.target.value)}
                 placeholder="e.g. St. Louis Open 2026"
                 required
-                style={modalInputStyle}
+                className={modalInputClass}
               />
             </div>
 
             <div>
-              <label style={modalLabelStyle}>URL Slug</label>
+              <label className={modalLabelClass}>URL Slug</label>
               <input
                 type="text"
                 value={newTourneySlug}
                 onChange={e => setNewTourneySlug(e.target.value)}
                 required
-                style={modalInputStyle}
+                className={modalInputClass}
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="grid grid-cols-[1fr_1fr] gap-3">
               <div>
-                <label style={modalLabelStyle}>Event Date</label>
+                <label className={modalLabelClass}>Event Date</label>
                 <input
                   type="text"
                   value={newTourneyDate}
                   onChange={e => setNewTourneyDate(e.target.value)}
                   placeholder="e.g. April 12, 2026"
-                  style={modalInputStyle}
+                  className={modalInputClass}
                 />
               </div>
               <div>
-                <label style={modalLabelStyle}>Location</label>
+                <label className={modalLabelClass}>Location</label>
                 <input
                   type="text"
                   value={newTourneyLocation}
                   onChange={e => setNewTourneyLocation(e.target.value)}
                   placeholder="e.g. St. Louis, MO"
-                  style={modalInputStyle}
+                  className={modalInputClass}
                 />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="grid grid-cols-[1fr_1fr] gap-3">
               <div>
-                <label style={modalLabelStyle}>Qualifying Mode</label>
+                <label className={modalLabelClass}>Qualifying Mode</label>
                 <select
                   value={newTourneyMode}
                   onChange={e => setNewTourneyMode(e.target.value as QualMode)}
-                  style={modalInputStyle}
+                  className={modalInputClass}
                 >
                   <option value="HYBRID">Hybrid (In-Person &amp; Online)</option>
                   <option value="IN_PERSON">In-Person Live Event</option>
@@ -254,7 +236,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                 </select>
               </div>
               <div>
-                <label style={modalLabelStyle}>Qual Duration (Minutes)</label>
+                <label className={modalLabelClass}>Qual Duration (Minutes)</label>
                 <input
                   type="number"
                   min={1}
@@ -264,17 +246,17 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                     const val = parseInt(e.target.value, 10);
                     setNewTourneyWindowMinutes(isNaN(val) || val < 1 ? 1 : val);
                   }}
-                  style={modalInputStyle}
+                  className={modalInputClass}
                 />
               </div>
             </div>
 
             <div>
-              <label style={modalLabelStyle}>Qualifying Format</label>
+              <label className={modalLabelClass}>Qualifying Format</label>
               <select
                 value={newTourneyFormat}
                 onChange={e => setNewTourneyFormat(e.target.value as QualFormat)}
-                style={modalInputStyle}
+                className={modalInputClass}
               >
                 <option value="AVERAGE_OF_X">Average of X Attempts</option>
                 <option value="HIGH_SCORE"># of Maxes</option>
@@ -284,7 +266,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
 
             {newTourneyFormat === 'AVERAGE_OF_X' && (
               <div>
-                <label style={modalLabelStyle}>Target Attempt Count (X)</label>
+                <label className={modalLabelClass}>Target Attempt Count (X)</label>
                 <ClearableNumberInput
                   min={1}
                   max={10}
@@ -295,40 +277,21 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
                   }}
                   error={avgCountError}
                   onErrorChange={setAvgCountError}
-                  style={modalInputStyle}
+                  className={modalInputClass}
                 />
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={requestClose}
-                disabled={isCreating}
-                className="btn btn-secondary"
-              >
+            <div className="mt-2 flex justify-end gap-3">
+              <Button onClick={requestClose} disabled={isCreating}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isCreating}
-                className="btn btn-primary"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem' }}
-              >
+              </Button>
+              <Button type="submit" variant="primary" disabled={isCreating} className="gap-2">
                 {isCreating && (
-                  <div
-                    style={{
-                      width: '14px',
-                      height: '14px',
-                      borderRadius: '50%',
-                      border: '2px solid rgba(255,255,255,0.3)',
-                      borderTopColor: '#ffffff',
-                      animation: 'spin 0.8s linear infinite',
-                    }}
-                  />
+                  <div className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 )}
                 <span>{isCreating ? 'Creating...' : 'Create & Configure'}</span>
-              </button>
+              </Button>
             </div>
           </form>
         </>
@@ -337,22 +300,3 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
   );
 };
 
-const modalLabelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '0.8rem',
-  fontWeight: 600,
-  color: 'var(--color-text-secondary, #94a3b8)',
-  marginBottom: '0.35rem',
-};
-
-const modalInputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '0.65rem 0.75rem',
-  borderRadius: 'var(--radius-sm, 6px)',
-  border: '1px solid var(--color-border, rgba(255, 255, 255, 0.12))',
-  background: 'var(--color-bg-base, #0c0d12)',
-  color: 'var(--color-text-primary, #ffffff)',
-  fontSize: '0.85rem',
-  outline: 'none',
-  boxSizing: 'border-box',
-};

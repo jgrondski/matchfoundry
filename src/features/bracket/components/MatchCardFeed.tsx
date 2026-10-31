@@ -14,6 +14,7 @@ import { PlayerDetailDrawer } from '../../qualifiers/components/PlayerDetailDraw
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { getInheritedRoundBestOf } from './OrganizerSheetMatrix';
+import { cn } from '../../../components/ui';
 
 interface MatchCardFeedProps {
   tournament: Tournament;
@@ -151,29 +152,10 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
   };
 
   return (
-    <div
-      style={{
-        width: '100%',
-        maxWidth: '480px',
-        margin: '0 auto',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.75rem',
-        boxSizing: 'border-box',
-      }}
-    >
+    <div className="w-full max-w-120 mx-auto flex flex-col gap-3">
       {/* Stage Filter Tabs (Winners / Losers / Grand Finals) for Double Elimination */}
       {isDoubleElim && (
-        <div
-          style={{
-            display: 'flex',
-            gap: '0.35rem',
-            paddingBottom: '0.2rem',
-            overflowX: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'none',
-          }}
-        >
+        <div className="flex gap-1.5 pb-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none]">
           {(['ALL', 'WINNERS', 'LOSERS', 'GRAND_FINALS'] as const).map((stage) => {
             const label = stage === 'ALL' ? 'All' : stage === 'WINNERS' ? 'Winners' : stage === 'LOSERS' ? 'Losers' : 'Finals';
             const isSelected = selectedStage === stage;
@@ -186,18 +168,14 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                   setSelectedStage(stage);
                   setSelectedRoundKey('ALL');
                 }}
+                className={cn(
+                  'text-xs py-1 px-2.5 rounded-full cursor-pointer whitespace-nowrap transition-all duration-100 shrink-0',
+                  isSelected ? 'font-extrabold' : 'font-semibold'
+                )}
                 style={{
-                  fontSize: '0.72rem',
-                  fontWeight: isSelected ? 800 : 600,
-                  padding: '0.3rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
                   border: isSelected ? `1px solid ${stageAccent}` : `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-border)')}`,
                   background: isSelected ? stageAccent : getAlternateShade(cardColor, 6),
                   color: isSelected ? contrast : 'var(--color-text-secondary)',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.12s ease',
-                  flexShrink: 0,
                 }}
               >
                 {label}
@@ -208,31 +186,18 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
       )}
 
       {/* Round Selector Bar */}
-      <div
-        style={{
-          overflowX: 'auto',
-          display: 'flex',
-          gap: '0.4rem',
-          paddingBottom: '0.2rem',
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none',
-        }}
-      >
+      <div className="overflow-x-auto flex gap-1.5 pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none]">
         <button
           key="ALL_ROUNDS"
           onClick={() => setSelectedRoundKey('ALL')}
+          className={cn(
+            'py-1.5 px-3 text-xs rounded-full cursor-pointer whitespace-nowrap transition-all duration-100 shrink-0',
+            activeRoundKey === 'ALL' ? 'font-extrabold' : 'font-semibold'
+          )}
           style={{
-            padding: '0.35rem 0.75rem',
-            fontSize: '0.76rem',
-            fontWeight: activeRoundKey === 'ALL' ? 800 : 600,
-            borderRadius: 'var(--radius-full)',
             border: activeRoundKey === 'ALL' ? `1px solid ${primaryColor}` : `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-border)')}`,
             background: activeRoundKey === 'ALL' ? primaryColor : getAlternateShade(cardColor, 6),
             color: activeRoundKey === 'ALL' ? getContrastingTextColor(primaryColor) : 'var(--color-text-secondary)',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'all 0.12s ease',
-            flexShrink: 0,
             boxShadow: activeRoundKey === 'ALL' ? `0 0 8px ${colorWithAlpha(primaryColor, 0.35)}` : 'none',
           }}
         >
@@ -248,18 +213,14 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
             <button
               key={rKey}
               onClick={() => setSelectedRoundKey(isSelected ? 'ALL' : rKey)}
+              className={cn(
+                'py-1.5 px-3 text-xs rounded-full cursor-pointer whitespace-nowrap transition-all duration-100 shrink-0',
+                isSelected ? 'font-extrabold' : 'font-semibold'
+              )}
               style={{
-                padding: '0.35rem 0.75rem',
-                fontSize: '0.76rem',
-                fontWeight: isSelected ? 800 : 600,
-                borderRadius: 'var(--radius-full)',
                 border: isSelected ? `1px solid ${rColor}` : `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-border)')}`,
                 background: isSelected ? rColor : getAlternateShade(cardColor, 6),
                 color: isSelected ? contrast : 'var(--color-text-secondary)',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.12s ease',
-                flexShrink: 0,
                 boxShadow: isSelected ? `0 0 8px ${colorWithAlpha(rColor, 0.35)}` : 'none',
               }}
             >
@@ -270,50 +231,32 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
       </div>
 
       {/* Search & Round Context Bar */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div className="flex flex-col gap-2">
         {/* Compact Quick Search */}
-        <div style={{ position: 'relative', width: '100%' }}>
-          <Search
-            size={13}
-            style={{
-              position: 'absolute',
-              left: '0.65rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--color-text-muted)',
-            }}
-          />
+        <div className="relative w-full">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted" />
           <input
             type="text"
             placeholder="Search match # or player..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full py-1.5 pr-2.5 pl-7.5 text-caption rounded-sm text-fg"
             style={{
-              width: '100%',
-              padding: '0.35rem 0.6rem 0.35rem 1.85rem',
-              fontSize: '0.78rem',
-              borderRadius: 'var(--radius-sm)',
               border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}`,
               background: getAlternateShade(cardColor, 4),
-              color: 'var(--color-text-primary)',
-              boxSizing: 'border-box',
             }}
           />
         </div>
       </div>
 
       {/* Matches Feed */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div className="flex flex-col gap-5">
         {totalFilteredMatchesCount === 0 ? (
           <div
+            className="py-8 px-4 text-center text-fg-muted rounded-md text-caption"
             style={{
-              padding: '2rem 1rem',
-              textAlign: 'center',
-              color: 'var(--color-text-muted)',
               background: cardColor,
-              borderRadius: 'var(--radius-md)',
               border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
-              fontSize: '0.82rem',
             }}
           >
             {searchTerm ? `No matches found matching "${searchTerm}".` : 'No matches available.'}
@@ -334,65 +277,26 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
             return (
               <div
                 key={getRoundKey(round, rIdx)}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.65rem',
-                }}
+                className="flex flex-col gap-2.5"
               >
                 {/* Round Summary Heading Banner with Left Accent Border */}
                 <div
+                  className="py-2 px-3 rounded-md flex items-center justify-between gap-2"
                   style={{
-                    padding: '0.45rem 0.75rem',
                     background: getAlternateShade(cardColor, 3),
-                    borderRadius: 'var(--radius-md)',
                     border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}`,
                     borderLeft: `4px solid ${roundAccentColor}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '0.5rem',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span
-                      style={{
-                        fontWeight: 800,
-                        fontSize: '0.82rem',
-                        color: 'var(--color-text-primary)',
-                        letterSpacing: '0.03em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-caption text-fg tracking-wide uppercase">
                       {round.name}
                     </span>
-                    <span
-                      style={{
-                        fontSize: '0.68rem',
-                        padding: '0.08rem 0.38rem',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'rgba(255, 255, 255, 0.06)',
-                        border: '1px solid var(--color-border)',
-                        color: 'var(--color-text-secondary)',
-                        fontWeight: 600,
-                        fontFamily: 'var(--font-mono)',
-                      }}
-                    >
+                    <span className="text-2xs py-0.5 px-1.5 rounded-sm bg-white/6 border border-line text-fg-secondary font-semibold font-mono">
                       Best of {inheritedBestOf}
                     </span>
                   </div>
-                  <span
-                    className="tabular-nums"
-                    style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      padding: '0.1rem 0.45rem',
-                      borderRadius: 'var(--radius-full)',
-                      background: 'rgba(255, 255, 255, 0.06)',
-                      color: 'var(--color-text-secondary)',
-                      border: '1px solid var(--color-border)',
-                    }}
-                  >
+                  <span className="font-mono tabular-nums tracking-tight text-2xs font-semibold py-0.5 px-2 rounded-full bg-white/6 text-fg-secondary border border-line">
                     {roundCompletedCount} / {round.matches.length} Done
                   </span>
                 </div>
@@ -445,11 +349,15 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                 }}
                 onMouseEnter={() => setHoveredMatchId(match.id)}
                 onMouseLeave={() => setHoveredMatchId(null)}
+                className={cn(
+                  'rounded-md p-3 flex flex-col gap-2 transition-all duration-100',
+                  tournament.isLocked && isPlayable ? 'cursor-pointer' : 'cursor-default',
+                  isPlayable ? 'opacity-100' : 'opacity-65'
+                )}
                 style={{
                   background: isMatchCardHovered
                     ? getAlternateShade(cardColor, 8)
                     : cardColor,
-                  borderRadius: 'var(--radius-md)',
                   border: inProgress
                     ? `2px solid ${primaryColor}`
                     : isMatchCardHovered
@@ -462,26 +370,14 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                     : isMatchCardHovered
                     ? 'var(--shadow-md)'
                     : 'var(--shadow-sm)',
-                  padding: '0.75rem',
-                  cursor: tournament.isLocked && isPlayable ? 'pointer' : 'default',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.55rem',
-                  opacity: isPlayable ? 1 : 0.65,
-                  transition: 'all 0.12s ease',
-                  boxSizing: 'border-box',
                 }}
               >
                 {/* Card Top: Match # badge on left, status on right (Round name removed per user request) */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
                     <span
+                      className="text-xs font-extrabold font-mono py-0.5 px-2 rounded-sm"
                       style={{
-                        fontSize: '0.74rem',
-                        fontWeight: 800,
-                        fontFamily: 'var(--font-mono)',
-                        padding: '0.15rem 0.5rem',
-                        borderRadius: 'var(--radius-sm)',
                         background: colorWithAlpha(matchAccentColor, 0.15, 'rgba(255, 255, 255, 0.08)'),
                         color: matchAccentColor,
                         border: `1px solid ${colorWithAlpha(matchAccentColor, 0.35, 'transparent')}`,
@@ -491,98 +387,52 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <div className="flex items-center gap-1.5">
                     {!tournament.isLocked ? (
                       <span
-                        style={{
-                          fontSize: '0.68rem',
-                          fontWeight: 600,
-                          padding: '0.12rem 0.45rem',
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'rgba(255, 255, 255, 0.06)',
-                          color: 'var(--color-text-muted)',
-                          border: '1px solid var(--color-border)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                        }}
+                        className="text-2xs font-semibold py-0.5 px-2 rounded-sm bg-white/6 text-fg-muted border border-line inline-flex items-center gap-1"
                         title="Scores locked during Qualifiers Mode"
                       >
                         <Lock size={11} /> Qualifiers
                       </span>
                     ) : isComplete ? (
-                      <span
-                        style={{
-                          fontSize: '0.68rem',
-                          fontWeight: 700,
-                          padding: '0.12rem 0.45rem',
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'rgba(34, 197, 94, 0.15)',
-                          color: '#4ade80',
-                          border: '1px solid rgba(34, 197, 94, 0.35)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                        }}
-                      >
+                      <span className="text-2xs font-bold py-0.5 px-2 rounded-sm bg-green-500/15 text-green-400 border border-green-500/35 inline-flex items-center gap-1">
                         <CheckCircle2 size={11} /> Complete
                       </span>
                     ) : inProgress ? (
                       <span
+                        className="animate-pulse-border text-2xs font-bold py-0.5 px-2 rounded-sm inline-flex items-center gap-1"
                         style={{
-                          fontSize: '0.68rem',
-                          fontWeight: 700,
-                          padding: '0.12rem 0.45rem',
-                          borderRadius: 'var(--radius-sm)',
                           background: colorWithAlpha(primaryColor, 0.15, 'rgba(245, 158, 11, 0.1)'),
                           color: primaryColor,
                           border: `1px solid ${colorWithAlpha(primaryColor, 0.4, 'rgba(245, 158, 11, 0.3)')}`,
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
                         }}
-                        className="animate-pulse-border"
                       >
                         <Clock size={11} /> Live (Bo{matchBestOf})
                       </span>
                     ) : (
-                      <span
-                        style={{
-                          fontSize: '0.68rem',
-                          fontWeight: 600,
-                          padding: '0.12rem 0.45rem',
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          color: 'var(--color-text-muted)',
-                          border: '1px solid var(--color-border)',
-                        }}
-                      >
+                      <span className="text-2xs font-semibold py-0.5 px-2 rounded-sm bg-white/5 text-fg-muted border border-line">
                         Ready
                       </span>
                     )}
                     {tournament.isLocked && isPlayable && (
-                      <ChevronRight size={15} color="var(--color-text-muted)" style={{ opacity: 0.6 }} />
+                      <ChevronRight size={15} color="var(--color-text-muted)" className="opacity-60" />
                     )}
                   </div>
                 </div>
 
                 {/* Matchup Rows */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <div className="flex flex-col gap-1.5">
                   {/* Player 1 Row */}
                   <div
+                    className="flex justify-between items-center py-2 px-2.5 rounded-sm transition-all duration-100"
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '0.5rem 0.65rem',
-                      borderRadius: 'var(--radius-sm)',
                       background: p1Won
                         ? colorWithAlpha(primaryColor, 0.18, 'rgba(255, 255, 255, 0.08)')
                         : getAlternateShade(cardColor, 6),
                       border: p1Won
                         ? `1px solid ${colorWithAlpha(primaryColor, 0.45, 'transparent')}`
                         : `1px solid ${colorWithAlpha(secondaryColor, 0.18, 'rgba(255, 255, 255, 0.04)')}`,
-                      transition: 'all 0.12s ease',
                     }}
                   >
                     <div
@@ -594,30 +444,26 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                       }}
                       onMouseEnter={() => p1?.id && setHoveredPlayerKey(`p1-${match.id}`)}
                       onMouseLeave={() => setHoveredPlayerKey(null)}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded-sm transition-all duration-100 max-w-[calc(100%-50px)] min-w-0',
+                        p1?.id ? 'cursor-pointer' : '[cursor:inherit]'
+                      )}
                       style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        padding: '0.1rem 0.35rem',
-                        borderRadius: 'var(--radius-sm)',
                         background: hoveredPlayerKey === `p1-${match.id}` ? colorWithAlpha(primaryColor, 0.15) : 'transparent',
                         boxShadow: hoveredPlayerKey === `p1-${match.id}` ? `0 0 0 1px ${primaryColor}` : 'none',
-                        cursor: p1?.id ? 'pointer' : 'inherit',
-                        transition: 'all 0.12s ease',
-                        maxWidth: 'calc(100% - 50px)',
-                        minWidth: 0,
                       }}
                       title={p1?.id ? "View competitor tournament profile" : undefined}
                     >
                       {(p1?.country || (p1 as any)?.avatarUrl) && (
-                        <PlayerAvatar player={p1 as any} country={p1?.country} style={{ opacity: isComplete && p2Won ? 0.45 : 1 }} />
+                        <PlayerAvatar player={p1 as any} country={p1?.country} className={isComplete && p2Won ? 'opacity-45' : 'opacity-100'} />
                       )}
                       {p1?.seed && (
                         <span
+                          className={cn(
+                            'text-3xs py-0 px-1 rounded-sm font-mono font-bold leading-tight shrink-0',
+                            isComplete && p2Won ? 'opacity-45' : 'opacity-100'
+                          )}
                           style={{
-                            fontSize: '0.65rem',
-                            padding: '0.06rem 0.28rem',
-                            borderRadius: 'var(--radius-sm)',
                             background: p1Won
                               ? colorWithAlpha(primaryColor, 0.15, 'rgba(255, 255, 255, 0.08)')
                               : colorWithAlpha(matchAccentColor, 0.12, 'rgba(255, 255, 255, 0.08)'),
@@ -625,11 +471,6 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                             border: p1Won
                               ? `1px solid ${colorWithAlpha(primaryColor, 0.4, 'rgba(255, 255, 255, 0.15)')}`
                               : `1px solid ${colorWithAlpha(matchAccentColor, 0.25, 'rgba(255, 255, 255, 0.1)')}`,
-                            fontFamily: 'var(--font-mono)',
-                            fontWeight: 700,
-                            lineHeight: 1.1,
-                            flexShrink: 0,
-                            opacity: isComplete && p2Won ? 0.45 : 1,
                           }}
                         >
                           #{p1.seed}
@@ -637,37 +478,24 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                       )}
                       {match.player1.isManualOverride && (
                         <span
-                          style={{
-                            fontSize: '0.58rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.04em',
-                            padding: '0.05rem 0.25rem',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(245, 158, 11, 0.18)',
-                            color: '#fbbf24',
-                            border: '1px solid rgba(245, 158, 11, 0.4)',
-                            textTransform: 'uppercase',
-                            lineHeight: 1.1,
-                            flexShrink: 0,
-                          }}
+                          className="text-3xs font-bold tracking-wide py-0 px-1 rounded-sm bg-gold/18 text-gold-bright border border-gold/40 uppercase leading-tight shrink-0"
                           title="Position manually placed by tournament organizer"
                         >
                           OVERRIDE
                         </span>
                       )}
                       <span
+                        className={cn(
+                          'text-sm truncate',
+                          isComplete ? (p1Won ? 'font-extrabold' : 'font-normal') : (p1Wins > p2Wins ? 'font-bold' : 'font-medium'),
+                          hoveredPlayerKey === `p1-${match.id}` ? 'opacity-100' : isComplete && p2Won ? 'opacity-45' : 'opacity-100'
+                        )}
                         style={{
-                          fontWeight: isComplete ? (p1Won ? 800 : 400) : (p1Wins > p2Wins ? 700 : 500),
-                          fontSize: '0.85rem',
                           color: hoveredPlayerKey === `p1-${match.id}`
                             ? primaryColor
                             : p1Won
                             ? primaryColor
                             : 'var(--color-text-primary)',
-                          opacity: hoveredPlayerKey === `p1-${match.id}` ? 1 : isComplete && p2Won ? 0.45 : 1,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
                         }}
                       >
                         {p1Name}
@@ -675,22 +503,19 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                     </div>
 
                     <span
-                      className="tabular-nums"
+                      className={cn(
+                        'font-mono tabular-nums tracking-tight text-lg py-0.5 px-2 rounded-sm leading-tight shrink-0',
+                        p1Won ? 'font-extrabold' : 'font-semibold',
+                        isComplete && p2Won ? 'opacity-45' : 'opacity-100'
+                      )}
                       style={{
-                        fontSize: '1.15rem',
-                        fontWeight: p1Won ? 800 : 600,
-                        padding: '0.1rem 0.5rem',
-                        borderRadius: 'var(--radius-sm)',
                         background: p1Won
                           ? colorWithAlpha(primaryColor, 0.22, 'rgba(255, 255, 255, 0.08)')
                           : 'transparent',
                         color: p1Won ? primaryColor : 'var(--color-text-primary)',
-                        opacity: isComplete && p2Won ? 0.45 : 1,
                         border: p1Won
                           ? `1px solid ${colorWithAlpha(primaryColor, 0.55, 'transparent')}`
                           : '1px solid transparent',
-                        lineHeight: 1.2,
-                        flexShrink: 0,
                       }}
                     >
                       {p1ScoreDisplay}
@@ -699,19 +524,14 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
 
                   {/* Player 2 Row */}
                   <div
+                    className="flex justify-between items-center py-2 px-2.5 rounded-sm transition-all duration-100"
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '0.5rem 0.65rem',
-                      borderRadius: 'var(--radius-sm)',
                       background: p2Won
                         ? colorWithAlpha(primaryColor, 0.18, 'rgba(255, 255, 255, 0.08)')
                         : getAlternateShade(cardColor, 6),
                       border: p2Won
                         ? `1px solid ${colorWithAlpha(primaryColor, 0.45, 'transparent')}`
                         : `1px solid ${colorWithAlpha(secondaryColor, 0.18, 'rgba(255, 255, 255, 0.04)')}`,
-                      transition: 'all 0.12s ease',
                     }}
                   >
                     <div
@@ -723,30 +543,26 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                       }}
                       onMouseEnter={() => p2?.id && setHoveredPlayerKey(`p2-${match.id}`)}
                       onMouseLeave={() => setHoveredPlayerKey(null)}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded-sm transition-all duration-100 max-w-[calc(100%-50px)] min-w-0',
+                        p2?.id ? 'cursor-pointer' : '[cursor:inherit]'
+                      )}
                       style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        padding: '0.1rem 0.35rem',
-                        borderRadius: 'var(--radius-sm)',
                         background: hoveredPlayerKey === `p2-${match.id}` ? colorWithAlpha(primaryColor, 0.15) : 'transparent',
                         boxShadow: hoveredPlayerKey === `p2-${match.id}` ? `0 0 0 1px ${primaryColor}` : 'none',
-                        cursor: p2?.id ? 'pointer' : 'inherit',
-                        transition: 'all 0.12s ease',
-                        maxWidth: 'calc(100% - 50px)',
-                        minWidth: 0,
                       }}
                       title={p2?.id ? "View competitor tournament profile" : undefined}
                     >
                       {(p2?.country || (p2 as any)?.avatarUrl) && (
-                        <PlayerAvatar player={p2 as any} country={p2?.country} style={{ opacity: isComplete && p1Won ? 0.45 : 1 }} />
+                        <PlayerAvatar player={p2 as any} country={p2?.country} className={isComplete && p1Won ? 'opacity-45' : 'opacity-100'} />
                       )}
                       {p2?.seed && (
                         <span
+                          className={cn(
+                            'text-3xs py-0 px-1 rounded-sm font-mono font-bold leading-tight shrink-0',
+                            isComplete && p1Won ? 'opacity-45' : 'opacity-100'
+                          )}
                           style={{
-                            fontSize: '0.65rem',
-                            padding: '0.06rem 0.28rem',
-                            borderRadius: 'var(--radius-sm)',
                             background: p2Won
                               ? colorWithAlpha(primaryColor, 0.15, 'rgba(255, 255, 255, 0.08)')
                               : colorWithAlpha(matchAccentColor, 0.12, 'rgba(255, 255, 255, 0.08)'),
@@ -754,11 +570,6 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                             border: p2Won
                               ? `1px solid ${colorWithAlpha(primaryColor, 0.4, 'rgba(255, 255, 255, 0.15)')}`
                               : `1px solid ${colorWithAlpha(matchAccentColor, 0.25, 'rgba(255, 255, 255, 0.1)')}`,
-                            fontFamily: 'var(--font-mono)',
-                            fontWeight: 700,
-                            lineHeight: 1.1,
-                            flexShrink: 0,
-                            opacity: isComplete && p1Won ? 0.45 : 1,
                           }}
                         >
                           #{p2.seed}
@@ -766,37 +577,24 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                       )}
                       {match.player2.isManualOverride && (
                         <span
-                          style={{
-                            fontSize: '0.58rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.04em',
-                            padding: '0.05rem 0.25rem',
-                            borderRadius: 'var(--radius-sm)',
-                            background: 'rgba(245, 158, 11, 0.18)',
-                            color: '#fbbf24',
-                            border: '1px solid rgba(245, 158, 11, 0.4)',
-                            textTransform: 'uppercase',
-                            lineHeight: 1.1,
-                            flexShrink: 0,
-                          }}
+                          className="text-3xs font-bold tracking-wide py-0 px-1 rounded-sm bg-gold/18 text-gold-bright border border-gold/40 uppercase leading-tight shrink-0"
                           title="Position manually placed by tournament organizer"
                         >
                           OVERRIDE
                         </span>
                       )}
                       <span
+                        className={cn(
+                          'text-sm truncate',
+                          isComplete ? (p2Won ? 'font-extrabold' : 'font-normal') : (p2Wins > p1Wins ? 'font-bold' : 'font-medium'),
+                          hoveredPlayerKey === `p2-${match.id}` ? 'opacity-100' : isComplete && p1Won ? 'opacity-45' : 'opacity-100'
+                        )}
                         style={{
-                          fontWeight: isComplete ? (p2Won ? 800 : 400) : (p2Wins > p1Wins ? 700 : 500),
-                          fontSize: '0.85rem',
                           color: hoveredPlayerKey === `p2-${match.id}`
                             ? primaryColor
                             : p2Won
                             ? primaryColor
                             : 'var(--color-text-primary)',
-                          opacity: hoveredPlayerKey === `p2-${match.id}` ? 1 : isComplete && p1Won ? 0.45 : 1,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
                         }}
                       >
                         {p2Name}
@@ -804,22 +602,19 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                     </div>
 
                     <span
-                      className="tabular-nums"
+                      className={cn(
+                        'font-mono tabular-nums tracking-tight text-lg py-0.5 px-2 rounded-sm leading-tight shrink-0',
+                        p2Won ? 'font-extrabold' : 'font-semibold',
+                        isComplete && p1Won ? 'opacity-45' : 'opacity-100'
+                      )}
                       style={{
-                        fontSize: '1.15rem',
-                        fontWeight: p2Won ? 800 : 600,
-                        padding: '0.1rem 0.5rem',
-                        borderRadius: 'var(--radius-sm)',
                         background: p2Won
                           ? colorWithAlpha(primaryColor, 0.22, 'rgba(255, 255, 255, 0.08)')
                           : 'transparent',
                         color: p2Won ? primaryColor : 'var(--color-text-primary)',
-                        opacity: isComplete && p1Won ? 0.45 : 1,
                         border: p2Won
                           ? `1px solid ${colorWithAlpha(primaryColor, 0.55, 'transparent')}`
                           : '1px solid transparent',
-                        lineHeight: 1.2,
-                        flexShrink: 0,
                       }}
                     >
                       {p2ScoreDisplay}
