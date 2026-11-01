@@ -165,14 +165,16 @@ export async function deleteTournament(id: string): Promise<boolean> {
 }
 
 
-import { players, tournamentPlayers, qualifierSubmissions, matches, games } from '../db/schema';
+import { players, tournamentPlayers, qualifierSubmissions, qualifierRuns, matches, games } from '../db/schema';
 import { desc, inArray } from 'drizzle-orm';
+import { attachOrphanScoresToRuns, listRuns, type QualRunRow } from './qualRuns';
 import type {
   Tournament,
   TournamentTier,
   PlayerProfile,
   TournamentPlayer,
   QualifierSubmission,
+  QualRun,
   MatchScoreRecord,
 } from '../features/tournament/types';
 import type { BracketMatch } from '../features/bracket/types';
@@ -187,6 +189,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
   const tList = await db.select().from(tournaments).where(condition).limit(1);
   if (tList.length === 0) return null;
   const t = tList[0];
+  await attachOrphanScoresToRuns(t.id);
 
   const tiersList = await db
     .select()
@@ -199,6 +202,8 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     .from(qualifierSubmissions)
     .where(eq(qualifierSubmissions.tournamentId, t.id))
     .orderBy(desc(qualifierSubmissions.score));
+  const runRows = await listRuns(t.id);
+  const runById = new Map<string, QualRunRow>(runRows.map(r => [r.id, r]));
 
   const tPlayersList = await db
     .select({
@@ -293,24 +298,50 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     };
   }
 
-  const qualifierSubmissionsList: QualifierSubmission[] = (subsList as any[]).map((s: any) => ({
-    id: s.id,
-    tournamentId: s.tournamentId,
-    playerId: s.playerId,
-    score: s.score,
-    submittedAt: s.createdAt.getTime(),
-    submissionSource: s.submissionSource || 'IN_PERSON',
-    authWord: s.authWord || undefined,
-    twitchVodUrl: s.twitchVodUrl || undefined,
-    submittedTwitchId: s.submittedTwitchId || undefined,
-    submittedTwitchUsername: s.submittedTwitchUsername || undefined,
-    identityStatus: s.identityStatus || undefined,
-    status: s.status || 'VERIFIED',
-    timerLog: s.timerLog || undefined,
-    judgeNotes: s.judgeNotes || undefined,
-    playerNotes: s.playerNotes || undefined,
-    verifiedBy: s.verifiedBy || undefined,
-    verifiedAt: s.verifiedAt ? new Date(s.verifiedAt).getTime() : undefined,
+  // Qual details come from the score row's run; a row with no run (not yet backfilled) keeps its own columns.
+  const qualifierSubmissionsList: QualifierSubmission[] = (subsList as any[]).map((s: any) => {
+    const d: any = (s.runId && runById.get(s.runId)) || s;
+    return {
+      id: s.id,
+      tournamentId: s.tournamentId,
+      playerId: s.playerId,
+      runId: s.runId || undefined,
+      score: s.score,
+      submittedAt: s.createdAt.getTime(),
+      submissionSource: d.submissionSource || 'IN_PERSON',
+      authWord: d.authWord || undefined,
+      twitchVodUrl: d.twitchVodUrl || undefined,
+      submittedTwitchId: d.submittedTwitchId || undefined,
+      submittedTwitchUsername: d.submittedTwitchUsername || undefined,
+      identityStatus: d.identityStatus || undefined,
+      status: d.status || 'VERIFIED',
+      timerLog: d.timerLog || undefined,
+      judgeNotes: d.judgeNotes || undefined,
+      playerNotes: d.playerNotes || undefined,
+      verifiedBy: d.verifiedBy || undefined,
+      verifiedAt: d.verifiedAt ? new Date(d.verifiedAt).getTime() : undefined,
+    };
+  });
+
+  // Never include resumeToken or draft: those belong only to the competitor running the qual.
+  const qualRunsList: QualRun[] = runRows.map(r => ({
+    id: r.id,
+    tournamentId: r.tournamentId,
+    playerId: r.playerId,
+    submissionSource: r.submissionSource,
+    status: r.status,
+    authWord: r.authWord || undefined,
+    twitchVodUrl: r.twitchVodUrl || undefined,
+    submittedTwitchId: r.submittedTwitchId || undefined,
+    submittedTwitchUsername: r.submittedTwitchUsername || undefined,
+    identityStatus: r.identityStatus || undefined,
+    timerLog: r.timerLog || undefined,
+    judgeNotes: r.judgeNotes || undefined,
+    playerNotes: r.playerNotes || undefined,
+    verifiedBy: r.verifiedBy || undefined,
+    verifiedAt: r.verifiedAt ? r.verifiedAt.getTime() : undefined,
+    submittedAt: r.submittedAt ? r.submittedAt.getTime() : undefined,
+    createdAt: r.createdAt.getTime(),
   }));
 
   const compositeTiers: TournamentTier[] = (tiersList as any[]).map((tier: any) => {
@@ -404,6 +435,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     },
     playersPool,
     qualifierSubmissions: qualifierSubmissionsList,
+    qualRuns: qualRunsList,
     tournamentPlayers: tournamentPlayersMap,
     useOrgBranding: meta.useOrgBranding ?? true,
     logoUrl: meta.logoUrl || undefined,
@@ -754,11 +786,11 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
       }
     }
 
-    // Fetch existing qualifier submissions early so we can cross-reference verified online runs
-    const existingDbSubs = await db
-      .select()
-      .from(qualifierSubmissions)
-      .where(eq(qualifierSubmissions.tournamentId, savedTourneyId));
+    // Fetch existing qual runs early so we can cross-reference verified online runs
+    const existingDbRuns = await db
+      .select({ playerId: qualifierRuns.playerId, submissionSource: qualifierRuns.submissionSource, status: qualifierRuns.status })
+      .from(qualifierRuns)
+      .where(eq(qualifierRuns.tournamentId, savedTourneyId));
 
     // Update existing players' seeds or qualsCompleted if provided
     for (const p of validPlayers) {
@@ -767,8 +799,8 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
         if (tp) {
           const existingPlayerRecord = (existingDbPlayers as any[]).find((r: any) => r.playerId === p.id);
           // Check if competitor has an active VERIFIED online submission in PostgreSQL
-          const hasVerifiedDbOnlineSub = existingDbSubs.some(
-            (s: any) => s.playerId === p.id && s.submissionSource === 'ONLINE' && s.status === 'VERIFIED'
+          const hasVerifiedDbOnlineSub = existingDbRuns.some(
+            (r: { playerId: string; submissionSource: string; status: string }) => r.playerId === p.id && r.submissionSource === 'ONLINE' && r.status === 'VERIFIED'
           );
           const isDbCompleted = Boolean(existingPlayerRecord?.qualsCompleted || hasVerifiedDbOnlineSub);
 
@@ -803,6 +835,14 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
       .from(qualifierSubmissions)
       .where(eq(qualifierSubmissions.tournamentId, savedTourneyId));
     const existingDbSubMap = new Map((existingDbSubs as any[]).map(s => [s.id, s]));
+    const runSourceById = new Map(
+      (
+        await db
+          .select({ id: qualifierRuns.id, submissionSource: qualifierRuns.submissionSource })
+          .from(qualifierRuns)
+          .where(eq(qualifierRuns.tournamentId, savedTourneyId))
+      ).map((r: { id: string; submissionSource: string }) => [r.id, r.submissionSource])
+    );
 
     const validSubs = tourney.qualifierSubmissions.filter(s => isUuid(s.playerId));
     const toInsert: Array<typeof qualifierSubmissions.$inferInsert> = [];
@@ -811,7 +851,11 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
       const isOurUuid = isUuid(s.id) && s.tournamentId === savedTourneyId;
       if (isOurUuid && existingDbSubMap.has(s.id)) {
         const existingSub = existingDbSubMap.get(s.id)!;
-        const isOnline = (existingSub as any).submissionSource === 'ONLINE';
+        // The run owns the source; a row not yet attached to a run still carries its legacy column.
+        const existingSource = (existingSub as any).runId
+          ? runSourceById.get((existingSub as any).runId)
+          : (existingSub as any).submissionSource;
+        const isOnline = existingSource === 'ONLINE';
 
         // Online submissions are owned exclusively by the /qualify/* endpoints (portal + judge adjudication).
         // A full-tournament PUT is a client snapshot that may be stale, so it never mutates them.
@@ -819,27 +863,10 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
           continue;
         }
 
-        const resolvedScore = s.score;
-
-        const resolvedStatus = (s.status as any) || (existingSub as any).status || 'SUBMITTED';
-
-        // Update existing record
+        // Only the score is synced; every other qual detail lives on the run (qualifier_runs).
         await db
           .update(qualifierSubmissions)
-          .set({
-            score: resolvedScore,
-            status: resolvedStatus,
-            submissionSource: (existingSub as any).submissionSource || (s.submissionSource as any) || 'IN_PERSON',
-            authWord: (existingSub as any).authWord || s.authWord || null,
-            twitchVodUrl: (existingSub as any).twitchVodUrl || s.twitchVodUrl || null,
-            submittedTwitchId: (existingSub as any).submittedTwitchId || s.submittedTwitchId || null,
-            submittedTwitchUsername: (existingSub as any).submittedTwitchUsername || s.submittedTwitchUsername || null,
-            identityStatus: (existingSub as any).identityStatus || (s.identityStatus as any) || null,
-            timerLog: (existingSub as any).timerLog || s.timerLog || null,
-            judgeNotes: s.judgeNotes || (existingSub as any).judgeNotes || null,
-            verifiedBy: s.verifiedBy || (existingSub as any).verifiedBy || null,
-            verifiedAt: s.verifiedAt ? new Date(s.verifiedAt) : ((existingSub as any).verifiedAt || null),
-          })
+          .set({ score: s.score })
           .where(eq(qualifierSubmissions.id, s.id));
       } else {
         // Issue 1: If s.submissionSource === 'ONLINE', NEVER insert it via saveFullTournament!

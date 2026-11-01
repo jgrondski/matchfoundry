@@ -173,18 +173,18 @@ Models multiple qualification pods funneling into a single-elimination champions
 * **Simulation:** "Seed Qualifiers Only" becomes "Generate Realistic Seeding".
 
 ### 4.6 Online Qualifiers
-* **Qual Modes:** `qualMode: 'IN_PERSON' | 'ONLINE' | 'HYBRID'`. In-person scores (via `QualifierEntryModal`) save as `IN_PERSON` and verified; portal scores save as `ONLINE` and `SUBMITTED` (awaiting verification).
+* **Qual Modes:** `qualMode: 'IN_PERSON' | 'ONLINE' | 'HYBRID'`. In-person scores (via `QualifierEntryModal`) save as `IN_PERSON` and pending review (`SUBMITTED`); portal scores save as `ONLINE` and `SUBMITTED` (awaiting verification).
 * **Competitor Journey (`/:slug/qualify`):**
   1. Competitor connects Twitch (OAuth 2.0). Unmatched accounts choose to claim a pre-registered roster profile or register a new alias; neither blocks starting a run.
   2. Pre-flight modal confirms the stream is live and "Store past broadcasts" is enabled.
   3. Starting a run assigns an NES Authword and issues a private run link (token). The competitor is added to the roster only on submit.
   4. Competitor scores $\ge 10,000$, tops out intentionally, and enters the Authword on the NES high-score name screen.
   5. Competitor enters score(s) and the Twitch VOD URL and submits. The run appears on the leaderboard immediately as `awaiting verification`.
-* **Run Recovery:** Drafts autosave by token and restore by run link, or by name + Twitch account. Competitors can discard an unfinished run (a walk-in player is removed with it); submitted runs cannot be discarded. Unfinished runs are hidden from the leaderboard and don't block roster removal or player deletion. Runs more than an hour past their window are flagged as abandoned. Tokens and drafts are never exposed in public data.
+* **Run Recovery:** Drafts autosave by token and restore by run link, or by name + Twitch account. Competitors can discard an unfinished run (a player record the run created is removed with it); submitted runs cannot be discarded. Unfinished runs are hidden from the leaderboard and don't block roster removal or player deletion. Runs more than an hour past their window are flagged as abandoned. Tokens and drafts are never exposed in public data.
 * **Identity Resolution:**
   * `VERIFIED_MATCH`: `players.twitch_id` matches the session; auto-linked.
   * `CLAIMED_PENDING_REVIEW`: competitor claimed an existing roster profile; a judge ratifies.
-  * `PROVISIONAL_NEW`: walk-in with a new alias, country, and playstyle; a judge promotes them to a global player.
+  * `PROVISIONAL_NEW`: a new competitor with a new alias, country, and playstyle; a judge promotes them to a global player.
 * **Authword Engine:**
   * 6–8 characters from the NES high-score charset: `A–Z`, `0–9`, `.`, `-`, `!`, `♥`. Spaces are forbidden (`/^[A-Z0-9.\-!♥]{6,8}$/`).
   * Built-in curated list of family-friendly words ($\ge 6$ letters), merged with tournament `customAuthWords`.
@@ -192,8 +192,9 @@ Models multiple qualification pods funneling into a single-elimination champions
 * **Review Queue (`/:slug/manage/review`):**
   * Sidebar badge with the count of pending online submissions.
   * Shows Twitch handle, a link to the VOD, the assigned Authword, and timer telemetry.
-  * Actions: Verify Qual, Edit Score & Verify (audit note in `judge_notes`), Mark DNQ, Disqualify (DQ), plus identity actions (Confirm Identity Binding, Reassign to a different player, Promote to Global Player).
-* **Closing Quals:** Closing qualifiers with unverified submissions requires confirmation. Once closed, `/:slug/qualify` shows "Qualifying Closed" and draft seeding includes only verified players (excluding DNQ and awaiting verification).
+  * Actions: Save (scores and notes, with a score-edit audit line in `judge_notes`; does not change status), Verify Qual (disabled while there are unsaved edits), Unverify (verified quals only; returns to pending), Mark DNQ, Disqualify (DQ), plus identity actions (Confirm Identity Binding, Reassign to a different player, Promote to Global Player). A verified qual is locked: its scores, attempts and notes can't change and it can't be DNQ'd, DQ'd, reassigned or removed from the roster until it is unverified.
+  * Each competitor has one qual per tournament (`qualifier_runs`); scores are child rows, so a qual remains (with zero scores) when every score is removed.
+* **Closing Quals:** Closing qualifiers with unverified submissions requires confirmation. Once closed, `/:slug/qualify` shows "Qualifying Closed" and draft seeding includes every player with at least one score except DNQ and DQ; unverified scores are seeded provisionally.
 * **Discord Webhooks:** Optional posts on qual start, submit, and verify. A tournament without its own webhook falls back to its org's.
 
 ### 4.7 Public Spectator Views vs. Management App

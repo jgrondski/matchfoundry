@@ -1,5 +1,6 @@
 import {
   qualifierSubmissions,
+  qualifierRuns,
   tournaments,
   players,
   tournamentPlayers,
@@ -29,7 +30,15 @@ import {
   PLAYER_NOTES_MAX_LENGTH,
   type QualDiscordEvent,
 } from '../features/online-quals/discordMessages';
-import { isPlaceholderSubmissionStatus } from '../features/online-quals/onlineQualsStatus';
+import {
+  attachOrphanScoresToRuns,
+  getRunForPlayer,
+  insertRunScores,
+  listRunScores,
+  listRuns,
+  replaceRunScores,
+  type QualRunRow,
+} from './qualRuns';
 
 export interface QualifierSubmissionRecord {
   id: string;
@@ -77,6 +86,10 @@ export interface OnlineQualSessionSummary {
   playerNotes?: string | null;
   submissionIds: string[];
   submissionSource?: SubmissionSource;
+  runId: string;
+  submittedAt: number | null;
+  verifiedBy: string | null;
+  verifiedAt: number | null;
   // Only startOnlineQualSession sets this: true when it created the run, not when it resumed one.
   isNewSession?: boolean;
   // Only set for the competitor's own in-progress run (start / get-by-token); never in public or judge listings.
@@ -86,6 +99,15 @@ export interface OnlineQualSessionSummary {
 
 /** Thrown when a run token is missing, wrong, or no longer refers to an in-progress run. */
 export class QualRunAccessError extends Error {}
+
+/** Thrown when a change is attempted on a verified (locked) qual. */
+export class QualLockedError extends Error {}
+
+const QUAL_LOCKED_MESSAGE = 'This qual is verified. Unverify it before making changes.';
+
+function assertRunEditable(run: { status: string }): void {
+  if (run.status === 'VERIFIED') throw new QualLockedError(QUAL_LOCKED_MESSAGE);
+}
 
 function generateResumeToken(): string {
   const bytes = new Uint8Array(24);
@@ -104,123 +126,175 @@ function areQualsClosed(tourney: { metadata: unknown }): boolean {
 
 async function resolveTournamentRow(tournamentIdOrSlug: string) {
   const db = getDb();
-  if (!isUuid(tournamentIdOrSlug)) {
-    const [tourney] = await db
-      .select()
-      .from(tournaments)
-      .where(eq(tournaments.slug, tournamentIdOrSlug))
-      .limit(1);
-    if (!tourney) throw new Error('Tournament not found');
-    return tourney;
-  } else {
-    const [tourney] = await db
-      .select()
-      .from(tournaments)
-      .where(eq(tournaments.id, tournamentIdOrSlug))
-      .limit(1);
-    if (!tourney) throw new Error('Tournament not found');
-    return tourney;
+  const [tourney] = await db
+    .select()
+    .from(tournaments)
+    .where(isUuid(tournamentIdOrSlug) ? eq(tournaments.id, tournamentIdOrSlug) : eq(tournaments.slug, tournamentIdOrSlug))
+    .limit(1);
+  if (!tourney) throw new Error('Tournament not found');
+  await attachOrphanScoresToRuns(tourney.id);
+  return tourney;
+}
+
+type TournamentRow = typeof tournaments.$inferSelect;
+type ScoreRow = { id: string; score: number; createdAt: Date };
+
+/** The session summary every qual API returns. Never includes the run token or draft. */
+function buildSessionSummary(
+  tourney: TournamentRow,
+  run: QualRunRow,
+  scoreRows: ScoreRow[],
+  player?: { name: string } | null
+): OnlineQualSessionSummary {
+  const isOnline = run.submissionSource === 'ONLINE';
+  const qualWindowMinutes = tourney.qualWindowMinutes ?? 90;
+  const ordered = [...scoreRows].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  return {
+    tournamentId: tourney.id,
+    playerId: run.playerId,
+    playerName: player?.name,
+    submissionSource: run.submissionSource,
+    status: run.status,
+    authWord: isOnline ? (run.authWord || 'ROCKET') : (run.authWord || null),
+    twitchVodUrl: run.twitchVodUrl || null,
+    submittedTwitchId: run.submittedTwitchId || null,
+    submittedTwitchUsername: run.submittedTwitchUsername || null,
+    identityStatus: run.identityStatus || (isOnline ? null : 'VERIFIED_MATCH'),
+    timerLog: run.timerLog || {
+      startedAt: run.createdAt.getTime(),
+      elapsedSeconds: isOnline ? 0 : qualWindowMinutes * 60,
+      pauses: [],
+    },
+    scores: ordered.map(r => r.score),
+    judgeNotes: run.judgeNotes || null,
+    playerNotes: run.playerNotes || null,
+    submissionIds: ordered.map(r => r.id),
+    runId: run.id,
+    submittedAt: run.submittedAt ? run.submittedAt.getTime() : null,
+    verifiedBy: run.verifiedBy || null,
+    verifiedAt: run.verifiedAt ? run.verifiedAt.getTime() : null,
+  };
+}
+
+async function loadPlayerName(playerId: string): Promise<{ name: string } | null> {
+  const [player] = await getDb().select({ name: players.name }).from(players).where(eq(players.id, playerId)).limit(1);
+  return player || null;
+}
+
+async function summarizeRun(tourney: TournamentRow, run: QualRunRow): Promise<OnlineQualSessionSummary> {
+  return buildSessionSummary(tourney, run, await listRunScores(run.id), await loadPlayerName(run.playerId));
+}
+
+async function updateRun(runId: string, values: Partial<typeof qualifierRuns.$inferInsert>): Promise<QualRunRow> {
+  const [updated] = await getDb().update(qualifierRuns).set(values).where(eq(qualifierRuns.id, runId)).returning();
+  return updated as QualRunRow;
+}
+
+interface RecordScoreOptions {
+  submissionSource?: SubmissionSource;
+  status?: SubmissionStatus;
+  authWord?: string;
+  twitchVodUrl?: string;
+  submittedTwitchId?: string;
+  submittedTwitchUsername?: string;
+  identityStatus?: IdentityStatus;
+  timerLog?: QualTimerLog;
+  judgeNotes?: string;
+}
+
+const NOT_SUBMITTED_ERROR = "This run hasn't been submitted yet.";
+
+const RUN_IN_PROGRESS_ERROR =
+  'This competitor has an online run in progress. Wait for them to submit, or discard the run first.';
+
+/** Adds one score to the player's qual, creating the qual (in person by default) if they have none. */
+async function recordScore(
+  tourney: TournamentRow,
+  playerId: string,
+  score: number,
+  options: RecordScoreOptions = {}
+): Promise<QualifierSubmissionRecord> {
+  let run = await getRunForPlayer(tourney.id, playerId);
+  if (run?.status === 'IN_PROGRESS') throw new Error(RUN_IN_PROGRESS_ERROR);
+  if (run) assertRunEditable(run);
+
+  // Ensure competitor is registered in tournament roster so leaderboard derivation and bracket seeding recognize them
+  await ensureTournamentPlayerRegistration(tourney.id, playerId);
+
+  const now = new Date();
+  if (!run) {
+    const status = options.status ?? 'SUBMITTED';
+    const [created] = await getDb()
+      .insert(qualifierRuns)
+      .values({
+        tournamentId: tourney.id,
+        playerId,
+        submissionSource: options.submissionSource ?? 'IN_PERSON',
+        status: status === 'NOT_STARTED' ? 'SUBMITTED' : status,
+        authWord: options.authWord || null,
+        twitchVodUrl: options.twitchVodUrl || null,
+        submittedTwitchId: options.submittedTwitchId || null,
+        submittedTwitchUsername: options.submittedTwitchUsername || null,
+        identityStatus: options.identityStatus || null,
+        timerLog: options.timerLog || null,
+        judgeNotes: options.judgeNotes || null,
+        submittedAt: now,
+      })
+      .returning();
+    run = created as QualRunRow;
   }
+
+  const [id] = await insertRunScores(run, [score], now);
+  return {
+    id,
+    tournamentId: run.tournamentId,
+    playerId: run.playerId,
+    score,
+    submissionSource: run.submissionSource,
+    authWord: run.authWord,
+    twitchVodUrl: run.twitchVodUrl,
+    submittedTwitchId: run.submittedTwitchId,
+    submittedTwitchUsername: run.submittedTwitchUsername,
+    identityStatus: run.identityStatus,
+    status: run.status,
+    timerLog: run.timerLog,
+    judgeNotes: run.judgeNotes,
+    playerNotes: run.playerNotes,
+    resumeToken: null,
+    draft: null,
+    verifiedBy: run.verifiedBy,
+    verifiedAt: run.verifiedAt,
+    createdAt: now,
+  };
 }
 
 export async function submitQualifierScore(
   tournamentId: string,
   playerId: string,
   score: number,
-  options?: {
-    submissionSource?: SubmissionSource;
-    status?: SubmissionStatus;
-    authWord?: string;
-    twitchVodUrl?: string;
-    submittedTwitchId?: string;
-    submittedTwitchUsername?: string;
-    identityStatus?: IdentityStatus;
-    timerLog?: QualTimerLog;
-    judgeNotes?: string;
-  }
+  options?: RecordScoreOptions
 ): Promise<QualifierSubmissionRecord> {
   if (score < 0) throw new Error('Score must be positive');
 
-  const db = getDb();
   const tourney = await resolveTournamentRow(tournamentId);
   if (areQualsClosed(tourney)) throw new Error('Qualifiers are closed for this tournament');
 
-  const submissionSource = options?.submissionSource || 'IN_PERSON';
-  const status = options?.status || 'SUBMITTED';
-
-  // Ensure competitor is registered in tournament roster so leaderboard derivation and bracket seeding recognize them
-  await ensureTournamentPlayerRegistration(tourney.id, playerId);
-
-  const [created] = await db
-    .insert(qualifierSubmissions)
-    .values({
-      tournamentId: tourney.id,
-      playerId,
-      score,
-      submissionSource,
-      status,
-      authWord: options?.authWord || null,
-      twitchVodUrl: options?.twitchVodUrl || null,
-      submittedTwitchId: options?.submittedTwitchId || null,
-      submittedTwitchUsername: options?.submittedTwitchUsername || null,
-      identityStatus: options?.identityStatus || null,
-      timerLog: options?.timerLog || null,
-      judgeNotes: options?.judgeNotes || null,
-    })
-    .returning();
-  return created as QualifierSubmissionRecord;
+  return recordScore(tourney, playerId, score, options);
 }
 
 export async function submitQualifiersBatch(
   tournamentId: string,
-  submissions: Array<{
-    playerId: string;
-    score: number;
-    submissionSource?: SubmissionSource;
-    status?: SubmissionStatus;
-    authWord?: string;
-    twitchVodUrl?: string;
-    submittedTwitchId?: string;
-    submittedTwitchUsername?: string;
-    identityStatus?: IdentityStatus;
-    timerLog?: QualTimerLog;
-    judgeNotes?: string;
-  }>
+  submissions: Array<{ playerId: string; score: number } & RecordScoreOptions>
 ): Promise<QualifierSubmissionRecord[]> {
-  const db = getDb();
   if (submissions.length === 0) return [];
   const tourney = await resolveTournamentRow(tournamentId);
   if (areQualsClosed(tourney)) throw new Error('Qualifiers are closed for this tournament');
 
-  const uniquePlayerIds = Array.from(new Set(submissions.map(s => s.playerId)));
-  for (const pid of uniquePlayerIds) {
-    await ensureTournamentPlayerRegistration(tourney.id, pid);
+  const results: QualifierSubmissionRecord[] = [];
+  for (const { playerId, score, ...options } of submissions) {
+    results.push(await recordScore(tourney, playerId, score, options));
   }
-
-  const inserted = await db
-    .insert(qualifierSubmissions)
-    .values(
-      submissions.map(s => {
-        const src = s.submissionSource || 'IN_PERSON';
-        const st = s.status || 'SUBMITTED';
-        return {
-          tournamentId: tourney.id,
-          playerId: s.playerId,
-          score: s.score,
-          submissionSource: src,
-          status: st,
-          authWord: s.authWord || null,
-          twitchVodUrl: s.twitchVodUrl || null,
-          submittedTwitchId: s.submittedTwitchId || null,
-          submittedTwitchUsername: s.submittedTwitchUsername || null,
-          identityStatus: s.identityStatus || null,
-          timerLog: s.timerLog || null,
-          judgeNotes: s.judgeNotes || null,
-        };
-      })
-    )
-    .returning();
-  return inserted as QualifierSubmissionRecord[];
+  return results;
 }
 
 export async function clearTournamentQualifiers(tournamentId: string): Promise<boolean> {
@@ -235,15 +309,19 @@ export async function clearTournamentQualifiers(tournamentId: string): Promise<b
     if (!tourney) return false;
     resolvedTourneyId = tourney.id;
   }
-  const res = await db
+  const deletedRuns = await db
+    .delete(qualifierRuns)
+    .where(eq(qualifierRuns.tournamentId, resolvedTourneyId))
+    .returning({ id: qualifierRuns.id });
+  const deletedRows = await db
     .delete(qualifierSubmissions)
     .where(eq(qualifierSubmissions.tournamentId, resolvedTourneyId))
-    .returning();
+    .returning({ id: qualifierSubmissions.id });
   await db
     .update(tournamentPlayers)
     .set({ qualsCompleted: false })
     .where(eq(tournamentPlayers.tournamentId, resolvedTourneyId));
-  return res.length > 0;
+  return deletedRuns.length > 0 || deletedRows.length > 0;
 }
 
 export async function getQualifierLeaderboard(tournamentId: string): Promise<LeaderboardEntry[]> {
@@ -259,16 +337,15 @@ export async function getQualifierLeaderboard(tournamentId: string): Promise<Lea
   const qualAvgCount = tRow.qualAverageCount || 2;
   const pointsConfig = tRow.pointsConfig || [];
 
-  const allSubmissions = (await db
-    .select()
+  // Score rows only; in-progress online runs have none (resolveTournamentRow removed legacy placeholders).
+  const allSubmissions = await db
+    .select({ playerId: qualifierSubmissions.playerId, score: qualifierSubmissions.score })
     .from(qualifierSubmissions)
     .where(eq(qualifierSubmissions.tournamentId, resolvedTourneyId))
-    .orderBy(desc(qualifierSubmissions.score))) as QualifierSubmissionRecord[];
+    .orderBy(desc(qualifierSubmissions.score));
 
-  // Group by player, excluding IN_PROGRESS / NOT_STARTED placeholder rows
   const playerScores = new Map<string, number[]>();
   for (const s of allSubmissions) {
-    if (s.status === 'IN_PROGRESS' || s.status === 'NOT_STARTED') continue;
     const list = playerScores.get(s.playerId) || [];
     list.push(s.score);
     playerScores.set(s.playerId, list);
@@ -462,59 +539,14 @@ export async function getOnlineQualSession(
   tournamentIdOrSlug: string,
   query: { playerId?: string; twitchId?: string }
 ): Promise<OnlineQualSessionSummary | null> {
-  const db = getDb();
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
 
-  const allSubs = (await db
-    .select()
-    .from(qualifierSubmissions)
-    .where(eq(qualifierSubmissions.tournamentId, tourney.id))) as QualifierSubmissionRecord[];
-
-  const matchedSubs = allSubs.filter(s => {
-    if (query.playerId && s.playerId === query.playerId) return true;
-    if (query.twitchId && s.submittedTwitchId === query.twitchId) return true;
-    return false;
-  });
-
-  if (matchedSubs.length === 0) return null;
-
-  // Row order is arbitrary; an in-progress run must win over any other row for this player.
-  const first = matchedSubs.find(s => s.status === 'IN_PROGRESS') || matchedSubs[0];
-  const isOnline = matchedSubs.some(s => s.submissionSource === 'ONLINE');
-  const scoredRows = matchedSubs.filter(
-    s => s.status !== 'IN_PROGRESS' && s.status !== 'NOT_STARTED'
-  );
-
-  const [player] = await db
-    .select({ name: players.name })
-    .from(players)
-    .where(eq(players.id, first.playerId))
-    .limit(1);
-
-  const qualWindowMinutes = tourney.qualWindowMinutes ?? 90;
-
-  return {
-    tournamentId: tourney.id,
-    playerId: first.playerId,
-    playerName: player?.name,
-    submissionSource: isOnline ? 'ONLINE' : 'IN_PERSON',
-    status: first.status,
-    authWord: isOnline ? (first.authWord || 'ROCKET') : (first.authWord || null),
-    twitchVodUrl: first.twitchVodUrl || null,
-    submittedTwitchId: first.submittedTwitchId || null,
-    submittedTwitchUsername: first.submittedTwitchUsername || null,
-    identityStatus: first.identityStatus || (isOnline ? null : 'VERIFIED_MATCH'),
-    timerLog:
-      first.timerLog || {
-        startedAt: first.createdAt.getTime(),
-        elapsedSeconds: isOnline ? 0 : qualWindowMinutes * 60,
-        pauses: [],
-      },
-    scores: scoredRows.map(s => s.score),
-    judgeNotes: first.judgeNotes || null,
-    playerNotes: first.playerNotes || null,
-    submissionIds: matchedSubs.map(s => s.id),
-  };
+  let run: QualRunRow | null = query.playerId ? await getRunForPlayer(tourney.id, query.playerId) : null;
+  if (!run && query.twitchId) {
+    run = (await listRuns(tourney.id)).find(r => r.submittedTwitchId === query.twitchId) || null;
+  }
+  if (!run) return null;
+  return summarizeRun(tourney, run);
 }
 
 export interface ReviewQueueSessionSummary extends OnlineQualSessionSummary {
@@ -525,7 +557,7 @@ export interface ReviewQueueSessionSummary extends OnlineQualSessionSummary {
 }
 
 /**
- * Lists all online and in-person qualifier sessions for a tournament, grouped by player (Track 10E).
+ * Lists all online and in-person qualifier sessions for a tournament, one per qual run (Track 10E).
  */
 export async function listOnlineQualSessions(
   tournamentIdOrSlug: string
@@ -533,20 +565,24 @@ export async function listOnlineQualSessions(
   const db = getDb();
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
 
-  const allSubs = (await db
-    .select()
+  const runs = await listRuns(tourney.id);
+  if (runs.length === 0) return [];
+
+  const scoreRows = await db
+    .select({
+      id: qualifierSubmissions.id,
+      runId: qualifierSubmissions.runId,
+      score: qualifierSubmissions.score,
+      createdAt: qualifierSubmissions.createdAt,
+    })
     .from(qualifierSubmissions)
-    .where(eq(qualifierSubmissions.tournamentId, tourney.id))
-    .orderBy(desc(qualifierSubmissions.createdAt))) as QualifierSubmissionRecord[];
-
-  if (allSubs.length === 0) return [];
-
-  // Group by playerId preserving order
-  const playerGroups = new Map<string, QualifierSubmissionRecord[]>();
-  for (const s of allSubs) {
-    const list = playerGroups.get(s.playerId) || [];
-    list.push(s);
-    playerGroups.set(s.playerId, list);
+    .where(eq(qualifierSubmissions.tournamentId, tourney.id));
+  const scoresByRun = new Map<string, ScoreRow[]>();
+  for (const row of scoreRows) {
+    if (!row.runId) continue;
+    const list = scoresByRun.get(row.runId) || [];
+    list.push(row);
+    scoresByRun.set(row.runId, list);
   }
 
   const allPlayers = (await db.select().from(players)) as Array<typeof players.$inferSelect>;
@@ -554,45 +590,16 @@ export async function listOnlineQualSessions(
     allPlayers.map(p => [p.id, p])
   );
 
-  const qualWindowMinutes = tourney.qualWindowMinutes ?? 90;
-  const result: ReviewQueueSessionSummary[] = [];
-
-  for (const [playerId, subs] of playerGroups.entries()) {
-    const first = subs[0];
-    const isOnline = subs.some(s => s.submissionSource === 'ONLINE');
-    const scoredRows = subs.filter(
-      s => s.status !== 'IN_PROGRESS' && s.status !== 'NOT_STARTED'
-    );
-    const p = playerMap.get(playerId);
-
-    result.push({
-      tournamentId: tourney.id,
-      playerId,
-      playerName: p?.name || first.submittedTwitchUsername || 'Unknown Player',
+  return runs.map(run => {
+    const p = playerMap.get(run.playerId);
+    return {
+      ...buildSessionSummary(tourney, run, scoresByRun.get(run.id) || [], p),
+      playerName: p?.name || run.submittedTwitchUsername || 'Unknown Player',
       country: p?.country || undefined,
       avatarUrl: p?.avatarUrl || undefined,
       avatarType: p?.avatarType || 'flag',
-      submissionSource: isOnline ? 'ONLINE' : 'IN_PERSON',
-      status: first.status,
-      authWord: isOnline ? (first.authWord || 'ROCKET') : (first.authWord || null),
-      twitchVodUrl: first.twitchVodUrl || null,
-      submittedTwitchId: first.submittedTwitchId || null,
-      submittedTwitchUsername: first.submittedTwitchUsername || null,
-      identityStatus: first.identityStatus || (isOnline ? null : 'VERIFIED_MATCH'),
-      timerLog:
-        first.timerLog || {
-          startedAt: first.createdAt.getTime(),
-          elapsedSeconds: isOnline ? 0 : qualWindowMinutes * 60,
-          pauses: [],
-        },
-      scores: scoredRows.map(s => s.score),
-      judgeNotes: first.judgeNotes || null,
-      playerNotes: first.playerNotes || null,
-      submissionIds: subs.map(s => s.id),
-    });
-  }
-
-  return result;
+    };
+  });
 }
 
 const DISCORD_TIMEOUT_MS = 3000;
@@ -847,10 +854,9 @@ export async function startOnlineQualSession(
   // Roster registration is deferred to submit: an unfinished run must not make someone a competitor.
 
   // Check if session already exists (idempotent recovery for page reloads - Assertion 1.5)
-  const existingSession = await getOnlineQualSession(tourney.id, {
-    playerId: targetPlayerId,
-  });
-  if (existingSession) {
+  const existingRun = await getRunForPlayer(tourney.id, targetPlayerId);
+  if (existingRun) {
+    const existingSession = await summarizeRun(tourney, existingRun);
     return withRunCredentials(tourney.id, {
       ...existingSession,
       playerName: targetPlayerName || existingSession.playerName,
@@ -858,12 +864,8 @@ export async function startOnlineQualSession(
   }
 
   // Gather already-used auth words in this tournament to avoid collisions
-  const allTourneySubs = (await db
-    .select()
-    .from(qualifierSubmissions)
-    .where(eq(qualifierSubmissions.tournamentId, tourney.id))) as QualifierSubmissionRecord[];
-  const usedWords = allTourneySubs
-    .map(s => s.authWord)
+  const usedWords = (await listRuns(tourney.id))
+    .map(r => r.authWord)
     .filter((w): w is string => Boolean(w));
 
   const customWords =
@@ -880,11 +882,10 @@ export async function startOnlineQualSession(
     .replace(/^https?:\/\/(www\.)?twitch\.tv\//i, '') || null;
 
   const [inserted] = await db
-    .insert(qualifierSubmissions)
+    .insert(qualifierRuns)
     .values({
       tournamentId: tourney.id,
       playerId: targetPlayerId,
-      score: 0,
       submissionSource: 'ONLINE',
       status: 'IN_PROGRESS',
       authWord,
@@ -897,43 +898,33 @@ export async function startOnlineQualSession(
     .returning();
 
   return {
-    tournamentId: tourney.id,
-    playerId: targetPlayerId,
+    ...buildSessionSummary(tourney, inserted as QualRunRow, [], { name: targetPlayerName || '' }),
     playerName: targetPlayerName,
-    status: 'IN_PROGRESS',
-    authWord,
-    twitchVodUrl: null,
-    submittedTwitchId: input.submittedTwitchId || null,
-    submittedTwitchUsername: cleanTwitchUser,
-    identityStatus: resolvedIdentityStatus,
-    timerLog,
-    scores: [],
-    judgeNotes: null,
-    submissionIds: [inserted.id],
+    submissionIds: [],
     isNewSession: true,
     resumeToken,
     draft: null,
   };
 }
 
-async function findInProgressRow(
+async function findInProgressRun(
   tournamentId: string,
   where: { playerId: string } | { resumeToken: string }
-): Promise<QualifierSubmissionRecord | null> {
-  const [row] = (await getDb()
+): Promise<QualRunRow | null> {
+  const [run] = await getDb()
     .select()
-    .from(qualifierSubmissions)
+    .from(qualifierRuns)
     .where(
       and(
-        eq(qualifierSubmissions.tournamentId, tournamentId),
-        eq(qualifierSubmissions.status, 'IN_PROGRESS'),
+        eq(qualifierRuns.tournamentId, tournamentId),
+        eq(qualifierRuns.status, 'IN_PROGRESS'),
         'playerId' in where
-          ? eq(qualifierSubmissions.playerId, where.playerId)
-          : eq(qualifierSubmissions.resumeToken, where.resumeToken)
+          ? eq(qualifierRuns.playerId, where.playerId)
+          : eq(qualifierRuns.resumeToken, where.resumeToken)
       )
     )
-    .limit(1)) as QualifierSubmissionRecord[];
-  return row || null;
+    .limit(1);
+  return (run as QualRunRow | undefined) || null;
 }
 
 /**
@@ -945,17 +936,14 @@ async function withRunCredentials(
   session: OnlineQualSessionSummary
 ): Promise<OnlineQualSessionSummary> {
   if (session.status !== 'IN_PROGRESS') return session;
-  const row = await findInProgressRow(tournamentId, { playerId: session.playerId });
-  if (!row) return session;
-  let resumeToken = row.resumeToken;
+  const run = await findInProgressRun(tournamentId, { playerId: session.playerId });
+  if (!run) return session;
+  let resumeToken = run.resumeToken;
   if (!resumeToken) {
     resumeToken = generateResumeToken();
-    await getDb()
-      .update(qualifierSubmissions)
-      .set({ resumeToken })
-      .where(eq(qualifierSubmissions.id, row.id));
+    await updateRun(run.id, { resumeToken });
   }
-  return { ...session, resumeToken, draft: row.draft || null };
+  return { ...session, resumeToken, draft: run.draft || null };
 }
 
 /** Loads the competitor's own in-progress run by its token (the `?run=` link). Null if not active. */
@@ -965,11 +953,10 @@ export async function getOnlineQualRunByToken(
 ): Promise<OnlineQualSessionSummary | null> {
   if (!resumeToken) return null;
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
-  const row = await findInProgressRow(tourney.id, { resumeToken });
-  if (!row) return null;
-  const session = await getOnlineQualSession(tourney.id, { playerId: row.playerId });
-  if (!session) return null;
-  return { ...session, resumeToken, draft: row.draft || null };
+  const run = await findInProgressRun(tourney.id, { resumeToken });
+  if (!run) return null;
+  const session = await summarizeRun(tourney, run);
+  return { ...session, resumeToken, draft: run.draft || null };
 }
 
 function validateQualScores(scores: unknown, { requireOne }: { requireOne: boolean }): number[] {
@@ -998,8 +985,8 @@ export async function saveOnlineQualDraft(
   input: { resumeToken: string; scores: number[]; twitchVodUrl?: string; playerNotes?: string }
 ): Promise<{ savedAt: number }> {
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
-  const row = input.resumeToken ? await findInProgressRow(tourney.id, { resumeToken: input.resumeToken }) : null;
-  if (!row) {
+  const run = input.resumeToken ? await findInProgressRun(tourney.id, { resumeToken: input.resumeToken }) : null;
+  if (!run) {
     throw new QualRunAccessError('This run link is no longer active');
   }
   const draft: QualRunDraft = {
@@ -1007,15 +994,12 @@ export async function saveOnlineQualDraft(
     twitchVodUrl: typeof input.twitchVodUrl === 'string' ? input.twitchVodUrl.trim() : undefined,
     playerNotes: normalizePlayerNotes(input.playerNotes) || undefined,
   };
-  await getDb()
-    .update(qualifierSubmissions)
-    .set({ draft })
-    .where(eq(qualifierSubmissions.id, row.id));
+  await updateRun(run.id, { draft });
   return { savedAt: Date.now() };
 }
 
 /**
- * Judge action: throws away an unfinished online run. If the run created a walk-in player who is
+ * Judge action: throws away an unfinished online run. If the run created a player record that is
  * referenced nowhere else, that player is deleted too. Submitted or judged runs cannot be discarded.
  */
 export async function discardOnlineQualRun(
@@ -1024,28 +1008,18 @@ export async function discardOnlineQualRun(
 ): Promise<{ deletedPlayer: boolean }> {
   const db = getDb();
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
-  const row = await findInProgressRow(tourney.id, { playerId });
-  if (!row) {
+  const run = await findInProgressRun(tourney.id, { playerId });
+  if (!run) {
     throw new Error('No unfinished run found for this player');
   }
 
-  const playerSubs = (await db
-    .select()
-    .from(qualifierSubmissions)
-    .where(
-      and(eq(qualifierSubmissions.tournamentId, tourney.id), eq(qualifierSubmissions.playerId, playerId))
-    )) as QualifierSubmissionRecord[];
-  for (const sub of playerSubs) {
-    if (isPlaceholderSubmissionStatus(sub.status)) {
-      await db.delete(qualifierSubmissions).where(eq(qualifierSubmissions.id, sub.id));
-    }
-  }
+  const hasRealResults = (await listRunScores(run.id)).length > 0;
+  await db.delete(qualifierRuns).where(eq(qualifierRuns.id, run.id));
 
-  if (row.identityStatus !== 'PROVISIONAL_NEW') return { deletedPlayer: false };
+  if (run.identityStatus !== 'PROVISIONAL_NEW') return { deletedPlayer: false };
 
-  // A walk-in created by this run: drop the roster entry (pre-token runs registered at start)
+  // A player created by this run: drop the roster entry (pre-token runs registered at start)
   // unless they have real results here, then the player record if nothing else references it.
-  const hasRealResults = playerSubs.some(sub => !isPlaceholderSubmissionStatus(sub.status));
   if (!hasRealResults && !(await hasTournamentMatches(tourney.id, playerId))) {
     await db
       .delete(tournamentPlayers)
@@ -1069,13 +1043,18 @@ async function hasTournamentMatches(tournamentId: string, playerId: string): Pro
   return rows.length > 0;
 }
 
-/** Deletes a player row only if no submission, roster entry, or match anywhere references it. */
+/** Deletes a player row only if no submission, qual run, roster entry, or match anywhere references it. */
 async function deletePlayerIfUnreferenced(playerId: string): Promise<boolean> {
   const db = getDb();
   const anySubs = await db
     .select({ id: qualifierSubmissions.id })
     .from(qualifierSubmissions)
     .where(eq(qualifierSubmissions.playerId, playerId))
+    .limit(1);
+  const anyRuns = await db
+    .select({ id: qualifierRuns.id })
+    .from(qualifierRuns)
+    .where(eq(qualifierRuns.playerId, playerId))
     .limit(1);
   const anyTourneyPlayers = await db
     .select({ playerId: tournamentPlayers.playerId })
@@ -1087,7 +1066,7 @@ async function deletePlayerIfUnreferenced(playerId: string): Promise<boolean> {
     .from(matches)
     .where(or(eq(matches.player1Id, playerId), eq(matches.player2Id, playerId), eq(matches.winnerId, playerId)))
     .limit(1);
-  if (anySubs.length > 0 || anyTourneyPlayers.length > 0 || anyMatches.length > 0) return false;
+  if (anySubs.length > 0 || anyRuns.length > 0 || anyTourneyPlayers.length > 0 || anyMatches.length > 0) return false;
   await db.delete(players).where(eq(players.id, playerId));
   return true;
 }
@@ -1125,15 +1104,14 @@ export async function submitOnlineQualScores(
     throw new Error('Twitch VOD URL is required');
   }
 
-  const existing = await getOnlineQualSession(tourney.id, { playerId: input.playerId });
+  let run = await getRunForPlayer(tourney.id, input.playerId);
   // A submitted (or judged) run can't be replaced by submitting again; only a judge reset reopens it.
-  if (existing && existing.status !== 'IN_PROGRESS') {
+  if (run && run.status !== 'IN_PROGRESS') {
     throw new Error('You have already submitted your qualifier run for this tournament');
   }
   // Runs issued a token can only be submitted by its holder. Runs started before tokens existed
   // have none and still submit by player ID.
-  const inProgressRow = await findInProgressRow(tourney.id, { playerId: input.playerId });
-  if (inProgressRow?.resumeToken && inProgressRow.resumeToken !== input.resumeToken) {
+  if (run?.resumeToken && run.resumeToken !== input.resumeToken) {
     throw new QualRunAccessError('This run link is no longer valid. Reload the page to continue your run.');
   }
 
@@ -1141,7 +1119,7 @@ export async function submitOnlineQualScores(
   const nowMs = input.nowMs ?? Date.now();
   const windowMinutes = tourney.qualWindowMinutes ?? meta.qualWindowMinutes ?? 90;
 
-  const baseTimerLog = existing?.timerLog || createInitialTimerLog(nowMs);
+  const baseTimerLog = run?.timerLog || createInitialTimerLog(nowMs);
   const telemetry = computeTimerTelemetry(baseTimerLog, windowMinutes, nowMs);
   const finalTimerLog: QualTimerLog = {
     ...baseTimerLog,
@@ -1150,44 +1128,32 @@ export async function submitOnlineQualScores(
     overTime: telemetry.overTime,
   };
 
-  const authWord = existing?.authWord || generateNesAuthword(tourney.customAuthWords as string[]);
-  const submittedTwitchId = input.submittedTwitchId ?? existing?.submittedTwitchId ?? null;
+  const authWord = run?.authWord || generateNesAuthword(tourney.customAuthWords as string[]);
+  const submittedTwitchId = input.submittedTwitchId ?? run?.submittedTwitchId ?? null;
   const submittedTwitchUsername =
-    input.submittedTwitchUsername ?? existing?.submittedTwitchUsername ?? null;
-  const identityStatus = input.identityStatus ?? existing?.identityStatus ?? 'CLAIMED_PENDING_REVIEW';
+    input.submittedTwitchUsername ?? run?.submittedTwitchUsername ?? null;
+  const identityStatus = input.identityStatus ?? run?.identityStatus ?? 'CLAIMED_PENDING_REVIEW';
 
-  // Remove the IN_PROGRESS placeholder row(s) for this player's online run
-  if (existing && existing.submissionIds.length > 0) {
-    for (const subId of existing.submissionIds) {
-      await db.delete(qualifierSubmissions).where(eq(qualifierSubmissions.id, subId));
-    }
-  }
-
-  const inserted = await db
-    .insert(qualifierSubmissions)
-    .values(
-      input.scores.map((score, idx) => ({
+  if (!run) {
+    const [created] = await db
+      .insert(qualifierRuns)
+      .values({
         tournamentId: tourney.id,
         playerId: input.playerId,
-        score,
-        submissionSource: 'ONLINE' as const,
-        status: 'SUBMITTED' as const,
+        submissionSource: 'ONLINE',
+        status: 'IN_PROGRESS',
         authWord,
-        twitchVodUrl: cleanVod,
         submittedTwitchId,
         submittedTwitchUsername,
         identityStatus,
-        timerLog: finalTimerLog,
-        judgeNotes: existing?.judgeNotes || null,
-        playerNotes,
-        createdAt: new Date(nowMs + idx),
-      }))
-    )
-    .returning();
+        timerLog: baseTimerLog,
+        createdAt: new Date(nowMs),
+      })
+      .returning();
+    run = created as QualRunRow;
+  }
 
-  return {
-    tournamentId: tourney.id,
-    playerId: input.playerId,
+  const submitted = await updateRun(run.id, {
     status: 'SUBMITTED',
     authWord,
     twitchVodUrl: cleanVod,
@@ -1195,11 +1161,14 @@ export async function submitOnlineQualScores(
     submittedTwitchUsername,
     identityStatus,
     timerLog: finalTimerLog,
-    scores: input.scores,
-    judgeNotes: existing?.judgeNotes || null,
     playerNotes,
-    submissionIds: (inserted as Array<{ id: string }>).map(r => r.id),
-  };
+    resumeToken: null,
+    draft: null,
+    submittedAt: new Date(nowMs),
+  });
+  await insertRunScores(submitted, input.scores, new Date(nowMs));
+
+  return summarizeRun(tourney, submitted);
 }
 
 /**
@@ -1215,18 +1184,9 @@ async function cleanupSourcePlayerAfterReassign(
   if (oldPlayerId === newPlayerId) return;
   const db = getDb();
 
-  const remainingSubs = await db
-    .select()
-    .from(qualifierSubmissions)
-    .where(
-      and(
-        eq(qualifierSubmissions.tournamentId, tournamentId),
-        eq(qualifierSubmissions.playerId, oldPlayerId)
-      )
-    )
-    .limit(1);
+  const remainingRun = await getRunForPlayer(tournamentId, oldPlayerId);
 
-  if (remainingSubs.length === 0 && !(await hasTournamentMatches(tournamentId, oldPlayerId))) {
+  if (!remainingRun && !(await hasTournamentMatches(tournamentId, oldPlayerId))) {
     await db
       .delete(tournamentPlayers)
       .where(
@@ -1240,9 +1200,7 @@ async function cleanupSourcePlayerAfterReassign(
       await deletePlayerIfUnreferenced(oldPlayerId);
     }
   } else {
-    const hasRemainingVerified = (remainingSubs as QualifierSubmissionRecord[]).some(
-      s => s.status === 'VERIFIED'
-    );
+    const hasRemainingVerified = remainingRun?.status === 'VERIFIED';
     await db
       .update(tournamentPlayers)
       .set({ qualsCompleted: hasRemainingVerified })
@@ -1255,6 +1213,12 @@ async function cleanupSourcePlayerAfterReassign(
   }
 }
 
+/** Moves a qual run and all its score rows to another player, marking the identity as confirmed. */
+async function moveRunToPlayer(runId: string, playerId: string): Promise<void> {
+  await updateRun(runId, { playerId, identityStatus: 'VERIFIED_MATCH' });
+  await getDb().update(qualifierSubmissions).set({ playerId }).where(eq(qualifierSubmissions.runId, runId));
+}
+
 /**
  * Track 10E: Judge Review Queue adjudication & identity resolution mutations.
  */
@@ -1263,8 +1227,9 @@ export async function adjudicateOnlineSubmission(
   input: {
     playerId: string;
     action:
+      | 'SAVE'
       | 'VERIFY'
-      | 'EDIT_AND_VERIFY'
+      | 'UNVERIFY'
       | 'DNQ'
       | 'DQ'
       | 'CONFIRM_IDENTITY'
@@ -1284,28 +1249,27 @@ export async function adjudicateOnlineSubmission(
 ) {
   const db = getDb();
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
-  const existing = await getOnlineQualSession(tourney.id, { playerId: input.playerId });
-  if (!existing) {
+  const run = await getRunForPlayer(tourney.id, input.playerId);
+  if (!run) {
     throw new Error('Online qualifier submission not found for this player');
   }
+  const existing = await summarizeRun(tourney, run);
+  const refreshed = () => getOnlineQualSession(tourney.id, { playerId: input.playerId });
 
   const now = new Date();
   const judgeBy = input.verifiedBy || 'Judge';
 
   if (input.action === 'VERIFY') {
+    if (run.status === 'IN_PROGRESS') throw new Error(NOT_SUBMITTED_ERROR);
+    if (run.status === 'VERIFIED') return existing;
     const note = input.judgeNotes?.trim() || existing.judgeNotes || null;
-    for (const subId of existing.submissionIds) {
-      await db
-        .update(qualifierSubmissions)
-        .set({
-          status: 'VERIFIED',
-          identityStatus: 'VERIFIED_MATCH',
-          judgeNotes: note,
-          verifiedBy: judgeBy,
-          verifiedAt: now,
-        })
-        .where(eq(qualifierSubmissions.id, subId));
-    }
+    await updateRun(run.id, {
+      status: 'VERIFIED',
+      identityStatus: 'VERIFIED_MATCH',
+      judgeNotes: note,
+      verifiedBy: judgeBy,
+      verifiedAt: now,
+    });
     if (existing.submittedTwitchId || existing.submittedTwitchUsername) {
       await db
         .update(players)
@@ -1326,90 +1290,54 @@ export async function adjudicateOnlineSubmission(
           eq(tournamentPlayers.playerId, input.playerId)
         )
       );
-    return getOnlineQualSession(tourney.id, { playerId: input.playerId });
+    return refreshed();
   }
 
-  if (input.action === 'EDIT_AND_VERIFY') {
-    const newScores =
-      Array.isArray(input.scores) && input.scores.length > 0
-        ? input.scores
-        : existing.scores;
-    const prevScoresStr = existing.scores.join(', ');
-    const newScoresStr = newScores.join(', ');
-    const auditLine = `[SCORE EDITED BY ${judgeBy}]: ${prevScoresStr} -> ${newScoresStr}${
-      input.judgeNotes ? ` (${input.judgeNotes.trim()})` : ''
-    }`;
-    const combinedNotes = existing.judgeNotes
-      ? `${existing.judgeNotes}\n${auditLine}`
-      : auditLine;
-
-    for (const subId of existing.submissionIds) {
-      await db.delete(qualifierSubmissions).where(eq(qualifierSubmissions.id, subId));
+  if (input.action === 'SAVE') {
+    if (run.status === 'IN_PROGRESS') throw new Error(NOT_SUBMITTED_ERROR);
+    assertRunEditable(run);
+    const next = validateQualScores(input.scores, { requireOne: false });
+    const prev = existing.scores;
+    let audit: string | null = null;
+    if (prev.length !== next.length || prev.some((score, i) => score !== next[i])) {
+      await replaceRunScores(run, next, run.submittedAt ?? now);
+      audit = `[SCORES EDITED BY ${judgeBy}]: ${prev.join(', ') || 'none'} -> ${next.join(', ') || 'none'}`;
     }
+    const base = input.judgeNotes !== undefined ? (input.judgeNotes.trim() || null) : run.judgeNotes;
+    await updateRun(run.id, { judgeNotes: audit ? (base ? `${base}\n${audit}` : audit) : base });
+    return refreshed();
+  }
 
-    await db.insert(qualifierSubmissions).values(
-      newScores.map((score, idx) => ({
-        tournamentId: tourney.id,
-        playerId: input.playerId,
-        score,
-        submissionSource: 'ONLINE' as const,
-        status: 'VERIFIED' as const,
-        authWord: existing.authWord,
-        twitchVodUrl: existing.twitchVodUrl,
-        submittedTwitchId: existing.submittedTwitchId,
-        submittedTwitchUsername: existing.submittedTwitchUsername,
-        identityStatus: 'VERIFIED_MATCH' as const,
-        timerLog: existing.timerLog,
-        judgeNotes: combinedNotes,
-        playerNotes: existing.playerNotes ?? null,
-        verifiedBy: judgeBy,
-        verifiedAt: now,
-        createdAt: new Date(now.getTime() + idx),
-      }))
-    );
-
-    if (existing.submittedTwitchId || existing.submittedTwitchUsername) {
-      await db
-        .update(players)
-        .set({
-          ...(existing.submittedTwitchId ? { twitchId: existing.submittedTwitchId } : {}),
-          ...(existing.submittedTwitchUsername
-            ? { twitchUsername: existing.submittedTwitchUsername }
-            : {}),
-        })
-        .where(eq(players.id, input.playerId));
-    }
-
+  if (input.action === 'UNVERIFY') {
+    if (run.status !== 'VERIFIED') throw new Error('Only a verified qual can be unverified.');
+    const line = `[UNVERIFIED BY ${judgeBy}]`;
+    await updateRun(run.id, {
+      status: 'SUBMITTED',
+      verifiedBy: null,
+      verifiedAt: null,
+      judgeNotes: run.judgeNotes ? `${run.judgeNotes}\n${line}` : line,
+    });
     await db
       .update(tournamentPlayers)
-      .set({ qualsCompleted: true, isDisqualified: false })
+      .set({ qualsCompleted: false })
       .where(
         and(
           eq(tournamentPlayers.tournamentId, tourney.id),
           eq(tournamentPlayers.playerId, input.playerId)
         )
       );
-    return getOnlineQualSession(tourney.id, { playerId: input.playerId });
+    return refreshed();
   }
 
   if (input.action === 'DNQ') {
+    assertRunEditable(run);
     const note = input.judgeNotes?.trim()
       ? existing.judgeNotes
         ? `${existing.judgeNotes}\n[DNQ]: ${input.judgeNotes.trim()}`
         : `[DNQ]: ${input.judgeNotes.trim()}`
       : existing.judgeNotes || '[DNQ]: Marked DNQ by judge';
 
-    for (const subId of existing.submissionIds) {
-      await db
-        .update(qualifierSubmissions)
-        .set({
-          status: 'DNQ',
-          judgeNotes: note,
-          verifiedBy: judgeBy,
-          verifiedAt: now,
-        })
-        .where(eq(qualifierSubmissions.id, subId));
-    }
+    await updateRun(run.id, { status: 'DNQ', judgeNotes: note, verifiedBy: judgeBy, verifiedAt: now });
     await db
       .update(tournamentPlayers)
       .set({ qualsCompleted: false, isDisqualified: false })
@@ -1419,17 +1347,18 @@ export async function adjudicateOnlineSubmission(
           eq(tournamentPlayers.playerId, input.playerId)
         )
       );
-    return getOnlineQualSession(tourney.id, { playerId: input.playerId });
+    return refreshed();
   }
 
   if (input.action === 'DQ') {
+    assertRunEditable(run);
     const note = input.judgeNotes?.trim()
       ? existing.judgeNotes
         ? `${existing.judgeNotes}\n[DQ]: ${input.judgeNotes.trim()}`
         : `[DQ]: ${input.judgeNotes.trim()}`
       : existing.judgeNotes || '[DQ]: Disqualified by judge';
 
-    // Tournament-scoped DQ: reversible by a later VERIFY / EDIT_AND_VERIFY / DNQ ruling
+    // Tournament-scoped DQ: reversible by a later VERIFY / DNQ ruling
     await db
       .update(tournamentPlayers)
       .set({ isDisqualified: true, qualsCompleted: false })
@@ -1440,18 +1369,8 @@ export async function adjudicateOnlineSubmission(
         )
       );
 
-    for (const subId of existing.submissionIds) {
-      await db
-        .update(qualifierSubmissions)
-        .set({
-          status: 'DQ',
-          judgeNotes: note,
-          verifiedBy: judgeBy,
-          verifiedAt: now,
-        })
-        .where(eq(qualifierSubmissions.id, subId));
-    }
-    return getOnlineQualSession(tourney.id, { playerId: input.playerId });
+    await updateRun(run.id, { status: 'DQ', judgeNotes: note, verifiedBy: judgeBy, verifiedAt: now });
+    return refreshed();
   }
 
   if (input.action === 'CONFIRM_IDENTITY' || input.action === 'PROMOTE_PROVISIONAL') {
@@ -1497,18 +1416,12 @@ export async function adjudicateOnlineSubmission(
     }
     await ensureTournamentPlayerRegistration(tourney.id, input.playerId);
 
-    for (const subId of existing.submissionIds) {
-      await db
-        .update(qualifierSubmissions)
-        .set({
-          identityStatus: 'VERIFIED_MATCH',
-        })
-        .where(eq(qualifierSubmissions.id, subId));
-    }
-    return getOnlineQualSession(tourney.id, { playerId: input.playerId });
+    await updateRun(run.id, { identityStatus: 'VERIFIED_MATCH' });
+    return refreshed();
   }
 
   if (input.action === 'REASSIGN_PLAYER') {
+    assertRunEditable(run);
     if (!input.targetPlayerId) {
       throw new Error('targetPlayerId is required for REASSIGN_PLAYER');
     }
@@ -1519,6 +1432,11 @@ export async function adjudicateOnlineSubmission(
       .limit(1);
     if (!targetPlayer) {
       throw new Error('Target player not found');
+    }
+    if (targetPlayer.id !== input.playerId && (await getRunForPlayer(tourney.id, targetPlayer.id))) {
+      throw new Error(
+        `${targetPlayer.name} already has a qual in this tournament. Remove that qual before reassigning this one.`
+      );
     }
 
     const wasProvisional = existing.identityStatus === 'PROVISIONAL_NEW';
@@ -1550,15 +1468,7 @@ export async function adjudicateOnlineSubmission(
         .where(eq(players.id, targetPlayer.id));
     }
 
-    for (const subId of existing.submissionIds) {
-      await db
-        .update(qualifierSubmissions)
-        .set({
-          playerId: targetPlayer.id,
-          identityStatus: 'VERIFIED_MATCH',
-        })
-        .where(eq(qualifierSubmissions.id, subId));
-    }
+    await moveRunToPlayer(run.id, targetPlayer.id);
 
     await cleanupSourcePlayerAfterReassign(
       tourney.id,
@@ -1571,6 +1481,7 @@ export async function adjudicateOnlineSubmission(
   }
 
   if (input.action === 'CREATE_NEW_PLAYER') {
+    assertRunEditable(run);
     const rawName = (input.newPlayer?.name || '').trim();
     if (!rawName) {
       throw new Error('Player name is required when creating a new player');
@@ -1624,15 +1535,7 @@ export async function adjudicateOnlineSubmission(
         );
     }
 
-    for (const subId of existing.submissionIds) {
-      await db
-        .update(qualifierSubmissions)
-        .set({
-          playerId: createdPlayer.id,
-          identityStatus: 'VERIFIED_MATCH',
-        })
-        .where(eq(qualifierSubmissions.id, subId));
-    }
+    await moveRunToPlayer(run.id, createdPlayer.id);
 
     await cleanupSourcePlayerAfterReassign(
       tourney.id,
@@ -1675,7 +1578,7 @@ export async function verifyAllQualifierSubmissions(
 
 /**
  * Explicitly sets or lifts a competitor's tournament-scoped disqualification (organizer toggle).
- * Lifting a DQ sends any DQ'd submissions back to SUBMITTED so they re-enter the judge review queue.
+ * Lifting a DQ sends a DQ'd qual back to SUBMITTED so they re-enter the judge review queue.
  */
 export async function setTournamentPlayerDisqualification(
   tournamentIdOrSlug: string,
@@ -1683,6 +1586,11 @@ export async function setTournamentPlayerDisqualification(
 ): Promise<void> {
   const db = getDb();
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
+
+  if (input.isDisqualified) {
+    const run = await getRunForPlayer(tourney.id, input.playerId);
+    if (run) assertRunEditable(run);
+  }
 
   const [updated] = await db
     .update(tournamentPlayers)
@@ -1699,27 +1607,15 @@ export async function setTournamentPlayerDisqualification(
   }
 
   if (!input.isDisqualified) {
-    const dqSubs = await db
-      .select()
-      .from(qualifierSubmissions)
-      .where(
-        and(
-          eq(qualifierSubmissions.tournamentId, tourney.id),
-          eq(qualifierSubmissions.playerId, input.playerId),
-          eq(qualifierSubmissions.status, 'DQ')
-        )
-      );
-    const liftNote = `[DQ LIFTED BY ${input.changedBy || 'Organizer'}]`;
-    for (const sub of dqSubs) {
-      await db
-        .update(qualifierSubmissions)
-        .set({
-          status: 'SUBMITTED',
-          judgeNotes: sub.judgeNotes ? `${sub.judgeNotes}\n${liftNote}` : liftNote,
-          verifiedBy: null,
-          verifiedAt: null,
-        })
-        .where(eq(qualifierSubmissions.id, sub.id));
+    const run = await getRunForPlayer(tourney.id, input.playerId);
+    if (run?.status === 'DQ') {
+      const liftNote = `[DQ LIFTED BY ${input.changedBy || 'Organizer'}]`;
+      await updateRun(run.id, {
+        status: 'SUBMITTED',
+        judgeNotes: run.judgeNotes ? `${run.judgeNotes}\n${liftNote}` : liftNote,
+        verifiedBy: null,
+        verifiedAt: null,
+      });
     }
   }
 }

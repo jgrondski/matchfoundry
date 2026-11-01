@@ -190,11 +190,35 @@ export interface TournamentTier {
   roundBestOfOverrides?: Record<string | number, number>; // Key: roundNumber (1, 2, ...) or stage ('W1', 'L1', 'GF', 'GF_RESET'), Value: bestOf (1..99)
 }
 
+export type QualRunStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'VERIFIED' | 'DNQ' | 'DQ';
+
+/** One competitor's qual in a tournament. Scores are the qualifierSubmissions with this runId. */
+export interface QualRun {
+  id: string;
+  tournamentId: string;
+  playerId: string;
+  submissionSource: SubmissionSource;
+  status: QualRunStatus;
+  authWord?: string;
+  twitchVodUrl?: string;
+  submittedTwitchId?: string;
+  submittedTwitchUsername?: string;
+  identityStatus?: IdentityStatus;
+  timerLog?: QualTimerLog;
+  judgeNotes?: string;
+  playerNotes?: string;
+  verifiedBy?: string;
+  verifiedAt?: number;
+  submittedAt?: number;
+  createdAt: number;
+}
+
 export interface QualifierSubmission {
   id: string;
   tournamentId: string;
   organizationId?: string;
   playerId: string;
+  runId?: string;
   score: number;
   submittedAt: number; // timestamp in ms
   submissionSource?: SubmissionSource;
@@ -291,6 +315,7 @@ export interface Tournament {
   matchScores: Record<string, MatchScoreRecord>; // keyed by matchId
   playersPool: PlayerProfile[];
   qualifierSubmissions: QualifierSubmission[];
+  qualRuns?: QualRun[];
   tournamentPlayers: Record<string, TournamentPlayer>; // keyed by playerId
   qualifiers?: QualifierScore[]; // legacy fallback
   useOrgBranding?: boolean; // default true: inherits 5 colors, logo, banner from org

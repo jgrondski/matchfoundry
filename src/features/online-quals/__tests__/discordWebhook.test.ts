@@ -241,7 +241,11 @@ describe('Discord webhook (server)', () => {
     const stale = (await getFullTournament(t.id))!;
     await call(`/api/tournaments/${t.id}/qualify/adjudicate`, {
       token,
-      body: { playerId: player.id, action: 'EDIT_AND_VERIFY', scores: [900000], verifiedBy: 'Judge' },
+      body: { playerId: player.id, action: 'SAVE', scores: [900000], verifiedBy: 'Judge' },
+    });
+    await call(`/api/tournaments/${t.id}/qualify/adjudicate`, {
+      token,
+      body: { playerId: player.id, action: 'VERIFY', verifiedBy: 'Judge' },
     });
     await saveFullTournament({
       ...stale,

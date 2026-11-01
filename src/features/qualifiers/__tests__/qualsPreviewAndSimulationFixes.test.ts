@@ -138,12 +138,13 @@ describe('Qualifier API guards and simulation', () => {
     expect(res.getStatusCode()).toBe(400);
   });
 
-  it('simulates verified in-person runs', () => {
+  it('simulates pending in-person runs', () => {
     const t = qualTournament();
     const { submissions } = generateSimulatedQualifiers(t, []);
     expect(submissions.length).toBeGreaterThan(0);
     for (const s of submissions) {
-      expect(s).toMatchObject({ status: 'VERIFIED', submissionSource: 'IN_PERSON', verifiedBy: 'Simulation' });
+      expect(s).toMatchObject({ status: 'SUBMITTED', submissionSource: 'IN_PERSON' });
+      expect(s.verifiedBy).toBeUndefined();
     }
   });
 
@@ -161,7 +162,7 @@ describe('Qualifier API guards and simulation', () => {
     expect(pool.length).toBeGreaterThanOrEqual(8);
     expect((loaded.qualifierSubmissions || []).length).toBeGreaterThan(0);
     for (const p of pool) {
-      expect(getPlayerQualifierStatus(loaded, p.id)).toBe('verified');
+      expect(getPlayerQualifierStatus(loaded, p.id)).toBe('awaiting verification');
     }
 
     // The preview page recomputes draft brackets client-side before lock (useBracketTier)

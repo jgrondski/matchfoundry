@@ -45,6 +45,9 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
     return getPlayerQualifierStatus(tournament, selectedPlayer.id);
   }, [tournament, selectedPlayer]);
 
+  const run = (tournament.qualRuns || []).find(r => r.playerId === selectedPlayer?.id);
+  const isQualLocked = run?.status === 'VERIFIED';
+
   if (!isOpen) return null;
 
   // Existing submissions for selected player
@@ -180,40 +183,46 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                 </div>
 
                 {/* 2. Score Submission Form */}
-                <form onSubmit={handleSubmitScore} className="flex flex-col gap-3">
-                  <label className={labelClass}>New Attempt Score</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={scoreInput ? parseInt(scoreInput, 10).toLocaleString() : ''}
-                      onChange={e => handleScoreChange(e.target.value)}
-                      placeholder="Enter score (e.g. 1,120,500)..."
-                      autoFocus
-                      data-autofocus
-                      className="w-full py-2 px-3.5 rounded-sm border border-line bg-canvas text-fg text-lg font-bold"
-                    />
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      disabled={!isScoreValid || isSubmitting}
-                      className="py-2 px-5 gap-1.5"
-                      title={
-                        !selectedPlayer
-                          ? 'Select a competitor first'
-                          : !isScoreValid
-                          ? 'Enter a valid score greater than 0'
-                          : 'Submit qualifier score'
-                      }
-                    >
-                      {isSubmitting ? (
-                        <div className="size-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                      ) : (
-                        <Plus size={16} />
-                      )}
-                      <span>{isSubmitting ? 'Saving...' : 'Submit'}</span>
-                    </Button>
-                  </div>
-                </form>
+                {isQualLocked ? (
+                  <p className="text-caption text-fg-muted">
+                    This qual is verified and locked. Unverify it on the Review page to change scores.
+                  </p>
+                ) : (
+                  <form onSubmit={handleSubmitScore} className="flex flex-col gap-3">
+                    <label className={labelClass}>New Attempt Score</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={scoreInput ? parseInt(scoreInput, 10).toLocaleString() : ''}
+                        onChange={e => handleScoreChange(e.target.value)}
+                        placeholder="Enter score (e.g. 1,120,500)..."
+                        autoFocus
+                        data-autofocus
+                        className="w-full py-2 px-3.5 rounded-sm border border-line bg-canvas text-fg text-lg font-bold"
+                      />
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        disabled={!isScoreValid || isSubmitting}
+                        className="py-2 px-5 gap-1.5"
+                        title={
+                          !selectedPlayer
+                            ? 'Select a competitor first'
+                            : !isScoreValid
+                            ? 'Enter a valid score greater than 0'
+                            : 'Submit qualifier score'
+                        }
+                      >
+                        {isSubmitting ? (
+                          <div className="size-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                        ) : (
+                          <Plus size={16} />
+                        )}
+                        <span>{isSubmitting ? 'Saving...' : 'Submit'}</span>
+                      </Button>
+                    </div>
+                  </form>
+                )}
 
                 {/* 3. Existing Attempts History */}
                 <div>
@@ -242,7 +251,7 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                               {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          {!tournament.isLocked && (
+                          {!tournament.isLocked && !isQualLocked && (
                             <button
                               type="button"
                               onClick={async () => {

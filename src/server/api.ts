@@ -1,4 +1,4 @@
-import { getDb, tournaments, systemSettings, tournamentPlayers, qualifierSubmissions } from '../db';
+import { getDb, tournaments, systemSettings, tournamentPlayers, qualifierSubmissions, qualifierRuns } from '../db';
 import { sql, eq, or, and } from 'drizzle-orm';
 import type { IncomingMessage, ServerResponse } from 'http';
 import {
@@ -46,8 +46,9 @@ import {
   saveOnlineQualDraft,
   discardOnlineQualRun,
   QualRunAccessError,
+  QualLockedError,
 } from '../api/qualifiers';
-import { isPlaceholderSubmissionStatus } from '../features/online-quals/onlineQualsStatus';
+import { getRunForPlayer, listRunScores } from '../api/qualRuns';
 import { clearTournamentMatches } from '../api/brackets';
 import {
   listOrganizations,
@@ -115,22 +116,6 @@ async function loadSimulationPlayerSupply(t: Tournament): Promise<PlayerProfile[
     profiles.push(...created.map(toProfile));
   }
   return profiles;
-}
-
-/** Marks every competitor with simulated (pre-verified) runs as having completed quals. */
-function markSimulatedQualsCompleted(t: Tournament): void {
-  const simulatedIds = new Set(
-    (t.qualifierSubmissions || []).filter(s => s.verifiedBy === 'Simulation').map(s => s.playerId)
-  );
-  const tournamentPlayers = { ...(t.tournamentPlayers || {}) };
-  for (const playerId of simulatedIds) {
-    tournamentPlayers[playerId] = {
-      ...(tournamentPlayers[playerId] || { playerId, tournamentId: t.id }),
-      qualsCompleted: true,
-      isVerified: true,
-    };
-  }
-  t.tournamentPlayers = tournamentPlayers;
 }
 
 async function parseBody(req: IncomingMessage): Promise<unknown> {
@@ -1046,6 +1031,8 @@ export function createApiMiddleware() {
         // POST /api/tournaments/:id/qualify/adjudicate (Judge / Tournament Admin only)
         if (subAction === 'qualify/adjudicate' && method === 'POST') {
           if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+          const before = body?.playerId ? await getOnlineQualSession(tourneyId, { playerId: body.playerId }) : null;
+          const wasVerified = before?.status === 'VERIFIED';
           const session = await adjudicateOnlineSubmission(tourneyId, {
             playerId: body?.playerId,
             action: body?.action,
@@ -1060,7 +1047,7 @@ export function createApiMiddleware() {
             t.tiers = generateDraftBracketsForTournament(t);
             await saveFullTournament(t);
           }
-          if (session && (body?.action === 'VERIFY' || body?.action === 'EDIT_AND_VERIFY')) {
+          if (session && body?.action === 'VERIFY' && !wasVerified) {
             const p = await getPlayer(session.playerId);
             await dispatchDiscordWebhook(tourneyId, 'VERIFIED', {
               playerName: p?.name || session.submittedTwitchUsername || 'Player',
@@ -1228,7 +1215,6 @@ export function createApiMiddleware() {
           const { players: selectedPlayers, submissions } = generateSimulatedQualifiers(t, profiles);
           t.playersPool = selectedPlayers;
           t.qualifierSubmissions = submissions;
-          markSimulatedQualsCompleted(t);
           t.matchScores = {};
           t.isLocked = false;
           t.tiers = t.tiers.map(tier => ({ ...tier, isLocked: false }));
@@ -1248,7 +1234,6 @@ export function createApiMiddleware() {
           const profiles = await loadSimulationPlayerSupply(t);
 
           const simulated = runFullSimulation(t, profiles);
-          markSimulatedQualsCompleted(simulated);
           const saved = await saveFullTournament(simulated);
           return sendJson(res, 200, saved);
         }
@@ -1271,6 +1256,15 @@ export function createApiMiddleware() {
 
           if (isUuid(subId)) {
             const db = getDb();
+            const [scoreRow] = await db
+              .select({ runId: qualifierSubmissions.runId })
+              .from(qualifierSubmissions)
+              .where(and(eq(qualifierSubmissions.id, subId), eq(qualifierSubmissions.tournamentId, t.id)))
+              .limit(1);
+            const scoreRun = scoreRow?.runId ? (t.qualRuns || []).find(r => r.id === scoreRow.runId) : undefined;
+            if (scoreRun?.status === 'VERIFIED') {
+              return sendError(res, 409, 'This qual is verified. Unverify it before making changes.');
+            }
             await db
               .delete(qualifierSubmissions)
               .where(
@@ -1321,23 +1315,24 @@ export function createApiMiddleware() {
             );
           }
 
-          const playerSubs = (t.qualifierSubmissions || []).filter(s => s.playerId === playerId);
-          const qualSubs = playerSubs.filter(s => !isPlaceholderSubmissionStatus(s.status));
-          if (qualSubs.length > 0) {
+          const run = isUuid(playerId) ? await getRunForPlayer(t.id, playerId) : null;
+          if (run?.status === 'VERIFIED') {
+            return sendError(res, 409, 'This qual is verified. Unverify it before making changes.');
+          }
+          const scoreCount = run ? (await listRunScores(run.id)).length : 0;
+          if (scoreCount > 0) {
             return sendError(
               res,
               400,
-              `Cannot remove competitor from roster while they have recorded qualifier scores (${qualSubs.length} submission(s)). Delete their qualifier scores first.`
+              `Cannot remove competitor from roster while they have recorded qualifier scores (${scoreCount} submission(s)). Delete their qualifier scores first.`
             );
           }
 
           if (isUuid(playerId)) {
             const db = getDb();
-            // An unfinished online run goes with the roster entry.
-            for (const sub of playerSubs) {
-              if (isUuid(sub.id)) {
-                await db.delete(qualifierSubmissions).where(eq(qualifierSubmissions.id, sub.id));
-              }
+            // A qual with no scores (e.g. an unfinished online run) goes with the roster entry.
+            if (run) {
+              await db.delete(qualifierRuns).where(eq(qualifierRuns.id, run.id));
             }
             await db
               .delete(tournamentPlayers)
@@ -1688,6 +1683,7 @@ export function createApiMiddleware() {
       return sendError(res, 404, `Not found: ${method} ${pathname}`);
     } catch (err: unknown) {
       console.error(`[API Error] ${method} ${pathname}:`, err);
+      if (err instanceof QualLockedError) return sendError(res, 409, err.message);
       const msg = err instanceof Error ? err.message : 'Internal Server Error';
       return sendError(res, 500, msg);
     }

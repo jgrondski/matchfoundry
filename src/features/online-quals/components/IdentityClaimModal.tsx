@@ -163,7 +163,7 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
               data-testid="tab-register-new"
             >
               <UserPlus size={18} />
-              Register as Walk-In
+              Register as New Competitor
             </button>
           </div>
 
@@ -185,7 +185,7 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
 
                 {unclaimedPlayers.length === 0 ? (
                   <div className="p-6 text-center text-fg-muted">
-                    No unclaimed players on this tournament roster. Please register as a walk-in competitor.
+                    No unclaimed players on this tournament roster. Please register as a new competitor.
                   </div>
                 ) : (
                   <div className="mb-6">
@@ -229,7 +229,7 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
             ) : (
               <form onSubmit={handleRegister}>
                 <p className="mb-4 text-sm text-fg-secondary">
-                  New walk-in competitor? Create your competitor alias below. You will be registered on the roster and
+                  New competitor? Create your competitor alias below. You will be registered on the roster and
                   placed as <strong>Provisional New</strong> until confirmed by tournament judges.
                 </p>
 

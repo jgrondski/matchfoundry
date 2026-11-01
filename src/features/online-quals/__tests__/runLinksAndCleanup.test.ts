@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Readable } from 'node:stream';
 import { and, eq } from 'drizzle-orm';
 import { setupTestDb } from '../../../db/testDb';
-import { setDb, getDb, qualifierSubmissions, tournamentPlayers, players } from '../../../db';
+import { setDb, getDb, qualifierRuns, tournamentPlayers, players } from '../../../db';
 import { createApiMiddleware } from '../../../server/api';
 import { createSessionToken } from '../../../server/pinCrypto';
 import { saveFullTournament, getFullTournament } from '../../../api/tournaments';
@@ -183,9 +183,9 @@ describe('Online run links, drafts, and unfinished-run cleanup', () => {
   it('still lets runs started before tokens existed submit by player ID', async () => {
     const run = await startOnlineQualSession(tourney.id, { playerName: 'Legacy', twitchUsername: 'legacy' });
     await getDb()
-      .update(qualifierSubmissions)
+      .update(qualifierRuns)
       .set({ resumeToken: null })
-      .where(eq(qualifierSubmissions.playerId, run.playerId));
+      .where(eq(qualifierRuns.playerId, run.playerId));
 
     const session = await submitOnlineQualScores(tourney.id, {
       playerId: run.playerId,
@@ -198,9 +198,9 @@ describe('Online run links, drafts, and unfinished-run cleanup', () => {
   it('issues a token to a pre-token run when it is resumed', async () => {
     const run = await startOnlineQualSession(tourney.id, { playerName: 'Upgraded', twitchUsername: 'upgraded' });
     await getDb()
-      .update(qualifierSubmissions)
+      .update(qualifierRuns)
       .set({ resumeToken: null })
-      .where(eq(qualifierSubmissions.playerId, run.playerId));
+      .where(eq(qualifierRuns.playerId, run.playerId));
 
     const resumed = await startOnlineQualSession(tourney.id, { playerName: 'Upgraded', twitchUsername: 'upgraded' });
     expect(resumed.resumeToken).toMatch(/^[0-9a-f]{48}$/);

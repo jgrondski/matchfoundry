@@ -9,7 +9,6 @@ export interface QualifiersHook {
   verifyQualifierScore: (tournamentId: string, qualifierId: string, verified: boolean) => void;
   togglePlayerDisqualification: (tournamentId: string, playerId: string, isDisqualified: boolean) => void;
   togglePlayerQualsCompleted: (tournamentId: string, playerId: string, qualsCompleted: boolean) => void;
-  togglePlayerQualifierVerified: (tournamentId: string, playerId: string, isVerified?: boolean) => void;
   clearQualifierScores: (tournamentId: string) => void;
 }
 
@@ -23,7 +22,6 @@ export function useQualifiers(): QualifiersHook {
     verifyQualifierScore: store.verifyQualifierScore,
     togglePlayerDisqualification: store.togglePlayerDisqualification,
     togglePlayerQualsCompleted: store.togglePlayerQualsCompleted,
-    togglePlayerQualifierVerified: store.togglePlayerQualifierVerified,
     clearQualifierScores: store.clearQualifierScores,
   };
 }

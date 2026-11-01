@@ -58,7 +58,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const fetchSessions = useCallback(async () => {
+  const fetchSessions = useCallback(async (): Promise<ReviewQueueSessionSummary[]> => {
     try {
       const res = await fetch(`/api/tournaments/${tournament.id}/qualify/sessions`, {
         headers: { ...getAuthHeaders() },
@@ -67,13 +67,15 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         const data = await res.json();
         if (Array.isArray(data)) {
           setSessions(data);
-          return;
+          return data;
         }
       }
     } catch {
       // Fallback to store
     }
-    setSessions(deriveSessionsFromTournament(tournament));
+    const derived = deriveSessionsFromTournament(tournament);
+    setSessions(derived);
+    return derived;
   }, [tournament]);
 
   useEffect(() => {
@@ -91,10 +93,11 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
   };
 
   const handleAdjudicate = async (
-    action: 'VERIFY' | 'EDIT_AND_VERIFY' | 'DNQ' | 'DQ',
+    action: 'SAVE' | 'VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ',
     options?: { scores?: number[]; judgeNotes?: string }
   ) => {
     if (!selectedAdjudication) return;
+    const { playerId, playerName: name } = selectedAdjudication;
     setIsSubmitting(true);
     setStatusMessage(null);
     try {
@@ -105,9 +108,9 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           ...getAuthHeaders(),
         },
         body: JSON.stringify({
-          playerId: selectedAdjudication.playerId,
+          playerId,
           action,
-          scores: options?.scores,
+          scores: action === 'SAVE' ? options?.scores : undefined,
           judgeNotes: options?.judgeNotes,
         }),
       });
@@ -118,16 +121,24 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       }
 
       setStatusMessage(
-        action === 'VERIFY'
-          ? `Verified run for ${selectedAdjudication.playerName}`
-          : action === 'EDIT_AND_VERIFY'
-          ? `Updated scores and verified run for ${selectedAdjudication.playerName}`
+        action === 'SAVE'
+          ? `Saved changes for ${name}`
+          : action === 'VERIFY'
+          ? `Verified run for ${name}`
+          : action === 'UNVERIFY'
+          ? `Unverified ${name}'s qual. It is back in Pending Review.`
           : action === 'DNQ'
-          ? `Marked ${selectedAdjudication.playerName} as DNQ`
-          : `Disqualified ${selectedAdjudication.playerName}`
+          ? `Marked ${name} as DNQ`
+          : `Disqualified ${name}`
       );
-      setSelectedAdjudication(null);
-      await fetchSessions();
+      if (action === 'SAVE' || action === 'UNVERIFY') {
+        // Keep the dialog open on the fresh data.
+        const list = await fetchSessions();
+        setSelectedAdjudication(list.find(s => s.playerId === playerId) ?? null);
+      } else {
+        setSelectedAdjudication(null);
+        await fetchSessions();
+      }
       await refreshTournament?.(tournament.id);
     } catch (e: any) {
       setStatusMessage(`Error: ${e.message}`);
@@ -158,7 +169,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       }
       setStatusMessage(
         data.deletedPlayer
-          ? `Discarded ${discardTarget.playerName}'s unfinished run and removed the walk-in player`
+          ? `Discarded ${discardTarget.playerName}'s unfinished run and removed the player record it created`
           : `Discarded ${discardTarget.playerName}'s unfinished run`
       );
       setDiscardTarget(null);
@@ -347,7 +358,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       {/* Adjudication Modal */}
       {selectedAdjudication && (
         <AdjudicationModal
-          key={selectedAdjudication.playerId}
+          key={`${selectedAdjudication.runId}-${selectedAdjudication.status}-${selectedAdjudication.submissionIds.join(',')}-${selectedAdjudication.judgeNotes ?? ''}`}
           isOpen={true}
           session={selectedAdjudication}
           onClose={() => setSelectedAdjudication(null)}
@@ -387,7 +398,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
             </p>
             {discardTarget?.identityStatus === 'PROVISIONAL_NEW' && (
               <p className="text-caption leading-snug text-fg-muted">
-                This run created {discardTarget.playerName} as a walk-in player. If they have nothing else on record,
+                This run created {discardTarget.playerName} as a new player record. If they have nothing else on record,
                 they'll be removed from the player list too.
               </p>
             )}

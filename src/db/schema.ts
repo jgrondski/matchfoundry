@@ -107,10 +107,37 @@ export const tournamentPlayers = pgTable('tournament_players', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const qualifierRuns = pgTable('qualifier_runs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tournamentId: uuid('tournament_id').references(() => tournaments.id, { onDelete: 'cascade' }).notNull(),
+  playerId: uuid('player_id').references(() => players.id, { onDelete: 'restrict' }).notNull(),
+  submissionSource: text('submission_source', { enum: ['IN_PERSON', 'ONLINE'] }).notNull().default('IN_PERSON'),
+  status: text('status', { enum: ['IN_PROGRESS', 'SUBMITTED', 'VERIFIED', 'DNQ', 'DQ'] }).notNull().default('SUBMITTED'),
+  authWord: text('auth_word'),
+  twitchVodUrl: text('twitch_vod_url'),
+  submittedTwitchId: text('submitted_twitch_id'),
+  submittedTwitchUsername: text('submitted_twitch_username'),
+  identityStatus: text('identity_status', { enum: ['VERIFIED_MATCH', 'CLAIMED_PENDING_REVIEW', 'PROVISIONAL_NEW'] }),
+  timerLog: jsonb('timer_log').$type<QualTimerLog>(),
+  judgeNotes: text('judge_notes'),
+  playerNotes: text('player_notes'),
+  resumeToken: text('resume_token'),
+  draft: jsonb('draft').$type<QualRunDraft>(),
+  verifiedBy: text('verified_by'),
+  verifiedAt: timestamp('verified_at'),
+  // When the competitor submitted (online) or the first score was recorded (in person). Null while IN_PROGRESS.
+  submittedAt: timestamp('submitted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('qualifier_runs_tournament_player_idx').on(table.tournamentId, table.playerId),
+  uniqueIndex('qualifier_runs_resume_token_idx').on(table.resumeToken),
+]);
+
 export const qualifierSubmissions = pgTable('qualifier_submissions', {
   id: uuid('id').defaultRandom().primaryKey(),
   tournamentId: uuid('tournament_id').references(() => tournaments.id, { onDelete: 'cascade' }).notNull(),
   playerId: uuid('player_id').references(() => players.id, { onDelete: 'restrict' }).notNull(),
+  runId: uuid('run_id').references(() => qualifierRuns.id, { onDelete: 'cascade' }),
   score: integer('score').notNull(),
   submissionSource: text('submission_source', { enum: ['IN_PERSON', 'ONLINE'] }).notNull().default('IN_PERSON'),
   authWord: text('auth_word'),

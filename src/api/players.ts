@@ -1,4 +1,4 @@
-import { players, tournamentPlayers, qualifierSubmissions, matches, tournaments } from '../db/schema';
+import { players, tournamentPlayers, qualifierSubmissions, qualifierRuns, matches, tournaments } from '../db/schema';
 import { eq, sql, or, inArray, isNotNull } from 'drizzle-orm';
 import { getDb } from '../db';
 import { isPlaceholderSubmissionStatus } from '../features/online-quals/onlineQualsStatus';
@@ -188,6 +188,18 @@ export async function deletePlayer(
     .where(eq(qualifierSubmissions.playerId, id));
   const quals = allQuals.filter((q: { status: string }) => !isPlaceholderSubmissionStatus(q.status));
 
+  // Qual runs: an unfinished (IN_PROGRESS) online run is a placeholder; any other run is a result.
+  const allRuns = await db
+    .select({
+      id: qualifierRuns.id,
+      status: qualifierRuns.status,
+      tournamentName: tournaments.name,
+    })
+    .from(qualifierRuns)
+    .innerJoin(tournaments, eq(qualifierRuns.tournamentId, tournaments.id))
+    .where(eq(qualifierRuns.playerId, id));
+  const blockingRuns = allRuns.filter((r: { status: string }) => r.status !== 'IN_PROGRESS');
+
   // Find matches
   const matchRows = await db
     .select({ id: matches.id })
@@ -203,7 +215,7 @@ export async function deletePlayer(
     .limit(1);
 
   const tourneyNames = Array.from(
-    new Set([...enrolled, ...quals].map(r => r.tournamentName).filter(Boolean))
+    new Set([...enrolled, ...quals, ...blockingRuns].map(r => r.tournamentName).filter(Boolean))
   );
 
   if (tourneyNames.length > 0 || matchRows.length > 0) {
@@ -221,6 +233,10 @@ export async function deletePlayer(
   if (placeholderIds.length > 0) {
     await db.delete(qualifierSubmissions).where(inArray(qualifierSubmissions.id, placeholderIds));
   }
+  const placeholderRunIds = allRuns.map((r: { id: string }) => r.id);
+  if (placeholderRunIds.length > 0) {
+    await db.delete(qualifierRuns).where(inArray(qualifierRuns.id, placeholderRunIds));
+  }
 
   const res = await db.delete(players).where(eq(players.id, id)).returning();
   if (res.length === 0) {
@@ -234,9 +250,10 @@ export async function deleteAllUnattachedPlayers(): Promise<{
   skippedCount: number;
 }> {
   const db = getDb();
-  const [tp, qs, m1, m2, mw, ml, allPlayers] = await Promise.all([
+  const [tp, qs, qr, m1, m2, mw, ml, allPlayers] = await Promise.all([
     db.select({ playerId: tournamentPlayers.playerId }).from(tournamentPlayers),
     db.select({ playerId: qualifierSubmissions.playerId }).from(qualifierSubmissions),
+    db.select({ playerId: qualifierRuns.playerId }).from(qualifierRuns),
     db.select({ playerId: matches.player1Id }).from(matches).where(isNotNull(matches.player1Id)),
     db.select({ playerId: matches.player2Id }).from(matches).where(isNotNull(matches.player2Id)),
     db.select({ playerId: matches.winnerId }).from(matches).where(isNotNull(matches.winnerId)),
@@ -247,6 +264,7 @@ export async function deleteAllUnattachedPlayers(): Promise<{
   const attachedSet = new Set<string>();
   tp.forEach((r: { playerId: string | null }) => r.playerId && attachedSet.add(r.playerId));
   qs.forEach((r: { playerId: string | null }) => r.playerId && attachedSet.add(r.playerId));
+  qr.forEach((r: { playerId: string | null }) => r.playerId && attachedSet.add(r.playerId));
   m1.forEach((r: { playerId: string | null }) => r.playerId && attachedSet.add(r.playerId));
   m2.forEach((r: { playerId: string | null }) => r.playerId && attachedSet.add(r.playerId));
   mw.forEach((r: { playerId: string | null }) => r.playerId && attachedSet.add(r.playerId));
