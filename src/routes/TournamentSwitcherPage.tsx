@@ -9,6 +9,7 @@ import { usePinAuth } from '../features/auth/AuthContext';
 import { OpenQualsCard } from '../features/online-quals/components/OpenQualsCard';
 import { ConfirmDialog } from '../components/overlay';
 import { Button, Chip } from '../components/ui';
+import { SIMULATION_ENABLED } from '../utils/simulationEnv';
 
 export const TournamentSwitcherPage: React.FC = () => {
   const { isSystemAdmin, session, canManage } = usePinAuth();
@@ -77,15 +78,17 @@ export const TournamentSwitcherPage: React.FC = () => {
                 <Plus size={18} />
                 Create New Tournament
               </Button>
-              <Button
-                variant="secondary"
-                onClick={handleSimulateSample}
-                disabled={isSimulating}
-                className="px-6 py-2.5 text-base"
-              >
-                <Sparkles size={18} />
-                {isSimulating ? 'Simulating...' : 'Simulate Sample Tournament'}
-              </Button>
+              {SIMULATION_ENABLED && (
+                <Button
+                  variant="secondary"
+                  onClick={handleSimulateSample}
+                  disabled={isSimulating}
+                  className="px-6 py-2.5 text-base"
+                >
+                  <Sparkles size={18} />
+                  {isSimulating ? 'Simulating...' : 'Simulate Sample Tournament'}
+                </Button>
+              )}
             </div>
           )}
         </header>
@@ -134,7 +137,9 @@ export const TournamentSwitcherPage: React.FC = () => {
               No Tournaments Created Yet
             </h2>
             <p className="max-w-110 text-base leading-normal text-fg-secondary">
-              Get started by creating your first competitive tournament, or launch an instant end-to-end simulation with authentic competitive Tetris players.
+              {SIMULATION_ENABLED
+                ? 'Get started by creating your first competitive tournament, or launch an instant end-to-end simulation with authentic competitive Tetris players.'
+                : 'Get started by creating your first competitive tournament.'}
             </p>
             <div className="mt-3 flex flex-wrap justify-center gap-3">
               <Button
@@ -145,15 +150,17 @@ export const TournamentSwitcherPage: React.FC = () => {
                 <Plus size={18} />
                 Create New Tournament
               </Button>
-              <Button
-                variant="secondary"
-                onClick={handleSimulateSample}
-                disabled={isSimulating}
-                className="px-7 py-3 text-base"
-              >
-                <Sparkles size={18} />
-                {isSimulating ? 'Simulating...' : 'Simulate Sample Tournament'}
-              </Button>
+              {SIMULATION_ENABLED && (
+                <Button
+                  variant="secondary"
+                  onClick={handleSimulateSample}
+                  disabled={isSimulating}
+                  className="px-7 py-3 text-base"
+                >
+                  <Sparkles size={18} />
+                  {isSimulating ? 'Simulating...' : 'Simulate Sample Tournament'}
+                </Button>
+              )}
             </div>
           </div>
         ) : (

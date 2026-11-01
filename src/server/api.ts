@@ -80,6 +80,7 @@ import type {
   Organization,
 } from '../features/tournament/types';
 import { DEFAULT_TIER_THEME, TIER_THEMES } from '../theme/palette';
+import { isSimulationAllowed, SIMULATION_DISABLED_MESSAGE } from '../utils/simulationEnv';
 
 /**
  * Loads the global player supply for a qualifier simulation, first creating real player rows if
@@ -743,6 +744,7 @@ export function createApiMiddleware() {
 
       // POST /api/simulate/sample (1-click sample tournament)
       if (pathname === '/api/simulate/sample' && method === 'POST') {
+        if (!isSimulationAllowed()) return sendError(res, 403, SIMULATION_DISABLED_MESSAGE);
         if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
         const sampleTourney = await simulateSampleTournament();
         return sendJson(res, 201, sampleTourney);
@@ -1205,7 +1207,6 @@ export function createApiMiddleware() {
           t.matchScores = {};
           t.tournamentPlayers = {};
           t.isLocked = false;
-          t.qualsClosed = false;
           t.tiers = t.tiers.map(tier => ({
             ...tier,
             isLocked: false,
@@ -1217,6 +1218,7 @@ export function createApiMiddleware() {
 
         // POST /api/tournaments/:id/simulate/seed-quals (Simulation - Master Admin only!)
         if (subAction === 'simulate/seed-quals' && method === 'POST') {
+          if (!isSimulationAllowed()) return sendError(res, 403, SIMULATION_DISABLED_MESSAGE);
           if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');
@@ -1238,6 +1240,7 @@ export function createApiMiddleware() {
 
         // POST /api/tournaments/:id/simulate/full (Simulation - Master Admin only!)
         if (subAction === 'simulate/full' && method === 'POST') {
+          if (!isSimulationAllowed()) return sendError(res, 403, SIMULATION_DISABLED_MESSAGE);
           if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
           const t = await getFullTournament(tourneyId);
           if (!t) return sendError(res, 404, 'Tournament not found');

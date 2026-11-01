@@ -371,7 +371,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
       bracketRouting: tierMeta.bracketRouting,
       finalsCutoff: tierMeta.finalsCutoff,
       bestOf: tierMeta.bestOf || 3,
-      isLocked: Boolean(tierMeta.isLocked || t.qualsClosed),
+      isLocked: Boolean(tierMeta.isLocked || meta.isLocked),
       roundBestOfOverrides: tierMeta.roundBestOfOverrides || {},
       bracket,
     };
@@ -393,7 +393,8 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     qualWindowMinutes: t.qualWindowMinutes ?? meta.qualWindowMinutes ?? 90,
     qualTimer: (meta.qualTimer as any) || undefined,
     customAuthWords: (t.customAuthWords as string[]) || meta.customAuthWords || undefined,
-    qualsClosed: Boolean(t.qualsClosed),
+    // Quals close exactly when brackets lock; the column mirrors isLocked and is never latched.
+    qualsClosed: Boolean(meta.isLocked),
     onlineQualsOpen: Boolean(t.onlineQualsOpen),
     isLocked: Boolean(meta.isLocked),
     tiers: compositeTiers,
@@ -491,7 +492,7 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
       qualMode,
       qualWindowMinutes,
       customAuthWords,
-      qualsClosed: Boolean(tourney.qualsClosed || tourney.isLocked),
+      qualsClosed: Boolean(tourney.isLocked),
       metadata,
     };
     if (tourney.adminPinEncrypted !== undefined) {
@@ -515,7 +516,7 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
         qualMode,
         qualWindowMinutes,
         customAuthWords,
-        qualsClosed: Boolean(tourney.qualsClosed || tourney.isLocked),
+        qualsClosed: Boolean(tourney.isLocked),
         isVerified: false,
         adminPinEncrypted: tourney.adminPinEncrypted || null,
         metadata,
