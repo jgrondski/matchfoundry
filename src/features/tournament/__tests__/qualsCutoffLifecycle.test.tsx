@@ -85,10 +85,10 @@ describe('Journey 4: Qualifiers Cutoff & Bracket Locking (ATDD)', () => {
   });
 
   describe('Assertion 4.2: Locked Public Portal', () => {
-    it('disables run initiation and displays "Qualifiers Closed" announcement when quals_closed = true', async () => {
+    it('disables run initiation and displays "Qualifiers Closed" announcement once brackets lock', async () => {
       const closedTourney: Tournament = {
         ...tourney,
-        qualsClosed: true,
+        isLocked: true,
       };
       await saveFullTournament(closedTourney);
 

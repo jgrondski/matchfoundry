@@ -4,6 +4,7 @@ import { PlayerProfile, Organization } from '../../tournament/types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { PlaystyleChip } from './PlaystyleChip';
 import { CountryFlag } from '../flagUtils';
+import { SIMULATION_ENABLED } from '../../../utils/simulationEnv';
 import {
   Users,
   Plus,
@@ -444,16 +445,20 @@ export const PlayerDirectoryTable: React.FC<PlayerDirectoryTableProps> = React.m
             </h3>
             <p className="m-0 max-w-105 text-sm text-fg-muted">
               {totalPlayersCount === 0
-                ? 'Add competitors manually or click "Generate Fake Players" to simulate authentic competitors for tournaments.'
+                ? SIMULATION_ENABLED
+                  ? 'Add competitors manually or click "Generate Fake Players" to simulate authentic competitors for tournaments.'
+                  : 'Add competitors manually to build your player directory.'
                 : 'Try adjusting your search query or playstyle filter.'}
             </p>
           </div>
           {totalPlayersCount === 0 && (
             <div className="mt-2 flex gap-3">
-              <Button variant="secondary" onClick={onOpenGenerateModal}>
-                <Sparkles size={16} color="var(--color-gold-bright)" />
-                Generate Fake Players
-              </Button>
+              {SIMULATION_ENABLED && (
+                <Button variant="secondary" onClick={onOpenGenerateModal}>
+                  <Sparkles size={16} color="var(--color-gold-bright)" />
+                  Generate Fake Players
+                </Button>
+              )}
               <Button variant="primary" onClick={onOpenAddModal}>
                 <Plus size={16} />
                 Add Competitor

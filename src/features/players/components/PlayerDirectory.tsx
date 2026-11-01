@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ConfirmDialog } from '../../../components/overlay';
 import { Button } from '../../../components/ui';
+import { SIMULATION_ENABLED } from '../../../utils/simulationEnv';
 
 export const PlayerDirectory: React.FC = () => {
   const {
@@ -228,7 +229,7 @@ export const PlayerDirectory: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-3">
-          {isSystemAdmin && (
+          {isSystemAdmin && SIMULATION_ENABLED && (
             <Button
               variant="secondary"
               onClick={handleOpenGenerateModal}
@@ -288,7 +289,7 @@ export const PlayerDirectory: React.FC = () => {
       />
 
       {/* Generate Fake Players Modal (conditionally mounted) */}
-      {isGenerateModalOpen && (
+      {SIMULATION_ENABLED && isGenerateModalOpen && (
         <GenerateFakePlayersModal
           isOpen={isGenerateModalOpen}
           onClose={handleCloseGenerateModal}

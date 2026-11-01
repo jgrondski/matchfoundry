@@ -97,6 +97,11 @@ function isUuid(val: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
 }
 
+/** Quals are closed exactly when brackets are locked (metadata.isLocked is the source of truth). */
+function areQualsClosed(tourney: { metadata: unknown }): boolean {
+  return Boolean(((tourney.metadata as Record<string, any>) || {}).isLocked);
+}
+
 async function resolveTournamentRow(tournamentIdOrSlug: string) {
   const db = getDb();
   if (!isUuid(tournamentIdOrSlug)) {
@@ -138,7 +143,7 @@ export async function submitQualifierScore(
 
   const db = getDb();
   const tourney = await resolveTournamentRow(tournamentId);
-  if (tourney.qualsClosed) throw new Error('Qualifiers are closed for this tournament');
+  if (areQualsClosed(tourney)) throw new Error('Qualifiers are closed for this tournament');
 
   const submissionSource = options?.submissionSource || 'IN_PERSON';
   const status = options?.status || 'SUBMITTED';
@@ -185,7 +190,7 @@ export async function submitQualifiersBatch(
   const db = getDb();
   if (submissions.length === 0) return [];
   const tourney = await resolveTournamentRow(tournamentId);
-  if (tourney.qualsClosed) throw new Error('Qualifiers are closed for this tournament');
+  if (areQualsClosed(tourney)) throw new Error('Qualifiers are closed for this tournament');
 
   const uniquePlayerIds = Array.from(new Set(submissions.map(s => s.playerId)));
   for (const pid of uniquePlayerIds) {
@@ -747,7 +752,7 @@ export async function startOnlineQualSession(
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
   const meta = (tourney.metadata as Record<string, any>) || {};
 
-  if (tourney.qualsClosed || meta.isLocked) {
+  if (areQualsClosed(tourney)) {
     throw new Error('Qualifiers are closed for this tournament');
   }
   if (tourney.qualMode === 'IN_PERSON') {
@@ -1110,7 +1115,7 @@ export async function submitOnlineQualScores(
 
   const playerNotes = normalizePlayerNotes(input.playerNotes);
 
-  if (tourney.qualsClosed || meta.isLocked) {
+  if (areQualsClosed(tourney)) {
     throw new Error('Qualifiers are closed for this tournament');
   }
 
