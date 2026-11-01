@@ -65,7 +65,7 @@ export const PublicTierBracketPage: React.FC = () => {
     if (tournamentFallback && tournamentFallback.tiers.length === 0) {
       const emptyContent = (
         <main className="mx-auto flex max-w-150 flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-          <h2 className="text-2xl text-fg">No Bracket Tiers Configured</h2>
+          <h2 className="text-2xl font-bold text-fg">No Bracket Tiers Configured</h2>
           <p className="text-sm leading-normal text-fg-secondary">
             This tournament does not have any bracket tiers yet. Qualifiers can be entered and ranked on the leaderboard, or you can create bracket tiers in Settings.
           </p>
@@ -95,7 +95,7 @@ export const PublicTierBracketPage: React.FC = () => {
 
     return (
       <div className="p-12 text-center text-fg-secondary">
-        <h2>Bracket Not Found</h2>
+        <h2 className="text-2xl font-bold">Bracket Not Found</h2>
         <p>Could not find tier "{tierSlug}" in tournament "{slug}".</p>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
@@ -210,7 +210,7 @@ const TierBracketView: React.FC<TierBracketViewProps> = ({
     );
   }
 
-  const tierBg = tier.backgroundColor || 'var(--color-bg-base)';
+  const tierBg = tier.backgroundColor || 'var(--color-canvas)';
 
   const pageContent = (
     <>

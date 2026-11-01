@@ -4,6 +4,7 @@ import { Button } from '../../../components/ui';
 import { OrgTierTheme } from '../../tournament/types';
 import { TierThemeColors } from '../../bracket/colorUtils';
 import { BracketThemeEditor } from '../../bracket/components/BracketThemeEditor';
+import { DEFAULT_TIER_THEME } from '../../../theme/palette';
 
 interface OrgBrandingTabProps {
   orgName: string;
@@ -58,11 +59,11 @@ export const OrgBrandingTab: React.FC<OrgBrandingTabProps> = ({
           onTextSizeChange={onPrimaryTextSizeChange}
           onReset={() => {
             onPrimaryThemeChange({
-              primaryColor: '#ffc905',
-              secondaryColor: '#705b33',
-              cardColor: '#1b1c1d',
-              textColor: '#94A3B8',
-              backgroundColor: '#020203',
+              primaryColor: DEFAULT_TIER_THEME.primaryColor,
+              secondaryColor: DEFAULT_TIER_THEME.secondaryColor,
+              cardColor: DEFAULT_TIER_THEME.cardColor,
+              textColor: DEFAULT_TIER_THEME.textColor,
+              backgroundColor: DEFAULT_TIER_THEME.backgroundColor,
             });
           }}
         />

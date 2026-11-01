@@ -150,7 +150,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
             {/* Overtime Alert */}
             {isOvertime && (
               <div className="flex items-center gap-3 rounded-md border border-red/40 bg-red/12 px-4 py-3.5 text-sm text-red-300">
-                <AlertTriangle size={20} color="#ef4444" className="shrink-0" />
+                <AlertTriangle size={20} className="text-red shrink-0" />
                 <div>
                   <strong>Overtime Recorded:</strong> Submission was submitted after the official tournament window.
                   Review elapsed telemetry before approving.
@@ -162,7 +162,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
             {session.playerNotes && (
               <div className="flex flex-col gap-1.5 rounded-md border border-purple-500/40 bg-purple-500/12 px-4 py-3.5 text-sm text-[#d8b4fe]">
                 <div className="flex items-center gap-2 font-bold">
-                  <StickyNote size={16} color="#a855f7" />
+                  <StickyNote size={16} className="text-purple-500" />
                   Competitor Notes
                 </div>
                 <div className="whitespace-pre-wrap rounded-sm bg-black/30 px-3 py-2 text-white wrap-anywhere">
@@ -216,7 +216,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
               {session.submissionSource === 'IN_PERSON' ? (
                 <>
                   <div className="flex items-center gap-2.5">
-                    <MapPin size={20} color="#60a5fa" />
+                    <MapPin size={20} className="text-blue-400" />
                     <div>
                       <div className="text-sm font-bold text-white">
                         In-Person Qualification Event
@@ -233,7 +233,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
               ) : (
                 <>
                   <div className="flex items-center gap-2.5">
-                    <Film size={20} color="#a78bfa" />
+                    <Film size={20} className="text-violet-400" />
                     <div>
                       <div className="text-sm font-bold text-white">
                         Twitch Broadcast VOD

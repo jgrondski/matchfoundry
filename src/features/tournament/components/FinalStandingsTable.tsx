@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
 import { Button, cn } from '../../../components/ui';
+import { STATUS_COLORS, THEME_FALLBACK } from '../../../theme/palette';
 
 const TABULAR = 'font-mono tabular-nums tracking-tight';
 const thClass = 'py-2 px-3 text-caption font-semibold uppercase tracking-wide text-fg-secondary';
@@ -126,7 +127,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
           id: 'dnq',
           title: 'Did Not Qualify (DNQ)',
           subtitle: 'Competitors below tournament bracket qualification cutoffs',
-          color: '#64748b',
+          color: STATUS_COLORS.dnq,
           isDNQ: true,
           rows: filteredRows,
         }];
@@ -136,7 +137,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
           id: 'dq',
           title: 'Disqualified (DQ)',
           subtitle: 'Disqualified competitors removed from official placement',
-          color: '#ef4444',
+          color: STATUS_COLORS.dq,
           isDQ: true,
           rows: filteredRows,
         }];
@@ -147,7 +148,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
         title: tier?.name || 'Tier',
         subtitle: `${tier?.playerCount || 0} Bracket Competitors • Best of ${tier?.bestOf || 3}`,
         tier,
-        color: tier?.primaryColor || '#f59e0b',
+        color: tier?.primaryColor || THEME_FALLBACK.primaryColor,
         rows: filteredRows,
       }];
     }
@@ -165,7 +166,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
           title: tier.name,
           subtitle: `${tier.playerCount} Bracket Competitors • Best of ${tier.bestOf}`,
           tier,
-          color: tier.primaryColor || '#f59e0b',
+          color: tier.primaryColor || THEME_FALLBACK.primaryColor,
           rows: tierRows,
         });
       }
@@ -177,7 +178,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
         id: 'dnq',
         title: 'Did Not Qualify (DNQ)',
         subtitle: 'Competitors below tournament bracket qualification cutoffs',
-        color: '#64748b',
+        color: STATUS_COLORS.dnq,
         isDNQ: true,
         rows: dnqRows,
       });
@@ -189,7 +190,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
         id: 'dq',
         title: 'Disqualified (DQ)',
         subtitle: 'Disqualified competitors removed from official placement',
-        color: '#ef4444',
+        color: STATUS_COLORS.dq,
         isDQ: true,
         rows: dqRows,
       });
@@ -202,7 +203,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
   if (tournament.tiers.length === 0) {
     return (
       <div className="flex w-full flex-col items-center justify-center gap-4 text-center">
-        <h2 className="text-2xl text-fg">No Bracket Tiers Configured</h2>
+        <h2 className="text-2xl font-bold text-fg">No Bracket Tiers Configured</h2>
         <p className="text-sm leading-normal text-fg-secondary">
           This tournament does not have any bracket tiers yet. Qualifiers can be entered and ranked on the leaderboard, or you can create bracket tiers in Settings.
         </p>
@@ -228,7 +229,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
         {(!isManage || isObsMode) && (
           <TournamentQualTimerHud tournament={tournament} isObsMode={isObsMode} readOnly={true} />
         )}
-        <h2 className="text-2xl text-fg">Brackets Not Finalized</h2>
+        <h2 className="text-2xl font-bold text-fg">Brackets Not Finalized</h2>
         <p className="text-sm leading-normal text-fg-secondary">
           Qualifiers are currently running and tournament brackets have not been locked into match play. Final standings will become available once qualifiers conclude and brackets are finalized.
         </p>
@@ -285,7 +286,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
 
         {tournament.tiers.map(t => {
           const isSelected = selectedFilter === t.id;
-          const tColor = t.primaryColor || '#f59e0b';
+          const tColor = t.primaryColor || THEME_FALLBACK.primaryColor;
           const count = tierCounts[t.id] || 0;
           return (
             <button
@@ -296,7 +297,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
                 isSelected
                   ? {
                       borderColor: colorWithAlpha(tColor, 0.6, 'var(--color-gold)'),
-                      background: colorWithAlpha(tColor, 0.18, 'var(--color-gold-bg)'),
+                      background: colorWithAlpha(tColor, 0.18, 'var(--color-gold-soft)'),
                       color: tColor,
                     }
                   : undefined
@@ -396,9 +397,9 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-2.5">
                           {section.isDQ ? (
-                            <AlertTriangle size={17} color="#ef4444" />
+                            <AlertTriangle size={17} className="text-red" />
                           ) : section.isDNQ ? (
-                            <Minus size={17} color="#94a3b8" />
+                            <Minus size={17} className="text-fg-secondary" />
                           ) : (
                             <Flame size={17} color={section.color} />
                           )}
@@ -426,7 +427,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
                   {section.rows.map((row, idx) => {
                     const isOverallChamp = row.finalRank === 1;
                     const isTierChamp = !isOverallChamp && row.eliminationRound === 'Champion';
-                    const tierColor = row.tier?.primaryColor || section.color || '#f59e0b';
+                    const tierColor = row.tier?.primaryColor || section.color || THEME_FALLBACK.primaryColor;
 
                     // Rank Delta formatting
                     const delta = row.rankDelta;
@@ -434,12 +435,12 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
                     const isNegativeDelta = typeof delta === 'number' && delta < 0;
 
                     // Row background with tier cardColor and zebra striping
-                    const baseCard = row.tier?.cardColor || 'var(--color-bg-surface)';
+                    const baseCard = row.tier?.cardColor || 'var(--color-surface)';
                     let rowBg = idx % 2 === 0 ? baseCard : getAlternateShade(baseCard, 6);
                     if (row.isDisqualified) {
                       rowBg = 'rgba(239, 68, 68, 0.06)';
                     } else if (row.isDNQ) {
-                      rowBg = idx % 2 === 0 ? 'var(--color-bg-surface)' : 'var(--color-bg-surface-elevated)';
+                      rowBg = idx % 2 === 0 ? 'var(--color-surface)' : 'var(--color-elevated)';
                     }
 
                     const champBadgeStyle = {

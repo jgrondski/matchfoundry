@@ -61,10 +61,10 @@ export const BracketBroadcastHeader: React.FC<BracketBroadcastHeaderProps> = ({
       className={cn(
         'flex w-full shrink-0 flex-wrap items-center justify-between gap-3 z-35',
         isObsMode ? 'py-2.5 px-5' : 'py-3 px-6',
-        isChroma ? 'bg-transparent' : 'border-b bg-[rgba(15,18,26,0.82)] backdrop-blur-md'
+        isChroma ? 'bg-transparent' : 'border-b bg-header/82 backdrop-blur-md'
       )}
       style={{
-        borderBottomColor: isChroma ? undefined : colorWithAlpha(primaryColor, 0.25, 'var(--color-border)'),
+        borderBottomColor: isChroma ? undefined : colorWithAlpha(primaryColor, 0.25, 'var(--color-line)'),
       }}
     >
       <div className="flex flex-wrap items-center gap-3">

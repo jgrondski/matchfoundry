@@ -5,6 +5,7 @@ import { Button, cn } from '../../../components/ui';
 import { Organization } from '../../tournament/types';
 import { TierThemeColors } from '../../bracket/colorUtils';
 import { OrganizationMetrics } from '../types';
+import { DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
 interface OrgHeaderBannerProps {
   org: Organization;
@@ -25,9 +26,9 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
   onSelectTab,
   onOpenEditMetadata,
 }) => {
-  const primaryColor = primaryTheme.primaryColor || '#ffc905';
-  const secondaryColor = primaryTheme.secondaryColor || '#1e293b';
-  const cardColor = primaryTheme.cardColor || '#161922';
+  const primaryColor = primaryTheme.primaryColor || DEFAULT_TIER_THEME.primaryColor;
+  const secondaryColor = primaryTheme.secondaryColor || THEME_FALLBACK.orgSecondaryColor;
+  const cardColor = primaryTheme.cardColor || THEME_FALLBACK.cardColor;
 
   return (
     <div className="overflow-hidden rounded-lg border border-line bg-surface shadow-[0_6px_24px_rgba(0,0,0,0.3)]">

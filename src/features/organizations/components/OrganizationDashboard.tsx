@@ -20,6 +20,7 @@ import { OrgMetadataModal } from './OrgMetadataModal';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ConfirmDialog } from '../../../components/overlay';
 import { buttonClasses } from '../../../components/ui';
+import { DEFAULT_TIER_THEME, TIER_THEMES } from '../../../theme/palette';
 
 export const OrganizationDashboard: React.FC = () => {
   const { orgSlug } = useParams<{ orgSlug: string }>();
@@ -99,11 +100,11 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
 
   // Branding Primary & Multi-tier state
   const initialColors = org.themeColors || org.branding?.themeColors || {
-    primaryColor: org.brandColor || '#ffc905',
-    secondaryColor: '#705b33',
-    cardColor: '#1b1c1d',
-    textColor: '#94A3B8',
-    backgroundColor: '#020203',
+    primaryColor: org.brandColor || DEFAULT_TIER_THEME.primaryColor,
+    secondaryColor: DEFAULT_TIER_THEME.secondaryColor,
+    cardColor: DEFAULT_TIER_THEME.cardColor,
+    textColor: DEFAULT_TIER_THEME.textColor,
+    backgroundColor: DEFAULT_TIER_THEME.backgroundColor,
   };
   const [primaryTheme, setPrimaryTheme] = useState<TierThemeColors>(initialColors);
   const [primaryTextSize, setPrimaryTextSize] = useState<'compact' | 'normal' | 'large'>('normal');
@@ -188,15 +189,16 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
 
   const handleAddTierTheme = () => {
     const nextIndex = tierThemes.length + 2; // Tier 2, 3, etc.
+    const preset = nextIndex === 2 ? TIER_THEMES.silver : TIER_THEMES.bronze;
     const newTier: OrgTierTheme = {
       id: `theme_tier_${Date.now()}`,
       name: nextIndex === 2 ? 'Silver Tier Theme' : nextIndex === 3 ? 'Bronze Tier Theme' : `Tier ${nextIndex} Theme`,
       themeColors: {
-        primaryColor: nextIndex === 2 ? '#CBD5E1' : '#db5f00',
-        secondaryColor: nextIndex === 2 ? '#3d4652' : '#4e310e',
-        cardColor: nextIndex === 2 ? '#0E1420' : '#181410',
-        textColor: nextIndex === 2 ? '#4f5c6d' : '#5e6f87',
-        backgroundColor: '#0B0E14',
+        primaryColor: preset.primaryColor,
+        secondaryColor: preset.secondaryColor,
+        cardColor: preset.cardColor,
+        textColor: preset.textColor,
+        backgroundColor: preset.backgroundColor,
       },
       textSize: 'normal',
     };
@@ -246,7 +248,7 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
           {
             title: `🎮 Webhook Verified: ${org.name}`,
             description: `This is a test notification from **MatchFoundry™** for organization **${org.name}**. Webhooks are correctly configured!`,
-            color: parseInt((primaryTheme.primaryColor || '#ffc905').replace('#', ''), 16) || 0xffc905,
+            color: parseInt((primaryTheme.primaryColor || DEFAULT_TIER_THEME.primaryColor).replace('#', ''), 16) || 0xffc905,
             fields: [
               { name: 'Organization Slug', value: `/${org.slug}`, inline: true },
               { name: 'Hosted Tournaments', value: String(orgTournaments.length), inline: true },

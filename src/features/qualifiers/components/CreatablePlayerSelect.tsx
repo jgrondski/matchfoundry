@@ -116,7 +116,7 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
         />
         <Search
           size={16}
-          color="var(--color-text-muted)"
+          color="var(--color-fg-muted)"
           className="absolute left-2.5 top-1/2 -translate-y-1/2"
         />
         {query && (
@@ -146,7 +146,7 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <User size={15} color="var(--color-text-muted)" />
+                  <User size={15} color="var(--color-fg-muted)" />
                   <span className={cn('text-fg', isSelected ? 'font-bold' : 'font-medium')}>
                     {getEffectivePlayerName(p)}
                   </span>

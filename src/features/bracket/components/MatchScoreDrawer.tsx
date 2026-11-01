@@ -14,6 +14,7 @@ import { ManualSlotOverrideSection } from './drawer/ManualSlotOverrideSection';
 import { GameScoreCard } from './drawer/GameScoreCard';
 import { Overlay } from '../../../components/overlay';
 import { Button, cn } from '../../../components/ui';
+import { DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
 type GameDraft = { p1: string; p2: string; winner: string | null };
 
@@ -90,11 +91,11 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
   const currentTournament = tournaments.find(t => t.id === tournamentId);
   const currentTier = currentTournament?.tiers.find(t => t.id === tierId) || currentTournament?.tiers[0];
   const defaults = getDefaultTierColors(currentTier || {});
-  const primaryColor = currentTier?.primaryColor || defaults.primaryColor || '#f59e0b';
-  const secondaryColor = currentTier?.secondaryColor || defaults.secondaryColor || '#705b33';
-  const cardColor = currentTier?.cardColor || defaults.cardColor || '#161922';
-  const textColor = currentTier?.textColor || defaults.textColor || '#94A3B8';
-  const backgroundColor = currentTier?.backgroundColor || defaults.backgroundColor || '#0c0d12';
+  const primaryColor = currentTier?.primaryColor || defaults.primaryColor || THEME_FALLBACK.primaryColor;
+  const secondaryColor = currentTier?.secondaryColor || defaults.secondaryColor || DEFAULT_TIER_THEME.secondaryColor;
+  const cardColor = currentTier?.cardColor || defaults.cardColor || THEME_FALLBACK.cardColor;
+  const textColor = currentTier?.textColor || defaults.textColor || DEFAULT_TIER_THEME.textColor;
+  const backgroundColor = currentTier?.backgroundColor || defaults.backgroundColor || THEME_FALLBACK.backgroundColor;
 
   const p1 = match.player1.player;
   const p2 = match.player2.player;
@@ -244,7 +245,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
       panelTestId="match-score-drawer"
       panelStyle={{
         background: `linear-gradient(180deg, ${getAlternateShade(cardColor, 2)} 0%, ${backgroundColor} 100%)`,
-        borderLeft: `1px solid ${colorWithAlpha(primaryColor, 0.45, 'var(--color-border)')}`,
+        borderLeft: `1px solid ${colorWithAlpha(primaryColor, 0.45, 'var(--color-line)')}`,
         boxShadow: `-12px 0 36px rgba(0, 0, 0, 0.7), -1px 0 16px ${colorWithAlpha(primaryColor, 0.2)}, inset 1px 0 0 ${colorWithAlpha(primaryColor, 0.25)}`,
       }}
     >
@@ -263,7 +264,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
           <div
             className="py-5 px-6 flex justify-between items-start shadow-[0_4px_20px_rgba(0,0,0,0.35)] gap-4"
             style={{
-              borderBottom: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-border)')}`,
+              borderBottom: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-line)')}`,
               background: gameCardBg,
             }}
           >
@@ -325,7 +326,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
               )}
               style={
                 {
-                  '--close-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-border)'),
+                  '--close-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
                   '--close-accent': primaryColor,
                   '--close-hover-bg': colorWithAlpha(primaryColor, 0.18),
                   '--close-hover-glow': colorWithAlpha(primaryColor, 0.3),
@@ -481,7 +482,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
           <div
             className="py-4 px-6 flex gap-3"
             style={{
-              borderTop: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-border)')}`,
+              borderTop: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-line)')}`,
               background: gameCardBg,
             }}
           >

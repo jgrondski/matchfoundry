@@ -112,11 +112,11 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
 
           <Link
             to={`/${tournament.slug}`}
-            className="flex shrink-0 items-center gap-2 no-underline"
+            className="flex shrink-0 items-center gap-2 text-gold-bright no-underline"
             title="Tournament Public Home"
           >
             <div className="flex size-7.5 items-center justify-center rounded-sm bg-gold shadow-gold">
-              <Layers size={16} color="#090d16" />
+              <Layers size={16} className="text-canvas" />
             </div>
             <div className="flex min-w-0 flex-col">
               <span className="max-w-55 truncate text-base leading-tight font-extrabold tracking-tight text-white">

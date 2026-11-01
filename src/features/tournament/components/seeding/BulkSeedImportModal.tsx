@@ -325,7 +325,7 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-line px-6 py-5">
             <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-md bg-[rgba(99,102,241,0.15)] text-brand">
+              <div className="flex size-9 items-center justify-center rounded-md bg-seed-indigo/15 text-brand">
                 <Upload size={20} />
               </div>
               <div>
@@ -382,7 +382,7 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                     onClick={() => setImportDestination('BOTTOM')}
                     className={cn(
                       'flex cursor-pointer flex-col gap-1 rounded-sm border-[1.5px] px-3 py-2.5 text-left text-fg transition-all duration-150',
-                      importDestination === 'BOTTOM' ? 'border-brand bg-[rgba(99,102,241,0.12)]' : 'border-line bg-surface'
+                      importDestination === 'BOTTOM' ? 'border-brand bg-seed-indigo/12' : 'border-line bg-surface'
                     )}
                   >
                     <div className={cn('flex items-center gap-1.5 text-caption font-bold', importDestination === 'BOTTOM' ? 'text-brand' : 'text-fg')}>
@@ -400,7 +400,7 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                     onClick={() => setImportDestination('TOP')}
                     className={cn(
                       'flex cursor-pointer flex-col gap-1 rounded-sm border-[1.5px] px-3 py-2.5 text-left text-fg transition-all duration-150',
-                      importDestination === 'TOP' ? 'border-brand bg-[rgba(99,102,241,0.12)]' : 'border-line bg-surface'
+                      importDestination === 'TOP' ? 'border-brand bg-seed-indigo/12' : 'border-line bg-surface'
                     )}
                   >
                     <div className={cn('flex items-center gap-1.5 text-caption font-bold', importDestination === 'TOP' ? 'text-brand' : 'text-fg')}>
@@ -516,7 +516,7 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                           </span>
                         )}
                         {item.status === 'new' && (
-                          <span className="rounded-full bg-[rgba(99,102,241,0.1)] px-2 py-0.5 text-2xs text-brand">
+                          <span className="rounded-full bg-seed-indigo/10 px-2 py-0.5 text-2xs text-brand">
                             Create New
                           </span>
                         )}

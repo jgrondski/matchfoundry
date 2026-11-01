@@ -53,7 +53,7 @@ export const TournamentSwitcherPage: React.FC = () => {
         <header className="px-4 py-6 text-center">
           <div className="mb-4 inline-flex items-center gap-2">
             <div className="flex size-9 items-center justify-center rounded-md bg-linear-135 from-gold-bright to-gold shadow-gold">
-              <Layers size={24} color="#090d16" />
+              <Layers size={24} className="text-canvas" />
             </div>
             <span className="text-2xl font-extrabold text-fg">
               MATCH<span className="text-gold-bright">FOUNDRY</span>
@@ -202,7 +202,7 @@ export const TournamentSwitcherPage: React.FC = () => {
             {isSystemAdmin && (
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3">
                 <div className="flex items-center gap-2">
-                  <LayoutDashboard size={18} color="#38bdf8" />
+                  <LayoutDashboard size={18} className="text-sky-400" />
                   <span className="text-base font-bold text-white">
                     System Admin Workspace:
                   </span>

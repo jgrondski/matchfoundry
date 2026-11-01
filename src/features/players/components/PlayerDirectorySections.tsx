@@ -190,7 +190,7 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
         />
         <Search
           size={16}
-          color="var(--color-text-muted)"
+          color="var(--color-fg-muted)"
           className="absolute top-1/2 left-2.5 -translate-y-1/2"
         />
         {searchInput && (
@@ -235,7 +235,7 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
       <div className="flex flex-wrap items-center gap-3">
         {/* Organization Circuit Selector */}
         <div className="flex items-center gap-1.5">
-          <Building2 size={14} color="var(--color-text-muted)" />
+          <Building2 size={14} color="var(--color-fg-muted)" />
           <select
             value={orgFilter}
             onChange={e => onOrgFilterChange(e.target.value)}
@@ -252,7 +252,7 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
 
         {/* Sort Selector */}
         <div className="flex items-center gap-2">
-          <ArrowUpDown size={14} color="var(--color-text-muted)" />
+          <ArrowUpDown size={14} color="var(--color-fg-muted)" />
           <select
             value={sortBy}
             onChange={e => onSortChange(e.target.value as 'NAME_ASC' | 'PB_DESC' | 'PB_ASC' | 'COUNTRY')}

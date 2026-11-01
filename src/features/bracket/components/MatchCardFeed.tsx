@@ -15,6 +15,7 @@ import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { getInheritedRoundBestOf } from './OrganizerSheetMatrix';
 import { cn } from '../../../components/ui';
+import { DEFAULT_TIER_THEME, LOWER_BRACKET_COLOR, THEME_FALLBACK } from '../../../theme/palette';
 
 interface MatchCardFeedProps {
   tournament: Tournament;
@@ -46,10 +47,10 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
 
   // Tier color theming matching Master Sheet, Quals, and Standings
   const defaults = getDefaultTierColors(tier);
-  const primaryColor = tier.primaryColor || defaults.primaryColor || '#f59e0b';
-  const secondaryColor = tier.secondaryColor || defaults.secondaryColor || '#705b33';
-  const cardColor = tier.cardColor || defaults.cardColor || '#161922';
-  const lowerBracketColor = tier.lowerBracketColor || defaults.lowerBracketColor || '#c2410c';
+  const primaryColor = tier.primaryColor || defaults.primaryColor || THEME_FALLBACK.primaryColor;
+  const secondaryColor = tier.secondaryColor || defaults.secondaryColor || DEFAULT_TIER_THEME.secondaryColor;
+  const cardColor = tier.cardColor || defaults.cardColor || THEME_FALLBACK.cardColor;
+  const lowerBracketColor = tier.lowerBracketColor || defaults.lowerBracketColor || LOWER_BRACKET_COLOR;
 
   const rounds = useMemo(() => {
     if (tier.bracket?.rounds) {
@@ -173,9 +174,9 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                   isSelected ? 'font-extrabold' : 'font-semibold'
                 )}
                 style={{
-                  border: isSelected ? `1px solid ${stageAccent}` : `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-border)')}`,
+                  border: isSelected ? `1px solid ${stageAccent}` : `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-line)')}`,
                   background: isSelected ? stageAccent : getAlternateShade(cardColor, 6),
-                  color: isSelected ? contrast : 'var(--color-text-secondary)',
+                  color: isSelected ? contrast : 'var(--color-fg-secondary)',
                 }}
               >
                 {label}
@@ -195,9 +196,9 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
             activeRoundKey === 'ALL' ? 'font-extrabold' : 'font-semibold'
           )}
           style={{
-            border: activeRoundKey === 'ALL' ? `1px solid ${primaryColor}` : `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-border)')}`,
+            border: activeRoundKey === 'ALL' ? `1px solid ${primaryColor}` : `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-line)')}`,
             background: activeRoundKey === 'ALL' ? primaryColor : getAlternateShade(cardColor, 6),
-            color: activeRoundKey === 'ALL' ? getContrastingTextColor(primaryColor) : 'var(--color-text-secondary)',
+            color: activeRoundKey === 'ALL' ? getContrastingTextColor(primaryColor) : 'var(--color-fg-secondary)',
             boxShadow: activeRoundKey === 'ALL' ? `0 0 8px ${colorWithAlpha(primaryColor, 0.35)}` : 'none',
           }}
         >
@@ -218,9 +219,9 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                 isSelected ? 'font-extrabold' : 'font-semibold'
               )}
               style={{
-                border: isSelected ? `1px solid ${rColor}` : `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-border)')}`,
+                border: isSelected ? `1px solid ${rColor}` : `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-line)')}`,
                 background: isSelected ? rColor : getAlternateShade(cardColor, 6),
-                color: isSelected ? contrast : 'var(--color-text-secondary)',
+                color: isSelected ? contrast : 'var(--color-fg-secondary)',
                 boxShadow: isSelected ? `0 0 8px ${colorWithAlpha(rColor, 0.35)}` : 'none',
               }}
             >
@@ -242,7 +243,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full py-1.5 pr-2.5 pl-7.5 text-caption rounded-sm text-fg"
             style={{
-              border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}`,
+              border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-line)')}`,
               background: getAlternateShade(cardColor, 4),
             }}
           />
@@ -256,7 +257,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
             className="py-8 px-4 text-center text-fg-muted rounded-md text-caption"
             style={{
               background: cardColor,
-              border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
+              border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-line)')}`,
             }}
           >
             {searchTerm ? `No matches found matching "${searchTerm}".` : 'No matches available.'}
@@ -284,7 +285,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                   className="py-2 px-3 rounded-md flex items-center justify-between gap-2"
                   style={{
                     background: getAlternateShade(cardColor, 3),
-                    border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}`,
+                    border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-line)')}`,
                     borderLeft: `4px solid ${roundAccentColor}`,
                   }}
                 >
@@ -363,8 +364,8 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                     : isMatchCardHovered
                     ? `1px solid ${colorWithAlpha(primaryColor, 0.6, 'var(--color-gold)')}`
                     : isComplete
-                    ? `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-border)')}`
-                    : `1px solid ${colorWithAlpha(secondaryColor, 0.25, 'var(--color-border-subtle)')}`,
+                    ? `1px solid ${colorWithAlpha(secondaryColor, 0.4, 'var(--color-line)')}`
+                    : `1px solid ${colorWithAlpha(secondaryColor, 0.25, 'var(--color-line-subtle)')}`,
                   boxShadow: inProgress
                     ? `0 0 12px ${colorWithAlpha(primaryColor, 0.3, 'rgba(245, 158, 11, 0.25)')}`
                     : isMatchCardHovered
@@ -416,7 +417,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                       </span>
                     )}
                     {tournament.isLocked && isPlayable && (
-                      <ChevronRight size={15} color="var(--color-text-muted)" className="opacity-60" />
+                      <ChevronRight size={15} color="var(--color-fg-muted)" className="opacity-60" />
                     )}
                   </div>
                 </div>
@@ -495,7 +496,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                             ? primaryColor
                             : p1Won
                             ? primaryColor
-                            : 'var(--color-text-primary)',
+                            : 'var(--color-fg)',
                         }}
                       >
                         {p1Name}
@@ -512,7 +513,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                         background: p1Won
                           ? colorWithAlpha(primaryColor, 0.22, 'rgba(255, 255, 255, 0.08)')
                           : 'transparent',
-                        color: p1Won ? primaryColor : 'var(--color-text-primary)',
+                        color: p1Won ? primaryColor : 'var(--color-fg)',
                         border: p1Won
                           ? `1px solid ${colorWithAlpha(primaryColor, 0.55, 'transparent')}`
                           : '1px solid transparent',
@@ -594,7 +595,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                             ? primaryColor
                             : p2Won
                             ? primaryColor
-                            : 'var(--color-text-primary)',
+                            : 'var(--color-fg)',
                         }}
                       >
                         {p2Name}
@@ -611,7 +612,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                         background: p2Won
                           ? colorWithAlpha(primaryColor, 0.22, 'rgba(255, 255, 255, 0.08)')
                           : 'transparent',
-                        color: p2Won ? primaryColor : 'var(--color-text-primary)',
+                        color: p2Won ? primaryColor : 'var(--color-fg)',
                         border: p2Won
                           ? `1px solid ${colorWithAlpha(primaryColor, 0.55, 'transparent')}`
                           : '1px solid transparent',

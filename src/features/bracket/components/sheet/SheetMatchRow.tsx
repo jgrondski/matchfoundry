@@ -218,7 +218,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
                   ? primaryColor
                   : p1IsWinner
                   ? primaryColor
-                  : 'var(--color-text-primary)',
+                  : 'var(--color-fg)',
               }}
             >
               {p1Name}
@@ -258,7 +258,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
                 : 'transparent',
               color: p1IsWinner
                 ? primaryColor
-                : 'var(--color-text-primary)',
+                : 'var(--color-fg)',
               border: p1IsWinner ? `1px solid ${colorWithAlpha(primaryColor, 0.55, 'transparent')}` : '1px solid transparent',
             }}
           >
@@ -306,7 +306,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
                   )}
                   style={{
                     background: p1WonGame ? colorWithAlpha(matchAccentColor, 0.16, 'rgba(255, 255, 255, 0.08)') : 'transparent',
-                    color: p1WonGame ? matchAccentColor : 'var(--color-text-primary)',
+                    color: p1WonGame ? matchAccentColor : 'var(--color-fg)',
                     fontSize: sizeTokens.fontSizeGameScore,
                     border: p1WonGame ? `1px solid ${colorWithAlpha(matchAccentColor, 0.38, 'transparent')}` : '1px solid transparent',
                   }}
@@ -438,7 +438,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
                   ? primaryColor
                   : p2IsWinner
                   ? primaryColor
-                  : 'var(--color-text-primary)',
+                  : 'var(--color-fg)',
               }}
             >
               {p2Name}
@@ -477,7 +477,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
                 : 'transparent',
               color: p2IsWinner
                 ? primaryColor
-                : 'var(--color-text-primary)',
+                : 'var(--color-fg)',
               border: p2IsWinner ? `1px solid ${colorWithAlpha(primaryColor, 0.55, 'transparent')}` : '1px solid transparent',
             }}
           >
@@ -524,7 +524,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
                   )}
                   style={{
                     background: p2WonGame ? colorWithAlpha(matchAccentColor, 0.16, 'rgba(255, 255, 255, 0.08)') : 'transparent',
-                    color: p2WonGame ? matchAccentColor : 'var(--color-text-primary)',
+                    color: p2WonGame ? matchAccentColor : 'var(--color-fg)',
                     fontSize: sizeTokens.fontSizeGameScore,
                     border: p2WonGame ? `1px solid ${colorWithAlpha(matchAccentColor, 0.38, 'transparent')}` : '1px solid transparent',
                   }}

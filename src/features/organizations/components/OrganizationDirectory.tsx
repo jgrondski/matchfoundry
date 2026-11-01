@@ -17,6 +17,7 @@ import { QualFormat } from '../../tournament/types';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Overlay } from '../../../components/overlay';
 import { Button, IconButton, buttonClasses, cn } from '../../../components/ui';
+import { DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
 const labelClass = 'mb-1.5 block text-caption font-semibold text-fg-secondary';
 const fieldClass = 'rounded-md border border-line bg-canvas px-3.5 py-2.5 text-sm text-white';
@@ -41,12 +42,12 @@ export const OrganizationDirectory: React.FC = () => {
   const [orgWebsite, setOrgWebsite] = useState('');
   const [orgLogoUrl, setOrgLogoUrl] = useState('');
   const [orgBannerUrl, setOrgBannerUrl] = useState('');
-  const [brandColor, setBrandColor] = useState('#ffc905');
-  const [primaryColor, setPrimaryColor] = useState('#ffc905');
-  const [secondaryColor, setSecondaryColor] = useState('#705b33');
-  const [cardColor, setCardColor] = useState('#1b1c1d');
-  const [textColor, setTextColor] = useState('#94A3B8');
-  const [backgroundColor, setBackgroundColor] = useState('#020203');
+  const [brandColor, setBrandColor] = useState(DEFAULT_TIER_THEME.primaryColor);
+  const [primaryColor, setPrimaryColor] = useState(DEFAULT_TIER_THEME.primaryColor);
+  const [secondaryColor, setSecondaryColor] = useState(DEFAULT_TIER_THEME.secondaryColor);
+  const [cardColor, setCardColor] = useState(DEFAULT_TIER_THEME.cardColor);
+  const [textColor, setTextColor] = useState(DEFAULT_TIER_THEME.textColor);
+  const [backgroundColor, setBackgroundColor] = useState(DEFAULT_TIER_THEME.backgroundColor);
   const [defaultQualFormat, setDefaultQualFormat] = useState<QualFormat>('AVERAGE_OF_X');
   const [defaultAvgCount, setDefaultAvgCount] = useState(2);
   const [defaultBestOf, setDefaultBestOf] = useState(5);
@@ -59,12 +60,12 @@ export const OrganizationDirectory: React.FC = () => {
     orgWebsite !== '' ||
     orgLogoUrl !== '' ||
     orgBannerUrl !== '' ||
-    brandColor !== '#ffc905' ||
-    primaryColor !== '#ffc905' ||
-    secondaryColor !== '#705b33' ||
-    cardColor !== '#1b1c1d' ||
-    textColor !== '#94A3B8' ||
-    backgroundColor !== '#020203' ||
+    brandColor !== DEFAULT_TIER_THEME.primaryColor ||
+    primaryColor !== DEFAULT_TIER_THEME.primaryColor ||
+    secondaryColor !== DEFAULT_TIER_THEME.secondaryColor ||
+    cardColor !== DEFAULT_TIER_THEME.cardColor ||
+    textColor !== DEFAULT_TIER_THEME.textColor ||
+    backgroundColor !== DEFAULT_TIER_THEME.backgroundColor ||
     defaultQualFormat !== 'AVERAGE_OF_X' ||
     defaultAvgCount !== 2 ||
     defaultBestOf !== 5 ||
@@ -152,7 +153,7 @@ export const OrganizationDirectory: React.FC = () => {
         <header className="px-4 pb-0 pt-6 text-center">
           <div className="mb-3 inline-flex items-center gap-2">
             <div className="flex size-9.5 items-center justify-center rounded-md bg-linear-135 from-gold-bright to-amber-600">
-              <Building2 size={20} color="#090d16" />
+              <Building2 size={20} className="text-canvas" />
             </div>
             <span className="text-2xl font-extrabold text-fg">
               ORGANIZATION <span className="text-gold-bright">DIRECTORY</span>
@@ -182,7 +183,7 @@ export const OrganizationDirectory: React.FC = () => {
           <div className="relative w-full max-w-135">
             <Search
               size={18}
-              color="var(--color-text-muted, #64748b)"
+              color="var(--color-fg-muted, #64748b)"
               className="absolute left-4 top-1/2 -translate-y-1/2"
             />
             <input
@@ -200,15 +201,15 @@ export const OrganizationDirectory: React.FC = () => {
           {filteredOrgs.map(org => {
             const orgTournaments = tournaments.filter(t => t.organizationId === org.id);
             const colors = org.themeColors || {
-              primaryColor: org.brandColor || '#ffc905',
-              secondaryColor: '#705b33',
-              cardColor: '#1b1c1d',
-              textColor: '#94A3B8',
-              backgroundColor: '#020203',
+              primaryColor: org.brandColor || DEFAULT_TIER_THEME.primaryColor,
+              secondaryColor: DEFAULT_TIER_THEME.secondaryColor,
+              cardColor: DEFAULT_TIER_THEME.cardColor,
+              textColor: DEFAULT_TIER_THEME.textColor,
+              backgroundColor: DEFAULT_TIER_THEME.backgroundColor,
             };
-            const orgPrimary = colors.primaryColor || '#ffc905';
-            const orgSecondary = colors.secondaryColor || '#1e293b';
-            const orgCard = colors.cardColor || '#161922';
+            const orgPrimary = colors.primaryColor || DEFAULT_TIER_THEME.primaryColor;
+            const orgSecondary = colors.secondaryColor || THEME_FALLBACK.orgSecondaryColor;
+            const orgCard = colors.cardColor || THEME_FALLBACK.cardColor;
 
             return (
               <div
@@ -216,7 +217,7 @@ export const OrganizationDirectory: React.FC = () => {
                 className="flex flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-[transform,border-color] duration-150"
               >
                 {/* Banner / Header (Clickable to Org Dashboard) */}
-                <Link to={`/org/${org.slug}`} className="relative block no-underline">
+                <Link to={`/org/${org.slug}`} className="relative block text-gold-bright no-underline">
                   <div
                     className="relative h-22.5"
                     style={{

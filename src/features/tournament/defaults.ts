@@ -8,6 +8,7 @@ import {
 } from './types';
 import { generateTraditionalBracket, generateFlatBracket } from '../bracket/math';
 import { AUTHENTIC_COMPETITOR_NAMES } from './data/authenticPlayers';
+import { BLUE_TIER_THEME, DEFAULT_TIER_THEME, TIER_THEMES } from '../../theme/palette';
 
 /**
  * Generates an RFC4122 v4 compliant UUID string cross-platform.
@@ -50,11 +51,11 @@ export function createDefaultTier(
       bracketType: 'TRADITIONAL',
       playerCount: 16,
       bestOf: 5,
-      primaryColor: '#ffc905',
-      secondaryColor: '#705b33',
-      cardColor: '#1b1c1d',
-      textColor: '#94A3B8',
-      backgroundColor: '#020203',
+      primaryColor: DEFAULT_TIER_THEME.primaryColor,
+      secondaryColor: DEFAULT_TIER_THEME.secondaryColor,
+      cardColor: DEFAULT_TIER_THEME.cardColor,
+      textColor: DEFAULT_TIER_THEME.textColor,
+      backgroundColor: DEFAULT_TIER_THEME.backgroundColor,
       isLocked: false,
       bracket: generateTraditionalBracket(
         Array.from({ length: 16 }, (_, i) => ({
@@ -80,11 +81,11 @@ export function createDefaultTier(
       flatWidth: 2,
       bestOf: 3,
       roundBestOfOverrides,
-      primaryColor: '#CBD5E1',
-      secondaryColor: '#3d4652',
-      cardColor: '#0E1420',
-      textColor: '#4f5c6d',
-      backgroundColor: '#0B0E14',
+      primaryColor: TIER_THEMES.silver.primaryColor,
+      secondaryColor: TIER_THEMES.silver.secondaryColor,
+      cardColor: TIER_THEMES.silver.cardColor,
+      textColor: TIER_THEMES.silver.textColor,
+      backgroundColor: TIER_THEMES.silver.backgroundColor,
       isLocked: false,
       bracket: generateFlatBracket(
         Array.from({ length: 9 }, (_, i) => ({
@@ -101,11 +102,8 @@ export function createDefaultTier(
 
   const tierName = priority === 3 ? 'Bronze' : `Tier ${priority}`;
   const tierSlug = priority === 3 ? 'bronze' : `tier-${priority}`;
-  const primaryColor = priority === 3 ? '#db5f00' : '#3b82f6';
-  const secondaryColor = priority === 3 ? '#4e310e' : '#60a5fa';
-  const cardColor = priority === 3 ? '#181410' : '#0E1420';
-  const textColor = priority === 3 ? '#5e6f87' : '#94A3B8';
-  const backgroundColor = '#0B0E14';
+  const theme = priority === 3 ? TIER_THEMES.bronze : BLUE_TIER_THEME;
+  const { primaryColor, secondaryColor, cardColor, textColor, backgroundColor } = theme;
 
   const defaultTier: TournamentTier = {
     id: tierId,

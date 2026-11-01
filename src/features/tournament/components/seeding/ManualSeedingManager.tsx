@@ -640,9 +640,9 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                       className={cn(
                         'flex items-center gap-3 border-b border-line-subtle px-5 py-2.5 transition-colors duration-150',
                         selectedPlayerIds.has(item.id)
-                          ? 'bg-[rgba(99,102,241,0.12)]'
+                          ? 'bg-seed-indigo/12'
                           : draggedIndex === item.seedNumber - 1
-                          ? 'bg-[rgba(99,102,241,0.15)]'
+                          ? 'bg-seed-indigo/15'
                           : 'bg-transparent'
                       )}
                     >
@@ -671,7 +671,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                           {selectedPlayerIds.has(item.id) ? (
                             <CheckSquare size={16} color="var(--color-brand)" />
                           ) : (
-                            <Square size={16} color="var(--color-text-muted)" />
+                            <Square size={16} color="var(--color-fg-muted)" />
                           )}
                         </div>
                       )}
@@ -693,9 +693,9 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                           isLocked ? 'cursor-default' : 'cursor-pointer'
                         )}
                         style={{
-                          background: item.tier ? (item.tier.primaryColor ? `${item.tier.primaryColor}22` : 'rgba(245, 158, 11, 0.15)') : 'var(--color-bg-surface-elevated)',
-                          borderColor: item.tier?.primaryColor ? `${item.tier.primaryColor}55` : 'var(--color-border)',
-                          color: item.tier?.primaryColor || 'var(--color-text-secondary)',
+                          background: item.tier ? (item.tier.primaryColor ? `${item.tier.primaryColor}22` : 'rgba(245, 158, 11, 0.15)') : 'var(--color-elevated)',
+                          borderColor: item.tier?.primaryColor ? `${item.tier.primaryColor}55` : 'var(--color-line)',
+                          color: item.tier?.primaryColor || 'var(--color-fg-secondary)',
                         }}
                         title={isLocked ? `Seed #${item.seedNumber}` : 'Click to jump to a specific seed number'}
                       >

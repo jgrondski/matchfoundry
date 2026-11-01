@@ -19,6 +19,7 @@ import {
 import { SheetTelemetryBar } from './sheet/SheetTelemetryBar';
 import { SheetMatchRow } from './sheet/SheetMatchRow';
 import { cn } from '../../../components/ui';
+import { LOWER_BRACKET_COLOR } from '../../../theme/palette';
 
 // Re-export utilities so existing tests and callers have zero breaking changes
 export {
@@ -239,7 +240,7 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
   const secondaryColor = tier.secondaryColor || defaults.secondaryColor;
   const cardColor = tier.cardColor || defaults.cardColor;
   const textColor = tier.textColor || defaults.textColor;
-  const lowerBracketColor = tier.lowerBracketColor || defaults.lowerBracketColor || '#c2410c';
+  const lowerBracketColor = tier.lowerBracketColor || defaults.lowerBracketColor || LOWER_BRACKET_COLOR;
 
   const maxGameColumns = useMemo(() => {
     let maxCols = tier.bestOf || 5;
@@ -304,7 +305,7 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
         className="rounded-md overflow-x-auto w-full"
         style={{
           background: cardColor,
-          border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
+          border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-line)')}`,
         }}
       >
         {filteredRounds.length === 0 ? (
@@ -320,7 +321,7 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
               <tr
                 style={{
                   background: getAlternateShade(cardColor, 7),
-                  borderBottom: `2px solid ${colorWithAlpha(secondaryColor, 0.6, 'var(--color-border)')}`,
+                  borderBottom: `2px solid ${colorWithAlpha(secondaryColor, 0.6, 'var(--color-line)')}`,
                 }}
               >
                 <th
@@ -364,7 +365,7 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
                       style={{
                         background: isResizingCol
                           ? primaryColor
-                          : colorWithAlpha(secondaryColor, 0.7, 'var(--color-border)'),
+                          : colorWithAlpha(secondaryColor, 0.7, 'var(--color-line)'),
                         boxShadow: isResizingCol ? `0 0 6px ${primaryColor}` : 'none',
                       }}
                     />
@@ -437,8 +438,8 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
                         colSpan={totalColCount}
                         className={cn(sizeTokens.bannerPadding, 'bg-canvas')}
                         style={{
-                          borderTop: roundIdx > 0 ? `2px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}` : 'none',
-                          borderBottom: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-border)')}`,
+                          borderTop: roundIdx > 0 ? `2px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-line)')}` : 'none',
+                          borderBottom: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-line)')}`,
                           borderLeft: `4px solid ${roundAccentColor}`,
                         }}
                       >

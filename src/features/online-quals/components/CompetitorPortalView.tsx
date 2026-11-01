@@ -554,7 +554,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       {/* Qualifiers Closed Speedbump */}
       {isQualsClosed && (
         <div className={speedbumpClass}>
-          <ShieldAlert size={28} color="#fbbf24" className="shrink-0" />
+          <ShieldAlert size={28} className="text-gold-bright shrink-0" />
           <div>
             <h4 className="m-0 text-lg font-extrabold text-gold-bright">
               Qualifiers Closed
@@ -571,7 +571,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
           className={speedbumpClass}
           data-testid="online-quals-not-open"
         >
-          <ShieldAlert size={28} color="#fbbf24" className="shrink-0" />
+          <ShieldAlert size={28} className="text-gold-bright shrink-0" />
           <div>
             <h4 className="m-0 text-lg font-extrabold text-gold-bright">
               Online Qualifying Not Open
@@ -669,7 +669,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
               )}
               data-testid="start-preflight-button"
             >
-              <Play size={18} fill="#000000" />
+              <Play size={18} className="fill-black" />
               Review Rules &amp; Checklist
             </button>
             <span className="text-center text-caption text-fg-muted">

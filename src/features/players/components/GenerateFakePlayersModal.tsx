@@ -91,7 +91,7 @@ export const GenerateFakePlayersModal: React.FC<GenerateFakePlayersModalProps> =
                   />
                 </div>
                 <div className="mt-2.5 flex items-center gap-1.5">
-                  <Users size={16} color="var(--color-text-muted)" />
+                  <Users size={16} color="var(--color-fg-muted)" />
                   <span className="text-sm font-medium text-fg-muted">
                     competitors
                   </span>

@@ -9,6 +9,7 @@ import { getContrastingTextColor } from '../features/bracket/colorUtils';
 import { GitBranch } from 'lucide-react';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { Button, buttonClasses, Chip, cn } from '../components/ui';
+import { THEME_FALLBACK } from '../theme/palette';
 
 /**
  * Tier 1: Route Gate (Hydration & Data Boundary)
@@ -29,7 +30,7 @@ export const ManageSheetPage: React.FC = () => {
   if (!tournament) {
     return (
       <div className="p-12 text-center text-fg-secondary">
-        <h2>Tournament Not Found</h2>
+        <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
         </Button>
@@ -62,7 +63,7 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
     return (
       <TournamentLayout tournament={tournament} activeView="sheet">
         <main className="mx-auto flex max-w-150 flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-          <h2 className="text-2xl text-fg">No Bracket Tiers Configured</h2>
+          <h2 className="text-2xl font-bold text-fg">No Bracket Tiers Configured</h2>
           <p className="text-sm leading-normal text-fg-secondary">
             This tournament does not have any bracket tiers yet. Qualifiers can be entered and ranked on the leaderboard, or you can create bracket tiers in Settings.
           </p>
@@ -98,7 +99,7 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
           </span>
           {sortedTiers.map(t => {
             const isActive = t.id === tier.id;
-            const tierColor = t.primaryColor || '#f59e0b';
+            const tierColor = t.primaryColor || THEME_FALLBACK.primaryColor;
             const contrastColor = getContrastingTextColor(tierColor);
 
             return (

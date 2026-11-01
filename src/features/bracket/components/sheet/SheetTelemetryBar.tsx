@@ -71,7 +71,7 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
       <div
         className="flex justify-between items-center py-2 px-3.5 rounded-md w-full flex-wrap gap-3"
         style={{
-          border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-border)')}`,
+          border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-line)')}`,
           background: cardColor,
         }}
       >
@@ -85,7 +85,7 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
               value={searchTerm}
               onChange={e => onSearchTermChange(e.target.value)}
               className="w-full py-1.5 pr-2 pl-7 text-caption rounded-sm bg-canvas text-fg"
-              style={{ border: `1px solid ${colorWithAlpha(secondaryColor, 0.5, 'var(--color-border)')}` }}
+              style={{ border: `1px solid ${colorWithAlpha(secondaryColor, 0.5, 'var(--color-line)')}` }}
             />
           </div>
 
@@ -95,7 +95,7 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
               variant="secondary"
               onClick={onToggleFilterDropdown}
               className="py-1.5 px-3 text-caption rounded-sm bg-canvas enabled:hover:bg-canvas text-fg gap-1.5"
-              style={{ border: `1px solid ${colorWithAlpha(secondaryColor, 0.5, 'var(--color-border)')}` }}
+              style={{ border: `1px solid ${colorWithAlpha(secondaryColor, 0.5, 'var(--color-line)')}` }}
             >
               <Filter size={13} color={primaryColor} />
               <span>
@@ -118,7 +118,7 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
                 className="absolute top-[calc(100%+4px)] left-0 z-50 min-w-50 max-h-80 overflow-y-auto rounded-md shadow-[0_10px_25px_rgba(0,0,0,0.5)] p-1.5 flex flex-col gap-0.5"
                 style={{
                   background: getAlternateShade(cardColor, 8),
-                  border: `1px solid ${colorWithAlpha(secondaryColor, 0.6, 'var(--color-border)')}`,
+                  border: `1px solid ${colorWithAlpha(secondaryColor, 0.6, 'var(--color-line)')}`,
                 }}
                 onClick={e => e.stopPropagation()}
               >
@@ -207,7 +207,7 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
           </span>
           <div
             className="inline-flex p-0.5 rounded-sm bg-canvas gap-0.5"
-            style={{ border: `1px solid ${colorWithAlpha(secondaryColor, 0.5, 'var(--color-border)')}` }}
+            style={{ border: `1px solid ${colorWithAlpha(secondaryColor, 0.5, 'var(--color-line)')}` }}
           >
             {(['xs', 'sm', 'md', 'lg'] as const).map(s => {
               const isCurrent = sheetSize === s;

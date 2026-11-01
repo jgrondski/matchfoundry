@@ -11,6 +11,7 @@ import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { getContrastingTextColor, getAlternateShade } from '../../bracket/colorUtils';
 import { TournamentQualTimerHud } from './TournamentQualTimerHud';
 import { Badge, Button, Card, cn } from '../../../components/ui';
+import { THEME_FALLBACK } from '../../../theme/palette';
 
 const thClass = 'py-3 px-3.5 text-fg-secondary font-semibold text-caption uppercase tracking-wide';
 const tdClass = 'py-2.5 px-3.5';
@@ -58,7 +59,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
     runningCutoff += tier.playerCount;
     cutoffRanks.set(runningCutoff, {
       tierName: tier.name,
-      color: tier.primaryColor || '#f59e0b',
+      color: tier.primaryColor || THEME_FALLBACK.primaryColor,
       count: tier.playerCount,
     });
   });
@@ -206,13 +207,13 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                 const cutoffInfo = typeof row.rank === 'number' ? cutoffRanks.get(row.rank) : undefined;
                 const assignedTier = row.assignedTier;
                 const isTierQualified = Boolean(hasBrackets && assignedTier && !row.isDNQ);
-                const tierColor = assignedTier?.primaryColor || '#f59e0b';
+                const tierColor = assignedTier?.primaryColor || THEME_FALLBACK.primaryColor;
                 const tierContrastColor = getContrastingTextColor(tierColor);
 
                 // Row background and accenting based on tier bracket palette
-                let rowBg = idx % 2 === 0 ? 'var(--color-bg-surface)' : 'var(--color-bg-surface-elevated)';
+                let rowBg = idx % 2 === 0 ? 'var(--color-surface)' : 'var(--color-elevated)';
                 if (isTierQualified) {
-                  const baseCard = assignedTier?.cardColor || '#0E1420';
+                  const baseCard = assignedTier?.cardColor || THEME_FALLBACK.leaderboardCardColor;
                   rowBg = idx % 2 === 0 ? baseCard : getAlternateShade(baseCard, 6);
                 }
 
@@ -478,7 +479,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                               <Badge variant="muted">Pending</Badge>
                             )}
 
-                            <ChevronRight size={14} color="var(--color-text-muted)" />
+                            <ChevronRight size={14} color="var(--color-fg-muted)" />
                           </div>
                         </td>
                       )}

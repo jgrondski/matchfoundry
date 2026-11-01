@@ -123,7 +123,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
   if (!tournament) {
     return (
       <div className="p-12 text-center text-fg-secondary">
-        <h2>Tournament Not Found</h2>
+        <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
           Back to Tournaments
         </Button>
@@ -190,7 +190,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                 className="gap-2 px-4 py-2 text-sm"
                 title={`Import all ${availableGlobalPlayers.length} available players from global catalog`}
               >
-                <DownloadCloud size={15} color="#38bdf8" />
+                <DownloadCloud size={15} className="text-sky-400" />
                 Import All Available ({availableGlobalPlayers.length})
               </Button>
             )}
@@ -275,7 +275,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
               />
               <Search
                 size={15}
-                color="var(--color-text-muted)"
+                color="var(--color-fg-muted)"
                 className="absolute top-1/2 left-2.5 -translate-y-1/2"
               />
             </div>
@@ -287,7 +287,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
 
           {currentPlayers.length === 0 ? (
             <div className="flex flex-col items-center gap-3.5 rounded-md border border-dashed border-line bg-canvas px-6 py-12 text-center">
-              <Users size={36} color="var(--color-text-muted)" />
+              <Users size={36} color="var(--color-fg-muted)" />
               <p className="m-0 text-base text-fg-secondary">
                 No competitors registered in this tournament yet.
               </p>
@@ -309,7 +309,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                     onClick={handleImportAllGlobal}
                     className="flex items-center gap-1.5 text-sm"
                   >
-                    <DownloadCloud size={14} color="#38bdf8" />
+                    <DownloadCloud size={14} className="text-sky-400" />
                     Import All Available ({availableGlobalPlayers.length})
                   </Button>
                 )}

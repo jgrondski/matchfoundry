@@ -3,6 +3,7 @@ import { eq, or, and } from 'drizzle-orm';
 import { getDb } from '../db';
 import type { BracketType, BracketRouting, EliminationType } from '../features/bracket/types';
 import type { TournamentMetadata, TierMetadata } from '../features/tournament/types';
+import { DEFAULT_TIER_THEME, LEGACY_TIER_FALLBACK } from '../theme/palette';
 
 export interface TierInput {
   name: string;
@@ -109,8 +110,8 @@ export async function createTournament(input: TournamentInput): Promise<{
           bracketType: tier.bracketType,
           flatWidth: tier.flatWidth || null,
           numPlayers: resolvedNumPlayers,
-          primaryColor: tier.primaryColor || '#FFD700',
-          secondaryColor: tier.secondaryColor || '#000000',
+          primaryColor: tier.primaryColor || LEGACY_TIER_FALLBACK.primaryColor,
+          secondaryColor: tier.secondaryColor || LEGACY_TIER_FALLBACK.secondaryColor,
           metadata: tierMeta,
         })
         .returning();
@@ -563,8 +564,8 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
           bracketType: t.bracketType,
           flatWidth: t.flatWidth || null,
           numPlayers: t.playerCount ?? (t as any).numPlayers ?? 8,
-          primaryColor: t.primaryColor || '#ffc905',
-          secondaryColor: t.secondaryColor || '#705b33',
+          primaryColor: t.primaryColor || DEFAULT_TIER_THEME.primaryColor,
+          secondaryColor: t.secondaryColor || DEFAULT_TIER_THEME.secondaryColor,
           metadata: tierMeta,
         })
         .where(eq(bracketTiers.id, tierUuid));
@@ -578,8 +579,8 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
         bracketType: t.bracketType,
         flatWidth: t.flatWidth || null,
         numPlayers: t.playerCount ?? (t as any).numPlayers ?? 8,
-        primaryColor: t.primaryColor || '#ffc905',
-        secondaryColor: t.secondaryColor || '#705b33',
+        primaryColor: t.primaryColor || DEFAULT_TIER_THEME.primaryColor,
+        secondaryColor: t.secondaryColor || DEFAULT_TIER_THEME.secondaryColor,
         metadata: tierMeta,
       });
     }

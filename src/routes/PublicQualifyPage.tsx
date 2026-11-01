@@ -20,7 +20,7 @@ export const PublicQualifyPage: React.FC = () => {
     // Loading failed (often a phone waking up offline). Any run in progress is still saved.
     return (
       <div className="p-12 text-center text-fg-secondary" data-testid="qualify-connection-error">
-        <h2>Can't reach the server</h2>
+        <h2 className="text-2xl font-bold">Can't reach the server</h2>
         <p>Check your connection and try again. Your run is still saved.</p>
         <Button
           variant="primary"
@@ -36,7 +36,7 @@ export const PublicQualifyPage: React.FC = () => {
   if (!tournament) {
     return (
       <div className="p-12 text-center text-fg-secondary">
-        <h2>Tournament Not Found</h2>
+        <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button
           variant="primary"
           onClick={() => navigate('/')}

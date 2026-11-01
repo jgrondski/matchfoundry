@@ -27,6 +27,7 @@ import { BracketStageNavBar, HybridStageTab } from './visualizer/BracketStageNav
 import { BracketQualifierPodGrid } from './visualizer/BracketQualifierPodGrid';
 import { BracketCanvas } from './visualizer/BracketCanvas';
 import { cn } from '../../../components/ui';
+import { CHROMA_KEY_COLORS, LOWER_BRACKET_COLOR, THEME_FALLBACK } from '../../../theme/palette';
 
 export * from '../routingChips';
 export * from '../journeyHighlight';
@@ -200,7 +201,7 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
   const cardColor = tier.cardColor || tierDefaults.cardColor;
   const backgroundColor = tier.backgroundColor || tierDefaults.backgroundColor;
   const textColor = tier.textColor || tierDefaults.textColor;
-  const lowerBracketColor = tier.lowerBracketColor || tierDefaults.lowerBracketColor || '#c2410c';
+  const lowerBracketColor = tier.lowerBracketColor || tierDefaults.lowerBracketColor || LOWER_BRACKET_COLOR;
   const textScale = getTextScale(tier.textSize);
 
   // Dynamic text scaling derived from smaller baseline:
@@ -595,9 +596,9 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
   const getChromaColor = (param?: string | null) => {
     if (!param) return null;
     const c = param.toLowerCase().trim();
-    if (c === 'green') return '#00ff00';
-    if (c === 'magenta') return '#ff00ff';
-    if (c === 'blue') return '#0000ff';
+    if (c === 'green') return CHROMA_KEY_COLORS.green;
+    if (c === 'magenta') return CHROMA_KEY_COLORS.magenta;
+    if (c === 'blue') return CHROMA_KEY_COLORS.blue;
     if (c.startsWith('#')) return c;
     return `#${c}`;
   };
@@ -607,7 +608,7 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
   const canvasBg = getTierCanvasBackground(backgroundColor, primaryColor);
 
   // Pure user-defined solid colors
-  const effectiveCardBg = chromaHex ? (tier.cardColor || '#161922') : cardBg;
+  const effectiveCardBg = chromaHex ? (tier.cardColor || THEME_FALLBACK.cardColor) : cardBg;
   const effectiveCanvasBg = chromaHex ? chromaHex : isObsMode ? 'transparent' : canvasBg;
 
   // Render a complete geometric canvas for a given layout and round set

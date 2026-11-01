@@ -73,7 +73,7 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
             <div className="relative w-70 max-w-full">
               <Search
                 size={16}
-                color="var(--color-text-muted)"
+                color="var(--color-fg-muted)"
                 className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
               />
               <input
