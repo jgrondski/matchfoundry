@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step QR.2 Review Workflow</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Qual review / QR.2</nav>
+<h1>Step QR.2: Save, verify, unverify, and provisional brackets</h1>
+<p class="subtitle">Separate saving a qual from verifying it, lock verified quals until they are unverified, show submission date and time, seed unverified quals into draft brackets, simulate unverified quals, and drop walk-in wording.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. <strong>Prerequisite:</strong> <a href="QR.1-qual-runs.html">QR.1</a> complete (every qual is a <code>qualifier_runs</code> row, and session summaries carry <code>runId</code>, <code>submittedAt</code>, <code>verifiedBy</code>, <code>verifiedAt</code>). <strong>Read first:</strong> <a href="../index.html">index.html</a> “Rules for every executor” and <code>docs/TESTING_STRATEGY.md</code>.</p></div>
+
+<h2>Decisions (already made by the user)</h2>
+<table>
+  <tr><th>Topic</th><th>Decision</th></tr>
+  <tr><td>Save vs verify</td><td>Editing scores and notes is a <strong>Save</strong> that never changes review status. <strong>Verify</strong> is a separate button and is disabled while there are unsaved edits.</td></tr>
+  <tr><td>Verified lock</td><td>A verified qual is frozen everywhere (scores, attempts, notes, DNQ, DQ, reassignment, roster removal). The only action is <strong>Unverify</strong>, which returns it to Pending.</td></tr>
+  <tr><td>Zero scores</td><td>The Review dialog may remove every game. A qual with no scores stays on the Review page.</td></tr>
+  <tr><td>Provisional brackets</td><td>Unverified (Pending) quals with at least one score are seeded into draft brackets. DNQ, DQ and quals with no scores are not.</td></tr>
+  <tr><td>Locking with pending quals</td><td>Allowed. The lock confirmation warns with counts.</td></tr>
+  <tr><td>Walk-ins</td><td>Remove every “walk-in” label and wording. Keep the internal <code>PROVISIONAL_NEW</code> flag and the Discard clean-up of a player the run created.</td></tr>
+  <tr><td>Simulation</td><td>Simulated quals are created Pending (<code>SUBMITTED</code>), never pre-verified.</td></tr>
+</table>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Area</th><th>Files</th></tr>
+  <tr><td>Server</td><td><code>src/api/qualifiers.ts</code>, <code>src/server/api.ts</code></td></tr>
+  <tr><td>Logic</td><td><code>src/features/qualifiers/scoring.ts</code>, <code>src/features/tournament/simulation.ts</code>; create <code>src/features/online-quals/formatQualTimestamp.ts</code></td></tr>
+  <tr><td>Review UI</td><td><code>src/features/online-quals/components/AdjudicationModal.tsx</code>, <code>ReviewQueueTable.tsx</code>, <code>ReviewQueueView.tsx</code>, <code>IdentityClaimModal.tsx</code></td></tr>
+  <tr><td>Other UI</td><td><code>src/features/qualifiers/components/PlayerDetailDrawer.tsx</code>, <code>QualifierEntryModal.tsx</code>, <code>src/features/tournament/components/VerifyBracketModal.tsx</code></td></tr>
+  <tr><td>Docs</td><td><code>docs/MatchFoundry-Product-Spec.md</code>, <code>docs/specs/phase-12/12.2-floor-judge.html</code></td></tr>
+  <tr><td>Tests</td><td>create <code>src/features/online-quals/__tests__/reviewWorkflow.test.tsx</code>; existing tests per section H</td></tr>
+</table>
+
+<h2>A. Server: adjudication actions and the verified lock</h2>
+<ol class="steps">
+  <li>In <code>qualifiers.ts</code> export <code>class QualLockedError extends Error {}</code> and a private <code>assertRunEditable(run)</code> that throws <code>new QualLockedError('This qual is verified. Unverify it before making changes.')</code> when <code>run.status === 'VERIFIED'</code>.</li>
+  <li>The adjudicate action union becomes <code>'SAVE' | 'VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ' | 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL' | 'CREATE_NEW_PLAYER'</code>. Delete <code>EDIT_AND_VERIFY</code> and its branch.</li>
+  <li><strong><code>SAVE</code></strong> (input: <code>scores</code>, <code>judgeNotes</code>):
+    <ul>
+      <li>If the run is <code>IN_PROGRESS</code>, throw <code>"This run hasn't been submitted yet."</code> Then <code>assertRunEditable(run)</code>.</li>
+      <li><code>next = validateQualScores(input.scores, { requireOne: false })</code> (an empty array is valid).</li>
+      <li><code>prev</code> = current scores ascending by <code>createdAt</code>. If <code>prev</code> and <code>next</code> differ in length or any position: <code>replaceRunScores(run, next, run.submittedAt ?? now)</code> and <code>audit = `[SCORES EDITED BY ${judgeBy}]: ${prev.join(', ') || 'none'} -&gt; ${next.join(', ') || 'none'}`</code>.</li>
+      <li><code>base = input.judgeNotes !== undefined ? (input.judgeNotes.trim() || null) : run.judgeNotes</code>. Store <code>audit ? (base ? `${base}\n${audit}` : audit) : base</code> as <code>judgeNotes</code>.</li>
+      <li>Status, source, verifier fields and <code>tournament_players</code> are not touched.</li>
+    </ul></li>
+  <li><strong><code>VERIFY</code></strong>: <code>IN_PROGRESS</code> → throw <code>"This run hasn't been submitted yet."</code>; already <code>VERIFIED</code> → return the current summary unchanged; otherwise today's behavior (on the run). Scores are never changed by <code>VERIFY</code>.</li>
+  <li><strong><code>UNVERIFY</code></strong>: if the run is not <code>VERIFIED</code>, throw <code>'Only a verified qual can be unverified.'</code> Otherwise set <code>status 'SUBMITTED'</code>, <code>verifiedBy null</code>, <code>verifiedAt null</code>, append <code>`[UNVERIFIED BY ${judgeBy}]`</code> to <code>judgeNotes</code> (newline-separated, same pattern as DNQ), and set <code>tournament_players.qualsCompleted = false</code> for the player.</li>
+  <li>Call <code>assertRunEditable(run)</code> at the start of: <code>DNQ</code>, <code>DQ</code>, <code>REASSIGN_PLAYER</code>, <code>CREATE_NEW_PLAYER</code>; <code>recordScore</code> (in-person score entry and batch); <code>setTournamentPlayerDisqualification</code> when <code>isDisqualified</code> is true and the player has a run. <code>CONFIRM_IDENTITY</code> and <code>PROMOTE_PROVISIONAL</code> stay allowed (they edit the player profile, not the qual).</li>
+  <li><code>src/server/api.ts</code>:
+    <ul>
+      <li>In the outer <code>catch</code> near the end of the middleware (the one that returns 500), add <code>if (err instanceof QualLockedError) return sendError(res, 409, err.message);</code> before the 500.</li>
+      <li><code>DELETE /api/tournaments/:id/qualifiers/:subId</code>: before deleting, load the score row; if its <code>runId</code> points at a <code>VERIFIED</code> run, return 409 with the same message.</li>
+      <li>Roster removal: if the player's run is <code>VERIFIED</code>, return 409 with the same message (checked before the score-count check).</li>
+      <li><code>qualify/adjudicate</code>: post the Discord <code>VERIFIED</code> message only when <code>body.action === 'VERIFY'</code> and the run was not already verified before the call (compare the status you loaded first).</li>
+    </ul></li>
+</ol>
+
+<h2>B. <code>formatQualTimestamp.ts</code> (new)</h2>
+<pre><code>const formatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+
+/** Full date and time for qual review, e.g. "Nov 1, 2026, 3:42 PM" in en-US. */
+export function formatQualTimestamp(ms: number): string {
+  return formatter.format(new Date(ms));
+}</code></pre>
+
+<h2>C. Review page</h2>
+<h3><code>ReviewQueueTable.tsx</code></h3>
+<ol class="steps">
+  <li>Replace the “NES Authword” header with <code>Submitted</code> (keep <code>cn(thClass, 'text-center')</code>). Replace its cell with: if <code>session.submittedAt</code> → <code>&lt;span className="text-caption font-semibold whitespace-nowrap text-white"&gt;{formatQualTimestamp(session.submittedAt)}&lt;/span&gt;</code>; else if <code>session.status === 'IN_PROGRESS'</code> and <code>session.timerLog?.startedAt</code> → <code>&lt;span className="text-caption whitespace-nowrap text-fg-muted"&gt;Started {formatQualTimestamp(session.timerLog.startedAt)}&lt;/span&gt;</code>; else <code>&lt;span className="text-caption text-fg-muted"&gt;—&lt;/span&gt;</code>.</li>
+  <li>Delete the <code>PROVISIONAL_NEW</code> “Walk-In” badge. Keep “Verified Match” and “Claimed”.</li>
+  <li>Scores cell: when <code>session.scores.length === 0</code> show <code>In Progress</code> only if status is <code>IN_PROGRESS</code>; otherwise show <code>&lt;span className="text-caption text-fg-muted"&gt;No scores&lt;/span&gt;</code>.</li>
+  <li>Keep authword in the search filter and placeholder.</li>
+</ol>
+<h3><code>AdjudicationModal.tsx</code></h3>
+<ol class="steps">
+  <li><code>onAdjudicate</code> action type becomes <code>'SAVE' | 'VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ'</code>.</li>
+  <li>Initial <code>scores</code> state is <code>session?.scores ? [...session.scores] : []</code> (no <code>[0]</code> default). Define <code>isVerified = session.status === 'VERIFIED'</code>, <code>isInProgress = session.status === 'IN_PROGRESS'</code>, <code>hasEdits</code> = scores differ from <code>session.scores</code> (length or any position) or <code>judgeNotes !== (session.judgeNotes || '')</code>. <code>isDirty = hasEdits || confirmDQ</code>. Delete <code>scoresChanged</code> and <code>initialScores</code>.</li>
+  <li>Header, under the Twitch/status row: a line <code>&lt;div className="mt-1 text-xs text-fg-secondary"&gt;</code> with <code>Submitted {formatQualTimestamp(session.submittedAt)}</code>, or <code>Not submitted yet</code> when null; when verified, append <code>{' · '}Verified by {session.verifiedBy || 'Judge'}</code> and, if <code>session.verifiedAt</code>, <code>{' on '}{formatQualTimestamp(session.verifiedAt)}</code>.</li>
+  <li>Timer box sub-line for online runs: <code>Started: {formatQualTimestamp(session.timerLog?.startedAt || Date.now())}</code> (replaces <code>toLocaleTimeString</code>).</li>
+  <li>When verified, render first in the scrollable content: <code>&lt;div className="flex items-center gap-3 rounded-md border border-green-500/40 bg-green-500/12 px-4 py-3.5 text-sm text-green-400"&gt;&lt;CheckCircle2 size={20} className="shrink-0" /&gt;&lt;div&gt;This qual is verified and locked. Unverify it to make changes.&lt;/div&gt;&lt;/div&gt;</code>.</li>
+  <li>Scores section: hide “+ Add Game” when <code>isVerified</code>. Show each game's “Remove” whenever <code>!isVerified</code> (drop the <code>scores.length &gt; 1</code> condition). <code>handleRemoveGame</code> loses its length guard. Inputs are <code>disabled={isSubmitting || isVerified}</code>. When <code>scores.length === 0</code>, render <code>&lt;div className="rounded-md border border-dashed border-line px-3 py-4 text-center text-caption text-fg-muted"&gt;No games recorded.&lt;/div&gt;</code> in place of the grid.</li>
+  <li>Judge notes textarea: <code>disabled={isSubmitting || isVerified}</code>.</li>
+  <li>Footer left (DNQ and DQ buttons): render only when <code>!isVerified</code>.</li>
+  <li>Footer right, in this order:
+    <ul>
+      <li>Cancel button: label <code>{isVerified ? 'Close' : 'Cancel'}</code>.</li>
+      <li>When verified: one button <code>&lt;Button variant="secondary" className="border-gold/40 text-sm text-gold-bright enabled:hover:border-gold/40" onClick={() =&gt; onAdjudicate('UNVERIFY')}&gt;Unverify&lt;/Button&gt;</code>.</li>
+      <li>Otherwise: <strong>Save</strong>, <code>&lt;Button variant="secondary" className="inline-flex items-center gap-1.5 text-sm" disabled={isSubmitting || !hasEdits || isInProgress} onClick={() =&gt; onAdjudicate('SAVE', { scores, judgeNotes })}&gt;&lt;Edit3 size={15} /&gt; Save&lt;/Button&gt;</code>; then <strong>Verify Qual</strong>, the existing green button, calling <code>onAdjudicate('VERIFY', { judgeNotes })</code>, with <code>disabled={isSubmitting || hasEdits || isInProgress}</code> and <code>title={hasEdits ? 'Save your changes before verifying.' : undefined}</code>.</li>
+    </ul></li>
+</ol>
+<h3><code>ReviewQueueView.tsx</code></h3>
+<ol class="steps">
+  <li><code>fetchSessions</code> returns the session array it set (the fetched list, or the store-derived fallback).</li>
+  <li><code>handleAdjudicate</code> accepts the new action union and sends <code>scores</code> only for <code>SAVE</code>. Status messages: <code>SAVE</code> → <code>`Saved changes for ${name}`</code>; <code>VERIFY</code> → existing; <code>UNVERIFY</code> → <code>`Unverified ${name}'s qual. It is back in Pending Review.`</code>; DNQ/DQ → existing.</li>
+  <li>After <code>SAVE</code> or <code>UNVERIFY</code>, keep the dialog open on fresh data: <code>const list = await fetchSessions()</code>, then <code>setSelectedAdjudication(list.find(s =&gt; s.playerId === playerId) ?? null)</code>. After <code>VERIFY</code>, DNQ and DQ, close it as today. Always <code>refreshTournament</code> as today.</li>
+  <li>Give the modal a key so it remounts on fresh data: <code>key={`${selectedAdjudication.runId}-${selectedAdjudication.status}-${selectedAdjudication.submissionIds.join(',')}-${selectedAdjudication.judgeNotes ?? ''}`}</code>.</li>
+  <li>Walk-in wording: the discard status message becomes <code>`Discarded ${discardTarget.playerName}'s unfinished run and removed the player record it created`</code>; the discard dialog sentence becomes “This run created {discardTarget.playerName} as a new player record. If they have nothing else on record, they'll be removed from the player list too.”</li>
+</ol>
+<h3><code>IdentityClaimModal.tsx</code> (wording only)</h3>
+<ul>
+  <li>“Register as Walk-In” → “Register as New Competitor”.</li>
+  <li>“…Please register as a walk-in competitor.” → “…Please register as a new competitor.”</li>
+  <li>“New walk-in competitor? Create your competitor alias below.” → “New competitor? Create your competitor alias below.”</li>
+</ul>
+
+<h2>D. Judge page: player drawer and score entry</h2>
+<ol class="steps">
+  <li><code>PlayerDetailDrawer.tsx</code>: <code>const run = (tournament.qualRuns || []).find(r =&gt; r.playerId === player?.id)</code> (compute before the early return, alongside the other memos) and <code>const isQualLocked = run?.status === 'VERIFIED'</code>. Add <code>&amp;&amp; !isQualLocked</code> to the per-attempt delete button's condition. When <code>isQualLocked</code>, render in place of the “Record Attempt Score” <code>&lt;form&gt;</code>: <code>&lt;p className="text-caption text-fg-muted"&gt;This qual is verified and locked. Unverify it on the Review page to change scores.&lt;/p&gt;</code>.</li>
+  <li><code>QualifierEntryModal.tsx</code>: the same <code>run</code>/<code>isQualLocked</code> for <code>selectedPlayer</code>. When locked, do not render the score <code>&lt;form&gt;</code> (line ~183) or the per-attempt delete buttons (the ones calling <code>deleteQualifierScore</code>); render the same notice paragraph where the form was.</li>
+</ol>
+
+<h2>E. Provisional brackets and the lock warning</h2>
+<ol class="steps">
+  <li><code>scoring.ts</code> <code>generateDraftBracketsForTournament</code>: remove <code>&amp;&amp; row.status !== 'awaiting verification'</code> from <code>eligibleRows</code>. Its doc comment becomes: “Excludes DQ / DNQ players (isSeedingEligible) and players with no recorded attempts. Unverified (awaiting verification) players are seeded, so draft brackets are provisional until quals are verified.”</li>
+  <li><code>VerifyBracketModal.tsx</code>, step 1, directly after the first gold box: compute <code>pending = (tournament.qualRuns || []).filter(r =&gt; r.status === 'SUBMITTED').length</code> and <code>unfinished = … r.status === 'IN_PROGRESS' …</code>. If either is above 0, render:
+<pre><code>&lt;div className="flex flex-col gap-1.5 rounded-md border border-red/40 bg-red/12 p-4 text-sm text-red-300" data-testid="lock-pending-warning"&gt;
+  &lt;div className="flex items-center gap-1.5 font-bold"&gt;&lt;ShieldAlert size={16} /&gt; Quals still open&lt;/div&gt;
+  {pending &gt; 0 &amp;&amp; &lt;p&gt;{pending} qual{pending === 1 ? ' is' : 's are'} still pending review and will be seeded as they stand.&lt;/p&gt;}
+  {unfinished &gt; 0 &amp;&amp; &lt;p&gt;{unfinished} online run{unfinished === 1 ? ' is' : 's are'} still in progress and will not be seeded.&lt;/p&gt;}
+&lt;/div&gt;</code></pre>
+  Locking is not blocked.</li>
+</ol>
+
+<h2>F. Simulation</h2>
+<ol class="steps">
+  <li><code>simulation.ts</code> <code>generateSimulatedQualifiers</code>: each submission gets <code>status: 'SUBMITTED'</code> and no <code>verifiedBy</code>/<code>verifiedAt</code>. Replace the comment above it with “Simulated runs are created pending review, like real ones; they still seed draft brackets.”</li>
+  <li><code>src/server/api.ts</code>: delete <code>markSimulatedQualsCompleted</code> and both calls to it.</li>
+</ol>
+
+<h2>G. Docs</h2>
+<ul>
+  <li><code>docs/MatchFoundry-Product-Spec.md</code>:
+    <ul>
+      <li>Line ~176: “In-person scores (via <code>QualifierEntryModal</code>) save as <code>IN_PERSON</code> and verified” → “save as <code>IN_PERSON</code> and pending review (<code>SUBMITTED</code>)”.</li>
+      <li>Line ~183: “(a walk-in player is removed with it)” → “(a player record the run created is removed with it)”.</li>
+      <li>Line ~187: “walk-in with a new alias” → “a new competitor with a new alias”.</li>
+      <li>Line ~195, the Actions list → “Actions: Save (scores and notes, with a score-edit audit line in <code>judge_notes</code>; does not change status), Verify Qual (disabled while there are unsaved edits), Unverify (verified quals only; returns to pending), Mark DNQ, Disqualify (DQ), plus identity actions (Confirm Identity Binding, Reassign to a different player, Promote to Global Player). A verified qual is locked: its scores, attempts and notes can't change and it can't be DNQ'd, DQ'd, reassigned or removed from the roster until it is unverified.”</li>
+      <li>Line ~196: “draft seeding includes only verified players (excluding DNQ and awaiting verification)” → “draft seeding includes every player with at least one score except DNQ and DQ; unverified scores are seeded provisionally.”</li>
+      <li>Add one bullet after the Actions bullet: “Each competitor has one qual per tournament (<code>qualifier_runs</code>); scores are child rows, so a qual remains (with zero scores) when every score is removed.”</li>
+    </ul></li>
+  <li><code>docs/specs/phase-12/12.2-floor-judge.html</code>: in the <code>ReviewQueueCardList</code> table, “NES Authword (<code>font-mono</code>)” → “submitted date and time (<code>formatQualTimestamp</code>)”; in the <code>AdjudicationModal</code> bullet, “the four decision buttons (Verify, Edit &amp; Verify, DNQ, DQ) stack full width in the existing order, with destructive ones last” → “the decision buttons (Save, Verify, DNQ, DQ, or Unverify when verified) stack full width in the existing order, with destructive ones last”.</li>
+</ul>
+
+<h2>H. Tests</h2>
+<h3>New: <code>src/features/online-quals/__tests__/reviewWorkflow.test.tsx</code></h3>
+<p>pg-mem, built in the test. HTTP via the mock helpers used in <code>src/server/__tests__/qualsReopenAndSimulationGate.test.ts</code>. Component checks via <code>renderToStaticMarkup</code>.</p>
+<ol class="steps">
+  <li><code>SAVE</code> changes scores, keeps status <code>SUBMITTED</code>, keeps source, appends the audit line; <code>SAVE</code> with <code>scores: []</code> leaves the qual listed with <code>scores: []</code>.</li>
+  <li><code>VERIFY</code> never changes scores. <code>VERIFY</code> twice posts one Discord message (spy on the dispatcher or use the existing Discord test approach in <code>discordWebhook.test.ts</code>).</li>
+  <li>Verified lock: after <code>VERIFY</code>, each of <code>SAVE</code>, <code>DNQ</code>, <code>DQ</code>, <code>REASSIGN_PLAYER</code>, <code>POST /qualifiers</code>, <code>DELETE /qualifiers/:subId</code> and roster removal returns 409 / throws <code>QualLockedError</code>, and nothing changes.</li>
+  <li><code>UNVERIFY</code> returns the qual to <code>SUBMITTED</code>, clears verifier fields, sets <code>qualsCompleted</code> false, and <code>SAVE</code> works again. <code>UNVERIFY</code> on a pending qual throws.</li>
+  <li>Draft brackets seed a player whose only qual is <code>SUBMITTED</code> with one score, and do not seed a <code>SUBMITTED</code> qual with zero scores.</li>
+  <li><code>generateSimulatedQualifiers</code> returns only <code>SUBMITTED</code> submissions with no <code>verifiedBy</code>.</li>
+  <li><code>AdjudicationModal</code> markup: pending session with scores → contains “Save” and “Verify Qual”, not “Unverify”; verified session → contains “Unverify” and “verified and locked”, not “Mark DNQ”; session with <code>scores: []</code> → contains “No games recorded.”</li>
+  <li><code>ReviewQueueTable</code> markup: header contains “Submitted” and not “NES Authword”; a row shows <code>formatQualTimestamp(submittedAt)</code>; a <code>PROVISIONAL_NEW</code> session does not contain “Walk-In”.</li>
+  <li><code>VerifyBracketModal</code> markup with one <code>SUBMITTED</code> run contains <code>data-testid="lock-pending-warning"</code> and “1 qual is still pending review”.</li>
+</ol>
+<h3>Existing tests to update (assert the new behavior; do not delete coverage)</h3>
+<ul>
+  <li><code>EDIT_AND_VERIFY</code> in <code>discordWebhook.test.ts</code>, <code>mixedModeAdjudication.test.tsx</code>, <code>slice1Foundation.test.ts</code>: replace each with <code>SAVE</code> followed by <code>VERIFY</code>, keeping the same assertions on final scores, notes and status.</li>
+  <li>“NES Authword” in the review table assertions (<code>slice1Foundation.test.ts</code>, <code>mixedModeAdjudication.test.tsx</code>, <code>competitorJourney.test.tsx</code>): assert “Submitted” for the review table. Leave assertions about the competitor's HUD authword (and <code>e2e/golden-journeys.spec.ts</code>) alone.</li>
+  <li>“Walk-In” / “walk-in” text assertions (<code>identityResolution.test.tsx</code>, <code>runLinksAndCleanup.test.ts</code>, <code>competitorJourney.test.tsx</code>, <code>apiAuth.test.ts</code>, <code>phase7PersistenceAndAvatars.test.tsx</code>): update to the new wording where they check UI text; leave test names and internal identifiers.</li>
+  <li>Assertions that draft brackets exclude awaiting-verification players (<code>qualsCutoffLifecycle.test.tsx</code> Assertion 4.3, <code>dqReversibility.test.ts</code>, <code>mixedModeAdjudication.test.tsx</code>, <code>slice1Foundation.test.ts</code>, <code>qualifyingTimerAndAdjudicationFixes.test.tsx</code>): flip to expect inclusion when the player has a score.</li>
+  <li><code>qualsPreviewAndSimulationFixes.test.ts</code>: expect simulated quals to be <code>SUBMITTED</code>.</li>
+  <li>Any other failure: stop and report it.</li>
+</ul>
+
+<h2>Commands</h2>
+<ol class="steps">
+  <li><code>npm run typecheck</code></li>
+  <li><code>npx vitest run src/features/online-quals/__tests__/reviewWorkflow.test.tsx</code></li>
+  <li><code>npm test</code></li>
+  <li><code>npm run test:e2e</code></li>
+  <li><code>npm run test:visual</code>. Expected diffs: the review page (Submitted column) and any page showing simulated quals as pending (leaderboard badges, manage qualifiers, settings counts). List every failing screenshot in the final report; do <strong>not</strong> update baselines.</li>
+</ol>
+
+<h2>Done when</h2>
+<ul class="check">
+  <li>Review dialog: Save and Verify are separate; Verify is disabled with unsaved edits; every game can be removed and the qual stays listed.</li>
+  <li>A verified qual can't be changed from the Review page, the Judge page drawer, score entry, roster removal or the API; Unverify returns it to Pending.</li>
+  <li>The review table shows the submitted date and time instead of the authword, and the dialog shows submitted, started and verified date and time.</li>
+  <li>Draft brackets include pending quals that have scores; the lock dialog warns about pending and unfinished quals.</li>
+  <li>“Seed Qualifiers” creates pending quals.</li>
+  <li>No “walk-in” wording remains in UI text (<code>grep -rni "walk-in" src --include='*.tsx'</code> finds only comments or identifiers).</li>
+  <li>All commands above pass, apart from the expected visual diffs, which are listed for the coordinator.</li>
+</ul>
+</main>
+</body>
+</html>

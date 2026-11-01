@@ -43,6 +43,14 @@ If the spec does not cover a situation, stop and ask instead of improvising.</co
 </table>
 <p>12.2, 12.3 and 12.4 touch disjoint files and can run in parallel after 12.1.</p>
 
+<h2>Qual review workflow</h2>
+<p><strong>Goal:</strong> a qual is its own record that survives having zero scores; saving and verifying are separate; verified quals are locked until unverified; pending quals seed provisional brackets. Run QR.1 then QR.2, both before Phase 12 step 12.2 (12.2 restyles the same review screens).</p>
+<table>
+  <tr><th>Step</th><th>File</th><th>Depends on</th><th>Summary</th></tr>
+  <tr><td>QR.1</td><td><a href="qual-review/QR.1-qual-runs.html">Qual records</a></td><td>None</td><td>New <code>qualifier_runs</code> table with lazy backfill; every qual API reads and writes the run; zero-score quals persist.</td></tr>
+  <tr><td>QR.2</td><td><a href="qual-review/QR.2-review-workflow.html">Review workflow</a></td><td>QR.1</td><td>Save vs Verify, Unverify, verified lock, submitted date/time, provisional brackets, lock warning, pending simulated quals, walk-in wording removed.</td></tr>
+</table>
+
 <h2>Decisions already made</h2>
 <table>
   <tr><th>Topic</th><th>Decision</th></tr>

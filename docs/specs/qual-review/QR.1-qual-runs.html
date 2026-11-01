@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step QR.1 Qual Records</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Qual review / QR.1</nav>
+<h1>Step QR.1: A qual is its own record</h1>
+<p class="subtitle">Move each competitor's qual (online or in-person, authword, VOD, Twitch, timer, notes, review status) out of the score rows into one <code>qualifier_runs</code> row, so a qual survives having zero scores.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. <strong>Prerequisite:</strong> none. Run before <a href="QR.2-review-workflow.html">QR.2</a> and before Phase 12 step 12.2. <strong>Read first:</strong> <a href="../index.html">index.html</a> “Rules for every executor”, <code>docs/TESTING_STRATEGY.md</code>, and the “Database &amp; Drizzle” section of <code>CLAUDE.md</code>.</p></div>
+
+<h2>Why</h2>
+<p>Today a qual exists only as its <code>qualifier_submissions</code> rows, and every row carries its own copy of the qual's details. Deleting the last score (Judge page player drawer, trash icon) deletes the qual: it vanishes from the Review page, and a score entered afterwards starts a brand-new in-person qual. Separately, <code>EDIT_AND_VERIFY</code> rewrites every row as <code>ONLINE</code>, turning in-person quals into online ones.</p>
+<p><strong>Behavior after this step:</strong> identical to today except (1) deleting every score leaves the qual in place with zero scores, (2) a score added later joins that qual and keeps its source and details, (3) editing an in-person qual's scores keeps it in-person, (4) reassigning a qual to a player who already has a qual in the tournament is refused.</p>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Area</th><th>Files</th></tr>
+  <tr><td>Schema</td><td><code>src/db/schema.ts</code>, <code>src/db/testDb.ts</code></td></tr>
+  <tr><td>Server</td><td>create <code>src/api/qualRuns.ts</code>; <code>src/api/qualifiers.ts</code>, <code>src/api/tournaments.ts</code>, <code>src/api/players.ts</code>, <code>src/server/api.ts</code></td></tr>
+  <tr><td>Client</td><td><code>src/features/tournament/types.ts</code>, <code>src/features/tournament/defaults.ts</code>, <code>src/features/tournament/store.tsx</code>, <code>src/features/tournament/hooks/useQualifiers.ts</code>, <code>src/features/qualifiers/scoring.ts</code>, <code>src/features/online-quals/sessionDerivation.ts</code>, <code>src/features/online-quals/components/CompetitorPortalView.tsx</code></td></tr>
+  <tr><td>Tests</td><td>create <code>src/api/__tests__/qualRuns.test.ts</code>; existing tests under <code>src/**/__tests__/</code> only where the rules in section F require it</td></tr>
+</table>
+
+<h2>A. Schema (additive only)</h2>
+<ol class="steps">
+  <li>In <code>src/db/schema.ts</code>, add <code>qualifierRuns</code> <strong>above</strong> <code>qualifierSubmissions</code>:
+<pre><code>export const qualifierRuns = pgTable('qualifier_runs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  tournamentId: uuid('tournament_id').references(() =&gt; tournaments.id, { onDelete: 'cascade' }).notNull(),
+  playerId: uuid('player_id').references(() =&gt; players.id, { onDelete: 'restrict' }).notNull(),
+  submissionSource: text('submission_source', { enum: ['IN_PERSON', 'ONLINE'] }).notNull().default('IN_PERSON'),
+  status: text('status', { enum: ['IN_PROGRESS', 'SUBMITTED', 'VERIFIED', 'DNQ', 'DQ'] }).notNull().default('SUBMITTED'),
+  authWord: text('auth_word'),
+  twitchVodUrl: text('twitch_vod_url'),
+  submittedTwitchId: text('submitted_twitch_id'),
+  submittedTwitchUsername: text('submitted_twitch_username'),
+  identityStatus: text('identity_status', { enum: ['VERIFIED_MATCH', 'CLAIMED_PENDING_REVIEW', 'PROVISIONAL_NEW'] }),
+  timerLog: jsonb('timer_log').$type&lt;QualTimerLog&gt;(),
+  judgeNotes: text('judge_notes'),
+  playerNotes: text('player_notes'),
+  resumeToken: text('resume_token'),
+  draft: jsonb('draft').$type&lt;QualRunDraft&gt;(),
+  verifiedBy: text('verified_by'),
+  verifiedAt: timestamp('verified_at'),
+  // When the competitor submitted (online) or the first score was recorded (in person). Null while IN_PROGRESS.
+  submittedAt: timestamp('submitted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) =&gt; [
+  uniqueIndex('qualifier_runs_tournament_player_idx').on(table.tournamentId, table.playerId),
+  uniqueIndex('qualifier_runs_resume_token_idx').on(table.resumeToken),
+]);</code></pre></li>
+  <li>Add one column to <code>qualifierSubmissions</code>, after <code>playerId</code>: <code>runId: uuid('run_id').references(() =&gt; qualifierRuns.id, { onDelete: 'cascade' }),</code> (nullable). Do not remove or change any existing column.</li>
+  <li>Mirror both in the hand-written SQL in <code>src/db/testDb.ts</code>: a <code>CREATE TABLE qualifier_runs</code> before <code>qualifier_submissions</code> with the same columns, types, defaults and FKs; the two <code>CREATE UNIQUE INDEX</code> statements; and <code>run_id UUID REFERENCES qualifier_runs(id) ON DELETE CASCADE</code> in <code>qualifier_submissions</code>. (<code>src/db/index.ts</code> already re-exports everything from <code>schema.ts</code>; no change needed there.)</li>
+  <li>Run <code>npm run db:push</code> against local Docker Postgres (check <code>.env</code> and <code>docker compose ps</code> first, per <code>CLAUDE.md</code>). It must apply with no prompt.</li>
+</ol>
+<p>From here on, a score row means a <code>qualifier_submissions</code> row: it holds <code>tournamentId</code>, <code>playerId</code>, <code>runId</code>, <code>score</code>, <code>createdAt</code>. New code never reads or writes the score row's other columns (leave them at their defaults on insert). Every qual detail lives on the run.</p>
+
+<h2>B. <code>src/api/qualRuns.ts</code> (new)</h2>
+<p>Export exactly these. All take a resolved tournament UUID.</p>
+<table>
+  <tr><th>Export</th><th>Behavior</th></tr>
+  <tr><td><code>type QualRunRow = typeof qualifierRuns.$inferSelect</code></td><td></td></tr>
+  <tr><td><code>getRunForPlayer(tournamentId, playerId): Promise&lt;QualRunRow | null&gt;</code></td><td>Select by both columns, limit 1.</td></tr>
+  <tr><td><code>listRuns(tournamentId): Promise&lt;QualRunRow[]&gt;</code></td><td>All runs of the tournament, ordered by <code>createdAt</code> descending.</td></tr>
+  <tr><td><code>listRunScores(runId): Promise&lt;Array&lt;{ id: string; score: number; createdAt: Date }&gt;&gt;</code></td><td>Score rows with that <code>runId</code>, ordered by <code>createdAt</code> ascending.</td></tr>
+  <tr><td><code>insertRunScores(run: QualRunRow, scores: number[], baseTime: Date): Promise&lt;string[]&gt;</code></td><td>Insert one score row per score with <code>tournamentId</code>, <code>playerId</code> and <code>runId</code> from the run, and <code>createdAt = new Date(baseTime.getTime() + index)</code>. Returns the new ids. No-op returning <code>[]</code> for an empty array.</td></tr>
+  <tr><td><code>replaceRunScores(run, scores, baseTime): Promise&lt;string[]&gt;</code></td><td>Delete every score row with that <code>runId</code>, then <code>insertRunScores</code>.</td></tr>
+  <tr><td><code>attachOrphanScoresToRuns(tournamentId): Promise&lt;void&gt;</code></td><td>Backfill; see below. Idempotent and cheap when there is nothing to do (one select).</td></tr>
+</table>
+<h3><code>attachOrphanScoresToRuns</code> algorithm</h3>
+<ol class="steps">
+  <li>Select all <code>qualifier_submissions</code> rows of the tournament where <code>run_id IS NULL</code>. If none, return.</li>
+  <li>Group them by <code>playerId</code>. For each group, call a row a <em>placeholder</em> if its <code>status</code> is <code>IN_PROGRESS</code> or <code>NOT_STARTED</code>, otherwise <em>scored</em>.</li>
+  <li><code>run = getRunForPlayer(...)</code>. If null, build one:
+    <ul>
+      <li><code>anchor</code> = the first placeholder row if any, else the row with the latest <code>createdAt</code>.</li>
+      <li><code>submissionSource</code> = <code>'ONLINE'</code> if any row in the group is <code>ONLINE</code>, else <code>'IN_PERSON'</code>.</li>
+      <li><code>status</code>, first match wins: any placeholder → <code>IN_PROGRESS</code>; any <code>DQ</code> → <code>DQ</code>; any <code>SUBMITTED</code> → <code>SUBMITTED</code>; at least one scored row and all scored rows <code>DNQ</code> → <code>DNQ</code>; any <code>VERIFIED</code> → <code>VERIFIED</code>; otherwise <code>SUBMITTED</code>.</li>
+      <li><code>authWord</code>, <code>twitchVodUrl</code>, <code>submittedTwitchId</code>, <code>submittedTwitchUsername</code>, <code>identityStatus</code>, <code>timerLog</code>, <code>judgeNotes</code>, <code>playerNotes</code>, <code>verifiedBy</code>, <code>verifiedAt</code>: from <code>anchor</code>. <code>resumeToken</code> and <code>draft</code>: from <code>anchor</code> if it is a placeholder, else null.</li>
+      <li><code>createdAt</code> = earliest <code>createdAt</code> in the group.</li>
+      <li><code>submittedAt</code> = null if status is <code>IN_PROGRESS</code>; else if <code>ONLINE</code> and <code>anchor.timerLog?.submittedAt</code> is set, <code>new Date(anchor.timerLog.submittedAt)</code>; else the earliest <code>createdAt</code> among scored rows; else (no scored rows) the earliest <code>createdAt</code> in the group.</li>
+      <li>Insert it. If the insert fails because of <code>qualifier_runs_tournament_player_idx</code> (a concurrent backfill won), catch the error, re-select with <code>getRunForPlayer</code> and continue with that run. Any other error rethrows.</li>
+    </ul></li>
+  <li>Delete the group's placeholder rows.</li>
+  <li>Set <code>run_id = run.id</code> on the group's scored rows.</li>
+</ol>
+<p><strong>Call sites (only these two):</strong> at the start of <code>getFullTournament</code> right after the tournament row is resolved, and at the end of <code>resolveTournamentRow</code> in <code>qualifiers.ts</code> before it returns. <code>saveFullTournament</code> needs no call because it ends with <code>getFullTournament</code>. This backfills production data lazily and also attaches rows inserted by the full-tournament save (simulation, legacy clients).</p>
+
+<h2>C. Server changes</h2>
+<h3><code>src/api/qualifiers.ts</code></h3>
+<ol class="steps">
+  <li><strong>Types.</strong> Add to <code>OnlineQualSessionSummary</code>: <code>runId: string; submittedAt: number | null; verifiedBy: string | null; verifiedAt: number | null;</code>. Add a private <code>buildSessionSummary(tourney, run, scoreRows, player?)</code> used by every function below that returns a summary. Its fields: <code>tournamentId</code>, <code>playerId: run.playerId</code>, <code>playerName: player?.name</code>, <code>submissionSource: run.submissionSource</code>, <code>status: run.status</code>, <code>authWord</code> = <code>run.submissionSource === 'ONLINE' ? (run.authWord || 'ROCKET') : (run.authWord || null)</code> (today's rule), <code>twitchVodUrl</code>, <code>submittedTwitchId</code>, <code>submittedTwitchUsername</code>, <code>identityStatus</code> = <code>run.identityStatus || (ONLINE ? null : 'VERIFIED_MATCH')</code>, <code>timerLog</code> = <code>run.timerLog || { startedAt: run.createdAt.getTime(), elapsedSeconds: ONLINE ? 0 : qualWindowMinutes * 60, pauses: [] }</code>, <code>scores</code> = score values ascending by <code>createdAt</code>, <code>judgeNotes</code>, <code>playerNotes</code>, <code>submissionIds</code> = score row ids, <code>runId</code>, <code>submittedAt</code>/<code>verifiedAt</code> as ms or null, <code>verifiedBy</code>. Never include <code>resumeToken</code>/<code>draft</code> (only <code>withRunCredentials</code> adds them, as today).</li>
+  <li><strong><code>submitQualifierScore</code> and <code>submitQualifiersBatch</code></strong> share a private <code>recordScore(tourneyId, playerId, score, options)</code>:
+    <ul>
+      <li><code>run = getRunForPlayer</code>. If <code>run?.status === 'IN_PROGRESS'</code>, throw <code>'This competitor has an online run in progress. Wait for them to submit, or discard the run first.'</code></li>
+      <li>If no run, insert one: <code>submissionSource = options.submissionSource ?? 'IN_PERSON'</code>, <code>status = options.status ?? 'SUBMITTED'</code>, the other option fields as given, <code>submittedAt = now</code>.</li>
+      <li><code>insertRunScores(run, [score], now)</code>. Keep <code>ensureTournamentPlayerRegistration</code> and the closed-quals check.</li>
+      <li>Return a <code>QualifierSubmissionRecord</code> built from the score row plus the run's fields (source, status, authWord, etc.), so callers that read <code>.submissionSource</code>/<code>.status</code> keep working.</li>
+    </ul>
+    <code>submitQualifiersBatch</code> resolves the tournament once, then calls <code>recordScore</code> for each item in order.</li>
+  <li><strong><code>clearTournamentQualifiers</code></strong>: delete the tournament's <code>qualifier_runs</code> (score rows cascade), then delete any remaining <code>qualifier_submissions</code> of the tournament, then reset <code>qualsCompleted</code> as today.</li>
+  <li><strong><code>getOnlineQualSession(tid, { playerId, twitchId })</code></strong>: find the run by <code>playerId</code>, else the first run of the tournament with <code>submittedTwitchId === twitchId</code>. Null if none. Return <code>buildSessionSummary</code>.</li>
+  <li><strong><code>listOnlineQualSessions</code></strong>: one summary per run from <code>listRuns</code> (newest first), with player name/country/avatar as today and <code>playerName</code> fallback <code>run.submittedTwitchUsername || 'Unknown Player'</code>. Load all score rows of the tournament in one query and group by <code>runId</code>.</li>
+  <li><strong>Run lifecycle.</strong> Replace <code>findInProgressRow</code> with <code>findInProgressRun(tournamentId, { playerId } | { resumeToken })</code> on <code>qualifier_runs</code> (status <code>IN_PROGRESS</code>). Update <code>withRunCredentials</code>, <code>getOnlineQualRunByToken</code> and <code>saveOnlineQualDraft</code> to read and write the run's <code>resumeToken</code>/<code>draft</code>.</li>
+  <li><strong><code>startOnlineQualSession</code></strong>: the existing-session check uses <code>getRunForPlayer</code>; collect used authwords from the tournament's runs; insert a run (<code>ONLINE</code>, <code>IN_PROGRESS</code>, authWord, Twitch fields, identityStatus, timerLog, resumeToken) and <strong>no</strong> score row. Return the summary with <code>submissionIds: []</code>, <code>isNewSession: true</code>, <code>resumeToken</code>, <code>draft: null</code>. Everything else (player resolution, walk-in creation, identity rules) is unchanged.</li>
+  <li><strong><code>submitOnlineQualScores</code></strong>: <code>run = getRunForPlayer</code>. If <code>run</code> exists and is not <code>IN_PROGRESS</code>, throw the existing “already submitted” error. Token check uses <code>run.resumeToken</code> (same rule as today). If there is no run, insert an <code>ONLINE</code> run first (same fields today's code derives). Then update the run: <code>status 'SUBMITTED'</code>, authWord, <code>twitchVodUrl</code>, Twitch fields, identityStatus, final timerLog, <code>playerNotes</code>, <code>resumeToken: null</code>, <code>draft: null</code>, <code>submittedAt: new Date(nowMs)</code>; and <code>insertRunScores(run, input.scores, new Date(nowMs))</code>. Return the summary.</li>
+  <li><strong><code>discardOnlineQualRun</code></strong>: <code>run = findInProgressRun({ playerId })</code>, else throw the existing error. <code>hasRealResults</code> = the run has score rows. Delete the run. Keep the existing <code>PROVISIONAL_NEW</code> roster/player cleanup, reading <code>run.identityStatus</code>.</li>
+  <li><strong><code>deletePlayerIfUnreferenced</code></strong>: also return false if any <code>qualifier_runs</code> row references the player.</li>
+  <li><strong><code>adjudicateOnlineSubmission</code></strong>: load the run with <code>getRunForPlayer(tourney.id, input.playerId)</code> (throw the existing “not found” error if null). Every action writes the run, not score rows:
+    <ul>
+      <li><code>VERIFY</code>, <code>DNQ</code>, <code>DQ</code>: same field changes as today, on the run.</li>
+      <li><code>EDIT_AND_VERIFY</code>: <code>replaceRunScores(run, newScores, run.submittedAt ?? now)</code>, then set the run to <code>VERIFIED</code> with the same notes/verifier fields as today. <strong>Do not change <code>submissionSource</code>.</strong> (QR.2 replaces this action.)</li>
+      <li><code>CONFIRM_IDENTITY</code> / <code>PROMOTE_PROVISIONAL</code>: player updates as today; set <code>run.identityStatus = 'VERIFIED_MATCH'</code>.</li>
+      <li><code>REASSIGN_PLAYER</code>: if <code>targetPlayerId !== input.playerId</code> and the target already has a run in this tournament, throw <code>`${targetPlayer.name} already has a qual in this tournament. Remove that qual before reassigning this one.`</code> Otherwise set <code>playerId</code> on the run and on all its score rows, <code>identityStatus 'VERIFIED_MATCH'</code>, and keep the rest of today's logic.</li>
+      <li><code>CREATE_NEW_PLAYER</code>: as today, moving the run and its score rows to the new player.</li>
+    </ul></li>
+  <li><strong><code>cleanupSourcePlayerAfterReassign</code></strong>: “remaining” means a run for <code>oldPlayerId</code> in this tournament (there won't be one after a move, so the delete branch runs, as today).</li>
+  <li><strong><code>setTournamentPlayerDisqualification</code></strong> (lifting a DQ): if the player's run is <code>DQ</code>, set it to <code>SUBMITTED</code> with the same note and cleared verifier fields as today.</li>
+</ol>
+<h3><code>src/api/tournaments.ts</code></h3>
+<ol class="steps">
+  <li><code>getFullTournament</code>: call <code>attachOrphanScoresToRuns</code> first. Load the runs and add <code>qualRuns</code> to the result (shape in section D; <strong>never</strong> include <code>resumeToken</code> or <code>draft</code>). When mapping score rows to <code>qualifierSubmissions</code>, add <code>runId</code> and take <code>submissionSource</code>, <code>authWord</code>, <code>twitchVodUrl</code>, <code>submittedTwitchId</code>, <code>submittedTwitchUsername</code>, <code>identityStatus</code>, <code>status</code>, <code>timerLog</code>, <code>judgeNotes</code>, <code>playerNotes</code>, <code>verifiedBy</code>, <code>verifiedAt</code> from the row's run. A row whose run is missing keeps its own columns.</li>
+  <li><code>saveFullTournament</code> submission sync: in the “update existing row” branch, write only <code>score</code> (remove every other field from that <code>.set()</code>). The insert branch is unchanged.</li>
+</ol>
+<h3><code>src/api/players.ts</code></h3>
+<ul>
+  <li>Player deletion: also query <code>qualifier_runs</code> joined to <code>tournaments</code> for the player. Runs with status <code>IN_PROGRESS</code> are placeholders: delete them along with today's placeholder deletion. Any other run blocks deletion and adds its tournament name to the error, exactly like a scored submission does today.</li>
+  <li><code>deleteAllUnattachedPlayers</code>: add <code>qualifier_runs.playerId</code> to the referenced-id sets.</li>
+</ul>
+<h3><code>src/server/api.ts</code></h3>
+<ul>
+  <li><code>DELETE /api/tournaments/:id/qualifiers/:subId</code>: unchanged. It deletes only the score row; the run stays. This is the zero-score fix.</li>
+  <li>Roster removal (<code>DELETE /api/tournaments/:id/players/:playerId</code>): replace the submission checks with: <code>run = getRunForPlayer</code>; <code>scoreCount = run ? (await listRunScores(run.id)).length : 0</code>. If <code>scoreCount &gt; 0</code>, return the existing 400 error with <code>scoreCount</code> in place of the submission count. Otherwise delete the run (if any) and the roster entry.</li>
+</ul>
+
+<h2>D. Client changes</h2>
+<ol class="steps">
+  <li><code>src/features/tournament/types.ts</code>: add
+<pre><code>export type QualRunStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'VERIFIED' | 'DNQ' | 'DQ';
+
+/** One competitor's qual in a tournament. Scores are the qualifierSubmissions with this runId. */
+export interface QualRun {
+  id: string;
+  tournamentId: string;
+  playerId: string;
+  submissionSource: SubmissionSource;
+  status: QualRunStatus;
+  authWord?: string;
+  twitchVodUrl?: string;
+  submittedTwitchId?: string;
+  submittedTwitchUsername?: string;
+  identityStatus?: IdentityStatus;
+  timerLog?: QualTimerLog;
+  judgeNotes?: string;
+  playerNotes?: string;
+  verifiedBy?: string;
+  verifiedAt?: number;
+  submittedAt?: number;
+  createdAt: number;
+}</code></pre>
+  Add <code>runId?: string</code> to <code>QualifierSubmission</code> and <code>qualRuns?: QualRun[]</code> to <code>Tournament</code> (optional, so hand-built fixtures still compile). In <code>defaults.ts</code>, <code>createEmptyTournament</code> sets <code>qualRuns: []</code>.</li>
+  <li><code>scoring.ts</code> <code>getPlayerQualifierStatus</code>: keep the locked check and the profile-DQ check first. Then <code>const run = (tournament.qualRuns || []).find(r =&gt; r.playerId === playerId)</code>; if found return <code>DQ → 'dq'</code>, <code>SUBMITTED → 'awaiting verification'</code>, <code>DNQ → 'dnq'</code>, <code>VERIFIED → 'verified'</code>, <code>IN_PROGRESS → 'in progress'</code>. Without a run, the existing logic runs unchanged. Update the doc comment to say the run's status wins when present.</li>
+  <li><code>sessionDerivation.ts</code> <code>deriveSessionsFromTournament</code>: when <code>tournament.qualRuns</code> is defined, build one summary per run with the same fields as the server's <code>buildSessionSummary</code> (scores = <code>qualifierSubmissions</code> with that <code>runId</code>, ascending <code>submittedAt</code>). When it is undefined, keep the existing grouping code.</li>
+  <li><code>CompetitorPortalView.tsx</code>: the stored-session reconcile (around line 96) looks up <code>run = tournament.qualRuns?.find(r =&gt; r.playerId === parsed.playerId)</code>: if a run exists and is not <code>IN_PROGRESS</code>, clear and return null; if it is <code>IN_PROGRESS</code>, take <code>authWord</code>/<code>timerLog</code> from it. If <code>qualRuns</code> is undefined, keep the existing submission-based code. The <code>hasExistingSession</code> check (around line 357) is true if any run matches the player id or (case-insensitively, trimmed) the Twitch username, or if the existing submission check matches.</li>
+  <li><code>store.tsx</code>: delete <code>togglePlayerQualifierVerified</code> (it writes qual status through the full-tournament save, which no longer stores it) from the implementation, the context type and the provider value; delete it from <code>hooks/useQualifiers.ts</code>.</li>
+</ol>
+
+<h2>E. Tests: <code>src/api/__tests__/qualRuns.test.ts</code> (new)</h2>
+<p>pg-mem via <code>setupTestDb()</code>/<code>setDb()</code> in <code>beforeEach</code>; build everything in the test. Use the mock request/response helpers from <code>src/server/__tests__/qualsReopenAndSimulationGate.test.ts</code> for HTTP calls.</p>
+<ol class="steps">
+  <li><strong>Backfill:</strong> insert legacy rows directly with <code>run_id</code> null: player A online <code>SUBMITTED</code> ×2 (authWord, VOD, timerLog with <code>submittedAt</code>); player B in-person <code>VERIFIED</code> ×1; player C online <code>IN_PROGRESS</code> placeholder with <code>resumeToken</code> and <code>draft</code>. Call <code>getFullTournament</code>. Assert: three runs with the right source/status/authWord/<code>submittedAt</code>; A's and B's score rows carry <code>runId</code>; C's placeholder row is gone; <code>getOnlineQualRunByToken(token)</code> returns C's run with the draft; <code>qualRuns</code> in the payload has no <code>resumeToken</code>/<code>draft</code> keys.</li>
+  <li><strong>Idempotent:</strong> call <code>getFullTournament</code> twice; run count unchanged.</li>
+  <li><strong>Zero scores keep the qual:</strong> online run started and submitted with 2 scores; delete both via <code>DELETE /qualifiers/:subId</code>. <code>listOnlineQualSessions</code> still returns the player with <code>submissionSource 'ONLINE'</code>, the authWord, the VOD and <code>scores: []</code>.</li>
+  <li><strong>Re-added score joins the qual:</strong> continue test 3 with <code>POST /qualifiers</code> for that player; the session has one score, is still <code>ONLINE</code>, same <code>runId</code>.</li>
+  <li><strong>Source preserved:</strong> in-person score, then <code>EDIT_AND_VERIFY</code> with new scores; session stays <code>IN_PERSON</code>.</li>
+  <li><strong>Reassign conflict:</strong> two players with quals; <code>REASSIGN_PLAYER</code> one onto the other throws the new error and changes nothing.</li>
+  <li><strong>Score entry blocked mid-run:</strong> start an online run; <code>submitQualifierScore</code> for that player throws the in-progress error.</li>
+  <li><strong>Discard:</strong> start a run that creates a new player, discard it; the run and the created player are gone.</li>
+</ol>
+
+<h2>F. Existing tests</h2>
+<ul>
+  <li>Tests that read raw <code>qualifier_submissions</code> rows to check qual details (status, placeholder rows, tokens, authwords) switch to reading <code>qualifier_runs</code>. Keep what each test checks; only change where it looks.</li>
+  <li>Tests for <code>togglePlayerQualifierVerified</code> (in <code>qualifyingTimerAndAdjudicationFixes.test.tsx</code>) are deleted with the function.</li>
+  <li>If a test expects a reassignment to merge two players' quals, change it to expect the new error.</li>
+  <li>No other assertion may be loosened. If one fails for a reason not listed here, stop and report it.</li>
+</ul>
+
+<h2>Commands</h2>
+<ol class="steps">
+  <li><code>npm run db:push</code> (local Docker Postgres).</li>
+  <li><code>npm run typecheck</code></li>
+  <li><code>npx vitest run src/api/__tests__/qualRuns.test.ts</code></li>
+  <li><code>npm run test:api</code> and <code>npm run test:ui</code>, then <code>npm test</code>.</li>
+  <li><code>npm run test:e2e</code> (golden journey 5 covers start → submit → review → verify).</li>
+</ol>
+
+<h2>Done when</h2>
+<ul class="check">
+  <li>Deleting every score of a qual leaves it on the Review page with its online details and zero scores.</li>
+  <li>A score added afterwards joins the same qual.</li>
+  <li>Editing an in-person qual's scores keeps it in-person.</li>
+  <li>No code outside <code>attachOrphanScoresToRuns</code> reads a score row's status, source or other qual details.</li>
+  <li>All commands above pass.</li>
+</ul>
+</main>
+</body>
+</html>
