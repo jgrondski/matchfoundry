@@ -47,6 +47,7 @@ import {
   discardOnlineQualRun,
   QualRunAccessError,
   QualLockedError,
+  QualConflictError,
 } from '../api/qualifiers';
 import { getRunForPlayer, listRunScores } from '../api/qualRuns';
 import { clearTournamentMatches } from '../api/brackets';
@@ -1047,7 +1048,7 @@ export function createApiMiddleware() {
             t.tiers = generateDraftBracketsForTournament(t);
             await saveFullTournament(t);
           }
-          if (session && body?.action === 'VERIFY' && !wasVerified) {
+          if (session && (body?.action === 'VERIFY' || body?.action === 'SAVE_AND_VERIFY') && !wasVerified) {
             const p = await getPlayer(session.playerId);
             await dispatchDiscordWebhook(tourneyId, 'VERIFIED', {
               playerName: p?.name || session.submittedTwitchUsername || 'Player',
@@ -1683,7 +1684,7 @@ export function createApiMiddleware() {
       return sendError(res, 404, `Not found: ${method} ${pathname}`);
     } catch (err: unknown) {
       console.error(`[API Error] ${method} ${pathname}:`, err);
-      if (err instanceof QualLockedError) return sendError(res, 409, err.message);
+      if (err instanceof QualLockedError || err instanceof QualConflictError) return sendError(res, 409, err.message);
       const msg = err instanceof Error ? err.message : 'Internal Server Error';
       return sendError(res, 500, msg);
     }

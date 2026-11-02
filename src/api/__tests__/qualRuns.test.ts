@@ -219,7 +219,7 @@ describe('Qual runs (qualifier_runs)', () => {
     expect(session!.scores).toEqual([650000, 610000]);
   });
 
-  it('refuses to reassign a qual onto a player who already has one', async () => {
+  it('refuses to reassign a qual onto a player whose qual has scores', async () => {
     const tid = await createTournament('qr-reassign');
     const a = await newPlayer('Reassign A');
     const b = await newPlayer('Reassign B');
@@ -229,10 +229,34 @@ describe('Qual runs (qualifier_runs)', () => {
 
     await expect(
       adjudicateOnlineSubmission(tid, { playerId: a, action: 'REASSIGN_PLAYER', targetPlayerId: b })
-    ).rejects.toThrow('Reassign B already has a qual in this tournament. Remove that qual before reassigning this one.');
+    ).rejects.toThrow(
+      "Reassign B already has a qual with 1 score. Remove Reassign B's scores on the Review page, or remove Reassign B from the roster, before reassigning to them."
+    );
 
     const after = await listOnlineQualSessions(tid);
     expect(after.map(s => [s.playerId, s.scores])).toEqual(before.map(s => [s.playerId, s.scores]));
+  });
+
+  it('reassigning onto a player whose qual has no scores replaces that empty qual', async () => {
+    const tid = await createTournament('qr-reassign-empty');
+    const a = await newPlayer('Empty A');
+    const b = await newPlayer('Empty B');
+    const aRun = await startAndSubmit(tid, a, [500000]);
+    await submitQualifierScore(tid, b, 400000);
+    const bSession = await sessionFor(tid, b);
+    for (const subId of bSession!.submissionIds) {
+      expect((await call(`/api/tournaments/${tid}/qualifiers/${subId}`, 'DELETE')).status).toBe(200);
+    }
+    expect((await sessionFor(tid, b))!.scores).toEqual([]);
+
+    const moved = await adjudicateOnlineSubmission(tid, { playerId: a, action: 'REASSIGN_PLAYER', targetPlayerId: b });
+    expect(moved?.playerId).toBe(b);
+    expect(moved?.runId).toBe(aRun.runId);
+    expect(moved?.scores).toEqual([500000]);
+
+    const sessions = await listOnlineQualSessions(tid);
+    expect(sessions.filter(s => s.playerId === b)).toHaveLength(1);
+    expect(sessions.some(s => s.playerId === a)).toBe(false);
   });
 
   it('blocks score entry while the player has an online run in progress', async () => {

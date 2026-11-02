@@ -11,7 +11,7 @@ export interface AdjudicationModalProps {
   session: ReviewQueueSessionSummary | null;
   onClose: () => void;
   onAdjudicate: (
-    action: 'SAVE' | 'VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ',
+    action: 'SAVE' | 'VERIFY' | 'SAVE_AND_VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ',
     options?: { scores?: number[]; judgeNotes?: string }
   ) => Promise<void>;
   onOpenIdentity?: (session: ReviewQueueSessionSummary) => void;
@@ -40,6 +40,8 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
     scores.some((s, idx) => s !== session.scores[idx]) ||
     judgeNotes !== (session.judgeNotes || '');
   const isDirty = hasEdits || confirmDQ;
+  // Verifying needs at least one score (the edited scores when there are edits).
+  const hasScoresToVerify = scores.length > 0;
 
   const newlyAddedIndexRef = useRef<number | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -425,13 +427,17 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => onAdjudicate('VERIFY', { judgeNotes })}
-                    disabled={isSubmitting || hasEdits || isInProgress}
-                    title={hasEdits ? 'Save your changes before verifying.' : undefined}
+                    onClick={() =>
+                      hasEdits
+                        ? onAdjudicate('SAVE_AND_VERIFY', { scores, judgeNotes })
+                        : onAdjudicate('VERIFY', { judgeNotes })
+                    }
+                    disabled={isSubmitting || isInProgress || !hasScoresToVerify}
+                    title={!hasScoresToVerify ? 'Add at least one score before verifying.' : undefined}
                     variant="primary"
                     className="inline-flex items-center gap-1.5 text-sm border-[#15803d] bg-[#16a34a] bg-none"
                   >
-                    <CheckCircle2 size={15} /> Verify Qual
+                    <CheckCircle2 size={15} /> {hasEdits ? 'Save & Verify' : 'Verify Qual'}
                   </Button>
                 </>
               )}

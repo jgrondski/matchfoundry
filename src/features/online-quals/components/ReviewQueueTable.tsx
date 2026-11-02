@@ -216,9 +216,12 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                                 @{session.submittedTwitchUsername}
                               </span>
                             )}
-                            {session.identityStatus === 'VERIFIED_MATCH' && (
-                              <span className="rounded-sm px-1.5 text-2xs font-bold bg-green-500/15 text-green-400">
-                                Verified Match
+                            {session.identityStatus === 'PROVISIONAL_NEW' && (
+                              <span
+                                title="This run created a new player record; they weren't found in the player list."
+                                className="rounded-sm px-1.5 text-2xs font-bold bg-sky-400/15 text-sky-400"
+                              >
+                                New Player
                               </span>
                             )}
                             {session.identityStatus === 'CLAIMED_PENDING_REVIEW' && (

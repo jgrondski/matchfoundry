@@ -1,10 +1,11 @@
 import React, { useState, useId } from 'react';
-import { UserCheck, UserX, UserPlus, Search, X } from 'lucide-react';
+import { UserCheck, UserX, UserPlus, Search, X, AlertTriangle } from 'lucide-react';
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import type { PlayerProfile } from '../../tournament/types';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { Overlay } from '../../../components/overlay';
 import { Button, IconButton, cn } from '../../../components/ui';
+import { getReassignBlockReason, reassignReplacesEmptyQual, type ReassignTargetQual } from '../reassignRules';
 
 const tabClass = (active: boolean) =>
   cn(
@@ -20,6 +21,8 @@ export interface IdentityResolutionModalProps {
   isOpen: boolean;
   session: ReviewQueueSessionSummary | null;
   playersPool: PlayerProfile[];
+  /** Every qual in the tournament, used to show which reassignment targets already have one. */
+  sessions?: ReviewQueueSessionSummary[];
   onClose: () => void;
   onResolve: (
     action: 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL' | 'CREATE_NEW_PLAYER',
@@ -35,6 +38,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
   isOpen,
   session,
   playersPool,
+  sessions = [],
   onClose,
   onResolve,
   isSubmitting = false,
@@ -47,9 +51,34 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
   const [newName, setNewName] = useState(session?.playerName || '');
   const [newCountry, setNewCountry] = useState(session?.country || '');
   const [newPlaystyle, setNewPlaystyle] = useState('DAS');
+  const [error, setError] = useState<string | null>(null);
   const titleId = useId();
 
   if (!isOpen || !session) return null;
+
+  const qualByPlayer = new Map<string, ReassignTargetQual>(
+    sessions.map(s => [s.playerId, { status: s.status, scoreCount: s.scores.length }])
+  );
+  const selectedTarget = selectedTargetId ? playersPool.find(p => p.id === selectedTargetId) : undefined;
+  const selectedQual = selectedTargetId ? qualByPlayer.get(selectedTargetId) : undefined;
+  const selectedBlock = selectedTarget ? getReassignBlockReason(selectedTarget.name, selectedQual) : null;
+
+  const resolve = async (...args: Parameters<typeof onResolve>) => {
+    setError(null);
+    try {
+      await onResolve(...args);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong. Try again.');
+    }
+  };
+
+  const describeQual = (qual: ReassignTargetQual | undefined): string | null => {
+    if (!qual) return null;
+    if (qual.status === 'VERIFIED') return 'Has a verified qual';
+    if (qual.status === 'IN_PROGRESS') return 'Online run in progress';
+    if (qual.scoreCount === 0) return 'Has an empty qual';
+    return `Has a qual · ${qual.scoreCount} score${qual.scoreCount === 1 ? '' : 's'}`;
+  };
 
   const filteredPlayers = playersPool
     .filter(p => p.id !== session.playerId)
@@ -161,13 +190,20 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                   ) : (
                     filteredPlayers.map(p => {
                       const isSelected = selectedTargetId === p.id;
+                      const qual = qualByPlayer.get(p.id);
+                      const qualLabel = describeQual(qual);
+                      const isBlocked = getReassignBlockReason(p.name, qual) !== null;
                       return (
                         <div
                           key={p.id}
-                          onClick={() => setSelectedTargetId(p.id)}
+                          onClick={() => {
+                            setSelectedTargetId(p.id);
+                            setError(null);
+                          }}
                           className={cn(
                             'flex cursor-pointer items-center justify-between border-b border-line-subtle px-3.5 py-2.5 transition-colors duration-100',
-                            isSelected ? 'bg-gold/15' : 'bg-transparent'
+                            isSelected ? 'bg-gold/15' : 'bg-transparent',
+                            isBlocked && !isSelected && 'opacity-60'
                           )}
                         >
                           <div className="flex items-center gap-2.5">
@@ -179,6 +215,11 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                               {p.twitchUsername && (
                                 <div className="text-xs text-violet-400">
                                   @{p.twitchUsername}
+                                </div>
+                              )}
+                              {qualLabel && (
+                                <div className={cn('text-xs', isBlocked ? 'text-red-bright' : 'text-fg-muted')}>
+                                  {qualLabel}
                                 </div>
                               )}
                             </div>
@@ -193,6 +234,24 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                     })
                   )}
                 </div>
+
+                {selectedBlock && (
+                  <div
+                    data-testid="reassign-blocked"
+                    className="flex items-start gap-2.5 rounded-md border border-red/40 bg-red/12 px-3.5 py-3 text-sm text-red-300"
+                  >
+                    <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                    <div>{selectedBlock}</div>
+                  </div>
+                )}
+                {selectedTarget && !selectedBlock && reassignReplacesEmptyQual(selectedQual) && (
+                  <div
+                    data-testid="reassign-replaces-empty"
+                    className="rounded-md border border-gold/30 bg-gold/10 px-3.5 py-3 text-sm text-gold-bright"
+                  >
+                    {selectedTarget.name} has an empty qual (no scores). It will be replaced by this run.
+                  </div>
+                )}
               </div>
             )}
 
@@ -301,6 +360,17 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
             )}
           </div>
 
+          {error && (
+            <div
+              role="alert"
+              data-testid="identity-resolution-error"
+              className="flex items-start gap-2.5 border-t border-red/40 bg-red/12 px-6 py-3 text-sm text-red-300"
+            >
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <div>{error}</div>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated px-6 py-4">
             <Button
@@ -319,10 +389,10 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                 data-testid="submit-reassign-button"
                 onClick={() => {
                   if (selectedTargetId) {
-                    onResolve('REASSIGN_PLAYER', { targetPlayerId: selectedTargetId });
+                    void resolve('REASSIGN_PLAYER', { targetPlayerId: selectedTargetId });
                   }
                 }}
-                disabled={isSubmitting || !selectedTargetId}
+                disabled={isSubmitting || !selectedTargetId || selectedBlock !== null}
                 variant="primary"
                 className="inline-flex items-center gap-1.5 text-sm bg-blue-500 bg-none border-blue-600"
               >
@@ -339,7 +409,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                     const action = session.identityStatus === 'PROVISIONAL_NEW'
                       ? 'PROMOTE_PROVISIONAL'
                       : 'CREATE_NEW_PLAYER';
-                    onResolve(action, {
+                    void resolve(action, {
                       newPlayer: {
                         name: newName.trim(),
                         country: newCountry.trim().toUpperCase() || undefined,
@@ -360,7 +430,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
               <Button
                 type="button"
                 data-testid="submit-confirm-button"
-                onClick={() => onResolve('CONFIRM_IDENTITY')}
+                onClick={() => void resolve('CONFIRM_IDENTITY')}
                 disabled={isSubmitting}
                 variant="primary"
                 className="inline-flex items-center gap-1.5 text-sm"

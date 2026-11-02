@@ -83,6 +83,8 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
   }, [fetchSessions]);
 
   const pendingUnverifiedCount = sessions.filter(s => s.status === 'SUBMITTED').length;
+  // Verify All skips quals with no scores (they can't be verified until scores are added).
+  const verifiableCount = sessions.filter(s => s.status === 'SUBMITTED' && s.scores.length > 0).length;
 
   const handleOpenAdjudicate = (session: ReviewQueueSessionSummary) => {
     setSelectedAdjudication(session);
@@ -93,7 +95,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
   };
 
   const handleAdjudicate = async (
-    action: 'SAVE' | 'VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ',
+    action: 'SAVE' | 'VERIFY' | 'SAVE_AND_VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ',
     options?: { scores?: number[]; judgeNotes?: string }
   ) => {
     if (!selectedAdjudication) return;
@@ -110,7 +112,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         body: JSON.stringify({
           playerId,
           action,
-          scores: action === 'SAVE' ? options?.scores : undefined,
+          scores: action === 'SAVE' || action === 'SAVE_AND_VERIFY' ? options?.scores : undefined,
           judgeNotes: options?.judgeNotes,
         }),
       });
@@ -125,6 +127,8 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           ? `Saved changes for ${name}`
           : action === 'VERIFY'
           ? `Verified run for ${name}`
+          : action === 'SAVE_AND_VERIFY'
+          ? `Saved changes and verified run for ${name}`
           : action === 'UNVERIFY'
           ? `Unverified ${name}'s qual. It is back in Pending Review.`
           : action === 'DNQ'
@@ -200,8 +204,8 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         throw new Error(err.error || 'Failed to verify all qualifier submissions');
       }
 
-      const data = await res.json().catch(() => ({ verifiedCount: pendingUnverifiedCount }));
-      setStatusMessage(`Successfully verified all ${data.verifiedCount || pendingUnverifiedCount} pending qualifier runs.`);
+      const data = await res.json().catch(() => ({ verifiedCount: verifiableCount }));
+      setStatusMessage(`Successfully verified all ${data.verifiedCount || verifiableCount} pending qualifier runs.`);
       setIsVerifyAllModalOpen(false);
       await fetchSessions();
       await refreshTournament?.(tournament.id);
@@ -257,11 +261,10 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       setSelectedIdentity(null);
       await fetchSessions();
       await refreshTournament?.(tournament.id);
-    } catch (e: any) {
-      setStatusMessage(`Error: ${e.message}`);
     } finally {
       setIsSubmitting(false);
     }
+    // Errors propagate to IdentityResolutionModal, which shows them inside the dialog.
   };
 
   const isQualsClosed = Boolean(tournament.isLocked);
@@ -310,14 +313,14 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           <button
             type="button"
             data-testid="verify-all-button"
-            disabled={pendingUnverifiedCount === 0 || isSubmitting}
+            disabled={verifiableCount === 0 || isSubmitting}
             onClick={() => setIsVerifyAllModalOpen(true)}
             className={cn(
               'inline-flex items-center gap-2 whitespace-nowrap rounded-md border px-4 py-2 text-caption font-bold transition-all duration-150',
-              pendingUnverifiedCount > 0
+              verifiableCount > 0
                 ? 'border-warn/45 bg-warn/15 text-gold-bright'
                 : 'border-line bg-white/5 text-fg-muted',
-              pendingUnverifiedCount > 0 && !isSubmitting ? 'cursor-pointer' : 'cursor-not-allowed'
+              verifiableCount > 0 && !isSubmitting ? 'cursor-pointer' : 'cursor-not-allowed'
             )}
           >
             <CheckCheck size={16} />
@@ -378,6 +381,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           isOpen={true}
           session={selectedIdentity}
           playersPool={reconcilePlayersPool}
+          sessions={sessions}
           onClose={() => setSelectedIdentity(null)}
           onResolve={handleResolveIdentity}
           isSubmitting={isSubmitting}
@@ -419,7 +423,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
         body={
           <>
             <div className="rounded-md border border-warn/35 bg-warn/12 px-4 py-3.5 text-sm leading-normal font-semibold text-gold-bright">
-              ⚠️ Are you sure you want to verify all {pendingUnverifiedCount} pending qualifier run{pendingUnverifiedCount === 1 ? '' : 's'}?
+              ⚠️ Are you sure you want to verify all {verifiableCount} pending qualifier run{verifiableCount === 1 ? '' : 's'}?
             </div>
             <p className="leading-normal text-fg-secondary">
               This will immediately mark all currently pending qualifier submissions as <strong>VERIFIED</strong>, lock in official scores on the public leaderboard, and update tournament seeding drafts.
@@ -430,10 +434,10 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           </>
         }
         cancelLabel="Cancel"
-        confirmLabel={isSubmitting ? 'Verifying...' : `Yes, Verify All (${pendingUnverifiedCount})`}
+        confirmLabel={isSubmitting ? 'Verifying...' : `Yes, Verify All (${verifiableCount})`}
         confirmVariant="primary"
         busy={isSubmitting}
-        confirmDisabled={pendingUnverifiedCount === 0}
+        confirmDisabled={verifiableCount === 0}
         onCancel={() => setIsVerifyAllModalOpen(false)}
         onConfirm={handleVerifyAll}
       />

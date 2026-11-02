@@ -39,6 +39,7 @@ import {
   replaceRunScores,
   type QualRunRow,
 } from './qualRuns';
+import { getReassignBlockReason } from '../features/online-quals/reassignRules';
 
 export interface QualifierSubmissionRecord {
   id: string;
@@ -102,6 +103,9 @@ export class QualRunAccessError extends Error {}
 
 /** Thrown when a change is attempted on a verified (locked) qual. */
 export class QualLockedError extends Error {}
+
+/** Thrown when a change conflicts with another qual (e.g. reassigning onto a player who has one). */
+export class QualConflictError extends Error {}
 
 const QUAL_LOCKED_MESSAGE = 'This qual is verified. Unverify it before making changes.';
 
@@ -203,6 +207,7 @@ interface RecordScoreOptions {
 }
 
 const NOT_SUBMITTED_ERROR = "This run hasn't been submitted yet.";
+const NO_SCORES_TO_VERIFY_ERROR = 'Add at least one score before verifying this qual.';
 
 const RUN_IN_PROGRESS_ERROR =
   'This competitor has an online run in progress. Wait for them to submit, or discard the run first.';
@@ -1229,6 +1234,7 @@ export async function adjudicateOnlineSubmission(
     action:
       | 'SAVE'
       | 'VERIFY'
+      | 'SAVE_AND_VERIFY'
       | 'UNVERIFY'
       | 'DNQ'
       | 'DQ'
@@ -1259,14 +1265,26 @@ export async function adjudicateOnlineSubmission(
   const now = new Date();
   const judgeBy = input.verifiedBy || 'Judge';
 
-  if (input.action === 'VERIFY') {
-    if (run.status === 'IN_PROGRESS') throw new Error(NOT_SUBMITTED_ERROR);
-    if (run.status === 'VERIFIED') return existing;
-    const note = input.judgeNotes?.trim() || existing.judgeNotes || null;
+  /** Writes edited scores and notes; never changes status. */
+  const applySave = async () => {
+    const next = validateQualScores(input.scores, { requireOne: false });
+    const prev = existing.scores;
+    let audit: string | null = null;
+    if (prev.length !== next.length || prev.some((score, i) => score !== next[i])) {
+      await replaceRunScores(run, next, run.submittedAt ?? now);
+      audit = `[SCORES EDITED BY ${judgeBy}]: ${prev.join(', ') || 'none'} -> ${next.join(', ') || 'none'}`;
+    }
+    const base = input.judgeNotes !== undefined ? (input.judgeNotes.trim() || null) : run.judgeNotes;
+    const judgeNotes = audit ? (base ? `${base}\n${audit}` : audit) : base;
+    await updateRun(run.id, { judgeNotes });
+    return { scoreCount: next.length, judgeNotes };
+  };
+
+  const applyVerify = async (judgeNotes: string | null) => {
     await updateRun(run.id, {
       status: 'VERIFIED',
       identityStatus: 'VERIFIED_MATCH',
-      judgeNotes: note,
+      judgeNotes,
       verifiedBy: judgeBy,
       verifiedAt: now,
     });
@@ -1290,21 +1308,26 @@ export async function adjudicateOnlineSubmission(
           eq(tournamentPlayers.playerId, input.playerId)
         )
       );
+  };
+
+  if (input.action === 'VERIFY') {
+    if (run.status === 'IN_PROGRESS') throw new Error(NOT_SUBMITTED_ERROR);
+    if (run.status === 'VERIFIED') return existing;
+    if (existing.scores.length === 0) throw new Error(NO_SCORES_TO_VERIFY_ERROR);
+    await applyVerify(input.judgeNotes?.trim() || existing.judgeNotes || null);
     return refreshed();
   }
 
-  if (input.action === 'SAVE') {
+  if (input.action === 'SAVE' || input.action === 'SAVE_AND_VERIFY') {
     if (run.status === 'IN_PROGRESS') throw new Error(NOT_SUBMITTED_ERROR);
     assertRunEditable(run);
-    const next = validateQualScores(input.scores, { requireOne: false });
-    const prev = existing.scores;
-    let audit: string | null = null;
-    if (prev.length !== next.length || prev.some((score, i) => score !== next[i])) {
-      await replaceRunScores(run, next, run.submittedAt ?? now);
-      audit = `[SCORES EDITED BY ${judgeBy}]: ${prev.join(', ') || 'none'} -> ${next.join(', ') || 'none'}`;
+    if (input.action === 'SAVE_AND_VERIFY') {
+      // Check before writing anything, so a refused verify never leaves a half-applied save.
+      const next = validateQualScores(input.scores, { requireOne: false });
+      if (next.length === 0) throw new Error(NO_SCORES_TO_VERIFY_ERROR);
     }
-    const base = input.judgeNotes !== undefined ? (input.judgeNotes.trim() || null) : run.judgeNotes;
-    await updateRun(run.id, { judgeNotes: audit ? (base ? `${base}\n${audit}` : audit) : base });
+    const saved = await applySave();
+    if (input.action === 'SAVE_AND_VERIFY') await applyVerify(saved.judgeNotes);
     return refreshed();
   }
 
@@ -1433,10 +1456,17 @@ export async function adjudicateOnlineSubmission(
     if (!targetPlayer) {
       throw new Error('Target player not found');
     }
-    if (targetPlayer.id !== input.playerId && (await getRunForPlayer(tourney.id, targetPlayer.id))) {
-      throw new Error(
-        `${targetPlayer.name} already has a qual in this tournament. Remove that qual before reassigning this one.`
-      );
+    if (targetPlayer.id !== input.playerId) {
+      const targetRun = await getRunForPlayer(tourney.id, targetPlayer.id);
+      if (targetRun) {
+        const scoreCount = (await listRunScores(targetRun.id)).length;
+        const reason = getReassignBlockReason(targetPlayer.name, { status: targetRun.status, scoreCount });
+        if (reason) {
+          throw targetRun.status === 'VERIFIED' ? new QualLockedError(reason) : new QualConflictError(reason);
+        }
+        // An empty, unverified qual holds nothing worth keeping: this run replaces it.
+        await db.delete(qualifierRuns).where(eq(qualifierRuns.id, targetRun.id));
+      }
     }
 
     const wasProvisional = existing.identityStatus === 'PROVISIONAL_NEW';
@@ -1556,7 +1586,8 @@ export async function verifyAllQualifierSubmissions(
 ): Promise<{ verifiedCount: number; sessions: OnlineQualSessionSummary[] }> {
   const tourney = await resolveTournamentRow(tournamentIdOrSlug);
   const sessions = await listOnlineQualSessions(tourney.id);
-  const unverified = sessions.filter(s => s.status === 'SUBMITTED');
+  // A qual with no scores can't be verified; it stays pending until scores are added or it is removed.
+  const unverified = sessions.filter(s => s.status === 'SUBMITTED' && s.scores.length > 0);
 
   const results: OnlineQualSessionSummary[] = [];
   for (const s of unverified) {
