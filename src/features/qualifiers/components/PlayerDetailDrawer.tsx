@@ -215,6 +215,8 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
   }, [tournament, player]);
 
   const isVerified = qualStatus === 'verified';
+  const run = (tournament.qualRuns || []).find(r => r.playerId === player?.id);
+  const isQualLocked = run?.status === 'VERIFIED';
   // Qual entry is only valid for competitors registered in this tournament (never draft placeholder seeds)
   const isRegisteredCompetitor = Boolean(
     player && (tournament.playersPool || []).some(p => p.id === player.id)
@@ -464,7 +466,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     </span>
                   )}
 
-                  {!tournament.isLocked && canManageTournament && (
+                  {!tournament.isLocked && canManageTournament && !isQualLocked && (
                     <button
                       type="button"
                       onClick={() => deleteQualifierScore(tournament.id, sub.id)}
@@ -760,48 +762,54 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                     <span className="text-xs font-semibold text-fg-secondary uppercase tracking-wide">
                       Record Attempt Score
                     </span>
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        const num = parseInt(scoreInput.replace(/\D/g, ''), 10);
-                        if (num > 0) {
-                          submitQualifierScore(tournament.id, player.id, num);
-                          setScoreInput('');
-                        }
-                      }}
-                      className="flex gap-2 p-2 rounded-sm border"
-                      style={{
-                        background: getAlternateShade(cardColor, 6),
-                        borderColor: colorWithAlpha(primaryColor, 0.25, 'var(--color-line-subtle)'),
-                      }}
-                    >
-                      <input
-                        type="text"
-                        value={scoreInput ? parseInt(scoreInput.replace(/\D/g, ''), 10).toLocaleString() : ''}
-                        onChange={(e) => setScoreInput(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Enter score (e.g. 1,050,000)..."
-                        className="flex-1 py-2 px-3 rounded-sm border text-white text-sm font-bold"
-                        style={{
-                          borderColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
-                          background: backgroundColor,
+                    {isQualLocked ? (
+                      <p className="text-caption text-fg-muted">
+                        This qual is verified and locked. Unverify it on the Review page to change scores.
+                      </p>
+                    ) : (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const num = parseInt(scoreInput.replace(/\D/g, ''), 10);
+                          if (num > 0) {
+                            submitQualifierScore(tournament.id, player.id, num);
+                            setScoreInput('');
+                          }
                         }}
-                      />
-                      <button
-                        type="submit"
-                        disabled={!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0}
-                        className={cn(
-                          'py-2 px-3.5 text-caption font-bold gap-1.5 whitespace-nowrap rounded-sm border-0 inline-flex items-center transition-all duration-150',
-                          (!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
-                        )}
+                        className="flex gap-2 p-2 rounded-sm border"
                         style={{
-                          background: primaryColor,
-                          color: primaryContrast,
-                          boxShadow: `0 2px 10px ${colorWithAlpha(primaryColor, 0.35)}`,
+                          background: getAlternateShade(cardColor, 6),
+                          borderColor: colorWithAlpha(primaryColor, 0.25, 'var(--color-line-subtle)'),
                         }}
                       >
-                        <Plus size={15} /> Log Score
-                      </button>
-                    </form>
+                        <input
+                          type="text"
+                          value={scoreInput ? parseInt(scoreInput.replace(/\D/g, ''), 10).toLocaleString() : ''}
+                          onChange={(e) => setScoreInput(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Enter score (e.g. 1,050,000)..."
+                          className="flex-1 py-2 px-3 rounded-sm border text-white text-sm font-bold"
+                          style={{
+                            borderColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
+                            background: backgroundColor,
+                          }}
+                        />
+                        <button
+                          type="submit"
+                          disabled={!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0}
+                          className={cn(
+                            'py-2 px-3.5 text-caption font-bold gap-1.5 whitespace-nowrap rounded-sm border-0 inline-flex items-center transition-all duration-150',
+                            (!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                          )}
+                          style={{
+                            background: primaryColor,
+                            color: primaryContrast,
+                            boxShadow: `0 2px 10px ${colorWithAlpha(primaryColor, 0.35)}`,
+                          }}
+                        >
+                          <Plus size={15} /> Log Score
+                        </button>
+                      </form>
+                    )}
                   </div>
                 </div>
               )}

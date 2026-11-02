@@ -8,6 +8,7 @@ import {
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { isAbandonedRun } from '../sessionDerivation';
+import { formatQualTimestamp } from '../formatQualTimestamp';
 import { Button, cn } from '../../../components/ui';
 
 const pillClass = 'cursor-pointer rounded-full border px-3 py-1.5 text-caption font-bold';
@@ -154,7 +155,7 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                 Competitor &amp; Identity
               </th>
               <th className={cn(thClass, 'text-center')}>
-                NES Authword
+                Submitted
               </th>
               <th className={cn(thClass, 'text-center')}>
                 Qual Total Time
@@ -215,9 +216,12 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                                 @{session.submittedTwitchUsername}
                               </span>
                             )}
-                            {session.identityStatus === 'VERIFIED_MATCH' && (
-                              <span className="rounded-sm px-1.5 text-2xs font-bold bg-green-500/15 text-green-400">
-                                Verified Match
+                            {session.identityStatus === 'PROVISIONAL_NEW' && (
+                              <span
+                                title="This run created a new player record; they weren't found in the player list."
+                                className="rounded-sm px-1.5 text-2xs font-bold bg-sky-400/15 text-sky-400"
+                              >
+                                New Player
                               </span>
                             )}
                             {session.identityStatus === 'CLAIMED_PENDING_REVIEW' && (
@@ -225,26 +229,23 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                                 Claimed
                               </span>
                             )}
-                            {session.identityStatus === 'PROVISIONAL_NEW' && (
-                              <span className="rounded-sm px-1.5 text-2xs font-bold bg-sky-400/15 text-sky-400">
-                                Walk-In
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>
                     </td>
 
-                    {/* NES Authword */}
+                    {/* Submitted */}
                     <td className={cn(tdClass, 'text-center')}>
-                      {session.authWord ? (
-                        <span className="rounded-sm border border-gold/30 bg-gold/12 px-2 py-1 font-mono text-base font-extrabold tracking-widest text-gold-bright">
-                          {session.authWord}
+                      {session.submittedAt ? (
+                        <span className="text-caption font-semibold whitespace-nowrap text-white">
+                          {formatQualTimestamp(session.submittedAt)}
+                        </span>
+                      ) : session.status === 'IN_PROGRESS' && session.timerLog?.startedAt ? (
+                        <span className="text-caption whitespace-nowrap text-fg-muted">
+                          Started {formatQualTimestamp(session.timerLog.startedAt)}
                         </span>
                       ) : (
-                        <span className="text-base font-semibold text-fg-muted">
-                          -
-                        </span>
+                        <span className="text-caption text-fg-muted">—</span>
                       )}
                     </td>
 
@@ -288,10 +289,12 @@ export const ReviewQueueTable: React.FC<ReviewQueueTableProps> = ({
                             {session.scores.map(s => s.toLocaleString()).join(', ')})
                           </span>
                         </div>
-                      ) : (
+                      ) : session.status === 'IN_PROGRESS' ? (
                         <span className="text-caption text-fg-muted">
                           In Progress
                         </span>
+                      ) : (
+                        <span className="text-caption text-fg-muted">No scores</span>
                       )}
                     </td>
 

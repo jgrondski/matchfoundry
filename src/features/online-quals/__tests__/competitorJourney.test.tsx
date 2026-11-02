@@ -160,7 +160,7 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       expect(html).toContain('Connected as:');
       expect(html).toContain('UnlinkedCompetitor');
       expect(html).toContain('Claim Existing Roster (1)');
-      expect(html).toContain('Register as Walk-In');
+      expect(html).toContain('Register as New Competitor');
       expect(html).toContain('UnlinkedRosterPlayer [CA] (DAS)');
       expect(html).toContain('Claim Profile &amp; Proceed');
     });
@@ -263,6 +263,10 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       scores: [684200, 721450],
       judgeNotes: null,
       submissionIds: ['sub-1', 'sub-2'],
+      runId: 'run-1',
+      submittedAt: null,
+      verifiedBy: null,
+      verifiedAt: null,
     };
 
     it('renders locked status with provisional placement pill and leaderboard link', () => {
@@ -340,6 +344,10 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
           scores: [950000],
           judgeNotes: null,
           submissionIds: ['sub-1'],
+          runId: 'run-1',
+          submittedAt: null,
+          verifiedBy: null,
+          verifiedAt: null,
         },
         scores: [950000],
         twitchVodUrl: 'https://twitch.tv/videos/12345',
@@ -383,6 +391,10 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
           scores: [950000],
           judgeNotes: null,
           submissionIds: ['sub-1'],
+          runId: 'run-1',
+          submittedAt: null,
+          verifiedBy: null,
+          verifiedAt: null,
         },
         scores: [950000],
         twitchVodUrl: '',
@@ -392,6 +404,18 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
 
       const tourneyWithSubmitted: Tournament = {
         ...sampleTournament,
+        qualRuns: [
+          {
+            id: 'run-1',
+            tournamentId: 'omen-das-tourney',
+            playerId: 'p-1',
+            submissionSource: 'ONLINE',
+            status: 'SUBMITTED',
+            authWord: 'ROCKET',
+            twitchVodUrl: 'https://twitch.tv/videos/reconciled',
+            createdAt: Date.now(),
+          },
+        ],
         qualifierSubmissions: [
           {
             id: 'sub-1',
@@ -440,6 +464,10 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
           scores: [950000],
           judgeNotes: null,
           submissionIds: ['sub-1'],
+          runId: 'run-1',
+          submittedAt: null,
+          verifiedBy: null,
+          verifiedAt: null,
         },
         scores: [950000],
         twitchVodUrl: 'https://twitch.tv/videos/123',
@@ -473,6 +501,10 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
         scores: [950000],
         judgeNotes: null,
         submissionIds: ['sub-1'],
+        runId: 'run-1',
+        submittedAt: null,
+        verifiedBy: null,
+        verifiedAt: null,
       };
 
       const html = renderToStaticMarkup(

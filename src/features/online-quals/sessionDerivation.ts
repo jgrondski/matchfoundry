@@ -1,4 +1,4 @@
-import type { Tournament } from '../tournament/types';
+import type { QualRun, QualifierSubmission, Tournament } from '../tournament/types';
 import type { ReviewQueueSessionSummary } from '../../api/qualifiers';
 
 /**
@@ -7,6 +7,8 @@ import type { ReviewQueueSessionSummary } from '../../api/qualifiers';
  * collapse into a single competitor session.
  */
 export function deriveSessionsFromTournament(tournament: Tournament): ReviewQueueSessionSummary[] {
+  if (tournament.qualRuns) return deriveSessionsFromRuns(tournament, tournament.qualRuns);
+
   const allSubs = tournament.qualifierSubmissions || [];
   if (allSubs.length === 0) return [];
 
@@ -53,10 +55,61 @@ export function deriveSessionsFromTournament(tournament: Tournament): ReviewQueu
       judgeNotes: first.judgeNotes || null,
       playerNotes: first.playerNotes || null,
       submissionIds: subs.map(s => s.id),
+      runId: first.runId || '',
+      submittedAt: first.status === 'IN_PROGRESS' ? null : (first.timerLog?.submittedAt ?? first.submittedAt ?? null),
+      verifiedBy: first.verifiedBy || null,
+      verifiedAt: first.verifiedAt ?? null,
     });
   }
 
   return result;
+}
+
+/** One summary per qual run, matching the server's buildSessionSummary. */
+function deriveSessionsFromRuns(tournament: Tournament, runs: QualRun[]): ReviewQueueSessionSummary[] {
+  const playerMap = new Map((tournament.playersPool || []).map(p => [p.id, p]));
+  const qualMinutes = tournament.qualWindowMinutes || 90;
+  const subsByRun = new Map<string, QualifierSubmission[]>();
+  for (const s of tournament.qualifierSubmissions || []) {
+    if (!s.runId) continue;
+    const list = subsByRun.get(s.runId) || [];
+    list.push(s);
+    subsByRun.set(s.runId, list);
+  }
+
+  return runs.map(run => {
+    const isOnline = run.submissionSource === 'ONLINE';
+    const subs = [...(subsByRun.get(run.id) || [])].sort((a, b) => a.submittedAt - b.submittedAt);
+    const p = playerMap.get(run.playerId);
+    return {
+      tournamentId: tournament.id,
+      playerId: run.playerId,
+      playerName: p?.name || run.submittedTwitchUsername || 'Unknown Player',
+      country: p?.country || undefined,
+      avatarUrl: p?.avatarUrl || undefined,
+      avatarType: (p?.avatarType as any) || 'flag',
+      submissionSource: run.submissionSource,
+      status: run.status,
+      authWord: isOnline ? (run.authWord || 'ROCKET') : (run.authWord || null),
+      twitchVodUrl: run.twitchVodUrl || null,
+      submittedTwitchId: run.submittedTwitchId || null,
+      submittedTwitchUsername: run.submittedTwitchUsername || null,
+      identityStatus: run.identityStatus || (isOnline ? null : 'VERIFIED_MATCH'),
+      timerLog: run.timerLog || {
+        startedAt: run.createdAt,
+        elapsedSeconds: isOnline ? 0 : qualMinutes * 60,
+        pauses: [],
+      },
+      scores: subs.map(s => s.score),
+      judgeNotes: run.judgeNotes || null,
+      playerNotes: run.playerNotes || null,
+      submissionIds: subs.map(s => s.id),
+      runId: run.id,
+      submittedAt: run.submittedAt ?? null,
+      verifiedBy: run.verifiedBy || null,
+      verifiedAt: run.verifiedAt ?? null,
+    };
+  });
 }
 
 /** How long past its qual window an unfinished run goes before judges see it flagged. */

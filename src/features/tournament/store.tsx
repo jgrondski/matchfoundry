@@ -60,11 +60,6 @@ interface TournamentContextType {
     playerId: string,
     qualsCompleted: boolean
   ) => void;
-  togglePlayerQualifierVerified: (
-    tournamentId: string,
-    playerId: string,
-    isVerified?: boolean
-  ) => void;
   lockTournament: (tournamentId: string) => Promise<Tournament | null>;
   unlockBrackets: (tournamentId: string) => Promise<{ success: boolean; error?: string }>;
   recordGameScore: (
@@ -950,60 +945,6 @@ export const TournamentProvider: React.FC<{
       updated.tiers = generateDraftBracketsForTournament(updated);
     }
     syncTournamentToApi(updated);
-  };
-
-  const togglePlayerQualifierVerified = (
-    tournamentId: string,
-    playerId: string,
-    isVerified?: boolean
-  ) => {
-    const tournament = tournaments.find(t => t.id === tournamentId || t.slug === tournamentId);
-    if (!tournament) return;
-    const currentPlayers = tournament.tournamentPlayers || {};
-    const existing = currentPlayers[playerId] || {
-      playerId,
-      tournamentId: tournament.id,
-      organizationId: tournament.organizationId,
-    };
-    const currentVal = Boolean(existing.isVerified || existing.qualsCompleted);
-    const newVerified = isVerified !== undefined ? isVerified : !currentVal;
-    const updatedPlayers = {
-      ...currentPlayers,
-      [playerId]: {
-        ...existing,
-        isVerified: newVerified,
-        qualsCompleted: newVerified,
-      },
-    };
-
-    const updatedSubmissions = (tournament.qualifierSubmissions || []).map(s => {
-      if (s.playerId === playerId) {
-        return {
-          ...s,
-          status: (newVerified ? 'VERIFIED' : 'SUBMITTED') as any,
-          verifiedAt: newVerified ? Date.now() : undefined,
-          verifiedBy: newVerified ? (s.verifiedBy || 'Judge') : undefined,
-        };
-      }
-      return s;
-    });
-
-    const updatedLegacyQuals = (tournament.qualifiers || []).map(q => {
-      if (q.playerId === playerId) {
-        return { ...q, verified: newVerified };
-      }
-      return q;
-    });
-
-    const updatedTourney: Tournament = {
-      ...tournament,
-      tournamentPlayers: updatedPlayers,
-      qualifierSubmissions: updatedSubmissions,
-      qualifiers: updatedLegacyQuals,
-    };
-
-    setTournaments(prev => prev.map(t => (t.id === tournament.id ? updatedTourney : t)));
-    syncTournamentToApi(updatedTourney);
   };
 
   const lockTournament = async (tournamentId: string): Promise<Tournament | null> => {
@@ -2001,7 +1942,6 @@ export const TournamentProvider: React.FC<{
         setOnlineQualsOpen,
         testDiscordWebhook,
         togglePlayerQualsCompleted,
-        togglePlayerQualifierVerified,
         lockTournament,
         unlockBrackets,
         recordGameScore,

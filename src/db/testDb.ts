@@ -111,10 +111,36 @@ export function setupTestDb() {
       created_at TIMESTAMP NOT NULL DEFAULT now()
     );
 
+    CREATE TABLE qualifier_runs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+      player_id UUID NOT NULL REFERENCES players(id) ON DELETE RESTRICT,
+      submission_source TEXT NOT NULL DEFAULT 'IN_PERSON',
+      status TEXT NOT NULL DEFAULT 'SUBMITTED',
+      auth_word TEXT,
+      twitch_vod_url TEXT,
+      submitted_twitch_id TEXT,
+      submitted_twitch_username TEXT,
+      identity_status TEXT,
+      timer_log JSONB,
+      judge_notes TEXT,
+      player_notes TEXT,
+      resume_token TEXT,
+      draft JSONB,
+      verified_by TEXT,
+      verified_at TIMESTAMP,
+      submitted_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT now()
+    );
+
+    CREATE UNIQUE INDEX qualifier_runs_tournament_player_idx ON qualifier_runs (tournament_id, player_id);
+    CREATE UNIQUE INDEX qualifier_runs_resume_token_idx ON qualifier_runs (resume_token);
+
     CREATE TABLE qualifier_submissions (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
       player_id UUID NOT NULL REFERENCES players(id) ON DELETE RESTRICT,
+      run_id UUID REFERENCES qualifier_runs(id) ON DELETE CASCADE,
       score INTEGER NOT NULL,
       submission_source TEXT NOT NULL DEFAULT 'IN_PERSON',
       auth_word TEXT,

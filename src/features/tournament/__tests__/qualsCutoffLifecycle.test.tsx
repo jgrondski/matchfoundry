@@ -112,7 +112,7 @@ describe('Journey 4: Qualifiers Cutoff & Bracket Locking (ATDD)', () => {
   });
 
   describe('Assertion 4.3: Draft Bracket Seeding Integrity', () => {
-    it('auto-seeded bracket draft includes verified players and strictly excludes DNQ, DQ, and AWAITING_VERIFICATION', () => {
+    it('auto-seeded bracket draft includes verified and pending players with scores and excludes DNQ and DQ', () => {
       // Alex Kerr: VERIFIED (in-person)
       // PixelAndy: AWAITING_VERIFICATION (SUBMITTED)
       // Blue Scuti: DNQ
@@ -161,8 +161,8 @@ describe('Journey 4: Qualifiers Cutoff & Bracket Locking (ATDD)', () => {
       // Alex Kerr (VERIFIED) must be seeded
       expect(seededNames).toContain('Alex Kerr');
 
-      // PixelAndy (AWAITING_VERIFICATION) must be EXCLUDED until verified
-      expect(seededNames).not.toContain('PixelAndy');
+      // PixelAndy (AWAITING_VERIFICATION) is seeded provisionally
+      expect(seededNames).toContain('PixelAndy');
 
       // Blue Scuti (DNQ) must be EXCLUDED
       expect(seededNames).not.toContain('Blue Scuti');

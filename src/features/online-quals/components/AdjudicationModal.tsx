@@ -4,13 +4,14 @@ import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { Overlay } from '../../../components/overlay';
 import { Button, IconButton, buttonClasses, cn } from '../../../components/ui';
+import { formatQualTimestamp } from '../formatQualTimestamp';
 
 export interface AdjudicationModalProps {
   isOpen: boolean;
   session: ReviewQueueSessionSummary | null;
   onClose: () => void;
   onAdjudicate: (
-    action: 'VERIFY' | 'EDIT_AND_VERIFY' | 'DNQ' | 'DQ',
+    action: 'SAVE' | 'VERIFY' | 'SAVE_AND_VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ',
     options?: { scores?: number[]; judgeNotes?: string }
   ) => Promise<void>;
   onOpenIdentity?: (session: ReviewQueueSessionSummary) => void;
@@ -25,25 +26,22 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
   onOpenIdentity,
   isSubmitting = false,
 }) => {
-  const [scores, setScores] = useState<number[]>(
-    session?.scores && session.scores.length > 0 ? [...session.scores] : [0]
-  );
+  const [scores, setScores] = useState<number[]>(session?.scores ? [...session.scores] : []);
   const [judgeNotes, setJudgeNotes] = useState<string>(session?.judgeNotes || '');
   const [confirmDQ, setConfirmDQ] = useState(false);
   const titleId = useId();
 
   if (!isOpen || !session) return null;
 
-  const scoresChanged =
+  const isVerified = session.status === 'VERIFIED';
+  const isInProgress = session.status === 'IN_PROGRESS';
+  const hasEdits =
     scores.length !== session.scores.length ||
-    scores.some((s, idx) => s !== session.scores[idx]);
-
-  const initialScores = session?.scores && session.scores.length > 0 ? [...session.scores] : [0];
-  const isDirty =
-    scores.length !== initialScores.length ||
-    scores.some((s, idx) => s !== initialScores[idx]) ||
-    judgeNotes !== (session?.judgeNotes || '') ||
-    confirmDQ;
+    scores.some((s, idx) => s !== session.scores[idx]) ||
+    judgeNotes !== (session.judgeNotes || '');
+  const isDirty = hasEdits || confirmDQ;
+  // Verifying needs at least one score (the edited scores when there are edits).
+  const hasScoresToVerify = scores.length > 0;
 
   const newlyAddedIndexRef = useRef<number | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -69,7 +67,6 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
   };
 
   const handleRemoveGame = (idx: number) => {
-    if (scores.length <= 1) return;
     setScores(prev => prev.filter((_, i) => i !== idx));
   };
 
@@ -133,6 +130,20 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                     </Button>
                   )}
                 </div>
+                <div className="mt-1 text-xs text-fg-secondary">
+                  {session.submittedAt ? `Submitted ${formatQualTimestamp(session.submittedAt)}` : 'Not submitted yet'}
+                  {isVerified && (
+                    <>
+                      {' · '}Verified by {session.verifiedBy || 'Judge'}
+                      {session.verifiedAt && (
+                        <>
+                          {' on '}
+                          {formatQualTimestamp(session.verifiedAt)}
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <IconButton
@@ -147,6 +158,13 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
 
           {/* Scrollable Content */}
           <div className="flex flex-col gap-5 overflow-y-auto p-6">
+            {isVerified && (
+              <div className="flex items-center gap-3 rounded-md border border-green-500/40 bg-green-500/12 px-4 py-3.5 text-sm text-green-400">
+                <CheckCircle2 size={20} className="shrink-0" />
+                <div>This qual is verified and locked. Unverify it to make changes.</div>
+              </div>
+            )}
+
             {/* Overtime Alert */}
             {isOvertime && (
               <div className="flex items-center gap-3 rounded-md border border-red/40 bg-red/12 px-4 py-3.5 text-sm text-red-300">
@@ -199,7 +217,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 <span className="text-xs text-fg-secondary">
                   {session.submissionSource === 'IN_PERSON'
                     ? 'In-person tournament window duration.'
-                    : `Started: ${new Date(session.timerLog?.startedAt || Date.now()).toLocaleTimeString()}`}
+                    : `Started: ${formatQualTimestamp(session.timerLog?.startedAt || Date.now())}`}
                 </span>
               </div>
             </div>
@@ -267,52 +285,60 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 <label className="text-sm font-bold text-fg">
                   Submitted Game Scores:
                 </label>
-                <button
-                  type="button"
-                  onClick={handleAddGame}
-                  disabled={isSubmitting}
-                  className="cursor-pointer rounded-sm border border-line bg-transparent px-2 py-1 text-xs text-gold-bright"
-                >
-                  + Add Game
-                </button>
-              </div>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
-                {scores.map((score, idx) => (
-                  <div
-                    key={idx}
-                    className="flex flex-col gap-1 rounded-md border border-line bg-elevated px-3 py-2"
+                {!isVerified && (
+                  <button
+                    type="button"
+                    onClick={handleAddGame}
+                    disabled={isSubmitting}
+                    className="cursor-pointer rounded-sm border border-line bg-transparent px-2 py-1 text-xs text-gold-bright"
                   >
-                    <div className="flex justify-between text-xs text-fg-muted">
-                      <span>Game {idx + 1}</span>
-                      {scores.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveGame(idx)}
-                          disabled={isSubmitting}
-                          className="cursor-pointer border-0 bg-transparent text-2xs text-red-bright"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      ref={el => {
-                        inputRefs.current[idx] = el;
-                        if (newlyAddedIndexRef.current === idx && el) {
-                          el.focus();
-                          newlyAddedIndexRef.current = null;
-                        }
-                      }}
-                      type="text"
-                      value={score > 0 ? score.toLocaleString() : ''}
-                      placeholder="e.g. 1,024,500"
-                      onChange={e => handleScoreChange(idx, e.target.value)}
-                      disabled={isSubmitting}
-                      className="rounded-sm border border-line bg-black/40 px-2.5 py-1.5 font-mono text-base font-bold text-white"
-                    />
-                  </div>
-                ))}
+                    + Add Game
+                  </button>
+                )}
               </div>
+              {scores.length === 0 ? (
+                <div className="rounded-md border border-dashed border-line px-3 py-4 text-center text-caption text-fg-muted">
+                  No games recorded.
+                </div>
+              ) : (
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
+                  {scores.map((score, idx) => (
+                    <div
+                      key={idx}
+                      className="flex flex-col gap-1 rounded-md border border-line bg-elevated px-3 py-2"
+                    >
+                      <div className="flex justify-between text-xs text-fg-muted">
+                        <span>Game {idx + 1}</span>
+                        {!isVerified && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGame(idx)}
+                            disabled={isSubmitting}
+                            className="cursor-pointer border-0 bg-transparent text-2xs text-red-bright"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        ref={el => {
+                          inputRefs.current[idx] = el;
+                          if (newlyAddedIndexRef.current === idx && el) {
+                            el.focus();
+                            newlyAddedIndexRef.current = null;
+                          }
+                        }}
+                        type="text"
+                        value={score > 0 ? score.toLocaleString() : ''}
+                        placeholder="e.g. 1,024,500"
+                        onChange={e => handleScoreChange(idx, e.target.value)}
+                        disabled={isSubmitting || isVerified}
+                        className="rounded-sm border border-line bg-black/40 px-2.5 py-1.5 font-mono text-base font-bold text-white"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Judge Notes */}
@@ -326,7 +352,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 value={judgeNotes}
                 onChange={e => setJudgeNotes(e.target.value)}
                 placeholder="e.g. Verified 10k topout Authword at 12:45 VOD mark. Score edited for Game 2."
-                disabled={isSubmitting}
+                disabled={isSubmitting || isVerified}
                 className="resize-y rounded-sm border border-line bg-elevated px-3 py-2.5 text-sm text-white"
               />
             </div>
@@ -335,38 +361,40 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
           {/* Footer Actions */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-elevated px-6 py-4">
             {/* Destructive actions (DNQ, DQ) */}
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                onClick={() => onAdjudicate('DNQ', { judgeNotes })}
-                disabled={isSubmitting}
-                variant="secondary"
-                className="border-gold/40 text-caption text-gold-bright enabled:hover:border-gold/40"
-              >
-                Mark DNQ
-              </Button>
-              {!confirmDQ ? (
+            {!isVerified && (
+              <div className="flex items-center gap-2">
                 <Button
                   type="button"
-                  onClick={() => setConfirmDQ(true)}
+                  onClick={() => onAdjudicate('DNQ', { judgeNotes })}
                   disabled={isSubmitting}
                   variant="secondary"
-                  className="inline-flex items-center gap-1.5 border-red/40 text-caption text-red-bright enabled:hover:border-red/40"
+                  className="border-gold/40 text-caption text-gold-bright enabled:hover:border-gold/40"
                 >
-                  <ShieldAlert size={14} /> Disqualify (DQ)
+                  Mark DNQ
                 </Button>
-              ) : (
-                <Button
-                  type="button"
-                  onClick={() => onAdjudicate('DQ', { judgeNotes })}
-                  disabled={isSubmitting}
-                  variant="danger"
-                  className="border-transparent bg-red text-caption font-bold text-white"
-                >
-                  Confirm Disqualify
-                </Button>
-              )}
-            </div>
+                {!confirmDQ ? (
+                  <Button
+                    type="button"
+                    onClick={() => setConfirmDQ(true)}
+                    disabled={isSubmitting}
+                    variant="secondary"
+                    className="inline-flex items-center gap-1.5 border-red/40 text-caption text-red-bright enabled:hover:border-red/40"
+                  >
+                    <ShieldAlert size={14} /> Disqualify (DQ)
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={() => onAdjudicate('DQ', { judgeNotes })}
+                    disabled={isSubmitting}
+                    variant="danger"
+                    className="border-transparent bg-red text-caption font-bold text-white"
+                  >
+                    Confirm Disqualify
+                  </Button>
+                )}
+              </div>
+            )}
 
             {/* Approval Actions */}
             <div className="flex items-center gap-3">
@@ -377,28 +405,41 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 variant="secondary"
                 className="text-sm"
               >
-                Cancel
+                {isVerified ? 'Close' : 'Cancel'}
               </Button>
-              {scoresChanged ? (
+              {isVerified ? (
                 <Button
-                  type="button"
-                  onClick={() => onAdjudicate('EDIT_AND_VERIFY', { scores, judgeNotes })}
-                  disabled={isSubmitting}
-                  variant="primary"
-                  className="inline-flex items-center gap-1.5 text-sm border-blue-600 bg-blue-500 bg-none"
+                  variant="secondary"
+                  className="border-gold/40 text-sm text-gold-bright enabled:hover:border-gold/40"
+                  onClick={() => onAdjudicate('UNVERIFY')}
                 >
-                  <Edit3 size={15} /> Edit Score &amp; Verify
+                  Unverify
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  onClick={() => onAdjudicate('VERIFY', { judgeNotes })}
-                  disabled={isSubmitting}
-                  variant="primary"
-                  className="inline-flex items-center gap-1.5 text-sm border-[#15803d] bg-[#16a34a] bg-none"
-                >
-                  <CheckCircle2 size={15} /> Verify Qual
-                </Button>
+                <>
+                  <Button
+                    variant="secondary"
+                    className="inline-flex items-center gap-1.5 text-sm"
+                    disabled={isSubmitting || !hasEdits || isInProgress}
+                    onClick={() => onAdjudicate('SAVE', { scores, judgeNotes })}
+                  >
+                    <Edit3 size={15} /> Save
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      hasEdits
+                        ? onAdjudicate('SAVE_AND_VERIFY', { scores, judgeNotes })
+                        : onAdjudicate('VERIFY', { judgeNotes })
+                    }
+                    disabled={isSubmitting || isInProgress || !hasScoresToVerify}
+                    title={!hasScoresToVerify ? 'Add at least one score before verifying.' : undefined}
+                    variant="primary"
+                    className="inline-flex items-center gap-1.5 text-sm border-[#15803d] bg-[#16a34a] bg-none"
+                  >
+                    <CheckCircle2 size={15} /> {hasEdits ? 'Save & Verify' : 'Verify Qual'}
+                  </Button>
+                </>
               )}
             </div>
           </div>

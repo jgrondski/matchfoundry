@@ -267,8 +267,7 @@ export function generateSimulatedQualifiers(
       }
 
       const submittedAt = baseTime + pIdx * 60000 + attempt * 120000;
-      // Simulated runs are already-judged in-person attempts, so they seed draft brackets immediately
-      // (unverified SUBMITTED runs are excluded from brackets as 'awaiting verification').
+      // Simulated runs are created pending review, like real ones; they still seed draft brackets.
       submissions.push({
         id: `sub_sim_${player.id}_${attempt}`,
         tournamentId: tournament.id,
@@ -277,9 +276,7 @@ export function generateSimulatedQualifiers(
         score,
         submittedAt,
         submissionSource: 'IN_PERSON',
-        status: 'VERIFIED',
-        verifiedBy: 'Simulation',
-        verifiedAt: submittedAt,
+        status: 'SUBMITTED',
       });
     }
   });

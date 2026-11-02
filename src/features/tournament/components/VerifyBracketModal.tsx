@@ -25,6 +25,8 @@ export const VerifyBracketModal: React.FC<VerifyBracketModalProps> = ({
   if (!isOpen) return null;
 
   const totalPlayers = tournament.tiers.reduce((acc, t) => acc + t.playerCount, 0);
+  const pending = (tournament.qualRuns || []).filter(r => r.status === 'SUBMITTED').length;
+  const unfinished = (tournament.qualRuns || []).filter(r => r.status === 'IN_PROGRESS').length;
 
   const handleConfirm = async () => {
     setIsLocking(true);
@@ -82,6 +84,14 @@ export const VerifyBracketModal: React.FC<VerifyBracketModalProps> = ({
                     Subsequent qualifier score edits will be recorded in the qualifiers table, but will <strong>not</strong> re-seed or mutate the locked match pairings.
                   </p>
                 </div>
+
+                {(pending > 0 || unfinished > 0) && (
+                  <div className="flex flex-col gap-1.5 rounded-md border border-red/40 bg-red/12 p-4 text-sm text-red-300" data-testid="lock-pending-warning">
+                    <div className="flex items-center gap-1.5 font-bold"><ShieldAlert size={16} /> Quals still open</div>
+                    {pending > 0 && <p>{pending} qual{pending === 1 ? ' is' : 's are'} still pending review and will be seeded as they stand.</p>}
+                    {unfinished > 0 && <p>{unfinished} online run{unfinished === 1 ? ' is' : 's are'} still in progress and will not be seeded.</p>}
+                  </div>
+                )}
 
                 {/* Tiers Summary */}
                 <div className="flex flex-col gap-2">

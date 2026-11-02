@@ -46,6 +46,11 @@ export interface LeaderboardRankRow {
 /**
  * Derives the current qualifier status for a player in a tournament.
  * - If brackets are locked, all players are auto-flipped to 'verified'.
+ * - A profile-level DQ returns 'dq'.
+ * - When the player has a qual run (tournament.qualRuns), the run's status wins:
+ *   DQ -> 'dq', SUBMITTED -> 'awaiting verification', DNQ -> 'dnq', VERIFIED -> 'verified',
+ *   IN_PROGRESS -> 'in progress'.
+ * - Without a run (legacy payloads), submissions decide:
  * - If marked isVerified in tournamentPlayers, returns 'verified'.
  * - For online submissions:
  *   - status === 'SUBMITTED' -> 'awaiting verification'
@@ -71,7 +76,27 @@ export function getPlayerQualifierStatus(
   const isProfileDQ = Boolean(
     (tournament.playersPool || []).find(p => p.id === playerId)?.isDisqualified
   );
-  if (isProfileDQ || playerSubs.some(s => s.status === 'DQ')) {
+  if (isProfileDQ) {
+    return 'dq';
+  }
+
+  const run = (tournament.qualRuns || []).find(r => r.playerId === playerId);
+  if (run) {
+    switch (run.status) {
+      case 'DQ':
+        return 'dq';
+      case 'SUBMITTED':
+        return 'awaiting verification';
+      case 'DNQ':
+        return 'dnq';
+      case 'VERIFIED':
+        return 'verified';
+      case 'IN_PROGRESS':
+        return 'in progress';
+    }
+  }
+
+  if (playerSubs.some(s => s.status === 'DQ')) {
     return 'dq';
   }
 
@@ -506,7 +531,8 @@ export function generateFullTierBracket(tier: TournamentTier, availablePlayers: 
 /**
  * Computes projected draft brackets for all tiers of a tournament.
  * Used during DRAFT mode to keep bracket previews live and reactive.
- * Strictly excludes DQ / DNQ players (isSeedingEligible) and AWAITING_VERIFICATION (Assertion 5.3).
+ * Excludes DQ / DNQ players (isSeedingEligible) and players with no recorded attempts. Unverified
+ * (awaiting verification) players are seeded, so draft brackets are provisional until quals are verified.
  */
 export function generateDraftBracketsForTournament(tournament: Tournament): TournamentTier[] {
   const sortedTiers = [...tournament.tiers].sort((a, b) => a.priority - b.priority);
@@ -555,8 +581,7 @@ export function generateDraftBracketsForTournament(tournament: Tournament): Tour
   const eligibleRows = leaderboard.filter(
     row =>
       row.attempts.length > 0 &&
-      isSeedingEligible(row) &&
-      row.status !== 'awaiting verification'
+      isSeedingEligible(row)
   );
 
   let currentOffset = 0;

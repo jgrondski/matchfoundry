@@ -91,8 +91,26 @@ export function loadPersistedSession(tournament: Tournament): PersistedPortalSes
       return null;
     }
 
-    // Reconcile with the server's rows for this player. Row order is arbitrary, so look for the
-    // in-progress row itself; if the player has rows but none in progress, the qual is over.
+    // Reconcile with the server's qual run for this player: if it exists and is no longer in
+    // progress, the qual is over.
+    if (tournament.qualRuns) {
+      const run = tournament.qualRuns.find(r => r.playerId === parsed.playerId);
+      if (run && run.status !== 'IN_PROGRESS') {
+        clearPersistedSession(tournament.id);
+        return null;
+      }
+      if (run) {
+        parsed.activeSession = {
+          ...parsed.activeSession,
+          authWord: run.authWord || parsed.activeSession.authWord,
+          timerLog: run.timerLog || parsed.activeSession.timerLog,
+        };
+      }
+      return parsed;
+    }
+
+    // Legacy payloads without qualRuns: row order is arbitrary, so look for the in-progress row
+    // itself; if the player has rows but none in progress, the qual is over.
     const subs = (tournament.qualifierSubmissions || []).filter(s => s.playerId === parsed.playerId);
     if (subs.length > 0) {
       const live = subs.find(s => s.status === 'IN_PROGRESS');
@@ -353,7 +371,12 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
       p => p.name.trim().toLowerCase() === cleanName.toLowerCase() ||
            (p.twitchUsername && p.twitchUsername.trim().toLowerCase() === cleanTwitch.toLowerCase())
     );
+    const twitchMatches = (name?: string) =>
+      Boolean(name && name.trim().toLowerCase() === cleanTwitch.toLowerCase());
     const hasExistingSession = Boolean(
+      (tournament.qualRuns || []).some(
+        r => (existingPlayer && r.playerId === existingPlayer.id) || twitchMatches(r.submittedTwitchUsername)
+      ) ||
       (tournament.qualifierSubmissions || []).some(
         s => (existingPlayer && s.playerId === existingPlayer.id) ||
              (s.submittedTwitchUsername && s.submittedTwitchUsername.trim().toLowerCase() === cleanTwitch.toLowerCase())

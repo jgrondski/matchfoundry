@@ -149,6 +149,10 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
       // Add 2 online pending submissions
       const tourneyTwo: Tournament = {
         ...tourney,
+        qualRuns: [
+          { id: 'run-1', tournamentId: tourney.id, playerId: pOnlineId, submissionSource: 'ONLINE', status: 'SUBMITTED', createdAt: Date.now() },
+          { id: 'run-2', tournamentId: tourney.id, playerId: pInPersonId, submissionSource: 'ONLINE', status: 'SUBMITTED', createdAt: Date.now() },
+        ],
         qualifierSubmissions: [
           {
             id: 'sub-1',
@@ -188,6 +192,9 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
       // 1 player submits 3 maxout scores
       const tourneyMultiSub: Tournament = {
         ...tourney,
+        qualRuns: [
+          { id: 'run-1', tournamentId: tourney.id, playerId: pOnlineId, submissionSource: 'ONLINE', status: 'SUBMITTED', createdAt: Date.now() },
+        ],
         qualifierSubmissions: [
           {
             id: 'sub-1',
@@ -275,18 +282,23 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
       expect(recovered?.status).toBe('VERIFIED');
     });
 
-    it('Clicking "Edit Score & Verify" mutates recorded scores and appends audit log to judgeNotes', async () => {
-      const session = await adjudicateOnlineSubmission(tourney.id, {
+    it('Clicking "Save" then "Verify Qual" mutates recorded scores and appends audit log to judgeNotes', async () => {
+      await adjudicateOnlineSubmission(tourney.id, {
         playerId: pOnlineId,
-        action: 'EDIT_AND_VERIFY',
+        action: 'SAVE',
         scores: [1200000, 1150000],
         judgeNotes: 'Corrected Game 1 topout OCR misread',
+        verifiedBy: 'Head Judge Vandam',
+      });
+      const session = await adjudicateOnlineSubmission(tourney.id, {
+        playerId: pOnlineId,
+        action: 'VERIFY',
         verifiedBy: 'Head Judge Vandam',
       });
 
       expect(session?.status).toBe('VERIFIED');
       expect(session?.scores).toEqual([1200000, 1150000]);
-      expect(session?.judgeNotes).toContain('[SCORE EDITED BY Head Judge Vandam]: 1180000, 1140000 -> 1200000, 1150000');
+      expect(session?.judgeNotes).toContain('[SCORES EDITED BY Head Judge Vandam]: 1180000, 1140000 -> 1200000, 1150000');
       expect(session?.judgeNotes).toContain('Corrected Game 1 topout OCR misread');
     });
 
@@ -361,6 +373,10 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
         scores: [1150000, 1120000],
         judgeNotes: null,
         submissionIds: ['sub-1', 'sub-2'],
+        runId: 'run-1',
+        submittedAt: null,
+        verifiedBy: null,
+        verifiedAt: null,
       };
 
       const html = renderToStaticMarkup(
@@ -402,6 +418,10 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
           scores: [1150000],
           judgeNotes: null,
           submissionIds: ['sub-1'],
+          runId: 'run-1',
+          submittedAt: null,
+          verifiedBy: null,
+          verifiedAt: null,
         },
       ];
 
@@ -419,7 +439,8 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
       expect(html).not.toContain('Verified (');
       expect(html).not.toContain('DNQ / DQ (');
       expect(html).toContain('PixelAndy');
-      expect(html).toContain('ROCKET');
+      expect(html).toContain('Submitted');
+      expect(html).not.toContain('NES Authword');
       expect(html).toContain('Review');
     });
 
@@ -445,6 +466,10 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
           scores: [1100000],
           judgeNotes: null,
           submissionIds: ['sub-ip-1'],
+          runId: 'run-1',
+          submittedAt: null,
+          verifiedBy: null,
+          verifiedAt: null,
         },
       ];
 
@@ -458,7 +483,7 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
       );
 
       expect(html).toContain('Fractal');
-      expect(html).toContain('-'); // Null NES Authword displayed as "-"
+      expect(html).toContain('—'); // No submitted time displayed as "—"
       expect(html).toContain('90m'); // Length of tournament's specified qual time
       expect(html).toContain('In Person'); // VOD link displays "In Person"
       expect(html).toContain('Review');

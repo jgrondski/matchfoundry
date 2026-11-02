@@ -485,14 +485,14 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
       const status = getPlayerQualifierStatus(fullT!, player.id);
       expect(status).toBe('awaiting verification');
 
-      // 4. Draft bracket seeding excludes unverified SUBMITTED submissions
+      // 4. Draft bracket seeding includes unverified SUBMITTED submissions provisionally
       const draftTiers = generateDraftBracketsForTournament(fullT!);
       const tier1 = draftTiers[0];
       const unverifiedSeededIds = Object.values(tier1?.bracket?.matchesById || {}).flatMap(m => [
         m.player1?.player?.id,
         m.player2?.player?.id,
       ]);
-      expect(unverifiedSeededIds).not.toContain(player.id);
+      expect(unverifiedSeededIds).toContain(player.id);
     });
   });
 
@@ -616,18 +616,28 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
       expect(dbPlayer?.twitchUsername).toBe('omendas');
     });
 
-    it('adjudicates with EDIT_AND_VERIFY action, replacing scores and logging audit trail', async () => {
-      const adjReq = createMockReq({
+    it('adjudicates with SAVE then VERIFY, replacing scores and logging audit trail', async () => {
+      const saveReq = createMockReq({
         url: `/api/tournaments/${tourney.id}/qualify/adjudicate`,
         method: 'POST',
         headers: { authorization: `Bearer ${adminToken}` },
         body: {
           playerId: player.id,
-          action: 'EDIT_AND_VERIFY',
+          action: 'SAVE',
           scores: [880000, 905000], // Edited from 910000
           judgeNotes: 'Topout was at 905000, not 910000',
           verifiedBy: 'Judge Dan',
         },
+      });
+      const saveRes = createMockRes();
+      await middleware(saveReq, saveRes as any, () => {});
+      expect(saveRes.getStatusCode()).toBe(200);
+
+      const adjReq = createMockReq({
+        url: `/api/tournaments/${tourney.id}/qualify/adjudicate`,
+        method: 'POST',
+        headers: { authorization: `Bearer ${adminToken}` },
+        body: { playerId: player.id, action: 'VERIFY', verifiedBy: 'Judge Dan' },
       });
       const adjRes = createMockRes();
       await middleware(adjReq, adjRes as any, () => {});
@@ -636,7 +646,7 @@ describe('Phase 10 - Slice 1 Foundation Engine', () => {
       const data = adjRes.getBody();
       expect(data.status).toBe('VERIFIED');
       expect(data.scores).toEqual([880000, 905000]);
-      expect(data.judgeNotes).toContain('[SCORE EDITED BY Judge Dan]');
+      expect(data.judgeNotes).toContain('[SCORES EDITED BY Judge Dan]');
     });
 
     it('adjudicates with DNQ action, marking status DNQ and clearing tournament registration', async () => {

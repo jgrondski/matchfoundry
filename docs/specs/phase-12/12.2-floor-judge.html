@@ -63,13 +63,13 @@
 <table>
   <tr><th>Area</th><th>Content (same data and formatting as the table cells)</th></tr>
   <tr><td>Header</td><td>Competitor name and identity status badge (left); review status badge (right).</td></tr>
-  <tr><td>Meta row</td><td>Source badge (Online / In-person), NES Authword (<code>font-mono</code>), qual total time.</td></tr>
+  <tr><td>Meta row</td><td>Source badge (Online / In-person), submitted date and time (<code>formatQualTimestamp</code>), qual total time.</td></tr>
   <tr><td>Scores</td><td>Submitted scores as chips that wrap.</td></tr>
   <tr><td>Actions</td><td>Full-width primary <code>Button</code> “Review” → <code>onOpenAdjudicate(session)</code>. Then a row of secondary buttons: “VOD” (a link opening the VOD URL in a new tab, <code>rel="noopener noreferrer"</code>, only when there is one), “Identity” → <code>onOpenIdentityModal(session)</code> (only when the table shows that action for the row), and “Discard” (danger, ghost-styled) → <code>onDiscardRun(session)</code> (only when the table shows it). Use the same conditions the table uses.</td></tr>
 </table>
 <ul>
   <li><code>ReviewQueueView</code>: the filter chips (<code>ReviewFilter</code>) scroll sideways on mobile. “Verify All” becomes a full-width button on mobile. The header stats wrap.</li>
-  <li><code>AdjudicationModal</code> (bottom sheet): the VOD link is a full-width secondary button near the top; score inputs get <code>inputMode="numeric"</code>; the four decision buttons (Verify, Edit &amp; Verify, DNQ, DQ) stack full width in the existing order, with destructive ones last; the judge notes textarea is full width.</li>
+  <li><code>AdjudicationModal</code> (bottom sheet): the VOD link is a full-width secondary button near the top; score inputs get <code>inputMode="numeric"</code>; the decision buttons (Save, Verify, DNQ, DQ, or Unverify when verified) stack full width in the existing order, with destructive ones last; the judge notes textarea is full width.</li>
   <li><code>IdentityResolutionModal</code> (bottom sheet): tabs scroll sideways; the search input and result list are full width; result rows are <code>min-h-11</code>.</li>
 </ul>
 

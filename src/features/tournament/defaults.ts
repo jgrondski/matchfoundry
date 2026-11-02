@@ -155,6 +155,7 @@ export function createEmptyTournament(overrides?: Partial<Tournament>): Tourname
     matchScores: {},
     playersPool: [],
     qualifierSubmissions: [],
+    qualRuns: [],
     tournamentPlayers: {},
     useOrgBranding: true,
   };

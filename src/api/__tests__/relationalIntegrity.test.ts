@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { setupTestDb } from '../../db/testDb';
 import { setDb } from '../../db';
-import { matches, games, tournaments, bracketTiers, players, qualifierSubmissions, tournamentPlayers } from '../../db/schema';
+import { matches, games, tournaments, bracketTiers, players, qualifierSubmissions, qualifierRuns, tournamentPlayers } from '../../db/schema';
 import { eq, inArray, and } from 'drizzle-orm';
 import {
   createTournament,
@@ -1247,7 +1247,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
       await setOnlineQualsOpen(tourney.id, true);
       const [comp] = await createCompetitors(1);
 
-      // 1. Competitor starts run -> creates placeholder IN_PROGRESS row
+      // 1. Competitor starts run -> creates an IN_PROGRESS qual run with no score rows
       const startRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/start`, 'POST', {
         playerId: comp.id,
         playerName: comp.name,
@@ -1255,19 +1255,24 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
       });
       expect(startRes.status).toBe(200);
       const startData = startRes.body;
-      const placeholderId = startData.submissionIds?.[0];
+      const placeholderId = startData.runId;
       expect(placeholderId).toBeDefined();
 
-      // Verify placeholder exists in DB
+      // Verify the in-progress run exists in DB
+      const runsDuringRun = await db
+        .select()
+        .from(qualifierRuns)
+        .where(eq(qualifierRuns.tournamentId, tourney.id));
+      expect(runsDuringRun.length).toBe(1);
+      expect(runsDuringRun[0].id).toBe(placeholderId);
+      expect(runsDuringRun[0].status).toBe('IN_PROGRESS');
       const subsDuringRun = await db
         .select()
         .from(qualifierSubmissions)
         .where(eq(qualifierSubmissions.tournamentId, tourney.id));
-      expect(subsDuringRun.length).toBe(1);
-      expect(subsDuringRun[0].id).toBe(placeholderId);
-      expect(subsDuringRun[0].status).toBe('IN_PROGRESS');
+      expect(subsDuringRun.length).toBe(0);
 
-      // 2. Competitor submits official scores -> placeholder is deleted and replaced by SUBMITTED row(s)
+      // 2. Competitor submits official scores -> the run becomes SUBMITTED with its score row(s)
       const submitRes = await makeHttpRequest(`/api/tournaments/${tourney.id}/qualify/submit`, 'POST', {
         playerId: comp.id, resumeToken: await runToken(tourney.id, comp.id),
         scores: [975000],
@@ -1308,8 +1313,13 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
         .from(qualifierSubmissions)
         .where(eq(qualifierSubmissions.tournamentId, tourney.id));
       expect(subsAfterStalePut.length).toBe(1);
-      expect(subsAfterStalePut[0].status).toBe('SUBMITTED');
       expect(subsAfterStalePut[0].score).toBe(975000);
+      const runsAfterStalePut = await db
+        .select()
+        .from(qualifierRuns)
+        .where(eq(qualifierRuns.tournamentId, tourney.id));
+      expect(runsAfterStalePut.length).toBe(1);
+      expect(runsAfterStalePut[0].status).toBe('SUBMITTED');
     });
 
     it('prevents stale SUBMITTED snapshot in PUT from downgrading a judge-adjudicated VERIFIED run and preserves qualsCompleted', async () => {
@@ -1351,8 +1361,12 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
         .select()
         .from(qualifierSubmissions)
         .where(eq(qualifierSubmissions.tournamentId, tourney.id));
-      expect(dbSub.status).toBe('VERIFIED');
-      expect(dbSub.verifiedBy).toBe('SeniorJudge');
+      const [dbRun] = await db
+        .select()
+        .from(qualifierRuns)
+        .where(eq(qualifierRuns.tournamentId, tourney.id));
+      expect(dbRun.status).toBe('VERIFIED');
+      expect(dbRun.verifiedBy).toBe('SeniorJudge');
 
       const [dbTp] = await db
         .select()
@@ -1385,12 +1399,12 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
       expect(putRes.status).toBe(200);
 
       // 4. VERIFY: Status remains VERIFIED and qualsCompleted remains true
-      const [reloadedSub] = await db
+      const [reloadedRun] = await db
         .select()
-        .from(qualifierSubmissions)
-        .where(eq(qualifierSubmissions.id, dbSub.id));
-      expect(reloadedSub.status).toBe('VERIFIED');
-      expect(reloadedSub.verifiedBy).toBe('SeniorJudge');
+        .from(qualifierRuns)
+        .where(eq(qualifierRuns.id, dbRun.id));
+      expect(reloadedRun.status).toBe('VERIFIED');
+      expect(reloadedRun.verifiedBy).toBe('SeniorJudge');
 
       const [reloadedTp] = await db
         .select()

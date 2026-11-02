@@ -206,6 +206,10 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         scores: [1100000],
         judgeNotes: null,
         submissionIds: ['sub-1'],
+        runId: 'run-1',
+        submittedAt: null,
+        verifiedBy: null,
+        verifiedAt: null,
       };
 
       const html = renderToStaticMarkup(
@@ -241,6 +245,10 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         scores: [950000],
         judgeNotes: null,
         submissionIds: ['sub-1'],
+        runId: 'run-1',
+        submittedAt: null,
+        verifiedBy: null,
+        verifiedAt: null,
       };
 
       const html = renderToStaticMarkup(
@@ -274,6 +282,10 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         scores: [1100000],
         judgeNotes: null,
         submissionIds: ['sub-1'],
+        runId: 'run-1',
+        submittedAt: null,
+        verifiedBy: null,
+        verifiedAt: null,
       };
 
       const html = renderToStaticMarkup(
@@ -507,6 +519,10 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
         scores: [1100000],
         judgeNotes: null,
         submissionIds: ['sub-1'],
+        runId: 'run-1',
+        submittedAt: null,
+        verifiedBy: null,
+        verifiedAt: null,
       };
 
       const tableHtml = renderToStaticMarkup(
