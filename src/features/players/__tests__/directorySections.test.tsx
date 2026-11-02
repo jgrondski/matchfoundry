@@ -99,7 +99,7 @@ describe('PlayerDirectorySections Component Decomposition', () => {
       expect(html).toContain('Blue Scuti');
       expect(html).toContain('Roll');
       expect(html).toContain('1,350,000');
-      expect(html).toContain('MAXOUT');
+      expect(html).not.toContain('MAXOUT');
       expect(html).toContain('US');
       // Must contain action buttons
       expect(html).toContain('title="Edit competitor profile"');

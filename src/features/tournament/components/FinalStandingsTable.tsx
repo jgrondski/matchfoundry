@@ -111,7 +111,6 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
   interface StandingsSection {
     id: string;
     title: string;
-    subtitle?: string;
     tier?: TournamentTier;
     color: string;
     isDNQ?: boolean;
@@ -126,7 +125,6 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
         return [{
           id: 'dnq',
           title: 'Did Not Qualify (DNQ)',
-          subtitle: 'Competitors below tournament bracket qualification cutoffs',
           color: STATUS_COLORS.dnq,
           isDNQ: true,
           rows: filteredRows,
@@ -136,7 +134,6 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
         return [{
           id: 'dq',
           title: 'Disqualified (DQ)',
-          subtitle: 'Disqualified competitors removed from official placement',
           color: STATUS_COLORS.dq,
           isDQ: true,
           rows: filteredRows,
@@ -146,7 +143,6 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
       return [{
         id: selectedFilter,
         title: tier?.name || 'Tier',
-        subtitle: `${tier?.playerCount || 0} Bracket Competitors • Best of ${tier?.bestOf || 3}`,
         tier,
         color: tier?.primaryColor || THEME_FALLBACK.primaryColor,
         rows: filteredRows,
@@ -164,7 +160,6 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
         grouped.push({
           id: tier.id,
           title: tier.name,
-          subtitle: `${tier.playerCount} Bracket Competitors • Best of ${tier.bestOf}`,
           tier,
           color: tier.primaryColor || THEME_FALLBACK.primaryColor,
           rows: tierRows,
@@ -177,7 +172,6 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
       grouped.push({
         id: 'dnq',
         title: 'Did Not Qualify (DNQ)',
-        subtitle: 'Competitors below tournament bracket qualification cutoffs',
         color: STATUS_COLORS.dnq,
         isDNQ: true,
         rows: dnqRows,
@@ -189,7 +183,6 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
       grouped.push({
         id: 'dq',
         title: 'Disqualified (DQ)',
-        subtitle: 'Disqualified competitors removed from official placement',
         color: STATUS_COLORS.dq,
         isDQ: true,
         rows: dqRows,
@@ -409,15 +402,10 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
                           >
                             {section.title}
                           </span>
-                          {section.subtitle && (
-                            <span className="text-caption text-fg-muted">
-                              • {section.subtitle}
-                            </span>
-                          )}
                         </div>
 
                         <span className={cn(TABULAR, 'rounded-full bg-white/8 py-0.5 px-2 text-xs font-semibold text-fg-secondary')}>
-                          {section.rows.length} {section.rows.length === 1 ? 'Competitor' : 'Competitors'}
+                          {section.rows.length} {section.rows.length === 1 ? 'Player' : 'Players'}
                         </span>
                       </div>
                     </td>

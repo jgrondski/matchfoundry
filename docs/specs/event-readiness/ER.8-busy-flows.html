@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step ER.8 Loading Flows</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Event readiness / ER.8</nav>
+<h1>Step ER.8: Put every event-day action on the shared loading pattern</h1>
+<p class="subtitle">Convert the judge, qualifier, review-queue and admin actions to <code>useAction</code>: the clicked button shows a spinner and loading text, everything else waits, and a hung request ends after 10 seconds with a banner.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. <strong>Prerequisites:</strong> <a href="ER.4-targeted-match-writes.html">ER.4</a>, <a href="ER.6-live-updates-client.html">ER.6</a>, <a href="ER.7-busy-foundation.html">ER.7</a>. <strong>Read first:</strong> <a href="../index.html">index.html</a> “Rules for every executor”, ER.7's “Rules this step establishes”, <code>docs/TESTING_STRATEGY.md</code>.</p></div>
+
+<h2>The conversion pattern (apply it to every row below)</h2>
+<pre><code>// Before
+const [isSaving, setIsSaving] = useState(false);
+const handleSave = async () =&gt; {
+  setIsSaving(true);
+  try { await doThing(); onClose(); } finally { setIsSaving(false); }
+};
+&lt;Button disabled={isSaving} onClick={handleSave}&gt;{isSaving ? 'Saving...' : 'Save'}&lt;/Button&gt;
+
+// After
+const save = useAction(async () =&gt; {
+  const result = await doThing();
+  if (result) onClose(); // store methods return null on failure and report it to the banner themselves
+});
+&lt;Button loading={save.busy} loadingText="Saving…" onClick={() =&gt; void save.run()}&gt;Save&lt;/Button&gt;</code></pre>
+<ol class="steps">
+  <li>Delete the local flag (<code>isSaving</code>, <code>isSubmitting</code>, <code>isTogglingTest</code>) and its setters. Overlays that took <code>busy={flag}</code> take <code>busy={action.busy}</code> (combine several with <code>||</code>).</li>
+  <li>Keep every validation, early return and post-success step the handler has today, in the same order, inside the action function.</li>
+  <li>Store methods that return <code>null</code>/<code>false</code>/<code>{ success: false }</code> on failure: treat that as failure (do not close or show success). The store already puts the error in the banner. When a method returns <code>{ error }</code> shown inline today (for example <code>unlockBrackets</code>), keep showing it inline.</li>
+  <li>Never wrap a store call in a second error banner: do not call <code>showError</code> when the store already set <code>apiError</code>.</li>
+  <li>Loading text: “Saving…”, “Deleting…”, “Verifying…”, “Discarding…”, “Resolving…”, “Unlocking…”, “Seeding…”, “Simulating…”, “Opening…”/“Closing…” as listed below. Use the single-character ellipsis <code>…</code>.</li>
+  <li>Replace <code>window.confirm</code> only where the row says so; otherwise leave it.</li>
+</ol>
+
+<h2>Flows</h2>
+<table>
+  <tr><th>File</th><th>Action</th><th>Change</th></tr>
+  <tr><td rowspan="3"><code>src/features/bracket/components/MatchScoreDrawer.tsx</code></td><td><code>handleSaveAndAdvance</code></td><td>Becomes <code>const save = useAction(async () =&gt; { …ER.4 body… })</code>. The conflict catch from ER.4 stays inside and does not rethrow for <code>MATCH_CONFLICT</code>. The save button stays the raw tier-colored <code>&lt;button&gt;</code> (its inline tier color is a runtime value); drive it from <code>save.busy</code>: <code>disabled={save.busy || globalBusy}</code> where <code>const { busy: globalBusy } = useGlobalBusy()</code>, render <code>&lt;Spinner /&gt;</code> in place of the old spinner div, text “Saving…” while busy. Remove <code>isSaving</code>.</td></tr>
+  <tr><td><code>handleForfeit</code></td><td><code>useAction</code>, “Saving…” on the clicked forfeit button. Keep its <code>window.confirm</code>.</td></tr>
+  <tr><td><code>handleBestOfChange</code></td><td><code>useAction</code>. The best-of buttons disable while it runs (they are <code>Button</code>s or get <code>disabled={bestOf.busy || globalBusy}</code> if raw). No loading text; the chosen option shows <code>&lt;Spinner /&gt;</code> beside its label while running. <code>busy</code> on the Overlay = <code>save.busy || forfeit.busy || bestOf.busy</code>.</td></tr>
+  <tr><td rowspan="2"><code>src/features/qualifiers/components/QualifierEntryModal.tsx</code></td><td><code>handleSubmitScore</code></td><td>Keep the <code>e.preventDefault()</code> and validation in the form handler, then <code>void submit.run()</code>. Submit button: <code>loading={submit.busy}</code>, “Saving…”, disabled when the score is invalid. Remove <code>isSubmitting</code>.</td></tr>
+  <tr><td>Inline delete of a submission</td><td><code>const remove = useAction((id: string) =&gt; deleteQualifierScore(tournament.id, id))</code>; the clicked row's delete button shows loading (track the id: <code>const [deletingId, setDeletingId] = useState&lt;string | null&gt;(null)</code>, set before <code>run</code>, cleared after).</td></tr>
+  <tr><td rowspan="2"><code>src/features/qualifiers/components/PlayerDetailDrawer.tsx</code></td><td>Record-attempt form (<code>onSubmit</code> near line 745)</td><td>Await <code>submitQualifierScore</code> inside a <code>useAction</code>; clear the input only when it returns non-null. Its submit button gets <code>loading</code>, “Saving…”.</td></tr>
+  <tr><td>Delete attempt (near line 446)</td><td>Same as the entry modal's inline delete, with a <code>deletingId</code>.</td></tr>
+  <tr><td rowspan="4"><code>src/features/online-quals/components/ReviewQueueView.tsx</code></td><td><code>handleAdjudicate</code></td><td><code>useAction</code>; the child that receives <code>isSubmitting</code> now receives <code>adjudicate.busy</code> (keep the prop name). “Saving…”/“Verifying…” on whichever button the child shows as primary; if the child renders raw buttons, pass the flag only and list the child file in the report as a follow-up.</td></tr>
+  <tr><td><code>handleResolveIdentity</code></td><td>Same, “Resolving…”.</td></tr>
+  <tr><td><code>handleDiscardRun</code></td><td>Pass it straight to the <code>ConfirmDialog</code>'s <code>onConfirm</code> (ER.7 runs it as an action). <code>confirmLabel="Discard Run"</code>, <code>confirmLoadingText="Discarding…"</code>, remove its <code>busy</code> prop.</td></tr>
+  <tr><td><code>handleVerifyAll</code></td><td>Same as discard: <code>confirmLabel={`Yes, Verify All (${verifiableCount})`}</code>, <code>confirmLoadingText="Verifying…"</code>. The “Verify All” opener button uses <code>Button</code> rules (global busy disables it). Remove <code>isSubmitting</code> once nothing reads it.</td></tr>
+  <tr><td rowspan="6"><code>src/features/tournament/components/TournamentAdminForm.tsx</code></td><td>Save Configuration (<code>saveCurrentConfig</code>, <code>handleSave</code>)</td><td>Remove <code>isSaving</code>. <code>handleSave</code> keeps <code>e.preventDefault()</code> and validation, then <code>void saveConfig.run()</code> where the action awaits <code>saveCurrentConfig()</code>. Button: <code>loading={saveConfig.busy}</code>, “Saving…”, <code>disabled={!isDirty || Boolean(tierConfigError)}</code>.</td></tr>
+  <tr><td>Unlock Brackets</td><td><code>useAction</code>, “Unlocking…”, inline error kept.</td></tr>
+  <tr><td>Online qualifying open/close</td><td><code>useAction(() =&gt; setOnlineQualsOpen(tournament.id, !tournament.onlineQualsOpen))</code>, loading text “Opening…” or “Closing…” by the current state.</td></tr>
+  <tr><td>Mark/Unmark as Test</td><td>Replace <code>isTogglingTest</code>; “Saving…”.</td></tr>
+  <tr><td><code>handleSeedQualifiers</code></td><td><code>useAction</code>: await <code>saveCurrentConfig()</code>, then <strong>await</strong> <code>seedQualifiers(tournament.id)</code>; show the success <code>simFeedback</code> only when it returns non-null. “Seeding…”.</td></tr>
+  <tr><td><code>handleSimulate</code></td><td>Same, awaiting <code>simulateFullTournament</code>; “Simulating…”.</td></tr>
+  <tr><td><code>src/routes/TournamentSwitcherPage.tsx</code></td><td><code>confirmDeleteTournament</code></td><td><code>async</code>: <code>const ok = await deleteTournament(tournamentToDelete.id); if (ok) setTournamentToDelete(null);</code>. Pass <code>confirmLoadingText="Deleting…"</code>.</td></tr>
+  <tr><td><code>src/features/organizations/components/OrganizationDashboard.tsx</code></td><td><code>confirmDeleteTournament</code></td><td>Already async; close the dialog only on success; <code>confirmLoadingText="Deleting…"</code>. Remove any local busy flag it uses for this dialog.</td></tr>
+  <tr><td><code>src/features/players/components/PlayerEditModal.tsx</code></td><td><code>onSave</code></td><td>Type becomes <code>(player: Omit&lt;PlayerProfile, 'id'&gt;) =&gt; void | Promise&lt;unknown&gt;</code>. <code>handleSubmit</code> keeps validation, then runs a <code>useAction</code> that awaits <code>onSave(...)</code> and closes only if the result is not <code>null</code> and not <code>false</code>. Save button: <code>loading</code>, “Saving…”. Overlay <code>busy={save.busy}</code>. Callers (<code>PlayerDirectory.tsx</code>, <code>ManageTournamentPlayersPage.tsx</code>, <code>PlayerDetailDrawer.tsx</code>) must <code>return</code> their store promise; if a caller closes the modal itself, remove that close so the modal decides.</td></tr>
+</table>
+<p>Files touched: exactly the ones in the table, plus <code>src/features/players/components/PlayerDirectory.tsx</code> and <code>src/routes/ManageTournamentPlayersPage.tsx</code> for the <code>onSave</code> callers.</p>
+
+<h2>Tests</h2>
+<h3>New: <code>e2e/busyActions.spec.ts</code></h3>
+<p>Use <code>installApiMocks</code>, <code>ADMIN_SESSION</code> and <code>FIXTURE_SLUG</code> from <code>e2e/visual/mockApi.ts</code> and the <code>prepare</code>/<code>settle</code>/<code>openDirtyScoreDrawer</code> approach from <code>e2e/overlays.spec.ts</code> (copy the helpers; do not import from another spec). Register the overriding <code>page.route</code> <strong>after</strong> <code>installApiMocks</code> so it takes precedence.</p>
+<ol class="steps">
+  <li><strong>Loading state:</strong> route <code>**/api/tournaments/*/tiers/*/matches/*/score</code> to wait 1 s then fulfill with the fixture tournament. Open the score drawer, type a score, click save. While waiting: the save button shows “Saving…” and <code>button-spinner</code>, and the drawer's Cancel button is disabled. After: the drawer closes.</li>
+  <li><strong>Timeout:</strong> <code>await page.clock.install({ time: FIXED_TIME })</code> before navigating. Route the score endpoint to never respond. Click save, then <code>await page.clock.runFor(10_500)</code>. The <code>feedback-banner</code> shows the timeout message, the save button shows its normal label again and is enabled, the drawer is still open with the typed score.</li>
+  <li><strong>Error:</strong> route the score endpoint to 500 with <code>{ error: 'Database unavailable' }</code>. After save: the banner shows “Database unavailable”, the drawer stays open with the typed score.</li>
+  <li><strong>Conflict:</strong> route the score endpoint to 409 with <code>{ error: MATCH_CONFLICT_MESSAGE, code: 'MATCH_CONFLICT' }</code> (import the constant from <code>src/features/bracket/matchConflict.ts</code>). After save: <code>match-conflict-notice</code> is visible, the drawer stays open, the banner is not shown.</li>
+</ol>
+<p>If the fixture's route for the score endpoint differs from the glob above, use the URL the app actually calls (see <code>saveMatchScores</code> in <code>store.tsx</code>) and record it.</p>
+<h3>Existing</h3>
+<p><code>e2e/overlays.spec.ts</code> and <code>e2e/golden-journeys.spec.ts</code> must pass. If a test fails only because a button's text changed while loading, update that assertion and list it in the report.</p>
+<h3>Leftovers check</h3>
+<p>Run <code>git grep -n -E "isSaving|isSubmitting|isTogglingTest" -- src</code>. Every remaining hit must be in a file not listed above; list them in the report.</p>
+
+<h2>Commands</h2>
+<ol class="steps">
+  <li><code>npm run typecheck</code></li>
+  <li><code>npm run test:ui</code></li>
+  <li><code>npx playwright test e2e/busyActions.spec.ts --project=chromium</code></li>
+  <li><code>npm test</code>, then <code>npm run test:e2e</code></li>
+  <li><code>npm run test:visual</code> (report diffs; do not update baselines)</li>
+</ol>
+
+<h2>Done when</h2>
+<ul class="check">
+  <li>Every flow in the table shows inline loading on the clicked button, disables other buttons while running, and recovers after 10 s with a banner.</li>
+  <li>Failed saves keep forms and drawers open with the user's input.</li>
+  <li>No local <code>isSaving</code>/<code>isSubmitting</code>/<code>isTogglingTest</code> remain in the listed files.</li>
+  <li>All commands above pass.</li>
+</ul>
+</main>
+</body>
+</html>

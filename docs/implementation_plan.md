@@ -4,7 +4,9 @@ This document is the single source of truth for MatchFoundry's roadmap: complete
 
 ---
 
-## 1. Master Roadmap & Global Status (Phases 1–13)
+## 1. Master Roadmap & Global Status (Phases 1–13, Event Readiness)
+
+**Current focus (event in under 3 weeks, as of 2026-11-02):** Event Readiness (ER), then Phase 12 steps 12.0–12.2. Execution specs for both are indexed in [`docs/specs/index.html`](specs/index.html).
 
 | Phase | Title | Status | Description |
 | :--- | :--- | :--- | :--- |
@@ -19,6 +21,7 @@ This document is the single source of truth for MatchFoundry's roadmap: complete
 | **Phase 9** | **Production Cloud Deployment, MatchFoundry™ Brand Launch & CI/CD** | **Complete** | Vercel Serverless runtime (`api/index.ts`), Neon cloud PostgreSQL migration, MatchFoundry™ rebrand & strategic trademark rollout, zero runtime git artifacts, and Branch/PR CI/CD deployment gating. |
 | **Phase 10**| **Live & Online Qualifiers Engine** | **Complete** | Competitor self-service portal (`/:slug/qualify`), Twitch OAuth 2.0 on production HTTPS, 6–8 char NES Authwords, qual window telemetry, review queue (`/:slug/manage/review`), Discord webhooks, tokened run links & draft recovery. |
 | **Phase 11**| **Styling Foundation & Tailwind Migration** | **Complete** | Tailwind v4 theme tokens and shared UI components, one overlay system with dirty-aware dismissal, every component converted off inline styles, lint-enforced. |
+| **ER**| **Event Readiness** | **In Progress** | Request timing, Neon WebSocket pool and transactions, per-tournament write lock, targeted match writes with conflict detection, Cloudflare live updates, inline loading with a 10 s timeout. Quick fixes and test-tournament hiding shipped. |
 | **Phase 12**| **Mobile-Friendly App (360×800)** | **Upcoming** | Spectator bottom nav and admin menu, floor judge scoring / qualifier entry / review queue on phones, compact visual bracket, card lists for tables, every route overflow-free. |
 | **Phase 13**| **Universal Match Data Export & Custom Analytics** | **Upcoming** | Universal match data export (CSV with UTF-8 BOM, Google Sheets TSV clipboard copy, JSON) with custom column selection and reordering. |
 
@@ -135,6 +138,10 @@ flowchart TD
         P11["• Visual Regression Harness & Tailwind v4 Theme Tokens<br>• Shared UI Components & Overlay System (Dirty-Aware Dismissal)<br>• Full Component Conversion (10 Parallel Batches)<br>• Preflight, Palette Module & Lint Enforcement"]
     end
 
+    subgraph ER["Event Readiness (ER) [IN PROGRESS]"]
+        PER["• Request Timing & Neon WebSocket Pool<br>• Per-Tournament Write Lock & Targeted Match Writes<br>• Cloudflare Live Updates & Keep-Warm<br>• Inline Loading, Global Busy Lock & 10s Timeout"]
+    end
+
     subgraph Phase12["Phase 12: Mobile-Friendly App (360×800)"]
         P12["• Bottom Sheets & Back-Gesture Handling<br>• Spectator Bottom Nav & Admin Menu<br>• Floor Judge Scoring, Qualifier Entry & Review Queue<br>• Compact Visual Bracket & Table Card Lists"]
     end
@@ -143,12 +150,12 @@ flowchart TD
         P13["• Universal Match Data Export Modal<br>• Formats: CSV (UTF-8 BOM), Sheets TSV (Clipboard), JSON<br>• Column Selection, Reordering & Preset Layouts"]
     end
 
-    subgraph Backlog["Deferred Backlog (Unscheduled)"]
-        B1["• Tournament ↔ Organization Association Fixes<br>• Double-Elim Flat Staged 2-Wide & Uneven Fields<br>• Organization-Level Roles (RBAC)"]
+    subgraph Backlog["Prioritized Backlog (Not Yet Specced)"]
+        B1["P1: Twitch Login Removal, Shared Player Modal, Single Name Field<br>P2: Tournament Status & Sorting, Test Players, Simulation on Test Tournaments<br>P3: Org Association Fixes, Flat Staged 2-Wide, Org Roles (RBAC)"]
     end
 
-    Historic --> Phase11 --> Phase12 --> Phase13
-    Backlog -.-> Phase13
+    Historic --> Phase11 --> ER --> Phase12 --> Phase13
+    Phase12 -.-> Backlog
 ```
 
 ---
@@ -332,11 +339,35 @@ flowchart TD
 
 ---
 
+### Event Readiness (ER) [IN PROGRESS]
+* **Goal:** before the event, writes take well under a second, two judges saving at once never lose each other's work, every open page updates without a refresh, and every action shows inline loading with a timeout.
+* **Why:** most writes took 2–3 s (one HTTPS round trip per query on the `neon-http` driver, plus cold starts). Every match write re-saved the whole tournament (delete and re-insert all matches and games), so concurrent judges overwrote each other, and a settings save could undo scores on a locked tournament. Pages only refreshed on navigation or window focus.
+* **Steps and specs** (index: [`docs/specs/index.html`](specs/index.html)):
+  1. **ER.1** [Request timing](specs/event-readiness/ER.1-request-timing.html): `Server-Timing` header and `[api]` log lines with duration and query count. Record a baseline before ER.2.
+  2. **ER.2** [Driver and transactions](specs/event-readiness/ER.2-db-driver-and-transactions.html): Neon WebSocket pool, real transactions, parallel tournament loads, real-Postgres test tier (`npm run test:pg`).
+  3. **ER.3** [Tournament write lock](specs/event-readiness/ER.3-tournament-write-lock.html): row lock and revision on every tournament write; a locked tournament's settings save no longer touches scores or brackets.
+  4. **ER.4** [Targeted match writes](specs/event-readiness/ER.4-targeted-match-writes.html): score, forfeit and best-of write only their own rows; per-match revision returns 409 `MATCH_CONFLICT`; the score drawer never wipes a judge's typing on refresh.
+  5. **ER.5** [Realtime worker](specs/event-readiness/ER.5-realtime-worker.html): Cloudflare Worker with one Durable Object per tournament (free tier), plus an event-day keep-warm cron. Needs the user to deploy it and set its secret.
+  6. **ER.6** [Live updates](specs/event-readiness/ER.6-live-updates-client.html): the API publishes after each write; open pages refresh themselves; anonymous refreshes are CDN-cached per revision; the qual timer uses the server clock.
+  7. **ER.7** [Loading foundation](specs/event-readiness/ER.7-busy-foundation.html): spinner, `useAction`, global busy lock, 10 s timeout, shared error banner.
+  8. **ER.8** [Loading flows](specs/event-readiness/ER.8-busy-flows.html): judge, qualifier, review-queue and admin actions converted.
+* **Order:** ER.1 → ER.2 → ER.3 → ER.4 → ER.6 → ER.8. ER.5 any time; ER.7 alongside ER.2–ER.4 and before ER.6.
+* **Decisions:** live updates use push (Cloudflare Durable Objects), not polling; messages carry only a revision and clients re-fetch through the API. Loading is inline on the clicked button, every other button is disabled, and a 10 s timeout shows an error banner.
+* **Already shipped with this phase (quick fixes):**
+  * MAXOUT chips and callouts removed everywhere; the "# of maxes" count stays (qual score and kicker contexts).
+  * Standings subtitles ("16 Bracket Competitors • Best of 5") removed; "competitors" now reads "players".
+  * Double-elim drop match-number tag stays highlighted instead of lighting only briefly.
+  * Identity → add global player offers Hybrid (shared `src/features/players/playstyleOptions.ts`).
+  * Tournament `isTest` flag (`metadata.isTest`): Mark/Unmark as Test in settings, Test badge on cards, test tournaments hidden from the front page, admin "Show test tournaments" toggle.
+
+---
+
 ### Phase 12: Mobile-Friendly App (360×800) [UPCOMING]
-* **Goal:** Every route usable on a 360×800 phone with no page-level horizontal scroll and 44px tap targets. Runs immediately after Phase 11; styling and mobile work is done only when both phases are complete.
+* **Goal:** Every route usable on a 360×800 phone with no page-level horizontal scroll and 44px tap targets. Runs after Event Readiness; steps 12.0–12.2 (foundation, navigation, floor judge tools) must land before the event.
 * **Priority order:** (1) spectator navigation from the landing page (bottom tab bar, tier chip strip, landing grid) and the admin menu; (2) floor judge tools: score sheet, qualifier entry, review queue and adjudication; (3) compact visual bracket (seed, name, match wins, keeping the bracket shape); (4) card lists for standings, roster and the player directory; (5) every remaining page.
 * **Steps:** 12.0 mobile foundation (bottom sheets, back gesture, overflow test); 12.1 navigation shell; 12.2 floor judge; 12.3 compact bracket; 12.4 data tables; 12.5 remaining pages and full-app sign-off.
-* **Execution specs:** [`docs/specs/index.html`](specs/index.html).
+* **Execution specs:** [`docs/specs/index.html`](specs/index.html): [12.0](specs/phase-12/12.0-mobile-foundation.html), [12.1](specs/phase-12/12.1-navigation-shell.html), [12.2](specs/phase-12/12.2-floor-judge.html), [12.3](specs/phase-12/12.3-compact-bracket.html), [12.4](specs/phase-12/12.4-data-tables.html), [12.5](specs/phase-12/12.5-remaining-pages.html).
+* **Interaction with the backlog:** 12.5 restyles `IdentityClaimModal.tsx`, which backlog item 1 (Twitch login removal) deletes. If item 1 lands first, drop that file from 12.5.
 
 ---
 
@@ -354,10 +385,43 @@ flowchart TD
 
 ---
 
-### Deferred Backlog (Unscheduled)
-Items recorded as "revisit later" in other docs that were never added to this plan. Each needs a decision before it's scheduled.
+### Prioritized Backlog
+Agreed or recorded work that has no execution spec yet. Items are in rough priority order; each needs a step spec (in `docs/specs/`, linked from [`docs/specs/index.html`](specs/index.html)) before it is executed. Items 1–10 come from the 2026-11-02 event-readiness review; their decisions are already made. Phase 13 (export) has not been ranked against these; decide when Phase 12 finishes.
 
-1. **Tournament ↔ Organization Association**
+#### Priority 1: Players and competitor flow (right after Phase 12; item 1 ideally before 12.5)
+1. **Remove the competitor-facing Twitch login and claim flow**
+   * Delete the Twitch OAuth endpoints (`/api/auth/twitch/*` in `src/server/api.ts`), the `claim-identity` endpoint and `IdentityClaimModal`. They are dead code; the competitor portal already uses a typed handle plus a VOD link.
+   * Keep: online players must submit a VOD URL and their Twitch handle (used for identification). Tournament staff resolve identity; nothing extra is asked of competitors.
+   * Update the Phase 10 description and the product spec, which still describe Twitch OAuth.
+2. **One shared add/edit global player modal**
+   * Every place that adds or edits a global player uses `PlayerEditModal`, including Identity → "add global player" in `IdentityResolutionModal`.
+   * Playstyle options come from `src/features/players/playstyleOptions.ts` everywhere (Hybrid already added).
+3. **One name field: "Preferred Name"**
+   * Keep `displayName`, labeled "Preferred Name"; remove the Nickname input from every form and display.
+   * One-time copy of `nickname` into `displayName` wherever `displayName` is empty.
+   * The `nickname` column stays in the schema, unused (schema changes must be additive).
+
+#### Priority 2: Test data and tournament status (nice to have in production; not needed for the event)
+4. **Tournament status and front-page sorting**
+   * **Active** is automatic while quals are open or a bracket is in progress; **Completed** is automatic once a champion exists. **Archived** and **Test** are manual flags (Test already exists).
+   * The front page hides archived and test tournaments by default; the toggle becomes "Show archived/test".
+   * Front-page sort: recent activity (default) or alphabetical.
+5. **Test players**
+   * Players can be marked as test players.
+   * Hidden from every add or seed picker unless a "Show test players" toggle is on; the toggle is offered everywhere players can be added or changed.
+   * Hidden from the global player directory and public leaderboards.
+   * A test tournament accepts only test players; marking a tournament as test is blocked while it has non-test players.
+6. **Simulate buttons on test tournaments only**
+   * Replace the build-time gate (`src/utils/simulationEnv.ts`, which compiles simulation out of Production) with a per-tournament rule: buttons show and the server allows simulation only when `isTest` is set.
+7. **Simulate matches around played matches:** keep every played match; simulate only unplayed ones.
+8. **Simulate quals around existing quals:** keep players who already have quals; fill in only the rest.
+
+#### Priority 3: Verification and data integrity
+9. **Verify `hasTiebreaker` survives reads:** relational match records may override `metadata.matchScores` and drop `hasTiebreaker`. Check after ER.4; fix with a regression test if still true.
+10. **Org silent re-attach bug** (from item 11): an org-less tournament's settings save attaches it to the first org. Fixable on its own before the policy decisions in item 11.
+
+#### Priority 4: Needs decisions before scheduling
+11. **Tournament ↔ Organization Association**
    * **Known bugs:**
      * No "None (Independent)" option in the Settings dropdown or `CreateTournamentModal` once any org exists.
      * For an org-less tournament, `TournamentAdminForm` initializes `organizationId` to the *first* org, so saving any unrelated setting silently attaches the tournament to that org.
@@ -365,17 +429,17 @@ Items recorded as "revisit later" in other docs that were never added to this pl
    * **Decisions pending:** who may change a tournament's org (recommendation: System Admin only, read-only for Tournament Admins); whether "Independent" is selectable at creation and for detaching; a pre-save notice summarizing side effects (Discord webhook fallback to the org's webhook, org theme inheritance).
    * **Note:** the silent re-attach is a data-integrity bug and could be fixed on its own before the policy decisions.
 
-2. **Double-Elimination Flat Staged: 2-Wide & Uneven Fields**
+12. **Double-Elimination Flat Staged: 2-Wide & Uneven Fields**
    * **Current behavior:** `FLAT_STAGED` supports 4 or 8 wide; fields must be a multiple of W (fields ≤ 2W silently fall back to a traditional tree). Invalid setups are blocked in Settings via `getDoubleEliminationConfigError()`.
    * **To revisit:**
      * True 2-wide flat staged for even fields (10, 12, 14…). Needs a new endgame, because the "Top 6 cross-drop" finish assumes W ≥ 4.
      * Whether to warn when a flat staged tier will actually render as a traditional tree (e.g. 9 players at 8 wide).
      * Odd / uneven fields: traditional tree remains the answer unless a ragged-wave design is specified (byes are never playable matches).
 
-3. **Organization-Level Roles (RBAC)**
+13. **Organization-Level Roles (RBAC)**
    * **Current state:** access is PIN-based with two tiers, System Admin and Tournament Admin. Organizations have no members or roles.
    * **Originally specified:** an `org_memberships` table (`organization_id`, `user_id`, `role`) with roles Org Owner (org settings, webhooks, assigning admins), Org Admin (create/manage the org's tournaments, edit org defaults, manage the player pool), and Org Judge / Tournament Admin (scoped score entry, qualifier verification, lock/unlock). Requires real user accounts, which don't exist yet.
-   * **Related:** the "who may change a tournament's org" decision in item 2.
+   * **Related:** the "who may change a tournament's org" decision in item 11.
 
 ---
 

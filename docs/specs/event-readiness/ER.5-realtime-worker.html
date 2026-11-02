@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step ER.5 Realtime Worker</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Event readiness / ER.5</nav>
+<h1>Step ER.5: Cloudflare realtime worker</h1>
+<p class="subtitle">A small Cloudflare Worker with one Durable Object per tournament. Browsers hold a WebSocket to it; the API tells it “tournament X changed, revision N”, and it forwards that one tiny message to every open socket. On event days, a cron job also keeps the Vercel function and Neon awake.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. <strong>Prerequisite:</strong> none; it can run in parallel with any other ER step (it touches no file under <code>src/</code>). <strong>Read first:</strong> <a href="../index.html">index.html</a> “Rules for every executor”. The deploy at the end needs the user (see section F).</p></div>
+
+<h2>Design</h2>
+<ul>
+  <li><strong>Messages carry no data.</strong> The worker only says <code>{"type":"changed","tournamentId":"…","revision":N}</code>. Clients then fetch the tournament from the API as they do today, so permissions and redaction stay in one place.</li>
+  <li><strong>Hibernation WebSockets</strong> (<code>ctx.acceptWebSocket</code>, <code>setWebSocketAutoResponse</code>): idle sockets cost no compute time, and the client's ping is answered by Cloudflare without waking the object.</li>
+  <li><strong>Free-tier budget</strong> (100,000 requests per day; each WebSocket connect is a request, and incoming WebSocket messages are billed as 1/20 of a request): 1,000 viewers connecting once and pinging every 25 seconds for 8 hours is about 1,000 + 1,000 × 1,152 / 20 ≈ 58,600. Pings answered by the auto-response do not wake the object. Broadcasts are outgoing messages and are not billed as requests.</li>
+</ul>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Area</th><th>Files</th></tr>
+  <tr><td>Worker</td><td>create <code>realtime/wrangler.toml</code>, <code>realtime/tsconfig.json</code>, <code>realtime/src/index.ts</code>, <code>realtime/src/policy.ts</code></td></tr>
+  <tr><td>Tests</td><td>create <code>realtime/src/policy.test.ts</code></td></tr>
+  <tr><td>Repo</td><td><code>package.json</code>, <code>package-lock.json</code> (via npm), <code>eslint.config.js</code> (ignore line only), <code>.gitignore</code></td></tr>
+</table>
+
+<h2>A. Dependencies and scripts</h2>
+<ol class="steps">
+  <li><code>npm install --save-dev --save-exact wrangler@4.156.1 @cloudflare/workers-types@5.20261102.1</code>. If either exact version does not exist, install the newest version published at least 14 days ago and record it in the report.</li>
+  <li>Add to <code>package.json</code> <code>scripts</code>:
+<pre><code>"realtime:dev": "wrangler dev --config realtime/wrangler.toml",
+"realtime:deploy": "wrangler deploy --config realtime/wrangler.toml",
+"realtime:typecheck": "tsc --noEmit -p realtime/tsconfig.json"</code></pre></li>
+  <li><code>eslint.config.js</code>: change <code>{ ignores: ['dist', 'node_modules'] }</code> to <code>{ ignores: ['dist', 'node_modules', '.wrangler', 'realtime/.wrangler'] }</code>.</li>
+  <li><code>.gitignore</code>: add <code>.wrangler/</code> and <code>realtime/.dev.vars</code> lines.</li>
+</ol>
+
+<h2>B. <code>realtime/wrangler.toml</code></h2>
+<pre><code>name = "matchfoundry-realtime"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[[durable_objects.bindings]]
+name = "CHANNELS"
+class_name = "TournamentChannel"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TournamentChannel"]
+
+[triggers]
+crons = ["*/4 * * * *"]
+
+[vars]
+ALLOWED_ORIGINS = "https://www.matchfoundry.gg,https://matchfoundry.gg,http://localhost:5173"
+ALLOW_VERCEL_PREVIEWS = "true"
+KEEP_WARM_URL = "https://www.matchfoundry.gg/api/health"
+# Inclusive UTC dates (YYYY-MM-DD). Outside this range the cron does nothing. Empty = never.
+KEEP_WARM_FROM = ""
+KEEP_WARM_UNTIL = ""
+
+# Secret, set with: npx wrangler secret put PUBLISH_SECRET --config realtime/wrangler.toml
+# PUBLISH_SECRET</code></pre>
+
+<h2>C. <code>realtime/tsconfig.json</code></h2>
+<pre><code>{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true
+  },
+  "include": ["src"]
+}</code></pre>
+<p>The root <code>tsconfig.json</code> includes only <code>src</code>, <code>api</code> and <code>vite.config.ts</code>, so the app typecheck never sees worker types. Leave it unchanged.</p>
+
+<h2>D. <code>realtime/src/policy.ts</code> (pure, no Cloudflare imports)</h2>
+<pre><code>/** Origins allowed to open a socket. Vercel preview URLs are allowed when allowVercelPreviews is true. */
+export function isAllowedOrigin(origin: string | null, allowedCsv: string, allowVercelPreviews: boolean): boolean {
+  if (!origin) return false;
+  const allowed = allowedCsv.split(',').map(s =&gt; s.trim()).filter(Boolean);
+  if (allowed.includes(origin)) return true;
+  if (allowVercelPreviews) {
+    try {
+      const url = new URL(origin);
+      return url.protocol === 'https:' &amp;&amp; url.hostname.endsWith('.vercel.app');
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/** True when `now` falls on or between the inclusive UTC dates (YYYY-MM-DD). Empty or invalid dates mean false. */
+export function shouldKeepWarm(now: Date, fromDate: string, untilDate: string): boolean {
+  const re = /^\d{4}-\d{2}-\d{2}$/;
+  if (!re.test(fromDate) || !re.test(untilDate)) return false;
+  const today = now.toISOString().slice(0, 10);
+  return today &gt;= fromDate &amp;&amp; today &lt;= untilDate;
+}
+
+export type Route =
+  | { kind: 'ws'; tournamentId: string }
+  | { kind: 'publish'; tournamentId: string }
+  | { kind: 'health' }
+  | { kind: 'notFound' };
+
+const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+export function parseRoute(pathname: string): Route {
+  if (pathname === '/health') return { kind: 'health' };
+  const m = pathname.match(/^\/t\/([^/]+)\/(ws|publish)$/);
+  if (!m || !ID_RE.test(m[1])) return { kind: 'notFound' };
+  return m[2] === 'ws' ? { kind: 'ws', tournamentId: m[1] } : { kind: 'publish', tournamentId: m[1] };
+}
+
+/** Constant-time string compare for the publish secret. */
+export function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i &lt; a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}</code></pre>
+
+<h2>E. <code>realtime/src/index.ts</code></h2>
+<pre><code>import { DurableObject } from 'cloudflare:workers';
+import { isAllowedOrigin, parseRoute, safeEqual, shouldKeepWarm } from './policy';
+
+export interface Env {
+  CHANNELS: DurableObjectNamespace&lt;TournamentChannel&gt;;
+  ALLOWED_ORIGINS: string;
+  ALLOW_VERCEL_PREVIEWS: string;
+  KEEP_WARM_URL: string;
+  KEEP_WARM_FROM: string;
+  KEEP_WARM_UNTIL: string;
+  PUBLISH_SECRET: string;
+}
+
+/** One instance per tournament id. Holds that tournament's viewer sockets. */
+export class TournamentChannel extends DurableObject&lt;Env&gt; {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    // Answered by Cloudflare without waking the object.
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'));
+  }
+
+  async fetch(request: Request): Promise&lt;Response&gt; {
+    const url = new URL(request.url);
+    if (url.pathname === '/connect') {
+      const pair = new WebSocketPair();
+      const [client, server] = Object.values(pair);
+      this.ctx.acceptWebSocket(server);
+      return new Response(null, { status: 101, webSocket: client });
+    }
+    if (url.pathname === '/broadcast') {
+      const message = await request.text();
+      let sent = 0;
+      for (const ws of this.ctx.getWebSockets()) {
+        try {
+          ws.send(message);
+          sent++;
+        } catch {
+          // Socket already closing; Cloudflare removes it.
+        }
+      }
+      return Response.json({ sent });
+    }
+    return new Response('Not found', { status: 404 });
+  }
+
+  async webSocketMessage(): Promise&lt;void&gt; {
+    // Clients send only "ping", which the auto-response handles. Ignore anything else.
+  }
+
+  async webSocketClose(ws: WebSocket, code: number): Promise&lt;void&gt; {
+    try {
+      ws.close(code === 1005 ? 1000 : code, 'closing');
+    } catch {
+      // already closed
+    }
+  }
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise&lt;Response&gt; {
+    const url = new URL(request.url);
+    const route = parseRoute(url.pathname);
+
+    if (route.kind === 'health') return Response.json({ status: 'ok' });
+    if (route.kind === 'notFound') return new Response('Not found', { status: 404 });
+
+    const stub = env.CHANNELS.get(env.CHANNELS.idFromName(route.tournamentId));
+
+    if (route.kind === 'ws') {
+      if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
+        return new Response('Expected WebSocket', { status: 426 });
+      }
+      const origin = request.headers.get('Origin');
+      if (!isAllowedOrigin(origin, env.ALLOWED_ORIGINS, env.ALLOW_VERCEL_PREVIEWS === 'true')) {
+        return new Response('Origin not allowed', { status: 403 });
+      }
+      return stub.fetch(new Request('https://do/connect', request));
+    }
+
+    // publish
+    if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+    const auth = request.headers.get('Authorization') || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+    if (!env.PUBLISH_SECRET || !safeEqual(token, env.PUBLISH_SECRET)) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+    let revision = 0;
+    try {
+      const body = (await request.json()) as { revision?: unknown };
+      revision = typeof body.revision === 'number' ? body.revision : 0;
+    } catch {
+      return new Response('Bad JSON', { status: 400 });
+    }
+    const message = JSON.stringify({ type: 'changed', tournamentId: route.tournamentId, revision });
+    return stub.fetch('https://do/broadcast', { method: 'POST', body: message });
+  },
+
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise&lt;void&gt; {
+    if (!shouldKeepWarm(new Date(), env.KEEP_WARM_FROM, env.KEEP_WARM_UNTIL)) return;
+    ctx.waitUntil(fetch(env.KEEP_WARM_URL, { headers: { 'User-Agent': 'matchfoundry-keepwarm' } }).then(() =&gt; undefined, () =&gt; undefined));
+  },
+} satisfies ExportedHandler&lt;Env&gt;;</code></pre>
+<p>If <code>npm run realtime:typecheck</code> reports that a type name above differs in the installed <code>@cloudflare/workers-types</code> (for example <code>ScheduledController</code>), use the name the package exports and record the change in the report. Do not change behavior.</p>
+<p><strong>Why the keep-warm hits <code>/api/health</code>:</strong> it runs <code>SELECT 1</code>, so one request every 4 minutes keeps a Vercel function instance warm and stops Neon's 5-minute scale-to-zero. Outside the configured dates it does nothing, so Neon's free compute hours are not spent on quiet weeks.</p>
+
+<h2>F. Tests: <code>realtime/src/policy.test.ts</code></h2>
+<p>Vitest's default include already picks up this file; it imports only <code>./policy</code>.</p>
+<ol class="steps">
+  <li><code>isAllowedOrigin</code>: a listed origin → true; <code>null</code> → false; <code>https://evil.example</code> → false; <code>https://matchfoundry-git-x.vercel.app</code> → true with previews on, false with previews off; <code>http://foo.vercel.app</code> → false; <code>https://vercel.app.evil.example</code> → false.</li>
+  <li><code>shouldKeepWarm</code>: inside the range, on both boundary dates → true; the day before and after → false; empty strings → false; <code>"2026-13-40x"</code> → false.</li>
+  <li><code>parseRoute</code>: <code>/health</code>; <code>/t/abc-123/ws</code>; <code>/t/abc-123/publish</code>; <code>/t/abc/other</code>, <code>/t/../ws</code>, <code>/t/a%20b/ws</code>, <code>/</code> → notFound.</li>
+  <li><code>safeEqual</code>: equal → true; different same-length → false; different length → false.</li>
+</ol>
+
+<h2>Commands</h2>
+<ol class="steps">
+  <li><code>npm run realtime:typecheck</code></li>
+  <li><code>npx vitest run realtime/src/policy.test.ts</code></li>
+  <li><code>npm run typecheck</code> (unchanged app still passes)</li>
+  <li>Local smoke test: <code>npm run realtime:dev</code> in one terminal. In another, <code>curl http://localhost:8787/health</code> returns <code>{"status":"ok"}</code>, and <code>curl -X POST http://localhost:8787/t/x/publish</code> returns 401. Stop the dev server afterwards.</li>
+</ol>
+
+<h2>G. Deploy (the user runs these; the executor lists them in the report and does not run them)</h2>
+<ol class="steps">
+  <li><code>! npx wrangler login</code> (opens the browser to the user's Cloudflare account).</li>
+  <li>Generate a secret: <code>node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</code>. Keep it for ER.6.</li>
+  <li><code>npm run realtime:deploy</code>. Note the printed URL, for example <code>https://matchfoundry-realtime.&lt;account&gt;.workers.dev</code>.</li>
+  <li><code>npx wrangler secret put PUBLISH_SECRET --config realtime/wrangler.toml</code> and paste the secret.</li>
+  <li>Before the event: set <code>KEEP_WARM_FROM</code> and <code>KEEP_WARM_UNTIL</code> in <code>wrangler.toml</code> to the event dates (UTC) and deploy again.</li>
+</ol>
+
+<h2>Done when</h2>
+<ul class="check">
+  <li>The worker typechecks and its policy tests pass.</li>
+  <li>The local smoke test passes.</li>
+  <li>The report lists the deploy steps for the user.</li>
+</ul>
+</main>
+</body>
+</html>

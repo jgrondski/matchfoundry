@@ -3,6 +3,7 @@ import { PlayerProfile, Playstyle, AvatarType } from '../../tournament/types';
 import { User, Check, X, AlertTriangle, Upload } from 'lucide-react';
 import { PlayerAvatar } from './PlayerAvatar';
 import { PlaystyleChip } from './PlaystyleChip';
+import { PLAYSTYLE_OPTIONS } from '../playstyleOptions';
 import { CountrySelect } from './CountrySelect';
 import { processAvatarImage } from '../../../utils/image';
 import { Overlay } from '../../../components/overlay';
@@ -354,10 +355,9 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                     onChange={e => setPlaystyle(e.target.value as Playstyle)}
                     className={inputClass}
                   >
-                    <option value="Rolling">Rolling / Roll</option>
-                    <option value="DAS">DAS</option>
-                    <option value="Hypertap">Hypertap / Tap</option>
-                    <option value="Hybrid">Hybrid</option>
+                    {PLAYSTYLE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
                   </select>
                 </div>
 

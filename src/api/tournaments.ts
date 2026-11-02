@@ -438,6 +438,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     qualRuns: qualRunsList,
     tournamentPlayers: tournamentPlayersMap,
     useOrgBranding: meta.useOrgBranding ?? true,
+    isTest: Boolean(meta.isTest),
     logoUrl: meta.logoUrl || undefined,
     bannerUrl: meta.bannerUrl || undefined,
     discordWebhookUrl: t.discordWebhookUrl || meta.discordWebhookUrl || undefined,
@@ -508,6 +509,11 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
         : ((existing[0]?.metadata as Record<string, any> | null)?.discordWebhookUrl ?? null),
     themeColors: tourney.themeColors || null,
     matchScores: tourney.matchScores || {},
+    // Omitted (undefined) keeps the stored flag, so a client that never sent it can't clear it.
+    isTest:
+      tourney.isTest !== undefined
+        ? Boolean(tourney.isTest)
+        : Boolean((existing[0]?.metadata as Record<string, any> | null)?.isTest),
   };
 
   let savedTourneyId = tourneyUuid;

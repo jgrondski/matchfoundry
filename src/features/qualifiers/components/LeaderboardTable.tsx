@@ -4,7 +4,7 @@ import { deriveLeaderboard, LeaderboardRankRow, calculatePoints } from '../scori
 import { QualifierEntryModal } from './QualifierEntryModal';
 import { PlayerDetailDrawer } from './PlayerDetailDrawer';
 import { TournamentPageHeader } from '../../../components/TournamentPageHeader';
-import { Plus, Sparkles, ChevronRight, Check } from 'lucide-react';
+import { Plus, ChevronRight, Check } from 'lucide-react';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../players/components/PlaystyleChip';
 import { getEffectivePlayerName } from '../../players/playerNameUtils';
@@ -327,10 +327,8 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                           {/* # of Maxes Column */}
                           <td className={cn(tdClass, 'w-35 text-center')}>
                             {row.maxoutCount && row.maxoutCount > 0 ? (
-                              <span
-                                className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full bg-gold/22 text-gold-bright text-xs font-extrabold border border-gold/40 shadow-[0_0_8px_rgba(245,158,11,0.15)]"
-                              >
-                                <Sparkles size={11} /> {row.maxoutCount}x Max
+                              <span className="font-mono tabular-nums text-base font-bold text-fg">
+                                {row.maxoutCount}
                               </span>
                             ) : (
                               <span className="text-caption text-fg-muted">

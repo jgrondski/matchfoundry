@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step ER.3 Write Lock</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Event readiness / ER.3</nav>
+<h1>Step ER.3: One write at a time per tournament</h1>
+<p class="subtitle">Run every tournament write inside a transaction that locks the tournament row, bump a tournament revision on each write, send the response only after commit, and stop a stale settings save from undoing match results.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. <strong>Prerequisite:</strong> <a href="ER.2-db-driver-and-transactions.html">ER.2</a>. Run before <a href="ER.4-targeted-match-writes.html">ER.4</a> and <a href="ER.6-live-updates-client.html">ER.6</a>. <strong>Read first:</strong> <a href="../index.html">index.html</a> “Rules for every executor”, <code>docs/TESTING_STRATEGY.md</code>, <code>CLAUDE.md</code> section 3.</p></div>
+
+<h2>Why (lost updates today)</h2>
+<p>Every tournament write reads the whole tournament, changes it in memory, and saves the whole tournament back (<code>getFullTournament</code> → change → <code>saveFullTournament</code>). Two judges scoring <em>different</em> matches at the same moment both read the old state, and the second save erases the first judge's result. Separately, the settings form and the qual timer send the client's entire tournament through <code>PUT /api/tournaments/:id</code>; on a locked tournament that copy can be stale and reverts scores recorded since the page loaded.</p>
+<p><strong>Behavior after this step:</strong> concurrent writes to one tournament run one after another, each seeing the previous one's result. A <code>PUT /api/tournaments/:id</code> on a locked tournament never changes match results, brackets or the lock flag. Responses are unchanged except a new <code>revision</code> number on tournaments.</p>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Area</th><th>Files</th></tr>
+  <tr><td>Server</td><td>create <code>src/server/tournamentWriteLock.ts</code>; <code>src/server/api.ts</code>; <code>src/api/tournaments.ts</code></td></tr>
+  <tr><td>Types</td><td><code>src/features/tournament/types.ts</code></td></tr>
+  <tr><td>Tests</td><td>create <code>src/server/__tests__/tournamentWriteLock.test.ts</code>, <code>src/server/__tests__/tournamentWriteLock.pg.test.ts</code></td></tr>
+</table>
+
+<h2>A. Types</h2>
+<p>In <code>src/features/tournament/types.ts</code>: add <code>revision?: number; // increases by 1 on every write; set by the server</code> to <code>Tournament</code> (after <code>isTest</code>), and <code>revision?: number;</code> to <code>TournamentMetadata</code> (after <code>isTest</code>).</p>
+
+<h2>B. <code>src/api/tournaments.ts</code></h2>
+<ol class="steps">
+  <li><strong>Read:</strong> in <code>getFullTournament</code>'s returned object, after <code>isTest</code>, add <code>revision: typeof meta.revision === 'number' ? meta.revision : 0,</code>.</li>
+  <li><strong>Preserve on save:</strong> in <code>saveFullTournament</code>'s <code>metadata</code> object, after <code>isTest</code>, add
+<pre><code>// The write lock owns the revision; a save never changes it.
+revision: Number((existing[0]?.metadata as Record&lt;string, any&gt; | null)?.revision ?? 0),</code></pre></li>
+  <li><strong>Option to skip match rows:</strong> change the signature to <code>saveFullTournament(tourney: Tournament, options: { syncMatches?: boolean } = {})</code>. Wrap the whole “Sync relational matches and games for all active tiers” loop in <code>if (options.syncMatches !== false) { ... }</code>. Nothing else changes; every existing caller keeps today's behavior.</li>
+</ol>
+
+<h2>C. <code>src/server/tournamentWriteLock.ts</code> (new)</h2>
+<pre><code>import type { ServerResponse } from 'http';
+import { eq, or } from 'drizzle-orm';
+import { getDb, tournaments } from '../db';
+import { withTransaction } from '../db/transaction';
+import { isUuid } from '../api/tournaments';
+
+/** Returned by a tournament route handler when no route matched (the router then sends its 404). */
+export const NOT_HANDLED = Symbol('NOT_HANDLED');
+
+/** Non-GET tournament sub-routes that never take the lock: competitor draft autosave and webhook tests write no tournament state. */
+export const UNLOCKED_SUBACTIONS = new Set(['qualify/draft', 'discord-webhook/test']);
+
+export interface LockedWrite&lt;T&gt; {
+  /** Resolved tournament UUID, or null when no tournament matched the id or slug. */
+  tournamentId: string | null;
+  /** The tournament's revision after this write's bump, or null when no tournament matched. */
+  revision: number | null;
+  result: T;
+}
+
+/**
+ * Runs fn in a transaction holding a row lock on the tournament, after bumping its revision.
+ * Other writes to the same tournament wait until this transaction commits or rolls back.
+ */
+export async function withTournamentWriteLock&lt;T&gt;(idOrSlug: string, fn: () =&gt; Promise&lt;T&gt;): Promise&lt;LockedWrite&lt;T&gt;&gt; {
+  return withTransaction(async () =&gt; {
+    const db = getDb();
+    const condition = isUuid(idOrSlug)
+      ? or(eq(tournaments.id, idOrSlug), eq(tournaments.slug, idOrSlug))
+      : eq(tournaments.slug, idOrSlug);
+    const [row] = await db
+      .select({ id: tournaments.id, metadata: tournaments.metadata })
+      .from(tournaments)
+      .where(condition)
+      .limit(1)
+      .for('update');
+    if (!row) {
+      return { tournamentId: null, revision: null, result: await fn() };
+    }
+    const meta = (row.metadata as Record&lt;string, unknown&gt; | null) || {};
+    const revision = Number(meta.revision ?? 0) + 1;
+    await db.update(tournaments).set({ metadata: { ...meta, revision } }).where(eq(tournaments.id, row.id));
+    return { tournamentId: row.id, revision, result: await fn() };
+  });
+}
+
+/**
+ * Runs a tournament write under the lock and holds back res.end() until the transaction commits,
+ * so no client sees a success that is then rolled back. On a throw, the held response is discarded
+ * and the error propagates (the router's catch sends the error response).
+ */
+export async function runLockedTournamentWrite&lt;T&gt;(
+  res: ServerResponse,
+  idOrSlug: string,
+  fn: () =&gt; Promise&lt;T&gt;
+): Promise&lt;LockedWrite&lt;T&gt;&gt; {
+  const realEnd = res.end.bind(res) as (...args: unknown[]) =&gt; ServerResponse;
+  let heldEnd: unknown[] | null = null;
+  (res as unknown as { end: (...args: unknown[]) =&gt; ServerResponse }).end = (...args: unknown[]) =&gt; {
+    heldEnd = args;
+    return res;
+  };
+  try {
+    const locked = await withTournamentWriteLock(idOrSlug, fn);
+    (res as unknown as { end: typeof realEnd }).end = realEnd;
+    if (heldEnd) realEnd(...(heldEnd as unknown[]));
+    return locked;
+  } catch (err) {
+    (res as unknown as { end: typeof realEnd }).end = realEnd;
+    throw err;
+  }
+}</code></pre>
+<div class="box warn"><p>If importing <code>isUuid</code> from <code>../api/tournaments</code> creates an import cycle that breaks tests (<code>api/tournaments.ts</code> must not import from <code>src/server</code>), copy the function body into this file instead and say so in the report. Do not move it.</p></div>
+
+<h2>D. Router (<code>src/server/api.ts</code>)</h2>
+<ol class="steps">
+  <li>Import <code>NOT_HANDLED</code>, <code>UNLOCKED_SUBACTIONS</code>, <code>runLockedTournamentWrite</code> from <code>'./tournamentWriteLock'</code>.</li>
+  <li>Inside <code>if (tourneySubMatch) {</code>, keep the two lines that compute <code>tourneyId</code> and <code>subAction</code>. Move <strong>all the code after them, up to the block's closing brace, unchanged</strong> into a local function, and end it with <code>return NOT_HANDLED;</code>:
+<pre><code>const handleTournamentRoute = async (): Promise&lt;typeof NOT_HANDLED | void&gt; =&gt; {
+  // ...every existing statement that was in this block, unchanged...
+  return NOT_HANDLED;
+};
+
+if (method === 'GET' || UNLOCKED_SUBACTIONS.has(subAction)) {
+  if ((await handleTournamentRoute()) !== NOT_HANDLED) return;
+} else {
+  const locked = await runLockedTournamentWrite(res, tourneyId, handleTournamentRoute);
+  if (locked.result !== NOT_HANDLED) return;
+}</code></pre>
+  The existing <code>return sendJson(...)</code> / <code>return sendError(...)</code> / <code>return;</code> statements now return from <code>handleTournamentRoute</code>; that is intended. When nothing matched, execution continues to the existing <code>return sendError(res, 404, ...)</code> after the block. Do not reformat the moved code beyond re-indenting it.</li>
+  <li><strong>Locked PUT protection.</strong> Replace the body of the root <code>if (method === 'PUT') {</code> (inside <code>if (!subAction)</code>) with:
+<pre><code>if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+const incoming: Tournament = { ...body, id: tourneyId };
+const current = await getFullTournament(tourneyId);
+const lockedNow = Boolean(current?.isLocked);
+if (current &amp;&amp; lockedNow) {
+  // Match results and brackets of a locked tournament change only through the match endpoints.
+  // The client's copy may be stale, so keep what the database has.
+  incoming.isLocked = true;
+  incoming.matchScores = current.matchScores;
+  incoming.tiers = (incoming.tiers || []).map(tier =&gt; {
+    const stored = current.tiers.find(t =&gt; t.id === tier.id);
+    return stored ? { ...tier, isLocked: stored.isLocked, bracket: stored.bracket } : tier;
+  });
+}
+const updated = await saveFullTournament(incoming, { syncMatches: !lockedNow });
+return sendJson(res, 200, updated);</code></pre>
+  Import the <code>Tournament</code> type if the file does not already.</li>
+</ol>
+<p>Lock and unlock keep their own endpoints (<code>POST .../lock</code>, <code>POST .../unlock</code>); the client never locks or unlocks through the PUT (checked while writing this spec: <code>lockTournament</code> and <code>unlockBrackets</code> in the store call those endpoints).</p>
+
+<h2>E. Tests</h2>
+<h3><code>src/server/__tests__/tournamentWriteLock.test.ts</code> (pg-mem)</h3>
+<p>Use the fixture pattern from <code>src/api/__tests__/relationalIntegrity.test.ts</code> section 4 (8 competitors, one Gold <code>TRADITIONAL</code> tier, manual seeds, locked, saved with <code>saveFullTournament</code>) and its <code>makeHttpRequest</code> helper, with a <code>SYSTEM_ADMIN</code> token.</p>
+<ol class="steps">
+  <li><strong>Revision:</strong> a fresh tournament has <code>revision === 0</code> from <code>GET /api/tournaments/:id</code>. After one score PUT and one best-of PUT, GET returns <code>revision === 2</code>.</li>
+  <li><strong>Stale settings save:</strong> score round-1 match 1 so player 1 wins (Best of 3: two games won). Then send <code>PUT /api/tournaments/:id</code> with the tournament object captured <em>before</em> the score (so its <code>matchScores</code> is empty), with <code>name</code> changed to <code>'Renamed'</code> and <code>isLocked: false</code>. Assert: response 200; GET shows <code>name === 'Renamed'</code>, <code>isLocked === true</code>, the match's <code>winnerPlayerId</code> is player 1, the round-2 match has player 1 in the slot the bracket routes to, and the <code>matches</code> table row for match 1 still has <code>winnerId</code> = player 1.</li>
+  <li><strong>Unmatched route:</strong> <code>POST /api/tournaments/:id/does-not-exist</code> returns 404 with exactly one response body.</li>
+  <li><strong>Unlocked sub-routes:</strong> <code>POST /api/tournaments/:id/qualify/draft</code> with body <code>{ resumeToken: 'not-a-real-token', scores: [] }</code> returns 403 (the existing <code>QualRunAccessError</code> handling), and a following GET shows <code>revision</code> unchanged.</li>
+  <li><strong>Error path:</strong> a request whose handler throws <code>QualLockedError</code> (the verified-lock cases already covered in the online-quals tests) still returns 409 with the error message, and only one response is written.</li>
+</ol>
+<h3><code>src/server/__tests__/tournamentWriteLock.pg.test.ts</code> (real PostgreSQL)</h3>
+<p><code>describe.skipIf(!RUN_PG_TESTS)</code>, connect with <code>connectLocalPostgres()</code> from <code>src/db/__tests__/pgTestDb.ts</code>, <code>setDb(db)</code>. Build the same locked 8-player tournament with player names prefixed <code>PGT_</code> and slug prefixed <code>pgt-</code>; delete that tournament and those players in <code>afterAll</code>.</p>
+<ol class="steps">
+  <li><strong>No lost updates:</strong> fire the two score PUTs for round-1 match 1 and round-1 match 2 (each a full Best-of-3 win for its player 1) with <code>Promise.all</code>. Then GET: both matches have their winner, and both winners appear in their round-2 slots. (This test fails on the code before this step; confirm that by running it once with the router change reverted, and say so in the report.)</li>
+  <li><strong>Serialized revisions:</strong> after the two concurrent writes, <code>revision</code> is exactly 2 higher than before.</li>
+</ol>
+
+<h2>Commands</h2>
+<ol class="steps">
+  <li><code>npm run typecheck</code></li>
+  <li><code>npx vitest run src/server/__tests__/tournamentWriteLock.test.ts</code></li>
+  <li><code>npm run test:pg</code></li>
+  <li><code>npm test</code></li>
+  <li><code>npm run test:e2e</code></li>
+</ol>
+
+<h2>Done when</h2>
+<ul class="check">
+  <li>Every non-GET tournament route except <code>qualify/draft</code> and <code>discord-webhook/test</code> runs under the tournament row lock, inside one transaction, with its response sent after commit.</li>
+  <li>Concurrent score writes to different matches both survive (real PostgreSQL test).</li>
+  <li>A PUT on a locked tournament cannot change match results, brackets or the lock flag.</li>
+  <li><code>revision</code> rises by one per write and is returned on every tournament.</li>
+  <li>All commands above pass.</li>
+</ul>
+</main>
+</body>
+</html>

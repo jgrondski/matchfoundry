@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step ER.4 Match Writes</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Event readiness / ER.4</nav>
+<h1>Step ER.4: Match writes touch only their own rows, and catch same-match edits</h1>
+<p class="subtitle">Score, forfeit and best-of changes stop deleting and re-inserting every match and game in the tournament; each match carries a revision so a judge saving over someone else's newer scores gets a clear “updated by someone else” message instead of silently overwriting them.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. <strong>Prerequisite:</strong> <a href="ER.3-tournament-write-lock.html">ER.3</a>. Run before <a href="ER.8-busy-flows.html">ER.8</a> (both edit <code>MatchScoreDrawer.tsx</code>). <strong>Read first:</strong> <a href="../index.html">index.html</a> “Rules for every executor”, <code>docs/TESTING_STRATEGY.md</code> (cover every bracket format the change touches), <code>CLAUDE.md</code> section 4.</p></div>
+
+<h2>Background: where match data lives</h2>
+<ul>
+  <li><strong>Bracket shape and slot assignments</strong> (who plays in which slot, who advanced): JSON in <code>bracket_tiers.metadata.bracket</code> (<code>rounds</code> and <code>matchesById</code>).</li>
+  <li><strong>Results:</strong> one <code>matches</code> row per bracket match (players, winner, loser, best-of, complete, forfeit) and one <code>games</code> row per recorded game. On read these override the JSON.</li>
+  <li><strong>A third copy</strong> of each result, including <code>hasTiebreaker</code>, in <code>tournaments.metadata.matchScores</code>.</li>
+</ul>
+<p>Today <code>PUT .../matches/:matchId/score</code>, <code>POST .../forfeit</code> and <code>PUT .../best-of</code> call <code>saveFullTournament</code>, which deletes every <code>matches</code> row of every tier (cascading every <code>games</code> row) and inserts them all again.</p>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Area</th><th>Files</th></tr>
+  <tr><td>Shared</td><td>create <code>src/features/bracket/matchConflict.ts</code>, <code>src/features/bracket/drawerSync.ts</code>; <code>src/features/tournament/types.ts</code></td></tr>
+  <tr><td>Server</td><td>create <code>src/api/matchWrites.ts</code>; <code>src/api/tournaments.ts</code>; <code>src/server/api.ts</code> (only the score, forfeit and best-of handlers)</td></tr>
+  <tr><td>Client</td><td>create <code>src/features/tournament/apiError.ts</code>; <code>src/features/tournament/store.tsx</code> (<code>apiCall</code>, <code>saveMatchScores</code>); <code>src/features/bracket/components/MatchScoreDrawer.tsx</code></td></tr>
+  <tr><td>Tests</td><td>create <code>src/api/__tests__/targetedMatchWrites.test.ts</code>, <code>src/features/bracket/__tests__/drawerSync.test.ts</code></td></tr>
+</table>
+
+<h2>A. Shared pieces</h2>
+<h3><code>src/features/bracket/matchConflict.ts</code> (new)</h3>
+<pre><code>export const MATCH_CONFLICT_CODE = 'MATCH_CONFLICT';
+export const MATCH_CONFLICT_MESSAGE =
+  'This match was updated by someone else. The latest scores are now shown. Check them and save again.';</code></pre>
+<h3><code>src/features/tournament/types.ts</code></h3>
+<p>Add to <code>MatchScoreRecord</code>, after <code>hasTiebreaker</code>: <code>revision?: number; // +1 on every score, forfeit or best-of write to this match</code>.</p>
+<h3><code>src/features/tournament/apiError.ts</code> (new)</h3>
+<pre><code>/** Error thrown by the store's apiCall for a non-2xx response. */
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}</code></pre>
+
+<h2>B. Row builders: <code>src/api/matchWrites.ts</code> (new)</h2>
+<ol class="steps">
+  <li>Move these pieces out of <code>saveFullTournament</code> verbatim into exported functions, and make <code>saveFullTournament</code> call them (its behavior must not change):
+    <ul>
+      <li><code>collectBracketMatches(bracket): Map&lt;string, BracketMatch&gt;</code>: the <code>matchMap</code> building (<code>matchesById</code> entries, then <code>rounds[].matches[]</code>).</li>
+      <li><code>buildMatchRow(m: BracketMatch, scoreRec: MatchScoreRecord | undefined, tierUuid: string, tierBestOf: number | undefined)</code>: returns the object pushed into <code>matchesToInsert</code> (from <code>p1Id</code> through <code>metadata</code>). Use <code>tierBestOf</code> where the loop used <code>t.bestOf</code>.</li>
+      <li><code>buildGameRows(m: BracketMatch, scoreRec: MatchScoreRecord | undefined)</code>: returns the array the loop pushed into <code>gamesToInsert</code> for that match (empty when there are no games).</li>
+    </ul>
+  <code>matchWrites.ts</code> imports <code>isUuid</code> from <code>./tournaments</code>; <code>tournaments.ts</code> imports the three builders from <code>./matchWrites</code>. If that cycle breaks module loading in tests, move <code>isUuid</code> into <code>matchWrites.ts</code>, re-export it from <code>tournaments.ts</code> (<code>export { isUuid } from './matchWrites'</code>) and say so in the report.</li>
+  <li>Add:
+<pre><code>/**
+ * Persists one match's result. Must run inside the tournament write lock (ER.3).
+ * Writes: the tier's bracket JSON, every match row of that tier (upsert, so slot changes from
+ * advancing or retracting a winner land), the games of `matchId` only, and the tournament's
+ * matchScores entry for `matchId`. Nothing is deleted except that match's old games.
+ */
+export async function saveMatchResult(input: {
+  tournament: Tournament; // loaded inside the lock, with input.matchId's record already replaced
+  tierId: string;
+  matchId: string;
+  record: MatchScoreRecord;
+  bracket: BracketStructure; // the tier's bracket after advance/retract
+}): Promise&lt;void&gt;</code></pre>
+  Steps, in order, all through <code>getDb()</code>:
+    <ol>
+      <li>Select <code>metadata</code> and <code>tournamentId</code> from <code>bracketTiers</code> where <code>id = tierId</code>. If no row, or its <code>tournamentId</code> differs from <code>input.tournament.id</code>, throw <code>new Error('Tier not found')</code>.</li>
+      <li>Update that tier: <code>metadata = { ...existingMetadata, bracket: input.bracket }</code>.</li>
+      <li><code>const tier = input.tournament.tiers.find(t =&gt; t.id === tierId)</code>; build <code>rows = [...collectBracketMatches(input.bracket).values()].map(m =&gt; buildMatchRow(m, m.id === input.matchId ? input.record : input.tournament.matchScores[m.id], tierId, tier?.bestOf))</code>.</li>
+      <li>Upsert <code>rows</code> into <code>matches</code> in chunks of 50: <code>.onConflictDoUpdate({ target: matches.id, set: { ... } })</code> where <code>set</code> maps every column except <code>id</code> and <code>createdAt</code> to <code>sql.raw('excluded.&lt;snake_case column&gt;')</code>: <code>tier_id, round_number, match_number, stage, round_identifier, player1_id, player2_id, winner_id, loser_id, best_of, is_forfeit, is_complete, metadata</code>. (pg-mem supports this form; verified while writing this spec.)</li>
+      <li>Delete <code>games</code> where <code>matchId = input.matchId</code>, then insert <code>buildGameRows(target, input.record)</code> if non-empty, where <code>target</code> is the bracket match with id <code>input.matchId</code>.</li>
+      <li>Select <code>metadata</code> from <code>tournaments</code> where <code>id = input.tournament.id</code>; update it to <code>{ ...meta, matchScores: { ...(meta.matchScores || {}), [input.matchId]: input.record } }</code>.</li>
+    </ol></li>
+</ol>
+
+<h2>C. Read the revision: <code>src/api/tournaments.ts</code></h2>
+<p>In <code>getFullTournament</code>, where <code>relationalMatchScores[m.id] = { ... }</code> is built, add the field <code>revision: Number(meta.matchScores?.[m.id]?.revision ?? 0),</code>. Move the line <code>const meta = (t.metadata as Record&lt;string, any&gt;) || {};</code> above that loop if it is currently below it.</p>
+
+<h2>D. Endpoints (<code>src/server/api.ts</code>)</h2>
+<p>Import <code>saveMatchResult</code> from <code>'../api/matchWrites'</code> and <code>MATCH_CONFLICT_CODE</code>, <code>MATCH_CONFLICT_MESSAGE</code> from <code>'../features/bracket/matchConflict'</code>.</p>
+<ol class="steps">
+  <li><strong>Score</strong> (<code>PUT .../matches/:matchId/score</code>): right after <code>currentRecord</code> is computed, add:
+<pre><code>const currentRevision = Number(currentRecord.revision ?? 0);
+if (typeof body.expectedRevision === 'number' &amp;&amp; body.expectedRevision !== currentRevision) {
+  return sendJson(res, 409, { error: MATCH_CONFLICT_MESSAGE, code: MATCH_CONFLICT_CODE });
+}</code></pre>
+  Add <code>revision: currentRevision + 1,</code> to <code>updatedRecord</code>. Replace the final two lines (<code>const saved = await saveFullTournament(t); return sendJson(res, 200, saved);</code>) with:
+<pre><code>t.matchScores[matchId] = updatedRecord;
+await saveMatchResult({ tournament: t, tierId, matchId, record: updatedRecord, bracket: updatedBracket });
+const saved = await getFullTournament(t.id);
+return sendJson(res, 200, saved);</code></pre>
+  Delete the now-duplicate <code>t.tiers = ...</code> and <code>t.matchScores[matchId] = updatedRecord;</code> lines above it.</li>
+  <li><strong>Forfeit</strong> (<code>POST .../forfeit</code>) and <strong>best-of</strong> (<code>PUT .../best-of</code>): same replacement of the final save, and <code>revision: Number(currentRecord.revision ?? 0) + 1</code> in <code>updatedRecord</code>. No conflict check on these two.</li>
+</ol>
+<p><code>swap-slots</code>, <code>lock</code>, <code>unlock</code>, clear and simulate keep using <code>saveFullTournament</code>; they now run under the lock (ER.3), so they no longer lose concurrent writes.</p>
+
+<h2>E. Client</h2>
+<h3><code>store.tsx</code></h3>
+<ol class="steps">
+  <li><code>apiCall</code>: replace <code>throw new Error(msg);</code> with <code>throw new ApiError(msg, res.status, typeof errorData.code === 'string' ? errorData.code : undefined);</code> (import <code>ApiError</code>). <code>ApiError</code> extends <code>Error</code>, so every existing <code>catch</code> keeps working.</li>
+  <li><code>saveMatchScores</code>: add a last parameter <code>options: { expectedRevision?: number } = {}</code> (also in the context type), and send <code>expectedRevision: options.expectedRevision</code> in the body. In its <code>catch</code>, first:
+<pre><code>if (err instanceof ApiError &amp;&amp; err.code === MATCH_CONFLICT_CODE) {
+  await refreshTournament(tournament.id);
+  throw err;
+}</code></pre>
+  then the existing <code>setApiError</code> / <code>return null</code>.</li>
+</ol>
+<h3><code>src/features/bracket/drawerSync.ts</code> (new)</h3>
+<pre><code>/**
+ * Whether the score drawer should replace its editable games with the latest stored ones.
+ * It never discards a judge's unsaved typing because of a background refresh; the save's
+ * revision check catches real conflicts instead.
+ */
+export function shouldResyncDrawer(input: {
+  lastSyncedMatchId: string | null; // match id at the last resync, null if never synced
+  lastSyncedGamesJson: string | null; // JSON of the games at the last resync
+  currentGamesJson: string; // JSON of the games the judge sees now
+  matchId: string;
+}): boolean {
+  if (input.lastSyncedMatchId !== input.matchId) return true;
+  return input.currentGamesJson === input.lastSyncedGamesJson;
+}</code></pre>
+<h3><code>MatchScoreDrawer.tsx</code></h3>
+<ol class="steps">
+  <li>Add state <code>const [baseRevision, setBaseRevision] = useState(0);</code>, <code>const [conflictNotice, setConflictNotice] = useState&lt;string | null&gt;(null);</code>, <code>const [resyncToken, setResyncToken] = useState(0);</code>, and refs <code>const lastSyncRef = useRef&lt;{ matchId: string; gamesJson: string } | null&gt;(null);</code> and <code>const gamesRef = useRef(games); gamesRef.current = games;</code> (place the <code>gamesRef</code> lines right after the <code>games</code> state).</li>
+  <li>Replace the existing reset <code>useEffect</code> (the one with deps <code>[match, liveRecord]</code>) with:
+<pre><code>useEffect(() =&gt; {
+  if (!match) return;
+  const last = lastSyncRef.current;
+  if (!shouldResyncDrawer({
+    lastSyncedMatchId: last?.matchId ?? null,
+    lastSyncedGamesJson: last?.gamesJson ?? null,
+    currentGamesJson: JSON.stringify(gamesRef.current),
+    matchId: match.id,
+  })) return;
+  const currentBestOf = liveRecord?.bestOf || match.bestOf || 5;
+  const nextGames = deriveInitialGames(match, liveRecord);
+  setBestOf(currentBestOf);
+  setGames(nextGames);
+  setHasTiebreaker(Boolean(liveRecord?.hasTiebreaker || (liveRecord?.games?.length || 0) &gt; currentBestOf));
+  setBaseRevision(Number(liveRecord?.revision ?? 0));
+  lastSyncRef.current = { matchId: match.id, gamesJson: JSON.stringify(nextGames) };
+}, [match, liveRecord, resyncToken]);</code></pre></li>
+  <li>When the drawer closes (<code>isOpen</code> becomes false), set <code>lastSyncRef.current = null</code> and <code>setConflictNotice(null)</code> in an effect on <code>[isOpen]</code>, so reopening always loads fresh games.</li>
+  <li>In <code>handleSaveAndAdvance</code>: call <code>setConflictNotice(null)</code> first; pass <code>{ expectedRevision: baseRevision }</code> as the new last argument of <code>saveMatchScores</code>; replace <code>await saveMatchScores(...); onClose();</code> with:
+<pre><code>try {
+  const saved = await saveMatchScores(/* existing args */, { expectedRevision: baseRevision });
+  if (saved) onClose(); // null means the store already reported an error; keep the judge's scores on screen
+} catch (err) {
+  if (err instanceof ApiError &amp;&amp; err.code === MATCH_CONFLICT_CODE) {
+    setConflictNotice(err.message);
+    lastSyncRef.current = null; // the next resync loads the latest stored games
+    setResyncToken(n =&gt; n + 1);
+    return;
+  }
+  throw err;
+}</code></pre></li>
+  <li>Render the notice directly above the footer row that holds Cancel and the save button:
+<pre><code>{conflictNotice &amp;&amp; (
+  &lt;div role="alert" data-testid="match-conflict-notice" className="mx-6 mb-3 rounded-sm border border-gold/40 bg-gold-soft px-3 py-2 text-sm text-gold-bright"&gt;
+    {conflictNotice}
+  &lt;/div&gt;
+)}</code></pre>
+  Match the horizontal padding of the surrounding footer if <code>mx-6</code> does not line up; use only Tailwind classes.</li>
+</ol>
+
+<h2>F. Tests</h2>
+<h3><code>src/api/__tests__/targetedMatchWrites.test.ts</code></h3>
+<p>Build locked tournaments with the fixture from <code>relationalIntegrity.test.ts</code> section 4, once per bracket format: Single Elimination Traditional, Double Elimination Traditional, Double Elimination Flat Staged, Double Elimination Accelerated Hybrid (the tier configs are in that file's section 1). For each format:</p>
+<ol class="steps">
+  <li><strong>No mass rewrite:</strong> record every <code>matches</code> row's <code>createdAt</code> for the tier. Score round-1 match 1 (Best-of win for player 1). Every row's <code>createdAt</code> is unchanged and the row count is unchanged.</li>
+  <li><strong>Advancement persisted:</strong> the match that bracket routes the winner to has player 1 in the routed slot, both in GET and in its <code>matches</code> row (<code>player1Id</code> or <code>player2Id</code>). For double elimination, the loser appears in the routed losers-bracket slot.</li>
+  <li><strong>Other games untouched:</strong> score match 2, then re-score match 1 with different points. Match 2's <code>games</code> rows are unchanged (same ids).</li>
+  <li><strong>Retract:</strong> re-scoring match 1 so nobody has won yet clears the winner from the next match's slot (GET and row).</li>
+</ol>
+<p>Once (Single Elimination only):</p>
+<ol class="steps">
+  <li>First score with no <code>expectedRevision</code> → 200, record <code>revision === 1</code>. Score with <code>expectedRevision: 0</code> → 409, body <code>{ error: MATCH_CONFLICT_MESSAGE, code: 'MATCH_CONFLICT' }</code>, and nothing changed. Score with <code>expectedRevision: 1</code> → 200 and <code>revision === 2</code>.</li>
+  <li>Forfeit and best-of each raise the revision by 1.</li>
+  <li><code>hasTiebreaker</code> sent with a score is stored in <code>tournaments.metadata.matchScores</code>.</li>
+</ol>
+<h3><code>src/features/bracket/__tests__/drawerSync.test.ts</code></h3>
+<ol class="steps">
+  <li>Never synced → true. Different match id → true.</li>
+  <li>Same match, current games equal the last synced games → true (nothing typed; take the refresh).</li>
+  <li>Same match, current games differ → false (judge is typing; keep it).</li>
+</ol>
+<h3>Existing tests</h3>
+<p><code>relationalIntegrity.test.ts</code>, <code>tournamentCreationAndSchemaRegression.test.ts</code> and every bracket test must pass with no edits. If one fails, stop and report it.</p>
+
+<h2>Commands</h2>
+<ol class="steps">
+  <li><code>npm run typecheck</code></li>
+  <li><code>npx vitest run src/api/__tests__/targetedMatchWrites.test.ts src/features/bracket/__tests__/drawerSync.test.ts</code></li>
+  <li><code>npm run test:brackets</code> and <code>npm run test:api</code></li>
+  <li><code>npm run test:pg</code> (ER.3's concurrency test still passes)</li>
+  <li><code>npm test</code>, then <code>npm run test:e2e</code></li>
+</ol>
+
+<h2>Done when</h2>
+<ul class="check">
+  <li>Score, forfeit and best-of writes no longer delete or re-insert unrelated matches or games, in all four bracket formats.</li>
+  <li>A save based on an older revision of the same match returns 409; the drawer shows the notice, loads the latest scores, and stays open.</li>
+  <li>A background refresh never wipes scores a judge is typing.</li>
+  <li>A failed save keeps the drawer open with the judge's scores.</li>
+  <li>All commands above pass.</li>
+</ul>
+</main>
+</body>
+</html>

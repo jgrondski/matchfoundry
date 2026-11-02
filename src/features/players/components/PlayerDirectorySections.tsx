@@ -12,7 +12,6 @@ import {
   Search,
   Trash2,
   Edit2,
-  Trophy,
   X,
   ArrowUpDown,
   Filter,
@@ -287,8 +286,6 @@ export const PlayerDirectoryRow: React.FC<PlayerDirectoryRowProps> = React.memo(
   onEdit,
   onDelete,
 }) => {
-  const isMaxout = (player.personalBest || 0) >= 999999;
-
   return (
     <tr className="border-b border-line-subtle bg-transparent transition-colors duration-150">
       {/* Index */}
@@ -355,21 +352,9 @@ export const PlayerDirectoryRow: React.FC<PlayerDirectoryRowProps> = React.memo(
 
       {/* Personal Best */}
       <td className={tdClass}>
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              'font-mono text-sm font-bold',
-              isMaxout ? 'text-gold-bright' : 'text-fg'
-            )}
-          >
-            {player.personalBest ? player.personalBest.toLocaleString() : '—'}
-          </span>
-          {isMaxout && (
-            <span className="inline-flex items-center gap-1 rounded-sm border border-gold bg-gold/20 px-1.5 py-0.5 text-3xs font-extrabold text-gold-bright">
-              <Trophy size={10} /> MAXOUT
-            </span>
-          )}
-        </div>
+        <span className="font-mono text-sm font-bold text-fg">
+          {player.personalBest ? player.personalBest.toLocaleString() : '—'}
+        </span>
       </td>
 
       {/* Status */}

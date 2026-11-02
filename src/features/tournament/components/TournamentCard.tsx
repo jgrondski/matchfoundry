@@ -17,6 +17,7 @@ import {
   Trophy,
   Settings,
   ExternalLink,
+  FlaskConical,
 } from 'lucide-react';
 import { usePinAuth } from '../../auth/AuthContext';
 import { Badge, Button, buttonClasses, cn } from '../../../components/ui';
@@ -81,6 +82,12 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
                 <Building2 size={12} />
                 {org.shortName || org.name}
               </Link>
+            )}
+
+            {tournament.isTest && (
+              <Badge variant="blue" data-testid="test-tournament-badge">
+                <FlaskConical size={12} /> Test
+              </Badge>
             )}
 
             {!tournament.isLocked ? (
