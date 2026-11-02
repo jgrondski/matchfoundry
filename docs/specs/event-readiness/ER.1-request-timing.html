@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step ER.1 Request Timing</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Event readiness / ER.1</nav>
+<h1>Step ER.1: Measure every API request</h1>
+<p class="subtitle">Count database queries and time each API request, return both in a <code>Server-Timing</code> header, and log slow or writing requests, so the 2–3 second write latency can be attributed before and after ER.2–ER.4.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. <strong>Prerequisite:</strong> none. Run before <a href="ER.2-db-driver-and-transactions.html">ER.2</a> (both edit <code>src/db/index.ts</code>). <strong>Read first:</strong> <a href="../index.html">index.html</a> “Rules for every executor”, <code>docs/TESTING_STRATEGY.md</code>.</p></div>
+
+<h2>Why</h2>
+<p>Most writes take 2–3 seconds in production. The code suggests the cause is many sequential database round trips per request (Neon's HTTP driver sends one HTTPS request per query), plus cold starts and Neon waking from scale-to-zero. This step adds the measurement; it changes no behavior.</p>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Area</th><th>Files</th></tr>
+  <tr><td>Server</td><td>create <code>src/server/requestMetrics.ts</code>; <code>src/server/api.ts</code>; <code>src/db/index.ts</code></td></tr>
+  <tr><td>Tests</td><td>create <code>src/server/__tests__/requestMetrics.test.ts</code></td></tr>
+</table>
+
+<h2>A. <code>src/server/requestMetrics.ts</code> (new)</h2>
+<pre><code>import { AsyncLocalStorage } from 'node:async_hooks';
+
+interface RequestMetricsState {
+  startedAt: number;
+  queryCount: number;
+}
+
+const storage = new AsyncLocalStorage&lt;RequestMetricsState&gt;();
+
+/** Runs one API request with its own query counter and clock. */
+export function runWithRequestMetrics&lt;T&gt;(fn: () =&gt; Promise&lt;T&gt;): Promise&lt;T&gt; {
+  return storage.run({ startedAt: performance.now(), queryCount: 0 }, fn);
+}
+
+/** Counts one database query against the current request (no-op outside a request). */
+export function recordQuery(): void {
+  const state = storage.getStore();
+  if (state) state.queryCount += 1;
+}
+
+export function getRequestMetrics(): { elapsedMs: number; queryCount: number } | null {
+  const state = storage.getStore();
+  if (!state) return null;
+  return { elapsedMs: Math.round(performance.now() - state.startedAt), queryCount: state.queryCount };
+}
+
+export function formatServerTiming(metrics: { elapsedMs: number; queryCount: number }): string {
+  return `app;dur=${metrics.elapsedMs}, db;desc="${metrics.queryCount} queries"`;
+}
+
+/** Drizzle logger that counts queries. Pass as `logger` to every drizzle() call in src/db/index.ts. */
+export const queryCounterLogger = {
+  logQuery(): void {
+    recordQuery();
+  },
+};</code></pre>
+
+<h2>B. <code>src/db/index.ts</code></h2>
+<ol class="steps">
+  <li>Import <code>queryCounterLogger</code> from <code>'../server/requestMetrics'</code>.</li>
+  <li>Pass <code>logger: queryCounterLogger</code> in the options of both drizzle calls: <code>drizzleNeon(sql, { schema, logger: queryCounterLogger })</code> and <code>drizzlePg(pgPool, { schema, logger: queryCounterLogger })</code>. Change nothing else. (<code>setDb</code> instances used by tests stay unlogged; that is expected.)</li>
+</ol>
+
+<h2>C. <code>src/server/api.ts</code></h2>
+<ol class="steps">
+  <li>Import <code>runWithRequestMetrics</code>, <code>getRequestMetrics</code>, <code>formatServerTiming</code> from <code>'./requestMetrics'</code>.</li>
+  <li>In <code>sendJson</code>, before <code>res.end(...)</code>, add:
+<pre><code>const metrics = getRequestMetrics();
+if (metrics) res.setHeader('Server-Timing', formatServerTiming(metrics));</code></pre></li>
+  <li>In <code>createApiMiddleware</code>, rename the returned async arrow function's body into an inner function and wrap it:
+<pre><code>export function createApiMiddleware() {
+  const handle = async (req: IncomingMessage, res: ServerResponse, _next?: () =&gt; void) =&gt; {
+    // ...the existing body, unchanged...
+  };
+  return (req: IncomingMessage, res: ServerResponse, _next?: () =&gt; void) =&gt;
+    runWithRequestMetrics(async () =&gt; {
+      try {
+        return await handle(req, res, _next);
+      } finally {
+        logRequestMetrics(req, res);
+      }
+    });
+}</code></pre></li>
+  <li>Add this module-level helper next to <code>sendJson</code>:
+<pre><code>const SLOW_REQUEST_MS = 500;
+
+function logRequestMetrics(req: IncomingMessage, res: ServerResponse): void {
+  if (process.env.VITEST) return;
+  const metrics = getRequestMetrics();
+  if (!metrics) return;
+  const method = req.method || 'GET';
+  const path = (req.url || '').split('?')[0];
+  if (!path.startsWith('/api') &amp;&amp; !path.startsWith('api')) return;
+  if (method === 'GET' &amp;&amp; metrics.elapsedMs &lt; SLOW_REQUEST_MS) return;
+  console.log(`[api] ${method} ${path} ${res.statusCode} ${metrics.elapsedMs}ms q=${metrics.queryCount}`);
+}</code></pre></li>
+</ol>
+<p>The Vite dev server passes non-API requests through <code>_next()</code>; the path check keeps those out of the log.</p>
+
+<h2>D. Tests: <code>src/server/__tests__/requestMetrics.test.ts</code></h2>
+<ol class="steps">
+  <li><code>getRequestMetrics()</code> returns <code>null</code> outside <code>runWithRequestMetrics</code>, and <code>recordQuery()</code> outside it does not throw.</li>
+  <li>Inside <code>runWithRequestMetrics</code>, three <code>recordQuery()</code> calls give <code>queryCount === 3</code>; two concurrent <code>runWithRequestMetrics</code> calls (<code>Promise.all</code>, each awaiting a <code>setTimeout(0)</code> between its calls, one recording 1 query and the other 2) keep separate counts.</li>
+  <li><code>formatServerTiming({ elapsedMs: 12, queryCount: 4 })</code> equals <code>'app;dur=12, db;desc="4 queries"'</code>.</li>
+  <li><code>GET /api</code> through <code>createApiMiddleware()</code> (mock request and response as in <code>src/server/__tests__/apiAuth.test.ts</code>, with <code>setHeader</code> recording into a map) sets a <code>Server-Timing</code> header matching <code>/^app;dur=\d+, db;desc="\d+ queries"$/</code>.</li>
+</ol>
+
+<h2>Commands</h2>
+<ol class="steps">
+  <li><code>npm run typecheck</code></li>
+  <li><code>npx vitest run src/server/__tests__/requestMetrics.test.ts</code></li>
+  <li><code>npm run test:api</code></li>
+</ol>
+
+<h2>How the coordinator reads the numbers (after deploy)</h2>
+<ul>
+  <li>Browser DevTools → Network → select a request → Timing tab shows <code>app</code> (total server time) and the query count. Vercel → Project → Logs shows the <code>[api]</code> lines.</li>
+  <li><strong>High <code>q=</code> (20+) and high ms:</strong> query pattern. ER.2–ER.4 fix it.</li>
+  <li><strong>Low <code>q=</code> but high ms on the first request after a quiet period:</strong> cold start or Neon waking. The keep-warm cron in <a href="ER.5-realtime-worker.html">ER.5</a> covers event days.</li>
+  <li>Record a baseline for: delete global player, save a match score, save tournament settings, start the qual timer. Compare after ER.4.</li>
+</ul>
+
+<h2>Done when</h2>
+<ul class="check">
+  <li>Every JSON API response carries a <code>Server-Timing</code> header.</li>
+  <li>Every non-GET request and every GET over 500 ms logs one <code>[api]</code> line with status, duration and query count; tests log nothing.</li>
+  <li>Typecheck and the commands above pass.</li>
+</ul>
+</main>
+</body>
+</html>

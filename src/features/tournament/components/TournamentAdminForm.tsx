@@ -10,6 +10,7 @@ import {
   Unlock,
   ShieldCheck,
   Globe,
+  FlaskConical,
 } from 'lucide-react';
 import { useOrganization } from '../../organizations/store';
 import {
@@ -58,6 +59,15 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     testDiscordWebhook,
   } = useTournament();
   const { isSystemAdmin } = usePinAuth();
+  const [isTogglingTest, setIsTogglingTest] = useState(false);
+  const toggleTestTournament = async () => {
+    setIsTogglingTest(true);
+    try {
+      await updateTournament(tournament.id, { isTest: !tournament.isTest });
+    } finally {
+      setIsTogglingTest(false);
+    }
+  };
 
   const { organizations, getOrganizationById } = useOrganization();
 
@@ -733,6 +743,39 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           </Button>
         </div>
       )}
+
+      {/* Test tournament flag (saved immediately, not by the form Save) */}
+      <div
+        className={cn(
+          'flex flex-wrap items-center justify-between gap-3 rounded-md border bg-surface py-2.5 px-4.5',
+          tournament.isTest ? 'border-sky-400/35' : 'border-line'
+        )}
+        data-testid="test-tournament-toggle-bar"
+      >
+        <div className="flex items-center gap-2.5">
+          <FlaskConical size={18} className={cn('shrink-0', tournament.isTest ? 'text-sky-400' : 'text-fg-muted')} />
+          <div>
+            <span className={cn('mr-2 text-sm font-bold', tournament.isTest ? 'text-sky-400' : 'text-fg')}>
+              {tournament.isTest ? 'TEST TOURNAMENT' : 'LIVE TOURNAMENT'}
+            </span>
+            <span className="text-caption text-fg-secondary">
+              {tournament.isTest
+                ? 'Hidden from the front page. Still reachable by direct link.'
+                : 'Listed on the front page.'}
+            </span>
+          </div>
+        </div>
+        <Button
+          onClick={() => {
+            void toggleTestTournament();
+          }}
+          disabled={isTogglingTest}
+          variant="secondary"
+          className="py-1.5 px-3 text-caption"
+        >
+          {isTogglingTest ? 'Saving…' : tournament.isTest ? 'Unmark as Test' : 'Mark as Test'}
+        </Button>
+      </div>
 
       {/* Section 1: Tournament Information */}
       <TournamentInfoSection

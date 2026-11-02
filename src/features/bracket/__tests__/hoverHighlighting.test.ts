@@ -3,6 +3,7 @@ import {
   getHighlightedPlayerNameColor,
   findPlayerJourney,
   getMatchBranchColor,
+  getCardHoverHighlight,
 } from '../components/BracketVisualizer';
 import { generateTraditionalDoubleElim } from '../math/double-elimination';
 import { SeededPlayer } from '../types';
@@ -366,6 +367,34 @@ describe('Bracket Hover Highlighting & Visual Distinction', () => {
       expect(journey.matchIds.size).toBeGreaterThan(0);
       expect(journey.slotKeys.size).toBeGreaterThan(0);
       expect(journey.targetPlayerId).toBe('p1');
+    });
+  });
+
+  describe('getCardHoverHighlight (routing chip target vs slot ancestry)', () => {
+    it('keeps the chip target lit and undimmed after the slot ancestry highlight kicks in', () => {
+      // Regression: the drop chip lives inside a player slot, so 200ms after hovering it the slot's
+      // ancestry highlight activated, dimmed the target card to opacity-35 and removed its outline.
+      expect(
+        getCardHoverHighlight({ hasAncestry: true, isCardInAncestry: false, isOriginHovered: true })
+      ).toEqual({ isDimmed: false, showOriginHighlight: true });
+    });
+
+    it('lights the chip target before any ancestry exists', () => {
+      expect(
+        getCardHoverHighlight({ hasAncestry: false, isCardInAncestry: false, isOriginHovered: true })
+      ).toEqual({ isDimmed: false, showOriginHighlight: true });
+    });
+
+    it('still dims unrelated cards outside the ancestry', () => {
+      expect(
+        getCardHoverHighlight({ hasAncestry: true, isCardInAncestry: false, isOriginHovered: false })
+      ).toEqual({ isDimmed: true, showOriginHighlight: false });
+    });
+
+    it('never dims cards inside the ancestry', () => {
+      expect(
+        getCardHoverHighlight({ hasAncestry: true, isCardInAncestry: true, isOriginHovered: false })
+      ).toEqual({ isDimmed: false, showOriginHighlight: false });
     });
   });
 });

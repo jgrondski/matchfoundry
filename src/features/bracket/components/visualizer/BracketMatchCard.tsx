@@ -18,7 +18,7 @@ import {
   getOutboundChip,
   renderMicroChip,
 } from '../../routingChips';
-import { getHighlightedPlayerNameColor } from '../../journeyHighlight';
+import { getCardHoverHighlight, getHighlightedPlayerNameColor } from '../../journeyHighlight';
 import { cn } from '../../../../components/ui';
 
 interface BracketMatchCardProps {
@@ -235,6 +235,11 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
   );
 
   const isHighlightActive = Boolean(hoveredAncestry && isCardInAncestry);
+  const { isDimmed, showOriginHighlight } = getCardHoverHighlight({
+    hasAncestry: Boolean(hoveredAncestry),
+    isCardInAncestry: Boolean(isCardInAncestry),
+    isOriginHovered,
+  });
 
   const cardBorderColor = hoveredAncestry
     ? isCardInAncestry
@@ -282,10 +287,10 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
         'pointer-events-auto absolute overflow-visible transition-[transform,scale,box-shadow] duration-300',
         isFocusedMatch
           ? 'z-60 scale-[1.08]'
+          : showOriginHighlight
+          ? 'z-27'
           : isCardInAncestry
           ? 'z-26'
-          : isOriginHovered
-          ? 'z-25'
           : isMatchHovered
           ? 'z-15'
           : 'z-2'
@@ -302,7 +307,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
         <div
           className={cn(
             'pointer-events-auto absolute right-[calc(100%+6px)] top-5 z-30 flex h-7 items-center justify-end',
-            hoveredAncestry && !isCardInAncestry && 'opacity-35'
+            isDimmed && 'opacity-35'
           )}
         >
           {renderMicroChip(p1InboundChip, setHoveredOriginMatchId, onChipClick)}
@@ -313,7 +318,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
         <div
           className={cn(
             'pointer-events-auto absolute right-[calc(100%+6px)] top-12.5 z-30 flex h-7 items-center justify-end',
-            hoveredAncestry && !isCardInAncestry && 'opacity-35'
+            isDimmed && 'opacity-35'
           )}
         >
           {renderMicroChip(p2InboundChip, setHoveredOriginMatchId, onChipClick)}
@@ -335,17 +340,17 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
           branchAccentColor && 'border-x-4',
           isFocusedMatch ? 'outline-offset-2 animate-match-zoom-pulse' : 'outline-offset-0',
           !isObsMode && tournament.isLocked && isPlayable ? 'cursor-pointer' : 'cursor-default',
-          hoveredAncestry ? !isCardInAncestry && 'opacity-35' : !isPlayable && 'opacity-70'
+          hoveredAncestry ? isDimmed && 'opacity-35' : !isPlayable && 'opacity-70'
         )}
         style={{
           background: effectiveCardBg,
           borderColor: `${cardBorderColor} ${cardSideBorderColor}`,
           boxShadow: isFocusedMatch
             ? `0 0 0 3px ${primaryColor}, 0 0 35px ${primaryColor}dd, 0 0 70px ${primaryColor}66`
+            : showOriginHighlight
+            ? `0 0 20px ${branchAccentColor || primaryColor}, 0 0 8px rgba(255, 255, 255, 0.6)`
             : hoveredAncestry
             ? 'none'
-            : isOriginHovered
-            ? `0 0 20px ${branchAccentColor || primaryColor}, 0 0 8px rgba(255, 255, 255, 0.6)`
             : inProgress
             ? `0 0 16px ${primaryColor}66`
             : isComplete
@@ -355,7 +360,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
             : undefined,
           outline: isFocusedMatch
             ? `2.5px solid ${primaryColor}`
-            : !hoveredAncestry && isOriginHovered
+            : showOriginHighlight
             ? `2px solid ${branchAccentColor || primaryColor}`
             : 'none',
         }}

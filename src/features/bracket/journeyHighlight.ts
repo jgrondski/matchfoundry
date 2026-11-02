@@ -146,3 +146,25 @@ export function getHighlightedPlayerNameColor({
     ? primaryColor
     : textColor;
 }
+
+/**
+ * How a match card reacts to the two hover highlights.
+ *
+ * Hovering a routing chip ("Loser #5") lights up the match it points to (the origin target). The chip
+ * sits inside a player slot, so the slot's ancestry highlight also kicks in after its hover delay and
+ * dims every card outside that ancestry. The origin target must stay lit and undimmed regardless.
+ */
+export function getCardHoverHighlight({
+  hasAncestry,
+  isCardInAncestry,
+  isOriginHovered,
+}: {
+  hasAncestry: boolean;
+  isCardInAncestry: boolean;
+  isOriginHovered: boolean;
+}): { isDimmed: boolean; showOriginHighlight: boolean } {
+  return {
+    isDimmed: hasAncestry && !isCardInAncestry && !isOriginHovered,
+    showOriginHighlight: isOriginHovered,
+  };
+}

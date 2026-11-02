@@ -6,6 +6,7 @@ import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { Overlay } from '../../../components/overlay';
 import { Button, IconButton, cn } from '../../../components/ui';
 import { getReassignBlockReason, reassignReplacesEmptyQual, type ReassignTargetQual } from '../reassignRules';
+import { PLAYSTYLE_OPTIONS } from '../../players/playstyleOptions';
 
 const tabClass = (active: boolean) =>
   cn(
@@ -322,9 +323,9 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                       onChange={e => setNewPlaystyle(e.target.value)}
                       className={fieldClass}
                     >
-                      <option value="DAS">DAS</option>
-                      <option value="Rolling">Rolling</option>
-                      <option value="Hypertap">Hypertap</option>
+                      {PLAYSTYLE_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
                   </div>
                 </div>

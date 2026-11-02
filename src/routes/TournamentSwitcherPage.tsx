@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTournament } from '../features/tournament/store';
 import { TopNavSwitcher } from '../components/TopNavSwitcher';
-import { Layers, Plus, Trophy, AlertTriangle, Sparkles, ShieldCheck, Eye, LayoutDashboard, Globe } from 'lucide-react';
+import { Layers, Plus, Trophy, AlertTriangle, Sparkles, ShieldCheck, Eye, LayoutDashboard, Globe, FlaskConical } from 'lucide-react';
 import { Tournament } from '../features/tournament/types';
 import { TournamentCard } from '../features/tournament/components/TournamentCard';
 import { CreateTournamentModal } from '../features/tournament/components/CreateTournamentModal';
@@ -10,6 +10,7 @@ import { OpenQualsCard } from '../features/online-quals/components/OpenQualsCard
 import { ConfirmDialog } from '../components/overlay';
 import { Button, Chip } from '../components/ui';
 import { SIMULATION_ENABLED } from '../utils/simulationEnv';
+import { filterFrontPageTournaments } from '../features/tournament/tournamentVisibility';
 
 export const TournamentSwitcherPage: React.FC = () => {
   const { isSystemAdmin, session, canManage } = usePinAuth();
@@ -28,6 +29,13 @@ export const TournamentSwitcherPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [tournamentToDelete, setTournamentToDelete] = useState<Tournament | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [showTestTournaments, setShowTestTournaments] = useState(false);
+  const isAdminView = isSystemAdmin && systemViewTab === 'admin';
+  // Public Preview always matches what the public sees, so test tournaments only appear in the admin view.
+  const listedTournaments = filterFrontPageTournaments(tournaments, {
+    showTest: isAdminView && showTestTournaments,
+  });
+  const publicTournaments = filterFrontPageTournaments(tournaments, { showTest: false });
 
   const confirmDeleteTournament = () => {
     if (tournamentToDelete) {
@@ -166,7 +174,7 @@ export const TournamentSwitcherPage: React.FC = () => {
         ) : (
           <div className="flex flex-col gap-10">
             {/* 0. Open online quals callout (same for every viewer; hidden when none are open) */}
-            <OpenQualsCard tournaments={tournaments} />
+            <OpenQualsCard tournaments={publicTournaments} />
 
             {/* 1. Scoped Workspace for Tournament Admin */}
             {isTournamentAdmin && (
@@ -233,17 +241,31 @@ export const TournamentSwitcherPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Globe size={18} color="var(--color-gold-bright)" />
                   <h2 className="m-0 text-xl font-extrabold text-white">
-                    {isSystemAdmin && systemViewTab === 'admin' ? 'All Managed Tournaments' : 'Active Tournaments'}
+                    {isAdminView ? 'All Managed Tournaments' : 'Active Tournaments'}
                   </h2>
                 </div>
+                {isAdminView && (
+                  <Chip
+                    active={showTestTournaments}
+                    onClick={() => setShowTestTournaments(v => !v)}
+                    data-testid="show-test-tournaments-toggle"
+                  >
+                    <FlaskConical size={13} />
+                    <span>Show test tournaments</span>
+                  </Chip>
+                )}
               </div>
 
+              {listedTournaments.length === 0 && (
+                <p className="m-0 text-sm text-fg-muted">No tournaments to show.</p>
+              )}
+
               <div className="grid grid-cols-[repeat(auto-fill,minmax(480px,1fr))] gap-6">
-                {tournaments.map(tournament => (
+                {listedTournaments.map(tournament => (
                   <TournamentCard
                     key={tournament.id}
                     tournament={tournament}
-                    variant={isSystemAdmin && systemViewTab === 'admin' ? 'admin' : 'public'}
+                    variant={isAdminView ? 'admin' : 'public'}
                     onDeleteClick={isSystemAdmin ? setTournamentToDelete : undefined}
                     showOrgBadge={true}
                   />

@@ -7,7 +7,6 @@ import {
   User,
   Trophy,
   Swords,
-  Sparkles,
   Flame,
   Clock,
   Plus,
@@ -364,30 +363,25 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 key={sub.id}
                 className="py-3 px-4 rounded-sm border flex items-center justify-between transition-all duration-150"
                 style={{
-                  background: isMaxout
-                    ? `linear-gradient(90deg, ${colorWithAlpha(primaryColor, 0.16)} 0%, ${getAlternateShade(cardColor, 4)} 100%)`
-                    : isKicker
+                  background: isKicker
                     ? `linear-gradient(90deg, rgba(56, 189, 248, 0.12) 0%, ${getAlternateShade(cardColor, 4)} 100%)`
                     : isBest
                     ? `linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, ${getAlternateShade(cardColor, 4)} 100%)`
                     : getAlternateShade(cardColor, 4),
-                  borderColor: isMaxout
-                    ? colorWithAlpha(primaryColor, 0.45)
-                    : isKicker
+                  borderColor: isKicker
                     ? 'rgba(56, 189, 248, 0.35)'
                     : isBest
                     ? 'rgba(16, 185, 129, 0.35)'
                     : colorWithAlpha(primaryColor, 0.15, 'var(--color-line-subtle)'),
-                  boxShadow: isMaxout ? `0 2px 10px ${colorWithAlpha(primaryColor, 0.12)}` : undefined,
                 }}
               >
                 <div className="flex items-center gap-3">
                   <div
                     className="font-mono tabular-nums tracking-tight size-6.5 rounded-full border flex items-center justify-center text-xs font-extrabold"
                     style={{
-                      background: isMaxout ? colorWithAlpha(primaryColor, 0.25) : colorWithAlpha(primaryColor, 0.1),
-                      borderColor: isMaxout ? colorWithAlpha(primaryColor, 0.5) : colorWithAlpha(primaryColor, 0.2),
-                      color: isMaxout ? primaryColor : textColor,
+                      background: colorWithAlpha(primaryColor, 0.1),
+                      borderColor: colorWithAlpha(primaryColor, 0.2),
+                      color: textColor,
                     }}
                   >
                     {idx + 1}
@@ -395,26 +389,9 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span
-                        className={cn('font-mono tabular-nums tracking-tight font-extrabold text-base', !isMaxout && 'text-white')}
-                        style={{ color: isMaxout ? primaryColor : undefined }}
-                      >
+                      <span className="font-mono tabular-nums tracking-tight font-extrabold text-base text-white">
                         {sub.score.toLocaleString()}
                       </span>
-
-                      {isMaxout && (
-                        <span
-                          className="inline-flex items-center gap-1 py-0.5 px-2 rounded-sm border text-2xs font-extrabold tracking-wide"
-                          style={{
-                            background: colorWithAlpha(primaryColor, 0.25),
-                            color: primaryColor,
-                            borderColor: colorWithAlpha(primaryColor, 0.5),
-                            boxShadow: `0 0 8px ${colorWithAlpha(primaryColor, 0.25)}`,
-                          }}
-                        >
-                          <Sparkles size={11} /> MAXOUT
-                        </span>
-                      )}
 
                       {isKicker && (
                         <span className="py-0.5 px-2 rounded-sm bg-sky-400/20 text-sky-400 border border-sky-400/40 text-2xs font-extrabold tracking-wide">
@@ -454,11 +431,8 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                       })()}
                     </span>
                   ) : tournament.qualFormat === 'HIGH_SCORE' ? (
-                    <span
-                      className={cn('text-xs font-semibold', !isMaxout && 'text-fg-muted')}
-                      style={{ color: isMaxout ? primaryColor : undefined }}
-                    >
-                      {isMaxout ? 'Maxout' : isKicker ? 'Kicker' : 'Attempt'}
+                    <span className="text-xs font-semibold text-fg-muted">
+                      {isKicker ? 'Kicker' : 'Attempt'}
                     </span>
                   ) : (
                     <span className="text-xs text-fg-muted">
@@ -1087,9 +1061,6 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                                 }}
                               >
                                 {m.games.map(g => {
-                                  const pScoreVal = g.playerScore ?? 0;
-                                  const isPMaxout = pScoreVal >= MAXOUT_THRESHOLD;
-
                                   return (
                                     <div
                                       key={g.gameNumber}
@@ -1102,11 +1073,6 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                                         Game {g.gameNumber}{g.isTie ? ' (TIE)' : ''}:
                                       </span>
                                       <div className="flex items-center gap-1.5">
-                                        {isPMaxout && (
-                                          <span title="Maxout" className="text-gold-bright inline-flex items-center">
-                                            <Sparkles size={11} />
-                                          </span>
-                                        )}
                                         <span
                                           className={cn(
                                             'font-bold',

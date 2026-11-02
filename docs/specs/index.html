@@ -9,12 +9,12 @@
 <body>
 <main>
 <h1>MatchFoundry Execution Specs</h1>
-<p class="subtitle">Phase 12 (mobile-friendly app). Start here.</p>
+<p class="subtitle">Event readiness (speed, safe concurrent writes, live updates, loading states), then Phase 12 (mobile-friendly app). Start here.</p>
 
 <h2>How to use these specs</h2>
 <p>Each step of each phase has its own HTML file. A step file is written so that one session, of any model, can execute it from start to finish without making design decisions. To hand a step to a session, use this prompt:</p>
 <pre><code>Read docs/specs/index.html (the "Rules for every executor" section), then execute
-docs/specs/phase-12/&lt;step file&gt;.html exactly as written. Do not start any other step.
+docs/specs/&lt;folder&gt;/&lt;step file&gt;.html exactly as written. Do not start any other step.
 If the spec does not cover a situation, stop and ask instead of improvising.</code></pre>
 
 <h2>Rules for every executor</h2>
@@ -29,6 +29,21 @@ If the spec does not cover a situation, stop and ask instead of improvising.</co
   <li><strong>Parallel steps.</strong> Steps that run in parallel edit the same working tree at the same time. <code>npm run typecheck</code> and some Vitest runs cover more than your step, so they can show errors from another step's unfinished file. If every error is in a file outside your step, list each one (file and line) in your report and keep working; never edit another step's file to make it pass. Errors in your own files must be fixed. Do not run <code>npm run test:visual</code> while other steps are running; run it once all parallel steps finish.</li>
   <li><strong>Final report.</strong> End with: files changed, commands run with pass/fail, anything skipped and why, any <code>eslint-disable</code> lines added (file, line and reason), requests for shared changes, and visual test results.</li>
 </ol>
+
+<h2>Event readiness (ER): before the event</h2>
+<p><strong>Goal:</strong> writes take well under a second, two judges saving at once never lose each other's work, every open page updates without a refresh, and every action shows inline loading with a 10-second timeout. Then Phase 12 steps 12.0–12.2.</p>
+<table>
+  <tr><th>Step</th><th>File</th><th>Depends on</th><th>Summary</th></tr>
+  <tr><td>ER.1</td><td><a href="event-readiness/ER.1-request-timing.html">Request timing</a></td><td>None</td><td><code>Server-Timing</code> header and <code>[api]</code> log lines with duration and query count.</td></tr>
+  <tr><td>ER.2</td><td><a href="event-readiness/ER.2-db-driver-and-transactions.html">Driver and transactions</a></td><td>ER.1</td><td>Neon WebSocket pool, real transactions, parallel tournament loads, real-Postgres test tier (<code>npm run test:pg</code>).</td></tr>
+  <tr><td>ER.3</td><td><a href="event-readiness/ER.3-tournament-write-lock.html">Tournament write lock</a></td><td>ER.2</td><td>Every tournament write runs under a row lock with a revision bump; a stale settings save can no longer undo scores.</td></tr>
+  <tr><td>ER.4</td><td><a href="event-readiness/ER.4-targeted-match-writes.html">Targeted match writes</a></td><td>ER.3</td><td>Score, forfeit and best-of write only their own rows; per-match revision returns a clear conflict message.</td></tr>
+  <tr><td>ER.5</td><td><a href="event-readiness/ER.5-realtime-worker.html">Realtime worker</a></td><td>None</td><td>Cloudflare Worker and Durable Object that fans out “tournament changed” messages; event-day keep-warm cron.</td></tr>
+  <tr><td>ER.6</td><td><a href="event-readiness/ER.6-live-updates-client.html">Live updates</a></td><td>ER.3, ER.5 (and ER.7 first if pending)</td><td>API publishes after writes; pages refresh on their own; CDN-cached anonymous refreshes; server clock for the qual timer.</td></tr>
+  <tr><td>ER.7</td><td><a href="event-readiness/ER.7-busy-foundation.html">Loading foundation</a></td><td>None</td><td>Spinner, <code>useAction</code>, global busy lock, 10-second timeout, shared error banner.</td></tr>
+  <tr><td>ER.8</td><td><a href="event-readiness/ER.8-busy-flows.html">Loading flows</a></td><td>ER.4, ER.6, ER.7</td><td>Judge, qualifier, review-queue and admin actions converted to the loading pattern.</td></tr>
+</table>
+<p>Main chain: ER.1 → ER.2 → ER.3 → ER.4 → ER.6 → ER.8. ER.5 can run any time (it touches nothing under <code>src/</code>). ER.7 can run alongside ER.2–ER.4. ER.5 must be deployed by the user before live updates work in production (see ER.5 section G).</p>
 
 <h2>Phase 12: Mobile-friendly app (360×800 and up)</h2>
 <p><strong>Goal:</strong> every page works on a 360×800 phone with no sideways page scroll, tap targets of at least 44px, and readable text. Priority order: spectators navigating from the landing page, then floor judges (match scoring, qualifier entry, review queue), then the compact bracket, then everything else. The work is not done until every route passes.</p>
@@ -51,6 +66,9 @@ If the spec does not cover a situation, stop and ask instead of improvising.</co
   <tr><td>QR.2</td><td><a href="qual-review/QR.2-review-workflow.html">Review workflow</a></td><td>QR.1</td><td>Save vs Verify, Unverify, verified lock, submitted date/time, provisional brackets, lock warning, pending simulated quals, walk-in wording removed.</td></tr>
 </table>
 
+<h2>Backlog</h2>
+<p>Agreed work without step specs yet (Twitch login removal, one shared player modal, a single name field, tournament status and sorting, test players, simulation) is listed in priority order in the “Prioritized Backlog” of <a href="../implementation_plan.md">docs/implementation_plan.md</a>, the roadmap for every phase.</p>
+
 <h2>Decisions already made</h2>
 <table>
   <tr><th>Topic</th><th>Decision</th></tr>
@@ -61,6 +79,10 @@ If the spec does not cover a situation, stop and ask instead of improvising.</co
   <tr><td>Compact bracket</td><td>Shows seed, name and match wins only (for example 2–1). Brackets never show game scores.</td></tr>
   <tr><td>Screenshot tests</td><td>Light touch: 18 screenshots, mocked API, fixtures generated in code (seeded, no database), frozen clock, their own command, never part of <code>npm test</code> or CI.</td></tr>
   <tr><td>Spec location</td><td><code>docs/specs/</code> in the repo, one HTML file per step.</td></tr>
+  <tr><td>Realtime</td><td>Cloudflare Durable Objects (free tier), one per tournament. Messages carry only a revision; clients re-fetch through the API. No polling.</td></tr>
+  <tr><td>Write model</td><td>Per-tournament row lock and revision on every write; match writes touch only their own rows; per-match revision returns 409 <code>MATCH_CONFLICT</code> instead of overwriting.</td></tr>
+  <tr><td>Loading</td><td>Inline spinner and loading text on the clicked button, every other button disabled, 10-second timeout with an error banner.</td></tr>
+  <tr><td>Test tournaments</td><td>Stored as <code>metadata.isTest</code>; hidden from the front page unless an admin turns on “Show test tournaments”. Test players, status, sorting and simulation are in the <a href="../implementation_plan.md">implementation plan</a> backlog.</td></tr>
 </table>
 
 <h2>Definition of done</h2>
