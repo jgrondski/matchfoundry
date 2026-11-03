@@ -19,6 +19,7 @@ import { ObsOverlayPage } from './routes/ObsOverlayPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Database, AlertTriangle } from 'lucide-react';
 import { AuthProvider } from './features/auth/AuthContext';
+import { BusyProvider, FeedbackProvider, useFeedback } from './components/ui';
 import { RequireTournamentAdmin, RequireMasterAdmin, RequireAnyAdmin } from './features/auth/RouteGuards';
 import { AdminLoginPage } from './routes/AdminLoginPage';
 import { PublicQualifyPage } from './routes/PublicQualifyPage';
@@ -77,6 +78,18 @@ const LiveRouteSync: React.FC = () => {
   return null;
 };
 
+/** Shows store errors in the shared banner. */
+const StoreErrorBridge: React.FC = () => {
+  const { apiError, clearApiError } = useTournament();
+  const { showError } = useFeedback();
+  useEffect(() => {
+    if (!apiError) return;
+    showError(apiError);
+    clearApiError?.();
+  }, [apiError, clearApiError, showError]);
+  return null;
+};
+
 export const App: React.FC = () => {
   const [configError] = useState<string | null>(null);
 
@@ -109,196 +122,201 @@ export const App: React.FC = () => {
   }
 
   return (
-    <AuthProvider>
-      <OrganizationProvider>
-        <TournamentProvider>
-          <BrowserRouter>
-            <LiveRouteSync />
-            <ErrorBoundary>
-              <Routes>
-                {/* Home: Tournaments Switcher */}
-                <Route path="/" element={<TournamentSwitcherPage />} />
+    <FeedbackProvider>
+      <BusyProvider>
+        <AuthProvider>
+          <OrganizationProvider>
+            <TournamentProvider>
+              <BrowserRouter>
+                <LiveRouteSync />
+                <StoreErrorBridge />
+                <ErrorBoundary>
+                  <Routes>
+                    {/* Home: Tournaments Switcher */}
+                    <Route path="/" element={<TournamentSwitcherPage />} />
 
-                {/* Dedicated Admin Login */}
-                <Route path="/admin" element={<AdminLoginPage />} />
-                <Route path="/login" element={<Navigate to="/admin" replace />} />
+                    {/* Dedicated Admin Login */}
+                    <Route path="/admin" element={<AdminLoginPage />} />
+                    <Route path="/login" element={<Navigate to="/admin" replace />} />
 
-                {/* Organizations Directory & Dashboard (Master Admin Restricted) */}
-                <Route
-                  path="/organizations"
-                  element={
-                    <RequireMasterAdmin>
-                      <OrganizationDirectoryPage />
-                    </RequireMasterAdmin>
-                  }
-                />
-                <Route path="/org/:orgSlug" element={<OrganizationDetailPage />} />
+                    {/* Organizations Directory & Dashboard (Master Admin Restricted) */}
+                    <Route
+                      path="/organizations"
+                      element={
+                        <RequireMasterAdmin>
+                          <OrganizationDirectoryPage />
+                        </RequireMasterAdmin>
+                      }
+                    />
+                    <Route path="/org/:orgSlug" element={<OrganizationDetailPage />} />
 
-                {/* Global Player Directory (Any Admin: System Admin or Tournament Admin) */}
-                <Route
-                  path="/players"
-                  element={
-                    <RequireAnyAdmin>
-                      <PlayerDirectoryPage />
-                    </RequireAnyAdmin>
-                  }
-                />
+                    {/* Global Player Directory (Any Admin: System Admin or Tournament Admin) */}
+                    <Route
+                      path="/players"
+                      element={
+                        <RequireAnyAdmin>
+                          <PlayerDirectoryPage />
+                        </RequireAnyAdmin>
+                      }
+                    />
 
-                {/* Tournament Shortlinks & Cutoffs */}
-                <Route path="/:slug" element={<SlugRedirectPage />} />
-                <Route path="/:slug/leaderboard" element={<PublicLeaderboardPage />} />
-                <Route path="/:slug/quals" element={<Navigate to="../leaderboard" relative="path" replace />} />
-                <Route path="/:slug/standings" element={<FinalStandingsPage />} />
-                <Route path="/:slug/qualify" element={<PublicQualifyPage />} />
+                    {/* Tournament Shortlinks & Cutoffs */}
+                    <Route path="/:slug" element={<SlugRedirectPage />} />
+                    <Route path="/:slug/leaderboard" element={<PublicLeaderboardPage />} />
+                    <Route path="/:slug/quals" element={<Navigate to="../leaderboard" relative="path" replace />} />
+                    <Route path="/:slug/standings" element={<FinalStandingsPage />} />
+                    <Route path="/:slug/qualify" element={<PublicQualifyPage />} />
 
-                {/* OBS Broadcast Studio Hub */}
-                <Route path="/:slug/obs" element={<OBSHubPage />} />
+                    {/* OBS Broadcast Studio Hub */}
+                    <Route path="/:slug/obs" element={<OBSHubPage />} />
 
-                {/* Dedicated OBS Broadcast Overlay Endpoints */}
-                <Route path="/:slug/obs/bracket" element={<ObsOverlayPage />} />
-                <Route path="/:slug/obs/bracket/:tierSlug" element={<ObsOverlayPage />} />
-                <Route path="/:slug/obs/match/:matchId" element={<ObsOverlayPage />} />
-                <Route path="/obs/overlay/:slug/:tierSlug" element={<ObsOverlayPage />} />
-                <Route path="/obs/match/:slug/:matchId" element={<ObsOverlayPage />} />
+                    {/* Dedicated OBS Broadcast Overlay Endpoints */}
+                    <Route path="/:slug/obs/bracket" element={<ObsOverlayPage />} />
+                    <Route path="/:slug/obs/bracket/:tierSlug" element={<ObsOverlayPage />} />
+                    <Route path="/:slug/obs/match/:matchId" element={<ObsOverlayPage />} />
+                    <Route path="/obs/overlay/:slug/:tierSlug" element={<ObsOverlayPage />} />
+                    <Route path="/obs/match/:slug/:matchId" element={<ObsOverlayPage />} />
 
-                {/* Management Views (Gated by Tournament Scope / Master Admin) */}
-                <Route
-                  path="/:slug/manage"
-                  element={
-                    <RequireTournamentAdmin>
-                      <PublicTierBracketPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/manage/bracket"
-                  element={
-                    <RequireTournamentAdmin>
-                      <PublicTierBracketPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/manage/bracket/:tierSlug"
-                  element={
-                    <RequireTournamentAdmin>
-                      <PublicTierBracketPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/manage/sheet"
-                  element={
-                    <RequireTournamentAdmin>
-                      <ManageSheetPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/manage/judge"
-                  element={
-                    <RequireTournamentAdmin>
-                      <ManageJudgePage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/manage/review"
-                  element={
-                    <RequireTournamentAdmin>
-                      <ManageReviewPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/manage/qualifiers"
-                  element={
-                    <RequireTournamentAdmin>
-                      <PublicLeaderboardPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/manage/seeding"
-                  element={
-                    <RequireTournamentAdmin>
-                      <PublicLeaderboardPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/manage/standings"
-                  element={
-                    <RequireTournamentAdmin>
-                      <FinalStandingsPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/manage/players"
-                  element={
-                    <RequireTournamentAdmin>
-                      <ManageTournamentPlayersPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/manage/settings"
-                  element={
-                    <RequireTournamentAdmin>
-                      <ManageTournamentSettingsPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
+                    {/* Management Views (Gated by Tournament Scope / Master Admin) */}
+                    <Route
+                      path="/:slug/manage"
+                      element={
+                        <RequireTournamentAdmin>
+                          <PublicTierBracketPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/manage/bracket"
+                      element={
+                        <RequireTournamentAdmin>
+                          <PublicTierBracketPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/manage/bracket/:tierSlug"
+                      element={
+                        <RequireTournamentAdmin>
+                          <PublicTierBracketPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/manage/sheet"
+                      element={
+                        <RequireTournamentAdmin>
+                          <ManageSheetPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/manage/judge"
+                      element={
+                        <RequireTournamentAdmin>
+                          <ManageJudgePage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/manage/review"
+                      element={
+                        <RequireTournamentAdmin>
+                          <ManageReviewPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/manage/qualifiers"
+                      element={
+                        <RequireTournamentAdmin>
+                          <PublicLeaderboardPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/manage/seeding"
+                      element={
+                        <RequireTournamentAdmin>
+                          <PublicLeaderboardPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/manage/standings"
+                      element={
+                        <RequireTournamentAdmin>
+                          <FinalStandingsPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/manage/players"
+                      element={
+                        <RequireTournamentAdmin>
+                          <ManageTournamentPlayersPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/manage/settings"
+                      element={
+                        <RequireTournamentAdmin>
+                          <ManageTournamentSettingsPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
 
-                {/* Route Aliases for Direct Friendly URLs */}
-                <Route path="/:slug/view" element={<PublicTierBracketPage />} />
-                <Route path="/:slug/brackets" element={<PublicTierBracketPage />} />
-                <Route path="/:slug/bracket" element={<PublicTierBracketPage />} />
-                <Route path="/:slug/seeding" element={<PublicLeaderboardPage />} />
-                <Route
-                  path="/:slug/sheet"
-                  element={
-                    <RequireTournamentAdmin>
-                      <ManageSheetPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/judge"
-                  element={
-                    <RequireTournamentAdmin>
-                      <ManageJudgePage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/players"
-                  element={
-                    <RequireTournamentAdmin>
-                      <ManageTournamentPlayersPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
-                <Route
-                  path="/:slug/settings"
-                  element={
-                    <RequireTournamentAdmin>
-                      <ManageTournamentSettingsPage />
-                    </RequireTournamentAdmin>
-                  }
-                />
+                    {/* Route Aliases for Direct Friendly URLs */}
+                    <Route path="/:slug/view" element={<PublicTierBracketPage />} />
+                    <Route path="/:slug/brackets" element={<PublicTierBracketPage />} />
+                    <Route path="/:slug/bracket" element={<PublicTierBracketPage />} />
+                    <Route path="/:slug/seeding" element={<PublicLeaderboardPage />} />
+                    <Route
+                      path="/:slug/sheet"
+                      element={
+                        <RequireTournamentAdmin>
+                          <ManageSheetPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/judge"
+                      element={
+                        <RequireTournamentAdmin>
+                          <ManageJudgePage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/players"
+                      element={
+                        <RequireTournamentAdmin>
+                          <ManageTournamentPlayersPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
+                    <Route
+                      path="/:slug/settings"
+                      element={
+                        <RequireTournamentAdmin>
+                          <ManageTournamentSettingsPage />
+                        </RequireTournamentAdmin>
+                      }
+                    />
 
-                {/* Public Dynamic Tier Bracket */}
-                <Route path="/:slug/:tierSlug" element={<PublicTierBracketPage />} />
+                    {/* Public Dynamic Tier Bracket */}
+                    <Route path="/:slug/:tierSlug" element={<PublicTierBracketPage />} />
 
-                {/* Fallback to Home */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </ErrorBoundary>
-          </BrowserRouter>
-        </TournamentProvider>
-      </OrganizationProvider>
-    </AuthProvider>
+                    {/* Fallback to Home */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </ErrorBoundary>
+              </BrowserRouter>
+            </TournamentProvider>
+          </OrganizationProvider>
+        </AuthProvider>
+      </BusyProvider>
+    </FeedbackProvider>
   );
 };

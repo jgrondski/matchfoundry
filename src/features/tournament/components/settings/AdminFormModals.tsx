@@ -60,7 +60,7 @@ export const AdminFormModals: React.FC<AdminFormModalsProps> = ({
         cancelLabel="Cancel"
         confirmLabel="Yes, Delete Bracket"
         onCancel={onCancelDeleteTier}
-        onConfirm={() => tierToDelete && onConfirmDeleteTier(tierToDelete.index)}
+        onConfirm={() => { if (tierToDelete) onConfirmDeleteTier(tierToDelete.index); }}
       />
 
       {/* Speedbump Modal for Clearing Tournament Data */}

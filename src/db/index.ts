@@ -3,6 +3,7 @@ import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
 import { neon } from '@neondatabase/serverless';
 import pg from 'pg';
 import * as schema from './schema';
+import { queryCounterLogger } from '../server/requestMetrics';
 
 let pgPool: pg.Pool | null = null;
 let currentDbInstance: any = null;
@@ -23,14 +24,14 @@ export function getDb(connectionString?: string) {
 
   if (url.includes('neon.tech')) {
     const sql = neon(url);
-    currentDbInstance = drizzleNeon(sql, { schema });
+    currentDbInstance = drizzleNeon(sql, { schema, logger: queryCounterLogger });
     return currentDbInstance;
   }
 
   if (!pgPool) {
     pgPool = new pg.Pool({ connectionString: url });
   }
-  currentDbInstance = drizzlePg(pgPool, { schema });
+  currentDbInstance = drizzlePg(pgPool, { schema, logger: queryCounterLogger });
   return currentDbInstance;
 }
 

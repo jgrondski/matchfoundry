@@ -83,6 +83,7 @@ import type {
 } from '../features/tournament/types';
 import { DEFAULT_TIER_THEME, TIER_THEMES } from '../theme/palette';
 import { isSimulationAllowed, SIMULATION_DISABLED_MESSAGE } from '../utils/simulationEnv';
+import { runWithRequestMetrics, getRequestMetrics, formatServerTiming } from './requestMetrics';
 
 /**
  * Loads the global player supply for a qualifier simulation, first creating real player rows if
@@ -142,7 +143,22 @@ async function parseBody(req: IncomingMessage): Promise<unknown> {
 function sendJson(res: ServerResponse, status: number, data: unknown) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
+  const metrics = getRequestMetrics();
+  if (metrics) res.setHeader('Server-Timing', formatServerTiming(metrics));
   res.end(JSON.stringify(data));
+}
+
+const SLOW_REQUEST_MS = 500;
+
+function logRequestMetrics(req: IncomingMessage, res: ServerResponse): void {
+  if (process.env.VITEST) return;
+  const metrics = getRequestMetrics();
+  if (!metrics) return;
+  const method = req.method || 'GET';
+  const path = (req.url || '').split('?')[0];
+  if (!path.startsWith('/api') && !path.startsWith('api')) return;
+  if (method === 'GET' && metrics.elapsedMs < SLOW_REQUEST_MS) return;
+  console.log(`[api] ${method} ${path} ${res.statusCode} ${metrics.elapsedMs}ms q=${metrics.queryCount}`);
 }
 
 function sendError(res: ServerResponse, status: number, message: string) {
@@ -225,7 +241,7 @@ function checkAuth(
 }
 
 export function createApiMiddleware() {
-  return async (req: IncomingMessage, res: ServerResponse, _next?: () => void) => {
+  const handle = async (req: IncomingMessage, res: ServerResponse, _next?: () => void) => {
     const forwardedUrl =
       (req.headers?.['x-matched-path'] as string) ||
       (req.headers?.['x-forwarded-url'] as string) ||
@@ -1689,6 +1705,14 @@ export function createApiMiddleware() {
       return sendError(res, 500, msg);
     }
   };
+  return (req: IncomingMessage, res: ServerResponse, _next?: () => void) =>
+    runWithRequestMetrics(async () => {
+      try {
+        return await handle(req, res, _next);
+      } finally {
+        logRequestMetrics(req, res);
+      }
+    });
 }
 
 /**

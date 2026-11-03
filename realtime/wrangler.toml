@@ -1,0 +1,25 @@
+name = "matchfoundry-realtime"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[[durable_objects.bindings]]
+name = "CHANNELS"
+class_name = "TournamentChannel"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TournamentChannel"]
+
+[triggers]
+crons = ["*/4 * * * *"]
+
+[vars]
+ALLOWED_ORIGINS = "https://www.matchfoundry.gg,https://matchfoundry.gg,http://localhost:5173"
+ALLOW_VERCEL_PREVIEWS = "true"
+KEEP_WARM_URL = "https://www.matchfoundry.gg/api/health"
+# Inclusive UTC dates (YYYY-MM-DD). Outside this range the cron does nothing. Empty = never.
+KEEP_WARM_FROM = ""
+KEEP_WARM_UNTIL = ""
+
+# Secret, set with: npx wrangler secret put PUBLISH_SECRET --config realtime/wrangler.toml
+# PUBLISH_SECRET

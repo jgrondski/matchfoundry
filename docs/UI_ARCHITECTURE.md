@@ -122,3 +122,13 @@ The dismissal rule (`resolveDismissal` in `dismissal.ts`):
 | `dismissible={false}` | Ignored | Ignored | Follows the dirty rule |
 
 On the Discard prompt, an outside click or Escape means Keep Editing. While an overlay is dirty, closing or reloading the tab also triggers the browser's leave-page warning.
+
+### Actions and loading
+
+One action runs at a time, and the user always sees what it is doing.
+
+* **Every button that calls the API runs through `useAction`** (`src/components/ui/useAction.ts`): `const save = useAction(async () => { … })`, then `<Button onClick={() => void save.run()} loading={save.busy} loadingText="Saving…">Save</Button>`. The clicked button shows a spinner and its `loadingText`. Never add a local `isSaving` flag or a bare progress bar.
+* **Other buttons disable themselves while any action runs.** `useAction` holds the global busy lock (`BusyProvider` / `useGlobalBusy`), and every `Button` and `IconButton` is disabled while it is held, except ones marked `ignoreBusy` (the error banner's dismiss button). Chips, links and form inputs are not affected. Background refreshes (focus, live updates) never set busy.
+* **Errors go to the shared banner** at the top of the screen, above overlays. A failed action shows there automatically; other code calls `useFeedback().showError(message)`, and store errors set the store's `apiError`, which `App.tsx` forwards to the banner. A handler that handles an error itself (for example a match conflict notice) catches it inside the action and does not rethrow.
+* **Timeout**: after `ACTION_TIMEOUT_MS` (10 s, `src/components/ui/actionConfig.ts`) the action stops waiting, the banner shows the timeout message, and every button is enabled again. The request is not cancelled; if it finishes later, the store applies its result as usual.
+* **`ConfirmDialog`** runs `onConfirm` through `useAction`, so an async `onConfirm` shows a spinner and `confirmLoadingText` (default "Working…") on the Confirm button. Callers still close the dialog themselves on success.
