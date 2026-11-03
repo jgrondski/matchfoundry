@@ -733,10 +733,20 @@ export async function saveFullTournament(tourney: Tournament, options: { syncMat
             isCompleted = true;
           }
 
+          // Skip rows that would not change: one sequential UPDATE per player dominated settings saves.
+          const nextSeed = tp.seed || null;
+          if (
+            existingPlayerRecord &&
+            (existingPlayerRecord.seed ?? null) === nextSeed &&
+            Boolean(existingPlayerRecord.qualsCompleted) === isCompleted
+          ) {
+            continue;
+          }
+
           await db
             .update(tournamentPlayers)
             .set({
-              seed: tp.seed || null,
+              seed: nextSeed,
               qualsCompleted: isCompleted,
             })
             .where(
@@ -786,6 +796,9 @@ export async function saveFullTournament(tourney: Tournament, options: { syncMat
         }
 
         // Only the score is synced; every other qual detail lives on the run (qualifier_runs).
+        if (Number((existingSub as any).score) === Number(s.score)) {
+          continue;
+        }
         await db
           .update(qualifierSubmissions)
           .set({ score: s.score })
