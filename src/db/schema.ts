@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, boolean, jsonb, timestamp, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, boolean, jsonb, timestamp, date, uniqueIndex, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import type {
   TierThemeColors,
@@ -77,6 +77,9 @@ export const tournaments = pgTable('tournaments', {
   isVerified: boolean('is_verified').notNull().default(false),
   adminPinEncrypted: text('admin_pin_encrypted'),
   metadata: jsonb('metadata').$type<TournamentMetadata>(),
+  // Event days (venue calendar dates). Validated as YYYY-MM-DD by saveFullTournament; null = not set.
+  startDate: date('start_date', { mode: 'string' }),
+  endDate: date('end_date', { mode: 'string' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

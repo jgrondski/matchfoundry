@@ -89,7 +89,6 @@ describe('PlayerDetailDrawer Theme and Presentation Logic', () => {
     organizationId: 'org_1',
     name: 'CTWC 2026',
     slug: 'ctwc-2026',
-    date: '2026-10-18',
     location: 'Portland, OR',
     qualFormat: 'HIGH_SCORE',
     isLocked: true,

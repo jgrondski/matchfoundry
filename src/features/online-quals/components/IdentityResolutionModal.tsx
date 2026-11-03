@@ -394,6 +394,8 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                   }
                 }}
                 disabled={isSubmitting || !selectedTargetId || selectedBlock !== null}
+                loading={isSubmitting}
+                loadingText="Saving…"
                 variant="primary"
                 className="inline-flex items-center gap-1.5 text-sm bg-blue-500 bg-none border-blue-600"
               >
@@ -420,6 +422,8 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                   }
                 }}
                 disabled={isSubmitting || !newName.trim()}
+                loading={isSubmitting}
+                loadingText="Saving…"
                 variant="primary"
                 className="inline-flex items-center gap-1.5 text-sm bg-green bg-none border-emerald-600"
               >
@@ -433,6 +437,8 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                 data-testid="submit-confirm-button"
                 onClick={() => void resolve('CONFIRM_IDENTITY')}
                 disabled={isSubmitting}
+                loading={isSubmitting}
+                loadingText="Saving…"
                 variant="primary"
                 className="inline-flex items-center gap-1.5 text-sm"
               >

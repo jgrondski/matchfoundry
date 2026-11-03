@@ -106,7 +106,6 @@ describe('Global Player Pool & Simulation', () => {
         organizationId: 'org_ctwc',
         slug: 'tourney-1',
         name: 'Test Tournament',
-        date: '2026-09-10',
         location: 'Local',
         qualFormat: 'HIGH_SCORE',
         isLocked: true,

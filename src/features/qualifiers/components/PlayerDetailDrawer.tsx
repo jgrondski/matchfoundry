@@ -27,7 +27,7 @@ import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../players/components/PlaystyleChip';
 import { PlayerEditModal } from '../../players/components/PlayerEditModal';
 import { Overlay } from '../../../components/overlay';
-import { cn } from '../../../components/ui';
+import { Spinner, cn, useAction, useGlobalBusy } from '../../../components/ui';
 import { DEFAULT_TIER_THEME, STATUS_COLORS, THEME_FALLBACK } from '../../../theme/palette';
 
 const sectionTitleClass = 'text-sm font-extrabold text-white uppercase tracking-wide m-0';
@@ -64,8 +64,26 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
   const { submitQualifierScore, deleteQualifierScore, updatePlayerInPool } = useTournament();
   const [scoreInput, setScoreInput] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const titleId = useId();
+  const { busy: globalBusy } = useGlobalBusy();
+
+  const recordAttempt = useAction(async (playerId: string, score: number) => {
+    const result = await submitQualifierScore(tournament.id, playerId, score);
+    if (result) setScoreInput(''); // null means the store already reported an error; keep the typed score
+  });
+
+  const remove = useAction((id: string) => deleteQualifierScore(tournament.id, id));
+
+  const handleDeleteSubmission = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await remove.run(id);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Derive leaderboard row so we have rank data even if caller didn't pass rankRow
   const leaderboard = useMemo(() => deriveLeaderboard(tournament), [tournament]);
@@ -443,11 +461,13 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   {!tournament.isLocked && canManageTournament && !isQualLocked && (
                     <button
                       type="button"
-                      onClick={() => deleteQualifierScore(tournament.id, sub.id)}
-                      className="bg-transparent border-0 text-red cursor-pointer p-1 rounded-xs flex items-center opacity-70 transition-opacity duration-150 hover:opacity-100"
+                      onClick={() => void handleDeleteSubmission(sub.id)}
+                      disabled={remove.busy || globalBusy}
+                      aria-busy={deletingId === sub.id || undefined}
+                      className="bg-transparent border-0 text-red cursor-pointer p-1 rounded-xs flex items-center opacity-70 transition-opacity duration-150 enabled:hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-40"
                       title="Delete attempt"
                     >
-                      <Trash2 size={14} />
+                      {deletingId === sub.id ? <Spinner size={14} /> : <Trash2 size={14} />}
                     </button>
                   )}
                 </div>
@@ -746,8 +766,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                           e.preventDefault();
                           const num = parseInt(scoreInput.replace(/\D/g, ''), 10);
                           if (num > 0) {
-                            submitQualifierScore(tournament.id, player.id, num);
-                            setScoreInput('');
+                            void recordAttempt.run(player.id, num);
                           }
                         }}
                         className="flex gap-2 p-2 rounded-sm border"
@@ -769,10 +788,11 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                         />
                         <button
                           type="submit"
-                          disabled={!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0}
+                          disabled={!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0 || recordAttempt.busy || globalBusy}
+                          aria-busy={recordAttempt.busy || undefined}
                           className={cn(
                             'py-2 px-3.5 text-caption font-bold gap-1.5 whitespace-nowrap rounded-sm border-0 inline-flex items-center transition-all duration-150',
-                            (!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                            (!scoreInput || parseInt(scoreInput.replace(/\D/g, ''), 10) <= 0 || recordAttempt.busy || globalBusy) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
                           )}
                           style={{
                             background: primaryColor,
@@ -780,7 +800,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                             boxShadow: `0 2px 10px ${colorWithAlpha(primaryColor, 0.35)}`,
                           }}
                         >
-                          <Plus size={15} /> Log Score
+                          {recordAttempt.busy ? (<><Spinner size={15} /> Saving…</>) : (<><Plus size={15} /> Log Score</>)}
                         </button>
                       </form>
                     )}
@@ -1135,10 +1155,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         initialPlayer={player}
-        onSave={async (playerData) => {
-          await updatePlayerInPool(tournament.id, player.id, playerData);
-          setIsEditModalOpen(false);
-        }}
+        onSave={(playerData) => updatePlayerInPool(tournament.id, player.id, playerData)}
         existingNames={[]}
       />
     )}

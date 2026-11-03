@@ -4,6 +4,7 @@ import { useTournament } from '../store';
 import { useOrganization } from '../../organizations/store';
 import { QualFormat, QualMode, Tournament, DEFAULT_POINTS_THRESHOLDS } from '../types';
 import { createEmptyTournament } from '../defaults';
+import { validateEventDates } from '../eventDates';
 import { ClearableNumberInput } from '../../../components/ClearableNumberInput';
 import { X, Building2 } from 'lucide-react';
 import { Overlay } from '../../../components/overlay';
@@ -35,7 +36,8 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
   const [newTourneyOrgId, setNewTourneyOrgId] = useState<string>(initialOrgId);
   const [newTourneyName, setNewTourneyName] = useState('');
   const [newTourneySlug, setNewTourneySlug] = useState('');
-  const [newTourneyDate, setNewTourneyDate] = useState('');
+  const [newTourneyStartDate, setNewTourneyStartDate] = useState('');
+  const [newTourneyEndDate, setNewTourneyEndDate] = useState('');
   const [newTourneyLocation, setNewTourneyLocation] = useState('');
   const [newTourneyMode, setNewTourneyMode] = useState<QualMode>('HYBRID');
   const [newTourneyWindowMinutes, setNewTourneyWindowMinutes] = useState<number>(90);
@@ -76,6 +78,7 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTourneyName.trim() || !newTourneySlug.trim() || isCreating) return;
+    if (validateEventDates(newTourneyStartDate, newTourneyEndDate)) return;
 
     let parsedAvgCount = 2;
     if (newTourneyFormat === 'AVERAGE_OF_X') {
@@ -95,7 +98,8 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
           name: newTourneyName.trim(),
           slug: newTourneySlug.trim(),
           organizationId: newTourneyOrgId,
-          date: newTourneyDate.trim() || 'Upcoming',
+          startDate: newTourneyStartDate,
+          endDate: newTourneyEndDate,
           location: newTourneyLocation.trim() || 'TBD',
           qualFormat: newTourneyFormat,
           qualAverageCount: parsedAvgCount,
@@ -119,12 +123,14 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
   };
 
   if (!isOpen) return null;
+  const dateError = validateEventDates(newTourneyStartDate, newTourneyEndDate);
 
   const currentOrg = getOrganizationById(newTourneyOrgId);
   const isDirty =
     newTourneyName !== '' ||
     newTourneySlug !== '' ||
-    newTourneyDate !== '' ||
+    newTourneyStartDate !== '' ||
+    newTourneyEndDate !== '' ||
     newTourneyLocation !== '' ||
     newTourneyMode !== 'HYBRID' ||
     newTourneyWindowMinutes !== 90 ||
@@ -201,25 +207,36 @@ export const CreateTournamentModal: React.FC<CreateTournamentModalProps> = ({
 
             <div className="grid grid-cols-[1fr_1fr] gap-3">
               <div>
-                <label className={modalLabelClass}>Event Date</label>
+                <label className={modalLabelClass}>Start Date</label>
                 <input
-                  type="text"
-                  value={newTourneyDate}
-                  onChange={e => setNewTourneyDate(e.target.value)}
-                  placeholder="e.g. April 12, 2026"
-                  className={modalInputClass}
+                  type="date"
+                  value={newTourneyStartDate}
+                  onChange={e => setNewTourneyStartDate(e.target.value)}
+                  className={cn(modalInputClass, 'scheme-dark')}
                 />
               </div>
               <div>
-                <label className={modalLabelClass}>Location</label>
+                <label className={modalLabelClass}>End Date</label>
                 <input
-                  type="text"
-                  value={newTourneyLocation}
-                  onChange={e => setNewTourneyLocation(e.target.value)}
-                  placeholder="e.g. St. Louis, MO"
-                  className={modalInputClass}
+                  type="date"
+                  value={newTourneyEndDate}
+                  onChange={e => setNewTourneyEndDate(e.target.value)}
+                  min={newTourneyStartDate || undefined}
+                  className={cn(modalInputClass, 'scheme-dark')}
                 />
+                {dateError && <p className="mt-1 text-xs text-red-bright">{dateError}</p>}
               </div>
+            </div>
+
+            <div>
+              <label className={modalLabelClass}>Location</label>
+              <input
+                type="text"
+                value={newTourneyLocation}
+                onChange={e => setNewTourneyLocation(e.target.value)}
+                placeholder="e.g. St. Louis, MO"
+                className={modalInputClass}
+              />
             </div>
 
             <div className="grid grid-cols-[1fr_1fr] gap-3">

@@ -6,14 +6,14 @@ import { Overlay } from '../../../components/overlay';
 import { Button, IconButton, buttonClasses, cn } from '../../../components/ui';
 import { formatQualTimestamp } from '../formatQualTimestamp';
 
+type AdjudicateAction = 'SAVE' | 'VERIFY' | 'SAVE_AND_VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ';
+type AdjudicateOptions = { scores?: number[]; judgeNotes?: string };
+
 export interface AdjudicationModalProps {
   isOpen: boolean;
   session: ReviewQueueSessionSummary | null;
   onClose: () => void;
-  onAdjudicate: (
-    action: 'SAVE' | 'VERIFY' | 'SAVE_AND_VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ',
-    options?: { scores?: number[]; judgeNotes?: string }
-  ) => Promise<void>;
+  onAdjudicate: (action: AdjudicateAction, options?: AdjudicateOptions) => Promise<void>;
   onOpenIdentity?: (session: ReviewQueueSessionSummary) => void;
   isSubmitting?: boolean;
 }
@@ -29,7 +29,16 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
   const [scores, setScores] = useState<number[]>(session?.scores ? [...session.scores] : []);
   const [judgeNotes, setJudgeNotes] = useState<string>(session?.judgeNotes || '');
   const [confirmDQ, setConfirmDQ] = useState(false);
+  // Which action button was clicked, so only that button shows its loading state.
+  const [pendingAction, setPendingAction] = useState<AdjudicateAction | null>(null);
   const titleId = useId();
+
+  const act = (action: AdjudicateAction, options?: AdjudicateOptions) => {
+    setPendingAction(action);
+    void onAdjudicate(action, options).finally(() => setPendingAction(null));
+  };
+  const isPending = (...actions: AdjudicateAction[]) =>
+    isSubmitting && pendingAction !== null && actions.includes(pendingAction);
 
   if (!isOpen || !session) return null;
 
@@ -365,8 +374,10 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
-                  onClick={() => onAdjudicate('DNQ', { judgeNotes })}
+                  onClick={() => act('DNQ', { judgeNotes })}
                   disabled={isSubmitting}
+                  loading={isPending('DNQ')}
+                  loadingText="Saving…"
                   variant="secondary"
                   className="border-gold/40 text-caption text-gold-bright enabled:hover:border-gold/40"
                 >
@@ -385,8 +396,10 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 ) : (
                   <Button
                     type="button"
-                    onClick={() => onAdjudicate('DQ', { judgeNotes })}
+                    onClick={() => act('DQ', { judgeNotes })}
                     disabled={isSubmitting}
+                    loading={isPending('DQ')}
+                    loadingText="Saving…"
                     variant="danger"
                     className="border-transparent bg-red text-caption font-bold text-white"
                   >
@@ -411,7 +424,10 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 <Button
                   variant="secondary"
                   className="border-gold/40 text-sm text-gold-bright enabled:hover:border-gold/40"
-                  onClick={() => onAdjudicate('UNVERIFY')}
+                  onClick={() => act('UNVERIFY')}
+                  disabled={isSubmitting}
+                  loading={isPending('UNVERIFY')}
+                  loadingText="Saving…"
                 >
                   Unverify
                 </Button>
@@ -421,7 +437,9 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                     variant="secondary"
                     className="inline-flex items-center gap-1.5 text-sm"
                     disabled={isSubmitting || !hasEdits || isInProgress}
-                    onClick={() => onAdjudicate('SAVE', { scores, judgeNotes })}
+                    onClick={() => act('SAVE', { scores, judgeNotes })}
+                    loading={isPending('SAVE')}
+                    loadingText="Saving…"
                   >
                     <Edit3 size={15} /> Save
                   </Button>
@@ -429,10 +447,12 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                     type="button"
                     onClick={() =>
                       hasEdits
-                        ? onAdjudicate('SAVE_AND_VERIFY', { scores, judgeNotes })
-                        : onAdjudicate('VERIFY', { judgeNotes })
+                        ? act('SAVE_AND_VERIFY', { scores, judgeNotes })
+                        : act('VERIFY', { judgeNotes })
                     }
                     disabled={isSubmitting || isInProgress || !hasScoresToVerify}
+                    loading={isPending('SAVE_AND_VERIFY', 'VERIFY')}
+                    loadingText="Verifying…"
                     title={!hasScoresToVerify ? 'Add at least one score before verifying.' : undefined}
                     variant="primary"
                     className="inline-flex items-center gap-1.5 text-sm border-[#15803d] bg-[#16a34a] bg-none"

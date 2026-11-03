@@ -92,7 +92,6 @@ describe('API Server & Full Simulation Engine against PostgreSQL Schema', () => 
         organizationId: 'org_ctwc',
         slug: 'double-elim-test',
         name: 'Double Elim Championship',
-        date: '2026-10-20',
         location: 'Denver, CO',
         qualFormat: 'HIGH_SCORE',
         isLocked: false,

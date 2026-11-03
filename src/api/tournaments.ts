@@ -180,6 +180,10 @@ import type {
   TournamentSummary,
 } from '../features/tournament/types';
 import { collectBracketMatches, buildMatchRow, buildGameRows } from './matchWrites';
+import { validateEventDates } from '../features/tournament/eventDates';
+
+/** A tournament save with an invalid event date or range. The API answers 400 with the message. */
+export class EventDateError extends Error {}
 
 export async function getFullTournament(idOrSlug: string): Promise<Tournament | null> {
   const db = getDb();
@@ -407,7 +411,8 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     organizationId: t.organizationId || meta.organizationId || undefined,
     slug: t.slug,
     name: t.name,
-    date: meta.date || '',
+    startDate: t.startDate || '',
+    endDate: t.endDate || '',
     location: meta.location || '',
     seedingMethod: meta.seedingMethod || 'QUALIFIERS',
     manualSeeds: meta.manualSeeds || [],
@@ -471,8 +476,9 @@ export async function listTournamentSummaries(): Promise<TournamentSummary[]> {
     pointsConfig: unknown;
     qualMode: string | null;
     onlineQualsOpen: boolean | null;
+    startDate: string | null;
+    endDate: string | null;
     metaOrganizationId: string | null;
-    metaDate: string | null;
     metaLocation: string | null;
     metaQualMode: string | null;
     metaSeedingMethod: string | null;
@@ -504,8 +510,9 @@ export async function listTournamentSummaries(): Promise<TournamentSummary[]> {
       pointsConfig: tournaments.pointsConfig,
       qualMode: tournaments.qualMode,
       onlineQualsOpen: tournaments.onlineQualsOpen,
+      startDate: tournaments.startDate,
+      endDate: tournaments.endDate,
       metaOrganizationId: sql<string | null>`${tournaments.metadata} -> 'organizationId'`,
-      metaDate: sql<string | null>`${tournaments.metadata} -> 'date'`,
       metaLocation: sql<string | null>`${tournaments.metadata} -> 'location'`,
       metaQualMode: sql<string | null>`${tournaments.metadata} -> 'qualMode'`,
       metaSeedingMethod: sql<string | null>`${tournaments.metadata} -> 'seedingMethod'`,
@@ -568,7 +575,8 @@ export async function listTournamentSummaries(): Promise<TournamentSummary[]> {
       slug: t.slug,
       name: t.name,
       organizationId: t.organizationId || t.metaOrganizationId || undefined,
-      date: t.metaDate || '',
+      startDate: t.startDate || '',
+      endDate: t.endDate || '',
       location: t.metaLocation || '',
       qualFormat: t.qualFormat as TournamentSummary['qualFormat'],
       qualAverageCount: t.qualAverageCount || undefined,
@@ -626,6 +634,15 @@ export async function saveFullTournament(tourney: Tournament, options: { syncMat
   if (existing.length === 0 && slug) {
     existing = await db.select().from(tournaments).where(eq(tournaments.slug, slug)).limit(1);
   }
+  // Omitted (undefined) keeps the stored dates, so a client that never sent them can't clear them; '' clears.
+  const startDate =
+    tourney.startDate !== undefined ? tourney.startDate || null : (existing[0]?.startDate ?? null);
+  const requestedEndDate =
+    tourney.endDate !== undefined ? tourney.endDate || null : (existing[0]?.endDate ?? null);
+  const dateError = validateEventDates(startDate || '', requestedEndDate || '');
+  if (dateError) throw new EventDateError(dateError);
+  // An end date equal to the start date is a single-day event.
+  const endDate = requestedEndDate === startDate ? null : requestedEndDate;
 
   const qualMode = tourney.qualMode || 'HYBRID';
   const qualWindowMinutes = tourney.qualWindowMinutes ?? 90;
@@ -633,7 +650,6 @@ export async function saveFullTournament(tourney: Tournament, options: { syncMat
 
   const metadata = {
     organizationId: orgId,
-    date: tourney.date || '',
     location: tourney.location || '',
     seedingMethod: tourney.seedingMethod || 'QUALIFIERS',
     manualSeeds: tourney.manualSeeds || [],
@@ -678,6 +694,8 @@ export async function saveFullTournament(tourney: Tournament, options: { syncMat
       customAuthWords,
       qualsClosed: Boolean(tourney.isLocked),
       metadata,
+      startDate,
+      endDate,
     };
     if (tourney.adminPinEncrypted !== undefined) {
       updatePayload.adminPinEncrypted = tourney.adminPinEncrypted;
@@ -704,6 +722,8 @@ export async function saveFullTournament(tourney: Tournament, options: { syncMat
         isVerified: false,
         adminPinEncrypted: tourney.adminPinEncrypted || null,
         metadata,
+        startDate,
+        endDate,
       })
       .returning();
     savedTourneyId = inserted.id;

@@ -6,9 +6,17 @@ compatibility_date = "2026-10-01"
 name = "CHANNELS"
 class_name = "TournamentChannel"
 
+[[durable_objects.bindings]]
+name = "KEEP_WARM"
+class_name = "KeepWarmSchedule"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["TournamentChannel"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["KeepWarmSchedule"]
 
 [triggers]
 crons = ["*/4 * * * *"]
@@ -17,9 +25,7 @@ crons = ["*/4 * * * *"]
 ALLOWED_ORIGINS = "https://www.matchfoundry.gg,https://matchfoundry.gg,http://localhost:5173"
 ALLOW_VERCEL_PREVIEWS = "true"
 KEEP_WARM_URL = "https://www.matchfoundry.gg/api/health"
-# Inclusive UTC dates (YYYY-MM-DD). Outside this range the cron does nothing. Empty = never.
-KEEP_WARM_FROM = ""
-KEEP_WARM_UNTIL = ""
+KEEP_WARM_SCHEDULE_URL = "https://www.matchfoundry.gg/api/keep-warm-schedule"
 
 # Secret, set with: npx wrangler secret put PUBLISH_SECRET --config realtime/wrangler.toml
 # PUBLISH_SECRET
