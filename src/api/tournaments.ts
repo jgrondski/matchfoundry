@@ -177,7 +177,7 @@ import type {
   QualRun,
   MatchScoreRecord,
 } from '../features/tournament/types';
-import type { BracketMatch } from '../features/bracket/types';
+import { collectBracketMatches, buildMatchRow, buildGameRows } from './matchWrites';
 
 export async function getFullTournament(idOrSlug: string): Promise<Tournament | null> {
   const db = getDb();
@@ -222,6 +222,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     gamesByMatch.get(g.matchId)!.push(g);
   }
 
+  const meta = (t.metadata as Record<string, any>) || {};
   const relationalMatchScores: Record<string, MatchScoreRecord> = {};
   for (const m of dbMatches as any[]) {
     const mGames = gamesByMatch.get(m.id) || [];
@@ -256,10 +257,9 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
       isComplete,
       notes: m.isForfeit ? 'Forfeit win' : undefined,
       forfeitWinnerId: m.isForfeit ? (m.winnerId || undefined) : undefined,
+      revision: Number(meta.matchScores?.[m.id]?.revision ?? 0),
     };
   }
-
-  const meta = (t.metadata as Record<string, any>) || {};
 
   const playersPool: PlayerProfile[] = (tPlayersList as any[]).map((row: any) => ({
     id: row.player.id,
@@ -431,6 +431,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     tournamentPlayers: tournamentPlayersMap,
     useOrgBranding: meta.useOrgBranding ?? true,
     isTest: Boolean(meta.isTest),
+    revision: typeof meta.revision === 'number' ? meta.revision : 0,
     logoUrl: meta.logoUrl || undefined,
     bannerUrl: meta.bannerUrl || undefined,
     discordWebhookUrl: t.discordWebhookUrl || meta.discordWebhookUrl || undefined,
@@ -455,7 +456,7 @@ export async function listFullTournaments(): Promise<Tournament[]> {
   return fullList;
 }
 
-export async function saveFullTournament(tourney: Tournament): Promise<Tournament> {
+export async function saveFullTournament(tourney: Tournament, options: { syncMatches?: boolean } = {}): Promise<Tournament> {
   const db = getDb();
   const tourneyUuid = isUuid(tourney.id) ? tourney.id : crypto.randomUUID();
   const slug = tourney.slug || `tournament-${Date.now()}`;
@@ -509,6 +510,8 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
       tourney.isTest !== undefined
         ? Boolean(tourney.isTest)
         : Boolean((existing[0]?.metadata as Record<string, any> | null)?.isTest),
+    // The write lock owns the revision; a save never changes it.
+    revision: Number((existing[0]?.metadata as Record<string, any> | null)?.revision ?? 0),
   };
 
   let savedTourneyId = tourneyUuid;
@@ -628,130 +631,48 @@ export async function saveFullTournament(tourney: Tournament): Promise<Tournamen
   }
 
   // Sync relational matches and games for all active tiers
-  for (let idx = 0; idx < (tourney.tiers || []).length; idx++) {
-    const t = tourney.tiers[idx];
-    const tierUuid = isUuid(t.id)
-      ? t.id
-      : ((existingTiers as any[]).find((et: any) => et.slug === t.slug)?.id || Array.from(currentTierIds)[idx]);
+  if (options.syncMatches !== false) {
+    for (let idx = 0; idx < (tourney.tiers || []).length; idx++) {
+      const t = tourney.tiers[idx];
+      const tierUuid = isUuid(t.id)
+        ? t.id
+        : ((existingTiers as any[]).find((et: any) => et.slug === t.slug)?.id || Array.from(currentTierIds)[idx]);
 
-    if (!tierUuid) continue;
+      if (!tierUuid) continue;
 
-    // Delete existing matches for this tier (foreign key cascade deletes existing games)
-    await db.delete(matches).where(eq(matches.tierId, tierUuid));
+      // Delete existing matches for this tier (foreign key cascade deletes existing games)
+      await db.delete(matches).where(eq(matches.tierId, tierUuid));
 
-    const shouldPersistMatches = Boolean(
-      tourney.isLocked ||
-      t.isLocked ||
-      (tourney.matchScores && Object.keys(tourney.matchScores).length > 0)
-    );
+      const shouldPersistMatches = Boolean(
+        tourney.isLocked ||
+        t.isLocked ||
+        (tourney.matchScores && Object.keys(tourney.matchScores).length > 0)
+      );
 
-    if (t.bracket && shouldPersistMatches) {
-      const matchMap = new Map<string, BracketMatch>();
-      if (t.bracket.matchesById) {
-        for (const [mId, m] of Object.entries(t.bracket.matchesById)) {
-          matchMap.set(mId, m);
+      if (t.bracket && shouldPersistMatches) {
+        const matchMap = collectBracketMatches(t.bracket);
+
+        const matchesToInsert: Array<any> = [];
+        const gamesToInsert: Array<any> = [];
+
+        for (const m of matchMap.values()) {
+          const scoreRec = tourney.matchScores?.[m.id];
+          matchesToInsert.push(buildMatchRow(m, scoreRec, tierUuid, t.bestOf));
+          gamesToInsert.push(...buildGameRows(m, scoreRec));
         }
-      }
-      if (t.bracket.rounds) {
-        for (const r of t.bracket.rounds) {
-          for (const m of r.matches || []) {
-            matchMap.set(m.id, m);
+
+        if (matchesToInsert.length > 0) {
+          const CHUNK = 50;
+          for (let i = 0; i < matchesToInsert.length; i += CHUNK) {
+            await db.insert(matches).values(matchesToInsert.slice(i, i + CHUNK));
           }
         }
-      }
 
-      const matchesToInsert: Array<any> = [];
-      const gamesToInsert: Array<any> = [];
-
-      for (const m of matchMap.values()) {
-        const scoreRec = tourney.matchScores?.[m.id];
-        const p1Id = m.player1?.player?.id && isUuid(m.player1.player.id) ? m.player1.player.id : null;
-        const p2Id = m.player2?.player?.id && isUuid(m.player2.player.id) ? m.player2.player.id : null;
-
-        let winId = (scoreRec?.winnerPlayerId && isUuid(scoreRec.winnerPlayerId))
-          ? scoreRec.winnerPlayerId
-          : ((m.winnerId && isUuid(m.winnerId)) ? m.winnerId : null);
-        let losId = (scoreRec?.loserPlayerId && isUuid(scoreRec.loserPlayerId))
-          ? scoreRec.loserPlayerId
-          : ((m.loserId && isUuid(m.loserId)) ? m.loserId : null);
-
-        if (winId && !losId && p1Id && p2Id) {
-          losId = winId === p1Id ? p2Id : p1Id;
-        }
-
-        const bestOf = scoreRec?.bestOf || m.bestOf || t.bestOf || 3;
-        const threshold = Math.ceil(bestOf / 2);
-        const p1Wins = scoreRec?.player1Wins ?? 0;
-        const p2Wins = scoreRec?.player2Wins ?? 0;
-        const isForfeit = Boolean(
-          scoreRec?.forfeitWinnerId || scoreRec?.notes?.toLowerCase().includes('forfeit')
-        );
-        const isComplete = Boolean(
-          scoreRec?.isComplete ||
-          (winId && (p1Wins >= threshold || p2Wins >= threshold || isForfeit))
-        );
-
-        matchesToInsert.push({
-          id: m.id,
-          tierId: tierUuid,
-          roundNumber: m.roundNumber || 1,
-          matchNumber: m.matchNumber || null,
-          stage: m.stage || null,
-          roundIdentifier: m.roundIdentifier || null,
-          player1Id: p1Id,
-          player2Id: p2Id,
-          winnerId: winId,
-          loserId: losId,
-          bestOf,
-          isForfeit,
-          isComplete,
-          metadata: {
-            nextMatchId: m.nextMatchId,
-            nextMatchSlot: m.nextMatchSlot,
-            loserNextMatchId: m.loserNextMatchId,
-            loserNextMatchSlot: m.loserNextMatchSlot,
-            slotA: m.slotA,
-            slotB: m.slotB,
-            player1SourceMatchId: m.player1?.sourceMatchId,
-            player2SourceMatchId: m.player2?.sourceMatchId,
-            isBye: m.isBye,
-          },
-        });
-
-        if (scoreRec?.games && scoreRec.games.length > 0) {
-          for (const g of scoreRec.games) {
-            if (g.player1Points !== null || g.player2Points !== null || g.winnerPlayerId !== null) {
-              const gWinId = g.winnerPlayerId && isUuid(g.winnerPlayerId) ? g.winnerPlayerId : null;
-              let gLosId: string | null = null;
-              if (gWinId && p1Id && p2Id) {
-                gLosId = gWinId === p1Id ? p2Id : p1Id;
-              }
-              gamesToInsert.push({
-                id: crypto.randomUUID(),
-                matchId: m.id,
-                gameNumber: g.gameNumber,
-                player1Score: g.player1Points ?? 0,
-                player2Score: g.player2Points ?? 0,
-                winnerId: gWinId,
-                loserId: gLosId,
-                isIntentionalTopout: false,
-              });
-            }
+        if (gamesToInsert.length > 0) {
+          const CHUNK = 50;
+          for (let i = 0; i < gamesToInsert.length; i += CHUNK) {
+            await db.insert(games).values(gamesToInsert.slice(i, i + CHUNK));
           }
-        }
-      }
-
-      if (matchesToInsert.length > 0) {
-        const CHUNK = 50;
-        for (let i = 0; i < matchesToInsert.length; i += CHUNK) {
-          await db.insert(matches).values(matchesToInsert.slice(i, i + CHUNK));
-        }
-      }
-
-      if (gamesToInsert.length > 0) {
-        const CHUNK = 50;
-        for (let i = 0; i < gamesToInsert.length; i += CHUNK) {
-          await db.insert(games).values(gamesToInsert.slice(i, i + CHUNK));
         }
       }
     }
