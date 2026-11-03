@@ -77,8 +77,8 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
 
   const confirmDeleteTournament = async () => {
     if (tournamentToDelete) {
-      await deleteTournament(tournamentToDelete.id);
-      setTournamentToDelete(null);
+      const ok = await deleteTournament(tournamentToDelete.id);
+      if (ok) setTournamentToDelete(null);
     }
   };
 
@@ -396,6 +396,7 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
         }
         cancelLabel="Cancel"
         confirmLabel="Delete Tournament"
+        confirmLoadingText="Deleting…"
         onCancel={() => setTournamentToDelete(null)}
         onConfirm={confirmDeleteTournament}
       />

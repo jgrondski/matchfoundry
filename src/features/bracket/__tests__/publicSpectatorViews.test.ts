@@ -9,7 +9,6 @@ describe('Public Spectator Views & Share Bracket Specifications', () => {
     id: 't-test',
     slug: 'kc-2026-open',
     name: 'KC 2026 Open',
-    date: '2026-10-01',
     location: 'Kansas City, MO',
     organizationId: 'org-1',
     qualFormat: 'HIGH_SCORE',

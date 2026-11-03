@@ -6,7 +6,7 @@ import { PlaystyleChip } from './PlaystyleChip';
 import { PLAYSTYLE_OPTIONS } from '../playstyleOptions';
 import { CountrySelect } from './CountrySelect';
 import { Overlay } from '../../../components/overlay';
-import { Button, IconButton, cn } from '../../../components/ui';
+import { Button, IconButton, cn, useAction } from '../../../components/ui';
 
 const labelClass = 'mb-1.5 block text-caption font-semibold text-fg';
 const inputClass = 'w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-fg';
@@ -15,7 +15,7 @@ const hintClass = 'mt-1 text-2xs text-fg-muted';
 interface PlayerEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (player: Omit<PlayerProfile, 'id'>) => void;
+  onSave: (player: Omit<PlayerProfile, 'id'>) => void | Promise<unknown>;
   initialPlayer?: PlayerProfile | null;
   existingNames: string[];
 }
@@ -116,6 +116,11 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
   const isDirty = JSON.stringify(currentValues) !== JSON.stringify(initialRef.current);
 
 
+  const save = useAction(async (player: Omit<PlayerProfile, 'id'>) => {
+    const result = await onSave(player);
+    if (result !== null && result !== false) onClose(); // null/false means the save failed; keep the form open
+  });
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -139,7 +144,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
     const pbNum = parseInt(personalBest.replace(/\D/g, ''), 10) || 0;
     const cleanTwitch = twitchUsername.trim().replace(/^@/, '');
 
-    onSave({
+    void save.run({
       name: trimmedName,
       displayName: displayName.trim() || undefined,
       nickname: nickname.trim() || undefined,
@@ -152,7 +157,6 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
       playstyle,
       notes: notes.trim() || undefined,
     });
-    onClose();
   };
 
   return (
@@ -160,6 +164,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
       open
       onClose={onClose}
       dirty={isDirty}
+      busy={save.busy}
       aria-labelledby={titleId}
       panelClassName="max-w-130 overflow-hidden rounded-lg border border-line bg-elevated shadow-xl"
     >
@@ -380,6 +385,8 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                 type="submit"
                 variant="primary"
                 disabled={!name.trim()}
+                loading={save.busy}
+                loadingText="Saving…"
                 className="px-6 py-2 text-sm shadow-gold"
               >
                 <Check size={16} />

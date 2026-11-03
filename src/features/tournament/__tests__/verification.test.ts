@@ -29,7 +29,6 @@ describe('Bracket Verification Lifecycle & Invariants', () => {
     organizationId: 'org_ctwc',
     slug: 'test-tournament',
     name: 'Verification Test Event',
-    date: '2026-03-20',
     location: 'Test City',
     qualFormat: 'HIGH_SCORE',
     isLocked,

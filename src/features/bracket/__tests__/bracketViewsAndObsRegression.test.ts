@@ -8,7 +8,6 @@ describe('Bracket Views & OBS Overlays Regression Suite', () => {
     id: 't-obs-test',
     slug: 'apex-open',
     name: 'Apex Open 2026',
-    date: '2026-10-01',
     location: 'Denver, CO',
     organizationId: 'org-1',
     qualFormat: 'HIGH_SCORE',

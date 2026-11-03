@@ -16,7 +16,7 @@ import { MatchupBanner } from './drawer/MatchupBanner';
 import { ManualSlotOverrideSection } from './drawer/ManualSlotOverrideSection';
 import { GameScoreCard } from './drawer/GameScoreCard';
 import { Overlay } from '../../../components/overlay';
-import { Button, cn } from '../../../components/ui';
+import { Button, Spinner, cn, useAction, useGlobalBusy } from '../../../components/ui';
 import { DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
 type GameDraft = { p1: string; p2: string; winner: string | null };
@@ -75,9 +75,10 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
   const gamesRef = useRef(games);
   gamesRef.current = games;
   const [hasTiebreaker, setHasTiebreaker] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [baseRevision, setBaseRevision] = useState(0);
   const [conflictNotice, setConflictNotice] = useState<string | null>(null);
+  const [forfeitingId, setForfeitingId] = useState<string | null>(null);
+  const { busy: globalBusy } = useGlobalBusy();
   const [resyncToken, setResyncToken] = useState(0);
   const lastSyncRef = useRef<{ matchId: string; gamesJson: string } | null>(null);
 
@@ -107,6 +108,61 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
 
   const baselineGames = useMemo(() => (match ? deriveInitialGames(match, liveRecord) : []), [match, liveRecord]);
   const titleId = useId();
+
+  // Actions are declared before the early return so hook order stays stable.
+  const bestOfAction = useAction(async (newBestOf: number) => {
+    if (!match) return;
+    setBestOf(newBestOf);
+    await updateMatchBestOf(tournamentId, tierId, match.id, newBestOf);
+    const updated = [...games];
+    while (updated.length < newBestOf) {
+      updated.push({ p1: '', p2: '', winner: null });
+    }
+    setGames(updated);
+  });
+
+  const save = useAction(async () => {
+    if (!match) return;
+    setConflictNotice(null);
+    const formattedGames = games.map((g, idx) => ({
+      gameNumber: idx + 1,
+      player1Points: g.p1.trim() !== '' ? parseInt(g.p1, 10) : null,
+      player2Points: g.p2.trim() !== '' ? parseInt(g.p2, 10) : null,
+      winnerPlayerId: g.winner,
+    }));
+
+    const hasTiedGame = formattedGames.some(
+      g => g.winnerPlayerId === 'TIE' || (g.player1Points !== null && g.player1Points === g.player2Points && g.player1Points > 0)
+    );
+    const hasRemainingTiebreaker = games.length > bestOf;
+    const shouldRecordTiebreaker = Boolean((hasTiebreaker || hasRemainingTiebreaker || hasTiedGame) && (hasTiedGame || hasRemainingTiebreaker));
+
+    try {
+      const saved = await saveMatchScores(
+        tournamentId,
+        tierId,
+        match.id,
+        formattedGames,
+        shouldRecordTiebreaker,
+        { expectedRevision: baseRevision }
+      );
+      if (saved) onClose(); // null means the store already reported an error; keep the judge's scores on screen
+    } catch (err) {
+      if (err instanceof ApiError && err.code === MATCH_CONFLICT_CODE) {
+        setConflictNotice(err.message);
+        lastSyncRef.current = null; // the next resync loads the latest stored games
+        setResyncToken(n => n + 1);
+        return;
+      }
+      throw err;
+    }
+  });
+
+  const forfeit = useAction(async (winnerPlayerId: string) => {
+    if (!match) return;
+    const result = await forfeitMatch(tournamentId, tierId, match.id, winnerPlayerId);
+    if (result) onClose(); // null means the store already reported an error
+  });
 
   if (!isOpen || !match) return null;
 
@@ -168,14 +224,8 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
     setGames(updated);
   };
 
-  const handleBestOfChange = async (newBestOf: number) => {
-    setBestOf(newBestOf);
-    await updateMatchBestOf(tournamentId, tierId, match.id, newBestOf);
-    const updated = [...games];
-    while (updated.length < newBestOf) {
-      updated.push({ p1: '', p2: '', winner: null });
-    }
-    setGames(updated);
+  const handleBestOfChange = (newBestOf: number) => {
+    void bestOfAction.run(newBestOf);
   };
 
   const handleAddTiebreakerGame = () => {
@@ -195,55 +245,14 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
     });
   };
 
-  const handleSaveAndAdvance = async () => {
-    setConflictNotice(null);
-    setIsSaving(true);
-    try {
-      const formattedGames = games.map((g, idx) => ({
-        gameNumber: idx + 1,
-        player1Points: g.p1.trim() !== '' ? parseInt(g.p1, 10) : null,
-        player2Points: g.p2.trim() !== '' ? parseInt(g.p2, 10) : null,
-        winnerPlayerId: g.winner,
-      }));
-
-      const hasTiedGame = formattedGames.some(
-        g => g.winnerPlayerId === 'TIE' || (g.player1Points !== null && g.player1Points === g.player2Points && g.player1Points > 0)
-      );
-      const hasRemainingTiebreaker = games.length > bestOf;
-      const shouldRecordTiebreaker = Boolean((hasTiebreaker || hasRemainingTiebreaker || hasTiedGame) && (hasTiedGame || hasRemainingTiebreaker));
-
-      try {
-        const saved = await saveMatchScores(
-          tournamentId,
-          tierId,
-          match.id,
-          formattedGames,
-          shouldRecordTiebreaker,
-          { expectedRevision: baseRevision }
-        );
-        if (saved) onClose(); // null means the store already reported an error; keep the judge's scores on screen
-      } catch (err) {
-        if (err instanceof ApiError && err.code === MATCH_CONFLICT_CODE) {
-          setConflictNotice(err.message);
-          lastSyncRef.current = null; // the next resync loads the latest stored games
-          setResyncToken(n => n + 1);
-          return;
-        }
-        throw err;
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleForfeit = async (winnerPlayerId: string) => {
     if (window.confirm(`Award forfeit win to ${winnerPlayerId === p1?.id ? p1Name : p2Name}?`)) {
-      setIsSaving(true);
+      setForfeitingId(winnerPlayerId);
       try {
-        await forfeitMatch(tournamentId, tierId, match.id, winnerPlayerId);
-        onClose();
+        await forfeit.run(winnerPlayerId);
       } finally {
-        setIsSaving(false);
+        setForfeitingId(null);
       }
     }
   };
@@ -275,7 +284,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
       onClose={onClose}
       variant="drawer"
       dirty={!gamesEqual(games, baselineGames)}
-      busy={isSaving}
+      busy={save.busy || forfeit.busy || bestOfAction.busy}
       aria-labelledby={titleId}
       panelTestId="match-score-drawer"
       panelStyle={{
@@ -388,6 +397,8 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
             isP2Override={match.player2.isManualOverride}
             primaryColor={primaryColor}
             onBestOfChange={handleBestOfChange}
+            bestOfDisabled={bestOfAction.busy || globalBusy}
+            bestOfLoading={bestOfAction.busy}
           />
 
           {/* Manual Placement Override Bar (available if no scores recorded in this match yet) */}
@@ -494,19 +505,21 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
                 {p1 && (
                   <button
                     type="button"
-                    onClick={() => handleForfeit(p1.id)}
-                    className="py-1.5 px-2.5 text-xs rounded-sm border border-red/40 bg-red/8 text-red-300 cursor-pointer transition-all duration-150"
+                    onClick={() => void handleForfeit(p1.id)}
+                    disabled={forfeit.busy || globalBusy}
+                    className="inline-flex items-center gap-1.5 py-1.5 px-2.5 text-xs rounded-sm border border-red/40 bg-red/8 text-red-300 cursor-pointer transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Award Win to {p1Name}
+                    {forfeitingId === p1.id ? (<><Spinner />Saving…</>) : <>Award Win to {p1Name}</>}
                   </button>
                 )}
                 {p2 && (
                   <button
                     type="button"
-                    onClick={() => handleForfeit(p2.id)}
-                    className="py-1.5 px-2.5 text-xs rounded-sm border border-red/40 bg-red/8 text-red-300 cursor-pointer transition-all duration-150"
+                    onClick={() => void handleForfeit(p2.id)}
+                    disabled={forfeit.busy || globalBusy}
+                    className="inline-flex items-center gap-1.5 py-1.5 px-2.5 text-xs rounded-sm border border-red/40 bg-red/8 text-red-300 cursor-pointer transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Award Win to {p2Name}
+                    {forfeitingId === p2.id ? (<><Spinner />Saving…</>) : <>Award Win to {p2Name}</>}
                   </button>
                 )}
               </div>
@@ -532,11 +545,12 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
             </Button>
             <button
               type="button"
-              onClick={handleSaveAndAdvance}
-              disabled={isSaving}
+              onClick={() => void save.run()}
+              disabled={save.busy || globalBusy}
+              aria-busy={save.busy || undefined}
               className={cn(
                 'flex-2 inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-sm border-0 font-bold text-sm transition-all duration-150',
-                isSaving ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100'
+                save.busy || globalBusy ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100'
               )}
               style={{
                 background: primaryColor,
@@ -544,12 +558,8 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
                 boxShadow: `0 2px 14px ${colorWithAlpha(primaryColor, 0.4)}`,
               }}
             >
-              {isSaving ? (
-                <div className="size-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-              ) : (
-                <Check size={18} />
-              )}
-              <span>{isSaving ? 'Saving...' : matchDecided ? 'Save & Advance Winner' : 'Save Match Progress'}</span>
+              {save.busy ? <Spinner size={16} /> : <Check size={18} />}
+              <span>{save.busy ? 'Saving…' : matchDecided ? 'Save & Advance Winner' : 'Save Match Progress'}</span>
             </button>
           </div>
         </>

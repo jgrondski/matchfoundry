@@ -149,12 +149,11 @@ export const PlayerDirectory: React.FC = () => {
     setSortBy(sort);
   }, []);
 
-  const handleSavePlayer = (playerData: Omit<PlayerProfile, 'id'>) => {
+  const handleSavePlayer = async (playerData: Omit<PlayerProfile, 'id'>) => {
     if (editingPlayer) {
-      updateGlobalPlayer(editingPlayer.id, playerData);
-    } else {
-      addGlobalPlayer(playerData);
+      return updateGlobalPlayer(editingPlayer.id, playerData);
     }
+    return addGlobalPlayer(playerData);
   };
 
   const enrolledTournamentsForDelete = useMemo(() => {

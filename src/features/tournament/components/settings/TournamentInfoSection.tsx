@@ -8,7 +8,9 @@ import { Badge, Button, cn } from '../../../../components/ui';
 interface TournamentInfoSectionProps {
   name: string;
   slug: string;
-  date: string;
+  startDate: string;
+  endDate: string;
+  dateError: string | null;
   location: string;
   seedingMethod: SeedingMethod;
   qualFormat: QualFormat;
@@ -20,7 +22,8 @@ interface TournamentInfoSectionProps {
   isLocked: boolean;
   onNameChange: (name: string) => void;
   onSlugChange: (slug: string) => void;
-  onDateChange: (date: string) => void;
+  onStartDateChange: (date: string) => void;
+  onEndDateChange: (date: string) => void;
   onLocationChange: (loc: string) => void;
   onSeedingMethodChange: (method: SeedingMethod) => void;
   onQualFormatChange: (fmt: QualFormat) => void;
@@ -35,7 +38,9 @@ interface TournamentInfoSectionProps {
 export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
   name,
   slug,
-  date,
+  startDate,
+  endDate,
+  dateError,
   location,
   seedingMethod,
   qualFormat,
@@ -47,7 +52,8 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
   isLocked,
   onNameChange,
   onSlugChange,
-  onDateChange,
+  onStartDateChange,
+  onEndDateChange,
   onLocationChange,
   onSeedingMethodChange,
   onQualFormatChange,
@@ -109,14 +115,25 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
         </div>
 
         <div>
-          <label className={labelClass}>Event Date</label>
+          <label className={labelClass}>Start Date</label>
           <input
-            type="text"
-            value={date}
-            onChange={e => onDateChange(e.target.value)}
-            placeholder="e.g. March 21-22, 2026"
-            className={inputClass}
+            type="date"
+            value={startDate}
+            onChange={e => onStartDateChange(e.target.value)}
+            className={cn(inputClass, 'scheme-dark')}
           />
+        </div>
+
+        <div>
+          <label className={labelClass}>End Date</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={e => onEndDateChange(e.target.value)}
+            min={startDate || undefined}
+            className={cn(inputClass, 'scheme-dark')}
+          />
+          {dateError && <p className="mt-1 text-xs text-red-bright">{dateError}</p>}
         </div>
 
         <div>

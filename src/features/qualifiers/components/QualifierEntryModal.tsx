@@ -5,7 +5,7 @@ import { CreatablePlayerSelect } from './CreatablePlayerSelect';
 import { Trophy, Plus, Trash2, X, Check, User } from 'lucide-react';
 import { getPlayerQualifierStatus } from '../scoring';
 import { Overlay } from '../../../components/overlay';
-import { Button, IconButton } from '../../../components/ui';
+import { Button, IconButton, Spinner, useAction, useGlobalBusy } from '../../../components/ui';
 
 const labelClass = 'block text-caption font-semibold text-fg-secondary mb-1.5 uppercase tracking-wide';
 
@@ -30,8 +30,25 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
 
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerProfile | null>(null);
   const [scoreInput, setScoreInput] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const titleId = useId();
+  const { busy: globalBusy } = useGlobalBusy();
+
+  const submit = useAction(async (player: PlayerProfile, score: number) => {
+    const result = await submitQualifierScore(tournament.id, player.id, score, player.name);
+    if (result) setScoreInput(''); // null means the store already reported an error; keep the typed score
+  });
+
+  const remove = useAction((id: string) => deleteQualifierScore(tournament.id, id));
+
+  const handleDeleteSubmission = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await remove.run(id);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -81,17 +98,10 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
     setScoreInput(cleaned);
   };
 
-  const handleSubmitScore = async (e: React.FormEvent) => {
+  const handleSubmitScore = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPlayer || !isScoreValid || isSubmitting) return;
-
-    setIsSubmitting(true);
-    try {
-      await submitQualifierScore(tournament.id, selectedPlayer.id, numericScore, selectedPlayer.name);
-      setScoreInput('');
-    } finally {
-      setIsSubmitting(false);
-    }
+    if (!selectedPlayer || !isScoreValid || submit.busy) return;
+    void submit.run(selectedPlayer, numericScore);
   };
 
   return (
@@ -99,7 +109,7 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
       open
       onClose={onClose}
       dirty={scoreInput.trim() !== ''}
-      busy={isSubmitting}
+      busy={submit.busy || remove.busy}
       aria-labelledby={titleId}
       panelTestId="qualifier-entry-modal"
       panelClassName="flex max-h-[85vh] min-h-130 max-w-140 flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-xl"
@@ -203,7 +213,9 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                       <Button
                         type="submit"
                         variant="primary"
-                        disabled={!isScoreValid || isSubmitting}
+                        disabled={!isScoreValid}
+                        loading={submit.busy}
+                        loadingText="Saving…"
                         className="py-2 px-5 gap-1.5"
                         title={
                           !selectedPlayer
@@ -213,12 +225,8 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                             : 'Submit qualifier score'
                         }
                       >
-                        {isSubmitting ? (
-                          <div className="size-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                        ) : (
-                          <Plus size={16} />
-                        )}
-                        <span>{isSubmitting ? 'Saving...' : 'Submit'}</span>
+                        <Plus size={16} />
+                        <span>Submit</span>
                       </Button>
                     </div>
                   </form>
@@ -254,13 +262,13 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                           {!tournament.isLocked && !isQualLocked && (
                             <button
                               type="button"
-                              onClick={async () => {
-                                await deleteQualifierScore(tournament.id, sub.id);
-                              }}
-                              className="bg-transparent border-0 text-red cursor-pointer p-1"
+                              onClick={() => void handleDeleteSubmission(sub.id)}
+                              disabled={remove.busy || globalBusy}
+                              aria-busy={deletingId === sub.id || undefined}
+                              className="bg-transparent border-0 text-red cursor-pointer p-1 disabled:cursor-not-allowed disabled:opacity-60"
                               title="Delete attempt"
                             >
-                              <Trash2 size={15} />
+                              {deletingId === sub.id ? <Spinner size={15} /> : <Trash2 size={15} />}
                             </button>
                           )}
                         </div>

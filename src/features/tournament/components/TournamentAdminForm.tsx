@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Tournament, TournamentTier, QualFormat, QualMode, PointsThreshold, DEFAULT_POINTS_THRESHOLDS, SeedingMethod } from '../types';
 import { useTournament } from '../store';
 import { createDefaultTier } from '../defaults';
+import { validateEventDates } from '../eventDates';
 import {
   Save,
   CheckCircle2,
@@ -33,7 +34,7 @@ import { DataSimulationSection } from './settings/DataSimulationSection';
 import { TournamentSecuritySection } from './settings/TournamentSecuritySection';
 import { AdminFormModals } from './settings/AdminFormModals';
 import { usePinAuth } from '../../auth/AuthContext';
-import { Button, cn } from '../../../components/ui';
+import { Button, cn, useAction } from '../../../components/ui';
 import { LOWER_BRACKET_COLOR } from '../../../theme/palette';
 
 interface TournamentAdminFormProps {
@@ -59,15 +60,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     testDiscordWebhook,
   } = useTournament();
   const { isSystemAdmin } = usePinAuth();
-  const [isTogglingTest, setIsTogglingTest] = useState(false);
-  const toggleTestTournament = async () => {
-    setIsTogglingTest(true);
-    try {
-      await updateTournament(tournament.id, { isTest: !tournament.isTest });
-    } finally {
-      setIsTogglingTest(false);
-    }
-  };
+  const toggleTest = useAction(() => updateTournament(tournament.id, { isTest: !tournament.isTest }));
 
   const { organizations, getOrganizationById } = useOrganization();
 
@@ -93,7 +86,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
 
   const selectedOrg = getOrganizationById(organizationId);
 
-  const [date, setDate] = useState(tournament.date);
+  const [startDate, setStartDate] = useState(tournament.startDate || '');
+  const [endDate, setEndDate] = useState(tournament.endDate || '');
   const [location, setLocation] = useState(tournament.location || '');
   const [seedingMethod, setSeedingMethod] = useState<SeedingMethod>(tournament.seedingMethod || 'QUALIFIERS');
   const [qualFormat, setQualFormat] = useState<QualFormat>(tournament.qualFormat || 'AVERAGE_OF_X');
@@ -154,7 +148,6 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     return null;
   }, [tiers]);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [tierToDelete, setTierToDelete] = useState<{ index: number; tier: TournamentTier } | null>(null);
   const [dataActionToConfirm, setDataActionToConfirm] = useState<'MATCHES' | 'QUALS' | 'ALL' | null>(null);
   const [isExecutingAction, setIsExecutingAction] = useState(false);
@@ -202,7 +195,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     if ((discordWebhookUrl || '').trim() !== (tournament.discordWebhookUrl || '').trim()) return true;
     if ((logoUrl || '').trim() !== (tournament.logoUrl || '').trim()) return true;
     if ((bannerUrl || '').trim() !== (tournament.bannerUrl || '').trim()) return true;
-    if (date.trim() !== (tournament.date || '').trim()) return true;
+    if (startDate !== (tournament.startDate || '')) return true;
+    if (endDate !== (tournament.endDate || '')) return true;
     if (location.trim() !== (tournament.location || '').trim()) return true;
     if (seedingMethod !== (tournament.seedingMethod || 'QUALIFIERS')) return true;
     if (qualFormat !== tournament.qualFormat) return true;
@@ -258,7 +252,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
   }, [
     name,
     slug,
-    date,
+    startDate,
+    endDate,
     location,
     seedingMethod,
     qualFormat,
@@ -302,7 +297,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       setDiscordWebhookUrl(tournament.discordWebhookUrl || '');
       setLogoUrl(tournament.logoUrl || '');
       setBannerUrl(tournament.bannerUrl || '');
-      setDate(tournament.date || '');
+      setStartDate(tournament.startDate || '');
+      setEndDate(tournament.endDate || '');
       setLocation(tournament.location || '');
       setSeedingMethod(tournament.seedingMethod || 'QUALIFIERS');
       setQualFormat(tournament.qualFormat || 'AVERAGE_OF_X');
@@ -327,7 +323,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     setDiscordWebhookUrl(tournament.discordWebhookUrl || '');
     setLogoUrl(tournament.logoUrl || '');
     setBannerUrl(tournament.bannerUrl || '');
-    setDate(tournament.date || '');
+    setStartDate(tournament.startDate || '');
+    setEndDate(tournament.endDate || '');
     setLocation(tournament.location || '');
     setSeedingMethod(tournament.seedingMethod || 'QUALIFIERS');
     setQualFormat(tournament.qualFormat || 'AVERAGE_OF_X');
@@ -474,6 +471,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
 
   const saveCurrentConfig = async (): Promise<boolean> => {
     if (tierConfigError) return false;
+    if (validateEventDates(startDate, endDate)) return false;
     let updatedTiers: TournamentTier[];
     if (tournament.isLocked) {
       // In locked match play mode, preserve existing active bracket matches, results, and player progression
@@ -529,7 +527,6 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       parsedAvg = qualAverageCount;
     }
 
-    setIsSaving(true);
     try {
       const saved = await updateTournament(tournament.id, {
         name,
@@ -542,7 +539,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           : {}),
         logoUrl,
         bannerUrl,
-        date,
+        startDate,
+        endDate,
         location,
         seedingMethod,
         qualFormat,
@@ -562,7 +560,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         setDiscordWebhookUrl(saved.discordWebhookUrl || '');
         setLogoUrl(saved.logoUrl || '');
         setBannerUrl(saved.bannerUrl || '');
-        setDate(saved.date || '');
+        setStartDate(saved.startDate || '');
+        setEndDate(saved.endDate || '');
         setLocation(saved.location || '');
         setSeedingMethod(saved.seedingMethod || 'QUALIFIERS');
         setQualFormat(saved.qualFormat || 'AVERAGE_OF_X');
@@ -590,10 +589,10 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     } catch (err) {
       console.error('[TournamentAdminForm] Error saving configuration:', err);
       return false;
-    } finally {
-      setIsSaving(false);
     }
   };
+
+  const saveConfig = useAction(() => saveCurrentConfig());
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -603,28 +602,47 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         return;
       }
     }
-    await saveCurrentConfig();
+    void saveConfig.run();
   };
 
-  const handleSeedQualifiers = async () => {
+  const seed = useAction(async () => {
     await saveCurrentConfig();
-    seedQualifiers(tournament.id);
+    const result = await seedQualifiers(tournament.id);
+    if (!result) return; // the store already reported the error
     setSimFeedback(
       seedingMethod === 'MANUAL'
         ? 'Competitors and manual seeds generated successfully!'
         : 'Realistic competitors and qualifier attempts seeded successfully!'
     );
+  });
+  const handleSeedQualifiers = () => {
+    void seed.run();
   };
 
-  const handleSimulate = async () => {
+  const simulate = useAction(async () => {
     await saveCurrentConfig();
-    simulateFullTournament(tournament.id);
+    const result = await simulateFullTournament(tournament.id);
+    if (!result) return; // the store already reported the error
     setSimFeedback(
       seedingMethod === 'MANUAL'
         ? 'Full tournament simulated: manual seeds, locked brackets, and complete match outcomes!'
         : 'Full tournament simulated: qualifiers, locked seeds, and complete match outcomes!'
     );
+  });
+  const handleSimulate = () => {
+    void simulate.run();
   };
+
+  const unlock = useAction(async () => {
+    const res = await unlockBrackets(tournament.id);
+    if (!res.success && res.error) {
+      setSettingsUnlockError(res.error);
+    } else {
+      setSettingsUnlockError(null);
+    }
+  });
+
+  const toggleOnlineQuals = useAction(() => setOnlineQualsOpen(tournament.id, !tournament.onlineQualsOpen));
 
   // Derive cutoffs
   let currentStart = 1;
@@ -683,14 +701,9 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           )}
           {tournament.isLocked ? (
             <Button
-              onClick={async () => {
-                const res = await unlockBrackets(tournament.id);
-                if (!res.success && res.error) {
-                  setSettingsUnlockError(res.error);
-                } else {
-                  setSettingsUnlockError(null);
-                }
-              }}
+              onClick={() => void unlock.run()}
+              loading={unlock.busy}
+              loadingText="Unlocking…"
               className="py-1.5 px-3 text-caption"
               title="Revert tournament to Qualifiers Mode"
             >
@@ -733,9 +746,9 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
             </div>
           </div>
           <Button
-            onClick={() => {
-              void setOnlineQualsOpen(tournament.id, !tournament.onlineQualsOpen);
-            }}
+            onClick={() => void toggleOnlineQuals.run()}
+            loading={toggleOnlineQuals.busy}
+            loadingText={tournament.onlineQualsOpen ? 'Closing…' : 'Opening…'}
             variant={tournament.onlineQualsOpen ? 'secondary' : 'primary'}
             className="py-1.5 px-3 text-caption"
           >
@@ -766,14 +779,13 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           </div>
         </div>
         <Button
-          onClick={() => {
-            void toggleTestTournament();
-          }}
-          disabled={isTogglingTest}
+          onClick={() => void toggleTest.run()}
+          loading={toggleTest.busy}
+          loadingText="Saving…"
           variant="secondary"
           className="py-1.5 px-3 text-caption"
         >
-          {isTogglingTest ? 'Saving…' : tournament.isTest ? 'Unmark as Test' : 'Mark as Test'}
+          {tournament.isTest ? 'Unmark as Test' : 'Mark as Test'}
         </Button>
       </div>
 
@@ -781,7 +793,9 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       <TournamentInfoSection
         name={name}
         slug={slug}
-        date={date}
+        startDate={startDate}
+        endDate={endDate}
+        dateError={validateEventDates(startDate, endDate)}
         location={location}
         seedingMethod={seedingMethod}
         qualFormat={qualFormat}
@@ -793,7 +807,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         isLocked={tournament.isLocked}
         onNameChange={handleNameChange}
         onSlugChange={setSlug}
-        onDateChange={setDate}
+        onStartDateChange={setStartDate}
+        onEndDateChange={setEndDate}
         onLocationChange={setLocation}
         onSeedingMethodChange={setSeedingMethod}
         onQualFormatChange={setQualFormat}
@@ -889,7 +904,9 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         <Button
           type="submit"
           variant="primary"
-          disabled={!isDirty || isSaving || Boolean(tierConfigError)}
+          disabled={!isDirty || Boolean(tierConfigError)}
+          loading={saveConfig.busy}
+          loadingText="Saving…"
           title={tierConfigError || undefined}
           className={cn(
             'py-2.5 px-7 text-base',
@@ -897,7 +914,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           )}
         >
           <Save size={18} />
-          {isSaving ? 'Saving...' : 'Save Configuration'}
+          Save Configuration
         </Button>
       </div>
 

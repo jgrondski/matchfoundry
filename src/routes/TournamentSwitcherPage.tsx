@@ -37,10 +37,10 @@ export const TournamentSwitcherPage: React.FC = () => {
   });
   const publicTournaments = filterFrontPageTournaments(tournamentSummaries, { showTest: false });
 
-  const confirmDeleteTournament = () => {
+  const confirmDeleteTournament = async () => {
     if (tournamentToDelete) {
-      deleteTournament(tournamentToDelete.id);
-      setTournamentToDelete(null);
+      const ok = await deleteTournament(tournamentToDelete.id);
+      if (ok) setTournamentToDelete(null);
     }
   };
 
@@ -299,6 +299,7 @@ export const TournamentSwitcherPage: React.FC = () => {
         }
         cancelLabel="Cancel"
         confirmLabel="Yes, Delete Tournament"
+        confirmLoadingText="Deleting…"
         onCancel={() => setTournamentToDelete(null)}
         onConfirm={confirmDeleteTournament}
       />

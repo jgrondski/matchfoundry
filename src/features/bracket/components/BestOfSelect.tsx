@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Check, Search } from 'lucide-react';
-import { cn } from '../../../components/ui';
+import { Spinner, cn } from '../../../components/ui';
 
 export interface BestOfSelectProps {
   value: number;
@@ -9,6 +9,8 @@ export interface BestOfSelectProps {
   label?: string;
   placeholder?: string;
   disabled?: boolean;
+  /** Shows a spinner beside the selected value while a change is being saved. */
+  loading?: boolean;
   compact?: boolean;
   className?: string;
 }
@@ -25,6 +27,7 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
   id,
   label,
   disabled = false,
+  loading = false,
   compact = false,
   className = '',
 }) => {
@@ -124,6 +127,7 @@ export const BestOfSelect: React.FC<BestOfSelectProps> = ({
       >
         <div className="flex items-center gap-1.5 overflow-hidden">
           <span className="font-bold text-gold-bright">Bo{value}</span>
+          {loading && <Spinner size={12} className="text-gold-bright" />}
           {!compact && (
             <span className="whitespace-nowrap text-xs text-fg-muted">
               (First to {winThreshold})

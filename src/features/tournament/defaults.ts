@@ -141,7 +141,6 @@ export function createEmptyTournament(overrides?: Partial<Tournament>): Tourname
     name: '',
     slug: '',
     organizationId: undefined,
-    date: 'Upcoming',
     location: 'TBD',
     qualFormat: DEFAULT_QUAL_FORMAT,
     qualAverageCount: DEFAULT_QUAL_AVERAGE_COUNT,

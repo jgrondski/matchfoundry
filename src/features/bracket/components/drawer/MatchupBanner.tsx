@@ -20,6 +20,8 @@ interface MatchupBannerProps {
   isP2Override?: boolean;
   primaryColor: string;
   onBestOfChange: (newBestOf: number) => void;
+  bestOfDisabled?: boolean;
+  bestOfLoading?: boolean;
 }
 
 export const MatchupBanner: React.FC<MatchupBannerProps> = ({
@@ -37,6 +39,8 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
   isP2Override,
   primaryColor,
   onBestOfChange,
+  bestOfDisabled = false,
+  bestOfLoading = false,
 }) => {
   return (
     <div
@@ -123,6 +127,8 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
           value={bestOf}
           onChange={onBestOfChange}
           compact={true}
+          disabled={bestOfDisabled}
+          loading={bestOfLoading}
         />
         <span className="text-3xs text-fg-muted mt-1.5 font-semibold font-mono">
           First to {winThreshold}

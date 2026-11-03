@@ -306,7 +306,8 @@ export function createInitialTournaments(): Tournament[] {
     organizationId: 'org_ctwc',
     slug: 'kc-2026-open',
     name: 'KC Regional 2026 Open',
-    date: 'March 21-22, 2026',
+    startDate: '2026-03-21',
+    endDate: '2026-03-22',
     location: 'Kansas City, MO',
     qualFormat: 'AVERAGE_OF_X',
     qualAverageCount: 2,
@@ -374,7 +375,7 @@ export function createInitialTournaments(): Tournament[] {
     organizationId: 'org_ctwc',
     slug: 'kc-2026-das',
     name: 'KC Regional 2026 DAS',
-    date: 'March 20, 2026',
+    startDate: '2026-03-20',
     location: 'Kansas City, MO',
     qualFormat: 'HIGH_SCORE',
     isLocked: false, // Qualifiers Mode (Draft preview)

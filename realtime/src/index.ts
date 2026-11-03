@@ -1,13 +1,22 @@
 import { DurableObject } from 'cloudflare:workers';
-import { isAllowedOrigin, parseRoute, safeEqual, shouldKeepWarm } from './policy';
+import {
+  EMPTY_SCHEDULE,
+  isAllowedOrigin,
+  isInKeepWarmWindow,
+  isScheduleDue,
+  parseKeepWarmSchedule,
+  parseRoute,
+  safeEqual,
+  type StoredSchedule,
+} from './policy';
 
 export interface Env {
   CHANNELS: DurableObjectNamespace<TournamentChannel>;
   ALLOWED_ORIGINS: string;
   ALLOW_VERCEL_PREVIEWS: string;
   KEEP_WARM_URL: string;
-  KEEP_WARM_FROM: string;
-  KEEP_WARM_UNTIL: string;
+  KEEP_WARM_SCHEDULE_URL: string;
+  KEEP_WARM: DurableObjectNamespace<KeepWarmSchedule>;
   PUBLISH_SECRET: string;
 }
 
@@ -56,12 +65,45 @@ export class TournamentChannel extends DurableObject<Env> {
   }
 }
 
+const KEEP_WARM_HEADERS = { 'User-Agent': 'matchfoundry-keepwarm' };
+
+/** Single instance ("schedule") that stores the keep-warm windows fetched from the API. */
+export class KeepWarmSchedule extends DurableObject<Env> {
+  async status(): Promise<StoredSchedule> {
+    return (await this.ctx.storage.get<StoredSchedule>('schedule')) ?? EMPTY_SCHEDULE;
+  }
+
+  /** Called by the cron every 4 minutes: refresh the schedule when due, then ping the API inside a window. */
+  async tick(): Promise<void> {
+    const now = Date.now();
+    let schedule = await this.status();
+    if (isScheduleDue(now, schedule)) {
+      schedule = { ...schedule, lastAttemptAt: now };
+      try {
+        const res = await fetch(this.env.KEEP_WARM_SCHEDULE_URL, { headers: KEEP_WARM_HEADERS });
+        const windows = res.ok ? parseKeepWarmSchedule(await res.json()) : null;
+        if (windows) schedule = { windows, fetchedAt: now, lastAttemptAt: now };
+      } catch {
+        // Keep the previous windows; isScheduleDue retries after SCHEDULE_RETRY_MS.
+      }
+      await this.ctx.storage.put('schedule', schedule);
+    }
+    if (isInKeepWarmWindow(new Date(now), schedule.windows)) {
+      await fetch(this.env.KEEP_WARM_URL, { headers: KEEP_WARM_HEADERS }).catch(() => undefined);
+    }
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const route = parseRoute(url.pathname);
 
     if (route.kind === 'health') return Response.json({ status: 'ok' });
+    if (route.kind === 'keepWarm') {
+      const schedule = await env.KEEP_WARM.get(env.KEEP_WARM.idFromName('schedule')).status();
+      return Response.json(schedule);
+    }
     if (route.kind === 'notFound') return new Response('Not found', { status: 404 });
 
     const stub = env.CHANNELS.get(env.CHANNELS.idFromName(route.tournamentId));
@@ -96,7 +138,7 @@ export default {
   },
 
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    if (!shouldKeepWarm(new Date(), env.KEEP_WARM_FROM, env.KEEP_WARM_UNTIL)) return;
-    ctx.waitUntil(fetch(env.KEEP_WARM_URL, { headers: { 'User-Agent': 'matchfoundry-keepwarm' } }).then(() => undefined, () => undefined));
+    const stub = env.KEEP_WARM.get(env.KEEP_WARM.idFromName('schedule'));
+    ctx.waitUntil(stub.tick().catch(() => undefined));
   },
 } satisfies ExportedHandler<Env>;

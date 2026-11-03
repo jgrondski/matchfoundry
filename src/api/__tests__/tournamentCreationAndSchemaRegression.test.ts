@@ -95,7 +95,6 @@ describe('Tournament Creation & Schema Regression Tests', () => {
         organizationId: 'org_ctwc',
         name: 'Championship Open',
         slug: 'championship-open',
-        date: '2026-10-04',
         location: 'Online',
         seedingMethod: 'QUALIFIERS',
         qualFormat: 'AVERAGE_OF_X',

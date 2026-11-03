@@ -82,6 +82,8 @@ export function setupTestDb() {
       is_verified BOOLEAN NOT NULL DEFAULT false,
       admin_pin_encrypted TEXT,
       metadata JSONB,
+      start_date DATE,
+      end_date DATE,
       created_at TIMESTAMP NOT NULL DEFAULT now()
     );
 

@@ -57,7 +57,7 @@ function createMockTournament(overrides: Partial<Tournament> = {}): Tournament {
     organizationId: overrides.organizationId || 'org-1',
     name: overrides.name || 'Mock Tournament',
     slug: overrides.slug || 'mock-tournament',
-    date: overrides.date || '2026-09-29',
+    startDate: overrides.startDate || '2026-09-29',
     location: overrides.location || 'Kansas City, MO',
     seedingMethod: overrides.seedingMethod || 'MANUAL',
     qualFormat: overrides.qualFormat || 'AVERAGE_OF_X',

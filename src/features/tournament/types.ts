@@ -87,7 +87,6 @@ export interface OrganizationDefaultRules {
 }
 
 export interface TournamentMetadata {
-  date?: string;
   location?: string;
   organizationId?: string;
   useOrgBranding?: boolean;
@@ -300,7 +299,10 @@ export interface Tournament {
   organizationId?: string; // parent Organization ID if associated
   slug: string; // e.g. 'kc-2026-open'
   name: string; // e.g. 'KC Regional 2026 Open'
-  date: string;
+  /** First event day, YYYY-MM-DD (venue calendar date, no time zone). '' or undefined = not set. */
+  startDate?: string;
+  /** Last event day, YYYY-MM-DD, on or after startDate. '' or undefined = single-day event. */
+  endDate?: string;
   location: string;
   seedingMethod?: SeedingMethod; // default 'QUALIFIERS'
   manualSeeds?: string[]; // ordered array of playerIds: index 0 = Seed 1, index 1 = Seed 2, etc.
@@ -349,7 +351,8 @@ export interface TournamentSummary {
   slug: string;
   name: string;
   organizationId?: string;
-  date: string;
+  startDate: string;
+  endDate: string;
   location: string;
   qualFormat: QualFormat;
   qualAverageCount?: number;

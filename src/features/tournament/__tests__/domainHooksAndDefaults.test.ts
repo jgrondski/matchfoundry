@@ -38,7 +38,7 @@ describe('Track A: Factory Centralization & Domain Defaults (defaults.ts)', () =
       expect(tourney.name).toBe('');
       expect(tourney.slug).toBe('');
       expect(tourney.organizationId).toBeUndefined();
-      expect(tourney.date).toBe('Upcoming');
+      expect(tourney.startDate).toBeUndefined();
       expect(tourney.location).toBe('TBD');
       expect(tourney.qualFormat).toBe(DEFAULT_QUAL_FORMAT);
       expect(tourney.qualAverageCount).toBe(DEFAULT_QUAL_AVERAGE_COUNT);

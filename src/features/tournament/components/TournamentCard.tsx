@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { TournamentSummary } from '../types';
+import { formatEventDates } from '../eventDates';
 import { useOrganization } from '../../organizations/store';
 import { colorWithAlpha } from '../../bracket/colorUtils';
 import {
@@ -131,7 +132,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         <div className="mb-5 flex flex-wrap gap-5 text-sm text-fg-secondary">
           <span className="flex items-center gap-1.5">
             <Calendar size={15} color="var(--color-gold-bright, #ffc905)" />
-            {tournament.date}
+            {formatEventDates(tournament.startDate, tournament.endDate)}
           </span>
           <span className="flex items-center gap-1.5">
             <MapPin size={15} color="var(--color-gold-bright, #ffc905)" />

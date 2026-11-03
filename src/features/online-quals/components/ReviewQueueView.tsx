@@ -13,7 +13,7 @@ import { ReviewQueueTable } from './ReviewQueueTable';
 import { AdjudicationModal } from './AdjudicationModal';
 import { IdentityResolutionModal } from './IdentityResolutionModal';
 import { ConfirmDialog } from '../../../components/overlay';
-import { cn } from '../../../components/ui';
+import { cn, useAction, useGlobalBusy } from '../../../components/ui';
 
 const metricCardClass = 'flex items-center justify-between rounded-md border border-line bg-surface p-4.5';
 const metricLabelClass = 'text-xs font-bold uppercase text-fg-muted';
@@ -55,7 +55,6 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
     useState<ReviewQueueSessionSummary | null>(null);
   const [isVerifyAllModalOpen, setIsVerifyAllModalOpen] = useState(false);
   const [discardTarget, setDiscardTarget] = useState<ReviewQueueSessionSummary | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const fetchSessions = useCallback(async (): Promise<ReviewQueueSessionSummary[]> => {
@@ -94,13 +93,12 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
     setSelectedIdentity(session);
   };
 
-  const handleAdjudicate = async (
+  const adjudicate = useAction(async (
     action: 'SAVE' | 'VERIFY' | 'SAVE_AND_VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ',
     options?: { scores?: number[]; judgeNotes?: string }
   ) => {
     if (!selectedAdjudication) return;
     const { playerId, playerName: name } = selectedAdjudication;
-    setIsSubmitting(true);
     setStatusMessage(null);
     try {
       const res = await fetch(`/api/tournaments/${tournament.id}/qualify/adjudicate`, {
@@ -146,14 +144,18 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       await refreshTournament?.(tournament.id);
     } catch (e: any) {
       setStatusMessage(`Error: ${e.message}`);
-    } finally {
-      setIsSubmitting(false);
     }
+  });
+
+  const handleAdjudicate = async (
+    action: 'SAVE' | 'VERIFY' | 'SAVE_AND_VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ',
+    options?: { scores?: number[]; judgeNotes?: string }
+  ) => {
+    await adjudicate.run(action, options);
   };
 
   const handleDiscardRun = async () => {
     if (!discardTarget) return;
-    setIsSubmitting(true);
     setStatusMessage(null);
     try {
       const res = await fetch(`/api/tournaments/${tournament.id}/qualify/discard`, {
@@ -181,13 +183,10 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       await refreshTournament?.(tournament.id);
     } catch (e: any) {
       setStatusMessage(`Error: ${e.message}`);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleVerifyAll = async () => {
-    setIsSubmitting(true);
     setStatusMessage(null);
     try {
       const res = await fetch(`/api/tournaments/${tournament.id}/qualify/verify-all`, {
@@ -211,20 +210,19 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       await refreshTournament?.(tournament.id);
     } catch (e: any) {
       setStatusMessage(`Error: ${e.message}`);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  const handleResolveIdentity = async (
+  // Errors are returned (not thrown) so the banner stays quiet; the wrapper below rethrows them
+  // to IdentityResolutionModal, which shows them inside the dialog.
+  const resolve = useAction(async (
     action: 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL' | 'CREATE_NEW_PLAYER',
     options?: {
       targetPlayerId?: string;
       newPlayer?: { name: string; country?: string; playstyle?: string };
     }
   ) => {
-    if (!selectedIdentity) return;
-    setIsSubmitting(true);
+    if (!selectedIdentity) return null;
     try {
       const res = await fetch(`/api/tournaments/${tournament.id}/qualify/adjudicate`, {
         method: 'POST',
@@ -261,13 +259,25 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
       setSelectedIdentity(null);
       await fetchSessions();
       await refreshTournament?.(tournament.id);
-    } finally {
-      setIsSubmitting(false);
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e : new Error(String(e));
     }
-    // Errors propagate to IdentityResolutionModal, which shows them inside the dialog.
+  });
+
+  const handleResolveIdentity = async (
+    action: 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL' | 'CREATE_NEW_PLAYER',
+    options?: {
+      targetPlayerId?: string;
+      newPlayer?: { name: string; country?: string; playstyle?: string };
+    }
+  ) => {
+    const err = await resolve.run(action, options);
+    if (err) throw err;
   };
 
   const isQualsClosed = Boolean(tournament.isLocked);
+  const { busy: globalBusy } = useGlobalBusy();
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -313,14 +323,14 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           <button
             type="button"
             data-testid="verify-all-button"
-            disabled={verifiableCount === 0 || isSubmitting}
+            disabled={verifiableCount === 0 || globalBusy}
             onClick={() => setIsVerifyAllModalOpen(true)}
             className={cn(
               'inline-flex items-center gap-2 whitespace-nowrap rounded-md border px-4 py-2 text-caption font-bold transition-all duration-150',
               verifiableCount > 0
                 ? 'border-warn/45 bg-warn/15 text-gold-bright'
                 : 'border-line bg-white/5 text-fg-muted',
-              verifiableCount > 0 && !isSubmitting ? 'cursor-pointer' : 'cursor-not-allowed'
+              verifiableCount > 0 && !globalBusy ? 'cursor-pointer' : 'cursor-not-allowed'
             )}
           >
             <CheckCheck size={16} />
@@ -370,7 +380,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
             setSelectedAdjudication(null);
             setSelectedIdentity(s);
           }}
-          isSubmitting={isSubmitting}
+          isSubmitting={adjudicate.busy}
         />
       )}
 
@@ -384,7 +394,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           sessions={sessions}
           onClose={() => setSelectedIdentity(null)}
           onResolve={handleResolveIdentity}
-          isSubmitting={isSubmitting}
+          isSubmitting={resolve.busy}
         />
       )}
 
@@ -409,8 +419,8 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           </>
         }
         cancelLabel="Cancel"
-        confirmLabel={isSubmitting ? 'Discarding...' : 'Discard Run'}
-        busy={isSubmitting}
+        confirmLabel="Discard Run"
+        confirmLoadingText="Discarding…"
         onCancel={() => setDiscardTarget(null)}
         onConfirm={handleDiscardRun}
       />
@@ -434,9 +444,9 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           </>
         }
         cancelLabel="Cancel"
-        confirmLabel={isSubmitting ? 'Verifying...' : `Yes, Verify All (${verifiableCount})`}
+        confirmLabel={`Yes, Verify All (${verifiableCount})`}
+        confirmLoadingText="Verifying…"
         confirmVariant="primary"
-        busy={isSubmitting}
         confirmDisabled={verifiableCount === 0}
         onCancel={() => setIsVerifyAllModalOpen(false)}
         onConfirm={handleVerifyAll}

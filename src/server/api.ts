@@ -26,6 +26,7 @@ import {
   saveFullTournament,
   deleteTournament,
   isUuid,
+  EventDateError,
 } from '../api/tournaments';
 import {
   submitQualifierScore,
@@ -88,6 +89,7 @@ import { runWithRequestMetrics, getRequestMetrics, formatServerTiming } from './
 import { NOT_HANDLED, UNLOCKED_SUBACTIONS, runLockedTournamentWrite } from './tournamentWriteLock';
 import { saveMatchResult } from '../api/matchWrites';
 import { publishTournamentChanged } from './realtime';
+import { getKeepWarmWindows } from '../api/keepWarm';
 import { MATCH_CONFLICT_CODE, MATCH_CONFLICT_MESSAGE } from '../features/bracket/matchConflict';
 
 /**
@@ -302,6 +304,12 @@ export function createApiMiddleware() {
             timestamp: Date.now(),
           });
         }
+      }
+
+      // GET /api/keep-warm-schedule (public): event-day windows for the realtime worker's keep-warm cron.
+      if (pathname === '/api/keep-warm-schedule' && method === 'GET') {
+        res.setHeader('Cache-Control', 'no-store');
+        return sendJson(res, 200, { windows: await getKeepWarmWindows() });
       }
 
       // POST /api/client-log
@@ -1750,6 +1758,7 @@ export function createApiMiddleware() {
       return sendError(res, 404, `Not found: ${method} ${pathname}`);
     } catch (err: unknown) {
       console.error(`[API Error] ${method} ${pathname}:`, err);
+      if (err instanceof EventDateError) return sendError(res, 400, err.message);
       if (err instanceof QualLockedError || err instanceof QualConflictError) return sendError(res, 409, err.message);
       const msg = err instanceof Error ? err.message : 'Internal Server Error';
       return sendError(res, 500, msg);
@@ -1807,7 +1816,7 @@ export async function simulateSampleTournament(): Promise<Tournament> {
     organizationId: 'org_ctwc',
     slug: `ctwc-open-${Date.now() % 10000}`,
     name: 'CTWC 2026 World Championship',
-    date: '2026-10-18',
+    startDate: '2026-10-18',
     location: 'Portland, Oregon',
     qualFormat: 'HIGH_SCORE',
     isLocked: false,

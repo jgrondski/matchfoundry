@@ -27,7 +27,8 @@ describe('Save Configuration & Dirty State Regression (All Bracket Types)', () =
       discordWebhookUrl: string;
       logoUrl: string;
       bannerUrl: string;
-      date: string;
+      startDate: string;
+      endDate: string;
       location: string;
       seedingMethod?: string;
       qualFormat: string;
@@ -42,7 +43,8 @@ describe('Save Configuration & Dirty State Regression (All Bracket Types)', () =
       if ((current.discordWebhookUrl || '').trim() !== (baseline.discordWebhookUrl || '').trim()) return true;
       if ((current.logoUrl || '').trim() !== (baseline.logoUrl || '').trim()) return true;
       if ((current.bannerUrl || '').trim() !== (baseline.bannerUrl || '').trim()) return true;
-      if (current.date.trim() !== (baseline.date || '').trim()) return true;
+      if (current.startDate !== (baseline.startDate || '')) return true;
+      if (current.endDate !== (baseline.endDate || '')) return true;
       if (current.location.trim() !== (baseline.location || '').trim()) return true;
       if (current.seedingMethod !== (baseline.seedingMethod || 'QUALIFIERS')) return true;
       if (current.qualFormat !== baseline.qualFormat) return true;
@@ -100,7 +102,6 @@ describe('Save Configuration & Dirty State Regression (All Bracket Types)', () =
       slug: 'tetris-masters-2026',
       organizationId: 'org_ctwc',
       useOrgBranding: true,
-      date: 'October 2026',
       location: 'Portland, OR',
       qualFormat: 'AVERAGE_OF_X',
       qualAverageCount: 2,
@@ -124,7 +125,8 @@ describe('Save Configuration & Dirty State Regression (All Bracket Types)', () =
       discordWebhookUrl: '',
       logoUrl: '',
       bannerUrl: '',
-      date: initialTourney.date || '',
+      startDate: initialTourney.startDate || '',
+      endDate: initialTourney.endDate || '',
       location: initialTourney.location || '',
       seedingMethod: initialTourney.seedingMethod,
       qualFormat: initialTourney.qualFormat,
@@ -182,7 +184,6 @@ describe('Save Configuration & Dirty State Regression (All Bracket Types)', () =
       slug: 'double-elim-championship',
       organizationId: 'org_ctwc',
       useOrgBranding: true,
-      date: '2026',
       location: 'Dallas, TX',
       qualFormat: 'HIGH_SCORE',
       seedingMethod: 'QUALIFIERS',
@@ -267,7 +268,8 @@ describe('Save Configuration & Dirty State Regression (All Bracket Types)', () =
       discordWebhookUrl: '',
       logoUrl: '',
       bannerUrl: '',
-      date: initialTourney.date || '',
+      startDate: initialTourney.startDate || '',
+      endDate: initialTourney.endDate || '',
       location: initialTourney.location || '',
       seedingMethod: initialTourney.seedingMethod,
       qualFormat: initialTourney.qualFormat,
@@ -324,7 +326,8 @@ describe('Save Configuration & Dirty State Regression (All Bracket Types)', () =
       discordWebhookUrl: '',
       logoUrl: '',
       bannerUrl: '',
-      date: '',
+      startDate: '',
+      endDate: '',
       location: '',
       seedingMethod: baselineTourney.seedingMethod,
       qualFormat: baselineTourney.qualFormat,

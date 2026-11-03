@@ -135,7 +135,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
   const totalCapacity = (tournament.tiers || []).reduce((sum, t) => sum + (t.playerCount || 0), 0);
 
   const handleRegisterNewCompetitor = async (playerData: Omit<PlayerProfile, 'id'>) => {
-    await addPlayerToPool(tournament.id, playerData);
+    return addPlayerToPool(tournament.id, playerData);
   };
 
   const handleImportGlobalPlayers = async (playersToImport: PlayerProfile[]) => {
@@ -430,12 +430,10 @@ export const ManageTournamentPlayersPage: React.FC = () => {
           setEditingPlayer(null);
         }}
         initialPlayer={editingPlayer || undefined}
-        onSave={async (playerData) => {
+        onSave={(playerData) => {
           if (editingPlayer) {
-            await updatePlayerInPool(tournament.id, editingPlayer.id, playerData);
+            return updatePlayerInPool(tournament.id, editingPlayer.id, playerData);
           }
-          setIsEditModalOpen(false);
-          setEditingPlayer(null);
         }}
         existingNames={existingRosterNames.filter(
           n => n.toLowerCase() !== editingPlayer?.name.toLowerCase()
