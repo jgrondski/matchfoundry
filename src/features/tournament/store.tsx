@@ -14,7 +14,8 @@ import { generateDraftBracketsForTournament } from '../qualifiers/scoring';
 import {
   generateAdditionalFakePlayers,
 } from './simulation';
-import { getAuthHeaders, usePinAuth } from '../auth/AuthContext';
+import { getAuthHeaders, getAuthToken, usePinAuth } from '../auth/AuthContext';
+import { recordServerTime } from '../../utils/serverClock';
 import { isPlaceholderSubmissionStatus } from '../online-quals/onlineQualsStatus';
 import { ApiError } from './apiError';
 import { MATCH_CONFLICT_CODE } from '../bracket/matchConflict';
@@ -32,7 +33,7 @@ interface TournamentContextType {
   dbError: string | null;
   checkDbHealth: () => Promise<boolean>;
   retryConnection: () => Promise<void>;
-  refreshTournament: (tournamentIdOrSlug: string) => Promise<Tournament | null>;
+  refreshTournament: (tournamentIdOrSlug: string, options?: { revision?: number }) => Promise<Tournament | null>;
   apiError?: string | null;
   clearApiError?: () => void;
   simulateSampleTournament: () => Promise<Tournament | undefined>;
@@ -259,6 +260,7 @@ async function apiCall(endpoint: string, options: RequestInit = {}) {
     ...options,
     headers: mergedHeaders,
   });
+  if (!endpoint.includes('?v=') && !endpoint.includes('&v=')) recordServerTime(res.headers?.get?.('X-Server-Time') ?? null);
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ error: res.statusText }));
     const msg = errorData.error || `HTTP ${res.status}`;
@@ -336,11 +338,15 @@ export const TournamentProvider: React.FC<{
     }
   };
 
-  const refreshTournament = useCallback(async (tournamentIdOrSlug: string): Promise<Tournament | null> => {
+  const refreshTournament = useCallback(async (
+    tournamentIdOrSlug: string,
+    options: { revision?: number } = {}
+  ): Promise<Tournament | null> => {
     if (typeof fetch === 'undefined') return null;
     try {
       setPendingTournamentKeys(prev => new Set(prev).add(tournamentIdOrSlug));
-      const fresh = await apiCall(`/api/tournaments/${tournamentIdOrSlug}`);
+      const versionQuery = typeof options.revision === 'number' && !getAuthToken() ? `?v=${options.revision}` : '';
+      const fresh = await apiCall(`/api/tournaments/${tournamentIdOrSlug}${versionQuery}`);
       if (fresh && fresh.id) {
         setIsDbConnected(true);
         setDbError(null);
@@ -349,6 +355,8 @@ export const TournamentProvider: React.FC<{
             t => t.id === fresh.id || (fresh.slug && t.slug === fresh.slug)
           );
           if (matchIndex >= 0) {
+            const existingRevision = prev[matchIndex].revision;
+            if (typeof existingRevision === 'number' && existingRevision > fresh.revision) return prev;
             const next = [...prev];
             next[matchIndex] = fresh;
             return next;

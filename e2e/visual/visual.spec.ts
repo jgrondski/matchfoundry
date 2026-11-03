@@ -3,7 +3,7 @@ import { installApiMocks, ADMIN_SESSION, FIXTURE_SLUG, FIXTURE_TIER_SLUG } from 
 
 const FIXED_TIME = new Date('2026-06-01T12:00:00Z');
 
-const PAGES = [
+const PAGES: Array<{ name: string; path: string; admin: boolean; fullPage?: boolean }> = [
   { name: 'landing', path: '/', admin: false },
   { name: 'bracket', path: `/${FIXTURE_SLUG}/${FIXTURE_TIER_SLUG}`, admin: false },
   { name: 'leaderboard', path: `/${FIXTURE_SLUG}/leaderboard`, admin: false },
@@ -11,7 +11,8 @@ const PAGES = [
   { name: 'judge', path: `/${FIXTURE_SLUG}/manage/judge`, admin: true },
   { name: 'manage-qualifiers', path: `/${FIXTURE_SLUG}/manage/qualifiers`, admin: true },
   { name: 'review', path: `/${FIXTURE_SLUG}/manage/review`, admin: true },
-  { name: 'settings', path: `/${FIXTURE_SLUG}/manage/settings`, admin: true },
+  // Full page: settings is a long form whose lower sections would otherwise go unchecked.
+  { name: 'settings', path: `/${FIXTURE_SLUG}/manage/settings`, admin: true, fullPage: true },
 ];
 
 async function prepare(page: Page, admin: boolean): Promise<string[]> {
@@ -36,7 +37,7 @@ for (const target of PAGES) {
     const unmocked = await prepare(page, target.admin);
     await page.goto(target.path);
     await settle(page);
-    await expect(page).toHaveScreenshot(`${target.name}.png`);
+    await expect(page).toHaveScreenshot(`${target.name}.png`, { fullPage: target.fullPage ?? false });
     expect(unmocked).toEqual([]);
   });
 }

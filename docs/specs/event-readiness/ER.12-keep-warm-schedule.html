@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step ER.12 Keep-Warm Schedule</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Event readiness / ER.12</nav>
+<h1>Step ER.12: Keep the API warm on event days, from tournament dates</h1>
+<p class="subtitle">The realtime worker's keep-warm cron stops reading two hand-edited dates in <code>wrangler.toml</code>. Once a day it asks the API for upcoming event days and stores the answer in a Durable Object; every 4 minutes it pings <code>/api/health</code> only when today falls inside one of those windows.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. <strong>Prerequisite:</strong> <a href="ER.11-event-dates.html">ER.11</a> (the <code>start_date</code> and <code>end_date</code> columns). <strong>Shared files:</strong> <code>src/server/api.ts</code> (one new route). Do not run alongside ER.6. <strong>Read first:</strong> <a href="../index.html">index.html</a> “Rules for every executor”, <code>docs/TESTING_STRATEGY.md</code>.</p></div>
+
+<h2>Why</h2>
+<p>ER.5's cron pings <code>/api/health</code> every 4 minutes between <code>KEEP_WARM_FROM</code> and <code>KEEP_WARM_UNTIL</code>. That keeps the Vercel function and the Neon database awake on event days (a cold start costs about 2.5 s). The two dates are edited by hand in <code>wrangler.toml</code> and need a manual redeploy, which is easy to forget.</p>
+<p>The worker cannot read the database directly, and asking the API every 4 minutes would wake the database all year, which is exactly what the date range avoids. So it asks once a day and remembers the answer. A failed fetch keeps the previous answer and retries an hour later. Each check sends at most one request to the API.</p>
+
+<h2>Behavior after this step</h2>
+<ul>
+  <li><code>GET /api/keep-warm-schedule</code> (public, <code>Cache-Control: no-store</code>) returns <code>{ "windows": [{ "from": "YYYY-MM-DD", "until": "YYYY-MM-DD" }] }</code>. There is one window per non-test tournament with a start date whose window has not ended, padded by one day on each side to cover venue time zones against UTC. Windows are sorted by <code>from</code>.</li>
+  <li>The worker refreshes that schedule at most once every 24 hours (and at most once an hour after a failure), and pings <code>/api/health</code> every 4 minutes while today (UTC) is inside any window.</li>
+  <li><code>GET https://&lt;worker&gt;/keep-warm</code> returns the stored schedule (<code>windows</code>, <code>fetchedAt</code>, <code>lastAttemptAt</code>), so anyone can check what the worker will do. It never triggers a fetch.</li>
+  <li><code>KEEP_WARM_FROM</code> and <code>KEEP_WARM_UNTIL</code> no longer exist.</li>
+</ul>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Area</th><th>Files</th></tr>
+  <tr><td>API</td><td>create <code>src/api/keepWarm.ts</code>; <code>src/server/api.ts</code> (one new route, section A step 2)</td></tr>
+  <tr><td>Worker</td><td><code>realtime/wrangler.toml</code>, <code>realtime/src/policy.ts</code>, <code>realtime/src/index.ts</code>, <code>realtime/src/policy.test.ts</code></td></tr>
+  <tr><td>Tests</td><td>create <code>src/api/__tests__/keepWarm.test.ts</code></td></tr>
+</table>
+
+<h2>A. API</h2>
+<ol class="steps">
+  <li>Create <code>src/api/keepWarm.ts</code>:
+<pre><code>import { isNotNull, sql } from 'drizzle-orm';
+import { getDb } from '../db';
+import { tournaments } from '../db/schema';
+
+/** Days added before and after each event, so venue time zones never fall outside the UTC window. */
+export const KEEP_WARM_PADDING_DAYS = 1;
+
+export interface KeepWarmWindow {
+  from: string;
+  until: string;
+}
+
+interface EventDays {
+  startDate: string | null;
+  endDate: string | null;
+  isTest: boolean;
+}
+
+/** Shifts a YYYY-MM-DD date by whole days. */
+export function addDays(isoDate: string, days: number): string {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/** One padded window per non-test event with a start date whose window ends today (UTC) or later, sorted by start. */
+export function buildKeepWarmWindows(events: EventDays[], today: string): KeepWarmWindow[] {
+  return events
+    .filter((e): e is EventDays &amp; { startDate: string } =&gt; !e.isTest &amp;&amp; Boolean(e.startDate))
+    .map(e =&gt; ({
+      from: addDays(e.startDate, -KEEP_WARM_PADDING_DAYS),
+      until: addDays(e.endDate || e.startDate, KEEP_WARM_PADDING_DAYS),
+    }))
+    .filter(w =&gt; w.until &gt;= today)
+    .sort((a, b) =&gt; a.from.localeCompare(b.from));
+}
+
+/** The schedule the realtime worker fetches once a day (GET /api/keep-warm-schedule). */
+export async function getKeepWarmWindows(now: Date = new Date()): Promise&lt;KeepWarmWindow[]&gt; {
+  const rows = await getDb()
+    .select({
+      startDate: tournaments.startDate,
+      endDate: tournaments.endDate,
+      isTest: sql&lt;boolean | null&gt;`${tournaments.metadata} -&gt; 'isTest'`,
+    })
+    .from(tournaments)
+    .where(isNotNull(tournaments.startDate));
+  return buildKeepWarmWindows(
+    rows.map(r =&gt; ({ startDate: r.startDate, endDate: r.endDate, isTest: Boolean(r.isTest) })),
+    now.toISOString().slice(0, 10)
+  );
+}</code></pre></li>
+  <li><code>src/server/api.ts</code>: import <code>getKeepWarmWindows</code> from <code>'../api/keepWarm'</code>. Directly after the closing brace of the <code>GET /api/health</code> handler block, add:
+<pre><code>      // GET /api/keep-warm-schedule (public): event-day windows for the realtime worker's keep-warm cron.
+      if (pathname === '/api/keep-warm-schedule' &amp;&amp; method === 'GET') {
+        res.setHeader('Cache-Control', 'no-store');
+        return sendJson(res, 200, { windows: await getKeepWarmWindows() });
+      }</code></pre></li>
+</ol>
+
+<h2>B. Worker policy (<code>realtime/src/policy.ts</code>)</h2>
+<p>Delete <code>shouldKeepWarm</code>. Add:</p>
+<pre><code>export interface KeepWarmWindow {
+  from: string;
+  until: string;
+}
+
+export interface StoredSchedule {
+  windows: KeepWarmWindow[];
+  /** When the last successful fetch happened (ms since epoch), or null if never. */
+  fetchedAt: number | null;
+  /** When the last fetch was attempted, successful or not (ms since epoch), or null if never. */
+  lastAttemptAt: number | null;
+}
+
+export const EMPTY_SCHEDULE: StoredSchedule = { windows: [], fetchedAt: null, lastAttemptAt: null };
+export const SCHEDULE_REFRESH_MS = 24 * 60 * 60 * 1000;
+export const SCHEDULE_RETRY_MS = 60 * 60 * 1000;
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** True when today's UTC date is inside any window, boundaries included. */
+export function isInKeepWarmWindow(now: Date, windows: KeepWarmWindow[]): boolean {
+  const today = now.toISOString().slice(0, 10);
+  return windows.some(w =&gt; today &gt;= w.from &amp;&amp; today &lt;= w.until);
+}
+
+/** The windows from a /api/keep-warm-schedule body, or null when the body is not in that shape. */
+export function parseKeepWarmSchedule(body: unknown): KeepWarmWindow[] | null {
+  if (!body || typeof body !== 'object' || !Array.isArray((body as { windows?: unknown }).windows)) return null;
+  const windows: KeepWarmWindow[] = [];
+  for (const w of (body as { windows: unknown[] }).windows) {
+    if (!w || typeof w !== 'object') return null;
+    const { from, until } = w as { from?: unknown; until?: unknown };
+    if (typeof from !== 'string' || typeof until !== 'string' || !ISO_DATE.test(from) || !ISO_DATE.test(until)) return null;
+    windows.push({ from, until });
+  }
+  return windows;
+}
+
+/** True when the stored schedule should be fetched again: never fetched or a day old, and no attempt in the last hour. */
+export function isScheduleDue(now: number, schedule: StoredSchedule): boolean {
+  const stale = schedule.fetchedAt === null || now - schedule.fetchedAt &gt;= SCHEDULE_REFRESH_MS;
+  const recentlyTried = schedule.lastAttemptAt !== null &amp;&amp; now - schedule.lastAttemptAt &lt; SCHEDULE_RETRY_MS;
+  return stale &amp;&amp; !recentlyTried;
+}</code></pre>
+<p>In <code>Route</code>, add <code>| { kind: 'keepWarm' }</code>. In <code>parseRoute</code>, directly after the <code>/health</code> line, add <code>if (pathname === '/keep-warm') return { kind: 'keepWarm' };</code>.</p>
+
+<h2>C. Worker (<code>realtime/src/index.ts</code> and <code>realtime/wrangler.toml</code>)</h2>
+<ol class="steps">
+  <li>Import line from <code>'./policy'</code>: replace <code>shouldKeepWarm</code> with <code>EMPTY_SCHEDULE, isInKeepWarmWindow, isScheduleDue, parseKeepWarmSchedule, type StoredSchedule</code>.</li>
+  <li><code>Env</code>: delete <code>KEEP_WARM_FROM</code> and <code>KEEP_WARM_UNTIL</code>; add <code>KEEP_WARM_SCHEDULE_URL: string;</code> and <code>KEEP_WARM: DurableObjectNamespace&lt;KeepWarmSchedule&gt;;</code>.</li>
+  <li>After the <code>TournamentChannel</code> class, add:
+<pre><code>const KEEP_WARM_HEADERS = { 'User-Agent': 'matchfoundry-keepwarm' };
+
+/** Single instance ("schedule") that stores the keep-warm windows fetched from the API. */
+export class KeepWarmSchedule extends DurableObject&lt;Env&gt; {
+  async status(): Promise&lt;StoredSchedule&gt; {
+    return (await this.ctx.storage.get&lt;StoredSchedule&gt;('schedule')) ?? EMPTY_SCHEDULE;
+  }
+
+  /** Called by the cron every 4 minutes: refresh the schedule when due, then ping the API inside a window. */
+  async tick(): Promise&lt;void&gt; {
+    const now = Date.now();
+    let schedule = await this.status();
+    if (isScheduleDue(now, schedule)) {
+      schedule = { ...schedule, lastAttemptAt: now };
+      try {
+        const res = await fetch(this.env.KEEP_WARM_SCHEDULE_URL, { headers: KEEP_WARM_HEADERS });
+        const windows = res.ok ? parseKeepWarmSchedule(await res.json()) : null;
+        if (windows) schedule = { windows, fetchedAt: now, lastAttemptAt: now };
+      } catch {
+        // Keep the previous windows; isScheduleDue retries after SCHEDULE_RETRY_MS.
+      }
+      await this.ctx.storage.put('schedule', schedule);
+    }
+    if (isInKeepWarmWindow(new Date(now), schedule.windows)) {
+      await fetch(this.env.KEEP_WARM_URL, { headers: KEEP_WARM_HEADERS }).catch(() =&gt; undefined);
+    }
+  }
+}</code></pre></li>
+  <li>In the default export's <code>fetch</code>, directly after the <code>health</code> line, add:
+<pre><code>    if (route.kind === 'keepWarm') {
+      const schedule = await env.KEEP_WARM.get(env.KEEP_WARM.idFromName('schedule')).status();
+      return Response.json(schedule);
+    }</code></pre></li>
+  <li>Replace the body of <code>scheduled</code> with:
+<pre><code>    const stub = env.KEEP_WARM.get(env.KEEP_WARM.idFromName('schedule'));
+    ctx.waitUntil(stub.tick().catch(() =&gt; undefined));</code></pre></li>
+  <li><code>wrangler.toml</code>:
+    <ul>
+      <li>Add a second binding block after the existing <code>[[durable_objects.bindings]]</code> block:
+<pre><code>[[durable_objects.bindings]]
+name = "KEEP_WARM"
+class_name = "KeepWarmSchedule"</code></pre></li>
+      <li>Add a second migration after the existing <code>tag = "v1"</code> block (never edit <code>v1</code>):
+<pre><code>[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["KeepWarmSchedule"]</code></pre></li>
+      <li>In <code>[vars]</code>: delete the comment line about inclusive UTC dates, <code>KEEP_WARM_FROM = ""</code> and <code>KEEP_WARM_UNTIL = ""</code>. Add <code>KEEP_WARM_SCHEDULE_URL = "https://www.matchfoundry.gg/api/keep-warm-schedule"</code> after <code>KEEP_WARM_URL</code>.</li>
+    </ul>
+  </li>
+</ol>
+
+<h2>D. Tests</h2>
+<ol class="steps">
+  <li><code>realtime/src/policy.test.ts</code>: remove <code>shouldKeepWarm</code> from the import and delete its <code>describe</code> block. Add tests:
+    <ul>
+      <li><code>isInKeepWarmWindow</code> with windows <code>[{from:'2026-11-13', until:'2026-11-17'}]</code>: true at <code>2026-11-13T00:00:00Z</code>, <code>2026-11-15T12:00:00Z</code>, <code>2026-11-17T23:59:59Z</code>; false at <code>2026-11-12T23:59:59Z</code> and <code>2026-11-18T00:00:00Z</code>; false for <code>[]</code>; true when only the second of two windows matches.</li>
+      <li><code>parseKeepWarmSchedule</code>: returns the windows for a valid body; returns <code>[]</code> for <code>{ windows: [] }</code>; returns null for <code>null</code>, <code>{}</code>, <code>{ windows: 'x' }</code>, and a window with <code>from: 'Nov 13'</code>.</li>
+      <li><code>isScheduleDue</code> (use a fixed <code>now</code>): true for <code>EMPTY_SCHEDULE</code>; false when <code>fetchedAt</code> is 1 hour ago; true when <code>fetchedAt</code> and <code>lastAttemptAt</code> are both 25 hours ago; false when <code>fetchedAt</code> is 25 hours ago but <code>lastAttemptAt</code> is 10 minutes ago; true when <code>fetchedAt</code> is null and <code>lastAttemptAt</code> is 2 hours ago.</li>
+      <li><code>parseRoute('/keep-warm')</code> returns <code>{ kind: 'keepWarm' }</code>.</li>
+    </ul>
+  </li>
+  <li><code>src/api/__tests__/keepWarm.test.ts</code>:
+    <ul>
+      <li><code>addDays</code>: <code>('2026-11-14', -1)</code> → <code>2026-11-13</code>; <code>('2026-12-31', 1)</code> → <code>2027-01-01</code>; <code>('2028-03-01', -1)</code> → <code>2028-02-29</code>.</li>
+      <li><code>buildKeepWarmWindows</code> with today <code>2026-11-03</code>: a 3-day event <code>2026-11-14</code>–<code>2026-11-16</code> gives <code>{from:'2026-11-13', until:'2026-11-17'}</code>; a single-day event uses its start date for both ends; test events and events without a start date are left out; an event that ended <code>2026-11-01</code> (window until <code>2026-11-02</code>) is left out; one that ended <code>2026-11-02</code> (until <code>2026-11-03</code>) is kept; output is sorted by <code>from</code>.</li>
+      <li>pg-mem (set up like <code>src/api/__tests__/eventDatesSave.test.ts</code>): save three tournaments with <code>saveFullTournament</code>: one with <code>startDate: '2026-11-14', endDate: '2026-11-16'</code>, one with <code>isTest: true</code> and dates, and one with no dates. <code>getKeepWarmWindows(new Date('2026-11-03T12:00:00Z'))</code> returns exactly <code>[{ from: '2026-11-13', until: '2026-11-17' }]</code>.</li>
+      <li>Through the API (copy the <code>makeHttpRequest</code> helper from <code>src/server/__tests__/tournamentWriteLock.test.ts</code>; no session): <code>GET /api/keep-warm-schedule</code> returns 200, a <code>Cache-Control</code> header of <code>no-store</code>, and a body with a <code>windows</code> array.</li>
+    </ul>
+  </li>
+</ol>
+
+<h2>Commands</h2>
+<ol class="steps">
+  <li><code>npm run typecheck</code> and <code>npm run realtime:typecheck</code></li>
+  <li><code>npx vitest run realtime/src/policy.test.ts src/api/__tests__/keepWarm.test.ts</code></li>
+  <li>Local worker smoke test: <code>npm run realtime:dev</code> in one terminal. In another, <code>curl http://localhost:8787/keep-warm</code> returns <code>{"windows":[],"fetchedAt":null,"lastAttemptAt":null}</code>. Stop the dev server afterwards.</li>
+  <li><code>npm test</code></li>
+</ol>
+<p>No visual test run is needed; nothing visible changes.</p>
+
+<h2>Deploy (the user runs these after the PR merges; list them in the report, do not run them)</h2>
+<ol class="steps">
+  <li><code>! npm run realtime:deploy</code>. The worker is not deployed by CI. Deploy after the production app has the new endpoint; if the worker asks first, it gets a 404, keeps an empty schedule and retries an hour later.</li>
+  <li>Set the event tournament's Start Date and End Date in Settings (ER.11), if not done yet.</li>
+  <li>Check: <code>curl https://matchfoundry-realtime.matchfoundry.workers.dev/keep-warm</code>. Within about 5 minutes of the deploy, <code>fetchedAt</code> is set and <code>windows</code> contains the event. Dates entered later are picked up by the next daily refresh.</li>
+</ol>
+
+<h2>Done when</h2>
+<ul class="check">
+  <li><code>KEEP_WARM_FROM</code> and <code>KEEP_WARM_UNTIL</code> appear nowhere in the repo.</li>
+  <li><code>GET /api/keep-warm-schedule</code> returns padded windows for upcoming non-test events.</li>
+  <li>The worker fetches the schedule at most daily (hourly after a failure), stores it, pings only inside a window, and reports it at <code>/keep-warm</code>.</li>
+  <li>All commands above pass.</li>
+</ul>
+</main>
+</body>
+</html>

@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => {
       'process.env.DATABASE_URL': JSON.stringify(databaseUrl),
       // Simulation UI is compiled out of Production builds (see src/utils/simulationEnv.ts).
       __SIMULATION_ENABLED__: JSON.stringify(process.env.VERCEL_ENV !== 'production'),
+      __REALTIME_URL__: JSON.stringify(process.env.REALTIME_URL || ''),
     },
     resolve: {
       alias: {
