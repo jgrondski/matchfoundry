@@ -20,7 +20,7 @@
 
 <h2>Behavior after this step</h2>
 <ul>
-  <li><code>GET /api/keep-warm-schedule</code> (public, <code>Cache-Control: no-store</code>) returns <code>{ "windows": [{ "from": "YYYY-MM-DD", "until": "YYYY-MM-DD" }] }</code>. There is one window per non-test tournament with a start date whose window has not ended, padded by one day on each side to cover venue time zones against UTC. Windows are sorted by <code>from</code>.</li>
+  <li><code>GET /api/keep-warm-schedule</code> (public, <code>Cache-Control: no-store</code>) returns <code>{ "windows": [{ "from": "YYYY-MM-DD", "until": "YYYY-MM-DD" }] }</code>. There is one window per non-test tournament with a start date that lasts at most 4 days, running from its first day to one day after its last (a US venue's last evening is already the next day in UTC). Longer events, such as month-long online tournaments, are left out so the database is not kept awake for weeks. Windows that have ended are left out. Windows are sorted by <code>from</code>.</li>
   <li>The worker refreshes that schedule at most once every 24 hours (and at most once an hour after a failure), and pings <code>/api/health</code> every 4 minutes while today (UTC) is inside any window.</li>
   <li><code>GET https://&lt;worker&gt;/keep-warm</code> returns the stored schedule (<code>windows</code>, <code>fetchedAt</code>, <code>lastAttemptAt</code>), so anyone can check what the worker will do. It never triggers a fetch.</li>
   <li><code>KEEP_WARM_FROM</code> and <code>KEEP_WARM_UNTIL</code> no longer exist.</li>
@@ -41,8 +41,17 @@
 import { getDb } from '../db';
 import { tournaments } from '../db/schema';
 
-/** Days added before and after each event, so venue time zones never fall outside the UTC window. */
-export const KEEP_WARM_PADDING_DAYS = 1;
+/**
+ * Days kept warm after an event's last day. Windows are UTC dates, and a US venue's evening is
+ * already the next day in UTC (6 pm Pacific is 2 am UTC), so the last evening needs one more day.
+ */
+export const KEEP_WARM_DAYS_AFTER = 1;
+
+/**
+ * Longest event (in days, inclusive) that is kept warm. Longer events, such as month-long online
+ * tournaments, are left out: warming them would keep the database awake for weeks.
+ */
+export const KEEP_WARM_MAX_EVENT_DAYS = 4;
 
 export interface KeepWarmWindow {
   from: string;
@@ -62,13 +71,24 @@ export function addDays(isoDate: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** One padded window per non-test event with a start date whose window ends today (UTC) or later, sorted by start. */
+/** Days from start to end, both included (a one-day event is 1). */
+export function eventLengthDays(startDate: string, endDate: string): number {
+  const ms = Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`);
+  return Math.round(ms / 86_400_000) + 1;
+}
+
+/**
+ * One window per non-test event with a start date that lasts at most KEEP_WARM_MAX_EVENT_DAYS,
+ * from its first day to KEEP_WARM_DAYS_AFTER past its last, keeping only windows that end today
+ * (UTC) or later, sorted by start.
+ */
 export function buildKeepWarmWindows(events: EventDays[], today: string): KeepWarmWindow[] {
   return events
     .filter((e): e is EventDays &amp; { startDate: string } =&gt; !e.isTest &amp;&amp; Boolean(e.startDate))
+    .filter(e =&gt; eventLengthDays(e.startDate, e.endDate || e.startDate) &lt;= KEEP_WARM_MAX_EVENT_DAYS)
     .map(e =&gt; ({
-      from: addDays(e.startDate, -KEEP_WARM_PADDING_DAYS),
-      until: addDays(e.endDate || e.startDate, KEEP_WARM_PADDING_DAYS),
+      from: e.startDate,
+      until: addDays(e.endDate || e.startDate, KEEP_WARM_DAYS_AFTER),
     }))
     .filter(w =&gt; w.until &gt;= today)
     .sort((a, b) =&gt; a.from.localeCompare(b.from));
@@ -214,8 +234,8 @@ new_sqlite_classes = ["KeepWarmSchedule"]</code></pre></li>
   <li><code>src/api/__tests__/keepWarm.test.ts</code>:
     <ul>
       <li><code>addDays</code>: <code>('2026-11-14', -1)</code> → <code>2026-11-13</code>; <code>('2026-12-31', 1)</code> → <code>2027-01-01</code>; <code>('2028-03-01', -1)</code> → <code>2028-02-29</code>.</li>
-      <li><code>buildKeepWarmWindows</code> with today <code>2026-11-03</code>: a 3-day event <code>2026-11-14</code>–<code>2026-11-16</code> gives <code>{from:'2026-11-13', until:'2026-11-17'}</code>; a single-day event uses its start date for both ends; test events and events without a start date are left out; an event that ended <code>2026-11-01</code> (window until <code>2026-11-02</code>) is left out; one that ended <code>2026-11-02</code> (until <code>2026-11-03</code>) is kept; output is sorted by <code>from</code>.</li>
-      <li>pg-mem (set up like <code>src/api/__tests__/eventDatesSave.test.ts</code>): save three tournaments with <code>saveFullTournament</code>: one with <code>startDate: '2026-11-14', endDate: '2026-11-16'</code>, one with <code>isTest: true</code> and dates, and one with no dates. <code>getKeepWarmWindows(new Date('2026-11-03T12:00:00Z'))</code> returns exactly <code>[{ from: '2026-11-13', until: '2026-11-17' }]</code>.</li>
+      <li><code>buildKeepWarmWindows</code> with today <code>2026-11-03</code>: a 3-day event <code>2026-11-14</code>–<code>2026-11-16</code> gives <code>{from:'2026-11-14', until:'2026-11-17'}</code>; a single-day event uses its start date as its last day; a 4-day event is kept and a 5-day or month-long event is left out; test events and events without a start date are left out; an event that ended <code>2026-11-01</code> (window until <code>2026-11-02</code>) is left out; one that ended <code>2026-11-02</code> (until <code>2026-11-03</code>) is kept; output is sorted by <code>from</code>.</li>
+      <li>pg-mem (set up like <code>src/api/__tests__/eventDatesSave.test.ts</code>): save three tournaments with <code>saveFullTournament</code>: one with <code>startDate: '2026-11-14', endDate: '2026-11-16'</code>, one with <code>isTest: true</code> and dates, and one with no dates. <code>getKeepWarmWindows(new Date('2026-11-03T12:00:00Z'))</code> returns exactly <code>[{ from: '2026-11-14', until: '2026-11-17' }]</code>.</li>
       <li>Through the API (copy the <code>makeHttpRequest</code> helper from <code>src/server/__tests__/tournamentWriteLock.test.ts</code>; no session): <code>GET /api/keep-warm-schedule</code> returns 200, a <code>Cache-Control</code> header of <code>no-store</code>, and a body with a <code>windows</code> array.</li>
     </ul>
   </li>
@@ -240,7 +260,7 @@ new_sqlite_classes = ["KeepWarmSchedule"]</code></pre></li>
 <h2>Done when</h2>
 <ul class="check">
   <li><code>KEEP_WARM_FROM</code> and <code>KEEP_WARM_UNTIL</code> appear nowhere in the repo.</li>
-  <li><code>GET /api/keep-warm-schedule</code> returns padded windows for upcoming non-test events.</li>
+  <li><code>GET /api/keep-warm-schedule</code> returns windows for upcoming non-test events of at most 4 days.</li>
   <li>The worker fetches the schedule at most daily (hourly after a failure), stores it, pings only inside a window, and reports it at <code>/keep-warm</code>.</li>
   <li>All commands above pass.</li>
 </ul>

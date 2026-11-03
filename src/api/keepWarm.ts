@@ -2,8 +2,17 @@ import { isNotNull, sql } from 'drizzle-orm';
 import { getDb } from '../db';
 import { tournaments } from '../db/schema';
 
-/** Days added before and after each event, so venue time zones never fall outside the UTC window. */
-export const KEEP_WARM_PADDING_DAYS = 1;
+/**
+ * Days kept warm after an event's last day. Windows are UTC dates, and a US venue's evening is
+ * already the next day in UTC (6 pm Pacific is 2 am UTC), so the last evening needs one more day.
+ */
+export const KEEP_WARM_DAYS_AFTER = 1;
+
+/**
+ * Longest event (in days, inclusive) that is kept warm. Longer events, such as month-long online
+ * tournaments, are left out: warming them would keep the database awake for weeks.
+ */
+export const KEEP_WARM_MAX_EVENT_DAYS = 4;
 
 export interface KeepWarmWindow {
   from: string;
@@ -23,13 +32,24 @@ export function addDays(isoDate: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** One padded window per non-test event with a start date whose window ends today (UTC) or later, sorted by start. */
+/** Days from start to end, both included (a one-day event is 1). */
+export function eventLengthDays(startDate: string, endDate: string): number {
+  const ms = Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${startDate}T00:00:00Z`);
+  return Math.round(ms / 86_400_000) + 1;
+}
+
+/**
+ * One window per non-test event with a start date that lasts at most KEEP_WARM_MAX_EVENT_DAYS,
+ * from its first day to KEEP_WARM_DAYS_AFTER past its last, keeping only windows that end today
+ * (UTC) or later, sorted by start.
+ */
 export function buildKeepWarmWindows(events: EventDays[], today: string): KeepWarmWindow[] {
   return events
     .filter((e): e is EventDays & { startDate: string } => !e.isTest && Boolean(e.startDate))
+    .filter(e => eventLengthDays(e.startDate, e.endDate || e.startDate) <= KEEP_WARM_MAX_EVENT_DAYS)
     .map(e => ({
-      from: addDays(e.startDate, -KEEP_WARM_PADDING_DAYS),
-      until: addDays(e.endDate || e.startDate, KEEP_WARM_PADDING_DAYS),
+      from: e.startDate,
+      until: addDays(e.endDate || e.startDate, KEEP_WARM_DAYS_AFTER),
     }))
     .filter(w => w.until >= today)
     .sort((a, b) => a.from.localeCompare(b.from));

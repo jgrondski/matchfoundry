@@ -22,14 +22,25 @@ describe('buildKeepWarmWindows', () => {
   const today = '2026-11-03';
   const event = (startDate: string | null, endDate: string | null = null, isTest = false) => ({ startDate, endDate, isTest });
 
-  it('pads a multi-day event by one day on each side', () => {
+  it('runs from the first event day to one day after the last', () => {
     expect(buildKeepWarmWindows([event('2026-11-14', '2026-11-16')], today)).toEqual([
-      { from: '2026-11-13', until: '2026-11-17' },
+      { from: '2026-11-14', until: '2026-11-17' },
     ]);
   });
 
-  it('uses the start date for both ends of a single-day event', () => {
-    expect(buildKeepWarmWindows([event('2026-11-14')], today)).toEqual([{ from: '2026-11-13', until: '2026-11-15' }]);
+  it('uses the start date as the last day of a single-day event', () => {
+    expect(buildKeepWarmWindows([event('2026-11-14')], today)).toEqual([{ from: '2026-11-14', until: '2026-11-15' }]);
+    expect(buildKeepWarmWindows([event('2026-11-14', '2026-11-14')], today)).toEqual([
+      { from: '2026-11-14', until: '2026-11-15' },
+    ]);
+  });
+
+  it('keeps events up to 4 days long and leaves out longer ones', () => {
+    expect(buildKeepWarmWindows([event('2026-11-14', '2026-11-17')], today)).toEqual([
+      { from: '2026-11-14', until: '2026-11-18' },
+    ]);
+    expect(buildKeepWarmWindows([event('2026-11-14', '2026-11-18')], today)).toEqual([]);
+    expect(buildKeepWarmWindows([event('2026-11-01', '2026-11-30')], today)).toEqual([]);
   });
 
   it('leaves out test events and events without a start date', () => {
@@ -39,7 +50,7 @@ describe('buildKeepWarmWindows', () => {
   it('leaves out a window that ended before today and keeps one that ends today', () => {
     expect(buildKeepWarmWindows([event('2026-10-30', '2026-11-01')], today)).toEqual([]);
     expect(buildKeepWarmWindows([event('2026-10-31', '2026-11-02')], today)).toEqual([
-      { from: '2026-10-30', until: '2026-11-03' },
+      { from: '2026-10-31', until: '2026-11-03' },
     ]);
   });
 
@@ -48,7 +59,7 @@ describe('buildKeepWarmWindows', () => {
       buildKeepWarmWindows([event('2026-12-05'), event('2026-11-14', '2026-11-16'), event('2026-11-20')], today).map(
         w => w.from
       )
-    ).toEqual(['2026-11-13', '2026-11-19', '2026-12-04']);
+    ).toEqual(['2026-11-14', '2026-11-20', '2026-12-05']);
   });
 });
 
@@ -113,13 +124,13 @@ describe('Keep-warm schedule (pg-mem)', () => {
     return { status: statusCode, headers, body: last ? JSON.parse(last) : null };
   };
 
-  it('returns one padded window for the upcoming non-test event', async () => {
+  it('returns one window for the upcoming non-test event', async () => {
     await saveTournament({ startDate: '2026-11-14', endDate: '2026-11-16' });
     await saveTournament({ startDate: '2026-11-20', endDate: '2026-11-21', isTest: true });
     await saveTournament({});
 
     expect(await getKeepWarmWindows(new Date('2026-11-03T12:00:00Z'))).toEqual([
-      { from: '2026-11-13', until: '2026-11-17' },
+      { from: '2026-11-14', until: '2026-11-17' },
     ]);
   });
 
