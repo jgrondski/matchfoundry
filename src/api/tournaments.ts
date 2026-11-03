@@ -166,7 +166,7 @@ export async function deleteTournament(id: string): Promise<boolean> {
 
 
 import { players, tournamentPlayers, qualifierSubmissions, qualifierRuns, matches, games } from '../db/schema';
-import { desc, inArray } from 'drizzle-orm';
+import { desc, inArray, getTableColumns } from 'drizzle-orm';
 import { attachOrphanScoresToRuns, listRuns, type QualRunRow } from './qualRuns';
 import type {
   Tournament,
@@ -191,38 +191,30 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
   const t = tList[0];
   await attachOrphanScoresToRuns(t.id);
 
-  const tiersList = await db
-    .select()
-    .from(bracketTiers)
-    .where(eq(bracketTiers.tournamentId, t.id))
-    .orderBy(bracketTiers.priorityOrder);
-
-  const subsList = await db
-    .select()
-    .from(qualifierSubmissions)
-    .where(eq(qualifierSubmissions.tournamentId, t.id))
-    .orderBy(desc(qualifierSubmissions.score));
-  const runRows = await listRuns(t.id);
-  const runById = new Map<string, QualRunRow>(runRows.map(r => [r.id, r]));
-
-  const tPlayersList = await db
-    .select({
-      tp: tournamentPlayers,
-      player: players,
-    })
-    .from(tournamentPlayers)
-    .innerJoin(players, eq(tournamentPlayers.playerId, players.id))
-    .where(eq(tournamentPlayers.tournamentId, t.id));
+  const [tiersList, subsList, runRows, tPlayersList] = await Promise.all([
+    db.select().from(bracketTiers).where(eq(bracketTiers.tournamentId, t.id)).orderBy(bracketTiers.priorityOrder),
+    db.select().from(qualifierSubmissions).where(eq(qualifierSubmissions.tournamentId, t.id)).orderBy(desc(qualifierSubmissions.score)),
+    listRuns(t.id),
+    db
+      .select({ tp: tournamentPlayers, player: players })
+      .from(tournamentPlayers)
+      .innerJoin(players, eq(tournamentPlayers.playerId, players.id))
+      .where(eq(tournamentPlayers.tournamentId, t.id)),
+  ]);
+  const runById = new Map<string, QualRunRow>(runRows.map((r: QualRunRow) => [r.id, r]));
 
   const tierIds = (tiersList as any[]).map((tr: any) => tr.id);
-  const dbMatches = tierIds.length > 0
-    ? await db.select().from(matches).where(inArray(matches.tierId, tierIds))
-    : [];
-
-  const matchIds = (dbMatches as any[]).map((m: any) => m.id);
-  const dbGames = matchIds.length > 0
-    ? await db.select().from(games).where(inArray(games.matchId, matchIds)).orderBy(games.gameNumber)
-    : [];
+  const [dbMatches, dbGames] = tierIds.length > 0
+    ? await Promise.all([
+        db.select().from(matches).where(inArray(matches.tierId, tierIds)),
+        db
+          .select(getTableColumns(games))
+          .from(games)
+          .innerJoin(matches, eq(games.matchId, matches.id))
+          .where(inArray(matches.tierId, tierIds))
+          .orderBy(games.gameNumber),
+      ])
+    : [[], []];
 
   const gamesByMatch = new Map<string, any[]>();
   for (const g of dbGames as any[]) {
@@ -452,10 +444,13 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
 export async function listFullTournaments(): Promise<Tournament[]> {
   const db = getDb();
   const allT = await db.select().from(tournaments).orderBy(desc(tournaments.createdAt));
+  const LIST_CONCURRENCY = 4;
   const fullList: Tournament[] = [];
-  for (const t of allT) {
-    const full = await getFullTournament(t.id);
-    if (full) fullList.push(full);
+  for (let i = 0; i < allT.length; i += LIST_CONCURRENCY) {
+    const chunk = await Promise.all(
+      allT.slice(i, i + LIST_CONCURRENCY).map((t: { id: string }) => getFullTournament(t.id))
+    );
+    for (const full of chunk) if (full) fullList.push(full);
   }
   return fullList;
 }

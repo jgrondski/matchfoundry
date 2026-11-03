@@ -1,5 +1,7 @@
 import React from 'react';
 import { cn } from './cn';
+import { Spinner } from './Spinner';
+import { useGlobalBusy } from './busy';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 export type ButtonSize = 'sm' | 'md';
@@ -32,11 +34,22 @@ export function buttonClasses(opts: { variant?: ButtonVariant; size?: ButtonSize
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Shows a spinner and loadingText (or the children) and disables the button. */
+  loading?: boolean;
+  loadingText?: React.ReactNode;
+  /** Stay clickable while another action holds the global busy lock. */
+  ignoreBusy?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'secondary', size = 'md', className, type = 'button', ...props }, ref) => (
-    <button ref={ref} type={type} className={buttonClasses({ variant, size, className })} {...props} />
-  )
+  ({ variant = 'secondary', size = 'md', className, type = 'button', loading = false, loadingText, ignoreBusy = false, disabled, children, ...props }, ref) => {
+    const { busy } = useGlobalBusy();
+    const isDisabled = Boolean(disabled) || loading || (busy && !ignoreBusy);
+    return (
+      <button ref={ref} type={type} className={buttonClasses({ variant, size, className })} disabled={isDisabled} aria-busy={loading || undefined} {...props}>
+        {loading ? (<><Spinner />{loadingText ?? children}</>) : children}
+      </button>
+    );
+  }
 );
 Button.displayName = 'Button';

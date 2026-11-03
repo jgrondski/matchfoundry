@@ -274,7 +274,7 @@ export const TournamentProvider: React.FC<{
   const [isDbConnected, setIsDbConnected] = useState<boolean>(true);
   const [dbError, setDbError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
-  const clearApiError = () => setApiError(null);
+  const clearApiError = useCallback(() => setApiError(null), []);
 
   const checkDbHealth = async (): Promise<boolean> => {
     try {
@@ -2006,24 +2006,6 @@ export const TournamentProvider: React.FC<{
             className="ml-3 cursor-pointer whitespace-nowrap rounded-xs border-0 bg-white py-1 px-3 text-xs font-bold text-red-800"
           >
             Retry Connection
-          </button>
-        </div>
-      )}
-      {apiError && (
-        <div
-          role="alert"
-          className="sticky top-0 z-99999 flex items-center justify-between bg-red-600 py-3 px-5 text-sm font-semibold text-white shadow-md"
-        >
-          <div className="flex items-center gap-2">
-            <span>⚠️</span>
-            <span>{apiError}</span>
-          </div>
-          <button
-            onClick={clearApiError}
-            className="cursor-pointer border-0 bg-transparent py-1 px-2 text-base font-bold text-white"
-            title="Dismiss error"
-          >
-            ✕
           </button>
         </div>
       )}

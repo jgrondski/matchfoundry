@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:pg": "vitest run pg.test",
     "test:brackets": "vitest run src/features/bracket",
     "test:api": "vitest run src/api src/server",
     "test:ui": "vitest run src/components src/features/tournament src/features/qualifiers src/features/players src/features/organizations src/features/online-quals",
@@ -25,10 +26,14 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx scripts/seed.ts",
     "db:import-players": "tsx scripts/importPlayers.ts",
-    "db:simulate": "tsx scripts/simulate.ts"
+    "db:simulate": "tsx scripts/simulate.ts",
+    "realtime:dev": "wrangler dev --config realtime/wrangler.toml",
+    "realtime:deploy": "wrangler deploy --config realtime/wrangler.toml",
+    "realtime:typecheck": "tsc --noEmit -p realtime/tsconfig.json"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
+    "@vercel/functions": "^3.10.5",
     "clsx": "^2.1.1",
     "country-flag-icons": "^1.6.20",
     "drizzle-orm": "^0.45.3",
@@ -39,9 +44,11 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.18.3",
     "tailwind-merge": "^3.7.0",
+    "ws": "^8.22.1",
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "5.20261102.1",
     "@eslint/js": "^9.21.0",
     "@playwright/test": "^1.64.0",
     "@tailwindcss/vite": "^4.3.3",
@@ -50,6 +57,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@types/ws": "^8.18.2",
     "@vitejs/plugin-react": "^4.3.4",
     "drizzle-kit": "^0.31.11",
     "esbuild": "^0.25.0",
@@ -62,6 +70,7 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0",
-    "vitest": "^3.0.7"
+    "vitest": "^3.0.7",
+    "wrangler": "4.156.1"
   }
 }

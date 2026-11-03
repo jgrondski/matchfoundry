@@ -1,6 +1,6 @@
 import React, { useId } from 'react';
 import { AlertTriangle, Info, X } from 'lucide-react';
-import { Button, IconButton, cn } from '../ui';
+import { Button, IconButton, cn, useAction } from '../ui';
 import { Overlay } from './Overlay';
 
 export interface ConfirmDialogProps {
@@ -11,10 +11,12 @@ export interface ConfirmDialogProps {
   confirmLabel: string;
   confirmVariant?: 'danger' | 'primary';
   cancelLabel?: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<unknown>;
   onCancel: () => void;
   busy?: boolean;
   confirmDisabled?: boolean;
+  /** Loading text on the Confirm button while onConfirm runs. */
+  confirmLoadingText?: React.ReactNode;
   /** Extra buttons rendered between Cancel and Confirm. */
   extraActions?: React.ReactNode;
 }
@@ -37,15 +39,18 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
   busy = false,
   confirmDisabled = false,
+  confirmLoadingText = 'Working…',
   extraActions,
 }) => {
   const titleId = useId();
+  const action = useAction(onConfirm);
+  const isBusy = busy || action.busy;
   const Icon = tone === 'info' ? Info : AlertTriangle;
   return (
     <Overlay
       open={open}
       onClose={onCancel}
-      busy={busy}
+      busy={isBusy}
       aria-labelledby={titleId}
       panelClassName={cn('max-w-[460px] overflow-hidden rounded-lg border bg-surface shadow-lg', TONE[tone].border)}
     >
@@ -56,17 +61,23 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               <Icon size={20} className={TONE[tone].icon} />
               <h3 id={titleId} className="text-lg font-bold text-fg">{title}</h3>
             </div>
-            <IconButton aria-label="Close" onClick={requestClose} disabled={busy}>
+            <IconButton aria-label="Close" onClick={requestClose} disabled={isBusy}>
               <X size={18} />
             </IconButton>
           </div>
           <div className="flex flex-col gap-4 p-6 text-sm text-fg">{body}</div>
           <div className="flex flex-wrap justify-end gap-3 border-t border-line bg-elevated px-6 py-4">
-            <Button variant="secondary" onClick={requestClose} disabled={busy} data-autofocus>
+            <Button variant="secondary" onClick={requestClose} disabled={isBusy} data-autofocus>
               {cancelLabel}
             </Button>
             {extraActions}
-            <Button variant={confirmVariant} onClick={onConfirm} disabled={busy || confirmDisabled}>
+            <Button
+              variant={confirmVariant}
+              onClick={() => void action.run()}
+              loading={isBusy}
+              loadingText={confirmLoadingText}
+              disabled={confirmDisabled}
+            >
               {confirmLabel}
             </Button>
           </div>
