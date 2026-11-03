@@ -353,6 +353,20 @@ flowchart TD
   8. **ER.8** [Loading flows](specs/event-readiness/ER.8-busy-flows.html): judge, qualifier, review-queue and admin actions converted.
 * **Order:** ER.1 → ER.2 → ER.3 → ER.4 → ER.6 → ER.8. ER.5 any time; ER.7 alongside ER.2–ER.4 and before ER.6.
 * **Decisions:** live updates use push (Cloudflare Durable Objects), not polling; messages carry only a revision and clients re-fetch through the API. Loading is inline on the clicked button, every other button is disabled, and a 10 s timeout shows an error banner.
+* **Baseline (ER.1, recorded 2026-11-02, before ER.2):** Vercel preview at commit `2304566` (`neon-http` driver), measured with `curl`-style requests and read from the `Server-Timing` header. Test tournament: 32 players, Gold (16, traditional, 15 matches) and Silver (16, flat, 8 matches), locked. Warm = 3 consecutive runs; total = full round trip from the client.
+
+  | Action | Server time (warm) | Queries | Total (warm) |
+  | :--- | :--- | :--- | :--- |
+  | Delete a global player (not in any tournament) | 73–140 ms | 5 | 165–355 ms |
+  | Save a match score | 1,393–1,725 ms | 94 | 1.5–1.8 s |
+  | Save tournament settings | 1,261–1,339 ms | 86 | 1.4–1.6 s |
+  | Start the qual timer | 1,260–1,281 ms | 86 | 1.4 s |
+  | Save a match score, **cold** (after 10 idle minutes) | 2,470 ms | 94 | 4.4 s |
+
+  * Score, settings and timer saves re-save the whole tournament: 86–94 sequential queries at roughly 15 ms each. ER.2–ER.4 target this; compare these rows after ER.4.
+  * The qual timer start costs the same as a full settings save because the client sends the whole tournament to change one field.
+  * Cold start adds about 3 s: about 1 s inside the handler (Neon waking, first connections) and about 2 s before it runs (Vercel function boot). ER.5's keep-warm cron targets this on event days.
+  * Network and Vercel overhead outside the handler is about 100–200 ms when warm.
 * **Already shipped with this phase (quick fixes):**
   * MAXOUT chips and callouts removed everywhere; the "# of maxes" count stays (qual score and kicker contexts).
   * Standings subtitles ("16 Bracket Competitors • Best of 5") removed; "competitors" now reads "players".
