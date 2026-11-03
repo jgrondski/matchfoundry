@@ -301,7 +301,7 @@ export interface Tournament {
   name: string; // e.g. 'KC Regional 2026 Open'
   /** First event day, YYYY-MM-DD (venue calendar date, no time zone). '' or undefined = not set. */
   startDate?: string;
-  /** Last event day, YYYY-MM-DD, after startDate. '' or undefined = single-day event. */
+  /** Last event day, YYYY-MM-DD, on or after startDate. '' or undefined = single-day event. */
   endDate?: string;
   location: string;
   seedingMethod?: SeedingMethod; // default 'QUALIFIERS'

@@ -110,10 +110,10 @@ describe('Event dates on tournament save (pg-mem)', () => {
     expect(after.endDate).toBe('');
   });
 
-  it('stores no end date when it equals the start date', async () => {
+  it('keeps an end date equal to the start date (a one-day event, as entered)', async () => {
     const t = await buildTournament({ startDate: '2026-11-14', endDate: '2026-11-14' });
     expect(t.startDate).toBe('2026-11-14');
-    expect(t.endDate).toBe('');
+    expect(t.endDate).toBe('2026-11-14');
   });
 
   it('rejects an invalid date or range and leaves the stored tournament unchanged', async () => {

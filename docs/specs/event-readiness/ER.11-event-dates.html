@@ -23,7 +23,7 @@
   <li>Create Tournament and Settings show <strong>Start Date</strong> and <strong>End Date</strong> date pickers instead of the “Event Date” text box. Both are optional. End Date cannot be before Start Date, and cannot be set without a Start Date; the form shows the error under End Date and does not save.</li>
   <li>Tournament cards show “Nov 14, 2026”, “Nov 14–16, 2026”, “Nov 30 – Dec 2, 2026”, “Dec 30, 2026 – Jan 2, 2027”, or “Date TBD” when no start date is set.</li>
   <li>The API rejects an invalid date or range with HTTP 400 and the validation message. A save that omits <code>startDate</code> and <code>endDate</code> (for example an old browser tab) keeps the stored dates. Sending <code>''</code> clears a date.</li>
-  <li>An end date equal to the start date is stored as no end date (a single-day event).</li>
+  <li>An end date equal to the start date is stored as entered (a one-day event).</li>
   <li>Existing free-text dates are not converted. Those tournaments show “Date TBD” until an admin sets the dates in Settings.</li>
 </ul>
 
@@ -81,7 +81,7 @@ export function formatEventDates(startDate?: string | null, endDate?: string | n
   <li><code>types.ts</code>, interface <code>Tournament</code>: delete <code>date: string;</code> and add in its place:
 <pre><code>  /** First event day, YYYY-MM-DD (venue calendar date, no time zone). '' or undefined = not set. */
   startDate?: string;
-  /** Last event day, YYYY-MM-DD, after startDate. '' or undefined = single-day event. */
+  /** Last event day, YYYY-MM-DD, on or after startDate. '' or undefined = single-day event. */
   endDate?: string;</code></pre></li>
   <li><code>types.ts</code>, interface <code>TournamentSummary</code>: delete <code>date: string;</code> and add <code>startDate: string;</code> and <code>endDate: string;</code> (always present; <code>''</code> when not set).</li>
   <li><code>types.ts</code>, interface <code>TournamentMetadata</code>: delete <code>date?: string;</code>.</li>
@@ -102,12 +102,10 @@ export class EventDateError extends Error {}</code></pre></li>
 <pre><code>  // Omitted (undefined) keeps the stored dates, so a client that never sent them can't clear them; '' clears.
   const startDate =
     tourney.startDate !== undefined ? tourney.startDate || null : (existing[0]?.startDate ?? null);
-  const requestedEndDate =
+  const endDate =
     tourney.endDate !== undefined ? tourney.endDate || null : (existing[0]?.endDate ?? null);
-  const dateError = validateEventDates(startDate || '', requestedEndDate || '');
-  if (dateError) throw new EventDateError(dateError);
-  // An end date equal to the start date is a single-day event.
-  const endDate = requestedEndDate === startDate ? null : requestedEndDate;</code></pre>
+  const dateError = validateEventDates(startDate || '', endDate || '');
+  if (dateError) throw new EventDateError(dateError);</code></pre>
   In the <code>metadata</code> object, delete the line <code>date: tourney.date || '',</code>. Add <code>startDate,</code> and <code>endDate,</code> to <code>updatePayload</code> (after <code>metadata,</code>) and to the object passed to <code>.values({...})</code> in the insert branch (after its <code>metadata</code> entry).</li>
   <li><code>getFullTournament</code>: in the returned object, replace <code>date: meta.date || '',</code> with:
 <pre><code>    startDate: t.startDate || '',
@@ -175,7 +173,7 @@ export class EventDateError extends Error {}</code></pre></li>
       <li>Saving <code>startDate: '2026-11-14', endDate: '2026-11-16'</code>: <code>getFullTournament</code> and the matching entry of <code>listTournamentSummaries()</code> both return those two values.</li>
       <li>Saving the loaded tournament again with <code>startDate</code> and <code>endDate</code> set to <code>undefined</code> keeps both stored dates.</li>
       <li>Saving <code>startDate: '', endDate: ''</code> clears both (reload returns <code>''</code> for each).</li>
-      <li>Saving <code>endDate</code> equal to <code>startDate</code> stores no end date (reload returns <code>endDate: ''</code>).</li>
+      <li>Saving <code>endDate</code> equal to <code>startDate</code> keeps it (reload returns the same date for both).</li>
       <li><code>startDate: 'March 21'</code> and the range <code>'2026-11-16'</code> to <code>'2026-11-14'</code> each reject with <code>EventDateError</code>; reloading shows the previous name and dates unchanged.</li>
       <li>Through the API (copy the <code>makeHttpRequest</code> helper and SYSTEM_ADMIN session setup from <code>src/server/__tests__/tournamentWriteLock.test.ts</code>): <code>PUT /api/tournaments/:id</code> with <code>startDate: 'Upcoming'</code> returns 400 and a body containing <code>Start date must be a real date</code>.</li>
     </ul>

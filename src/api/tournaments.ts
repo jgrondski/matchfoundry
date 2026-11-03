@@ -637,12 +637,10 @@ export async function saveFullTournament(tourney: Tournament, options: { syncMat
   // Omitted (undefined) keeps the stored dates, so a client that never sent them can't clear them; '' clears.
   const startDate =
     tourney.startDate !== undefined ? tourney.startDate || null : (existing[0]?.startDate ?? null);
-  const requestedEndDate =
+  const endDate =
     tourney.endDate !== undefined ? tourney.endDate || null : (existing[0]?.endDate ?? null);
-  const dateError = validateEventDates(startDate || '', requestedEndDate || '');
+  const dateError = validateEventDates(startDate || '', endDate || '');
   if (dateError) throw new EventDateError(dateError);
-  // An end date equal to the start date is a single-day event.
-  const endDate = requestedEndDate === startDate ? null : requestedEndDate;
 
   const qualMode = tourney.qualMode || 'HYBRID';
   const qualWindowMinutes = tourney.qualWindowMinutes ?? 90;
