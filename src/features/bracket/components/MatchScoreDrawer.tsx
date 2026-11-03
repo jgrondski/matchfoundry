@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useId, useMemo } from 'react';
+import React, { useState, useEffect, useId, useMemo, useRef } from 'react';
 import { BracketMatch } from '../types';
 import { MatchScoreRecord } from '../../tournament/types';
 import { useTournament } from '../../tournament/store';
+import { ApiError } from '../../tournament/apiError';
+import { MATCH_CONFLICT_CODE } from '../matchConflict';
+import { shouldResyncDrawer } from '../drawerSync';
 import { X, Trophy, Check, ShieldAlert, Plus } from 'lucide-react';
 import {
   getDefaultTierColors,
@@ -69,18 +72,38 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
 
   const [bestOf, setBestOf] = useState<number>(match?.bestOf || 5);
   const [games, setGames] = useState<GameDraft[]>([]);
+  const gamesRef = useRef(games);
+  gamesRef.current = games;
   const [hasTiebreaker, setHasTiebreaker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [baseRevision, setBaseRevision] = useState(0);
+  const [conflictNotice, setConflictNotice] = useState<string | null>(null);
+  const [resyncToken, setResyncToken] = useState(0);
+  const lastSyncRef = useRef<{ matchId: string; gamesJson: string } | null>(null);
 
   useEffect(() => {
     if (!match) return;
+    const last = lastSyncRef.current;
+    if (!shouldResyncDrawer({
+      lastSyncedMatchId: last?.matchId ?? null,
+      lastSyncedGamesJson: last?.gamesJson ?? null,
+      currentGamesJson: JSON.stringify(gamesRef.current),
+      matchId: match.id,
+    })) return;
     const currentBestOf = liveRecord?.bestOf || match.bestOf || 5;
+    const nextGames = deriveInitialGames(match, liveRecord);
     setBestOf(currentBestOf);
+    setGames(nextGames);
+    setHasTiebreaker(Boolean(liveRecord?.hasTiebreaker || (liveRecord?.games?.length || 0) > currentBestOf));
+    setBaseRevision(Number(liveRecord?.revision ?? 0));
+    lastSyncRef.current = { matchId: match.id, gamesJson: JSON.stringify(nextGames) };
+  }, [match, liveRecord, resyncToken]);
 
-    const recordedCount = liveRecord?.games?.length || 0;
-    setGames(deriveInitialGames(match, liveRecord));
-    setHasTiebreaker(Boolean(liveRecord?.hasTiebreaker || recordedCount > currentBestOf));
-  }, [match, liveRecord]);
+  useEffect(() => {
+    if (isOpen) return;
+    lastSyncRef.current = null;
+    setConflictNotice(null);
+  }, [isOpen]);
 
   const baselineGames = useMemo(() => (match ? deriveInitialGames(match, liveRecord) : []), [match, liveRecord]);
   const titleId = useId();
@@ -173,6 +196,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
   };
 
   const handleSaveAndAdvance = async () => {
+    setConflictNotice(null);
     setIsSaving(true);
     try {
       const formattedGames = games.map((g, idx) => ({
@@ -188,14 +212,25 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
       const hasRemainingTiebreaker = games.length > bestOf;
       const shouldRecordTiebreaker = Boolean((hasTiebreaker || hasRemainingTiebreaker || hasTiedGame) && (hasTiedGame || hasRemainingTiebreaker));
 
-      await saveMatchScores(
-        tournamentId,
-        tierId,
-        match.id,
-        formattedGames,
-        shouldRecordTiebreaker
-      );
-      onClose();
+      try {
+        const saved = await saveMatchScores(
+          tournamentId,
+          tierId,
+          match.id,
+          formattedGames,
+          shouldRecordTiebreaker,
+          { expectedRevision: baseRevision }
+        );
+        if (saved) onClose(); // null means the store already reported an error; keep the judge's scores on screen
+      } catch (err) {
+        if (err instanceof ApiError && err.code === MATCH_CONFLICT_CODE) {
+          setConflictNotice(err.message);
+          lastSyncRef.current = null; // the next resync loads the latest stored games
+          setResyncToken(n => n + 1);
+          return;
+        }
+        throw err;
+      }
     } finally {
       setIsSaving(false);
     }
@@ -477,6 +512,12 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
               </div>
             </div>
           </div>
+
+          {conflictNotice && (
+            <div role="alert" data-testid="match-conflict-notice" className="mx-6 mb-3 rounded-sm border border-gold/40 bg-gold-soft px-3 py-2 text-sm text-gold-bright">
+              {conflictNotice}
+            </div>
+          )}
 
           {/* Footer Actions */}
           <div

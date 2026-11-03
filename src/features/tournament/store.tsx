@@ -14,6 +14,8 @@ import {
 } from './simulation';
 import { getAuthHeaders, usePinAuth } from '../auth/AuthContext';
 import { isPlaceholderSubmissionStatus } from '../online-quals/onlineQualsStatus';
+import { ApiError } from './apiError';
+import { MATCH_CONFLICT_CODE } from '../bracket/matchConflict';
 
 interface TournamentContextType {
   tournaments: Tournament[];
@@ -81,7 +83,8 @@ interface TournamentContextType {
       player2Points: number | null;
       winnerPlayerId: string | null;
     }>,
-    hasTiebreaker?: boolean
+    hasTiebreaker?: boolean,
+    options?: { expectedRevision?: number }
   ) => Promise<Tournament | null>;
   updateMatchBestOf: (tournamentId: string, tierId: string, matchId: string, bestOf: number) => Promise<Tournament | null>;
   forfeitMatch: (tournamentId: string, tierId: string, matchId: string, winnerPlayerId: string) => Promise<Tournament | null>;
@@ -256,7 +259,7 @@ async function apiCall(endpoint: string, options: RequestInit = {}) {
     const errorData = await res.json().catch(() => ({ error: res.statusText }));
     const msg = errorData.error || `HTTP ${res.status}`;
     console.error(`[API Error] ${options.method || 'GET'} ${endpoint} failed:`, msg);
-    throw new Error(msg);
+    throw new ApiError(msg, res.status, typeof errorData.code === 'string' ? errorData.code : undefined);
   }
   return await res.json();
 }
@@ -1087,7 +1090,8 @@ export const TournamentProvider: React.FC<{
       player2Points: number | null;
       winnerPlayerId: string | null;
     }>,
-    hasTiebreaker?: boolean
+    hasTiebreaker?: boolean,
+    options: { expectedRevision?: number } = {}
   ): Promise<Tournament | null> => {
     const tournament = tournaments.find(t => t.id === tournamentId || t.slug === tournamentId);
     if (!tournament) return null;
@@ -1104,6 +1108,7 @@ export const TournamentProvider: React.FC<{
           scoredGames,
           bestOf,
           hasTiebreaker,
+          expectedRevision: options.expectedRevision,
         }),
       });
       if (saved && saved.id) {
@@ -1112,6 +1117,10 @@ export const TournamentProvider: React.FC<{
       }
       return null;
     } catch (err: any) {
+      if (err instanceof ApiError && err.code === MATCH_CONFLICT_CODE) {
+        await refreshTournament(tournament.id);
+        throw err;
+      }
       setApiError(`Failed to save match scores to database: ${err.message}`);
       return null;
     }

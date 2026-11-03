@@ -353,20 +353,25 @@ flowchart TD
   8. **ER.8** [Loading flows](specs/event-readiness/ER.8-busy-flows.html): judge, qualifier, review-queue and admin actions converted.
 * **Order:** ER.1 → ER.2 → ER.3 → ER.4 → ER.6 → ER.8. ER.5 any time; ER.7 alongside ER.2–ER.4 and before ER.6.
 * **Decisions:** live updates use push (Cloudflare Durable Objects), not polling; messages carry only a revision and clients re-fetch through the API. Loading is inline on the clicked button, every other button is disabled, and a 10 s timeout shows an error banner.
-* **Baseline (ER.1, recorded 2026-11-02, before ER.2):** Vercel preview at commit `2304566` (`neon-http` driver), measured with `curl`-style requests and read from the `Server-Timing` header. Test tournament: 32 players, Gold (16, traditional, 15 matches) and Silver (16, flat, 8 matches), locked. Warm = 3 consecutive runs; total = full round trip from the client.
+* **Write performance (measured 2026-11-02 on Vercel previews):** read from the `Server-Timing` header added in ER.1. Same test tournament at every stage: 32 players, Gold (16, traditional, 15 matches) and Silver (16, flat, 8 matches), locked. Warm = 3 consecutive runs; cold = first request after 10 idle minutes. Each cell is server time / query count.
+  * **Before ER.2:** commit `2304566`, `neon-http` driver, functions in `iad1`.
+  * **After ER.4:** commit `23d26d3`, WebSocket pool, write lock, targeted match writes, functions still in `iad1`.
+  * **After region and skip fixes:** commit `7d8d769`, functions pinned to `cle1` beside Neon (`us-east-2`), and `saveFullTournament` skips UPDATEs for unchanged players and qual scores.
 
-  | Action | Server time (warm) | Queries | Total (warm) |
+  | Action | Before ER.2 | After ER.4 | After region and skip fixes |
   | :--- | :--- | :--- | :--- |
-  | Delete a global player (not in any tournament) | 73–140 ms | 5 | 165–355 ms |
-  | Save a match score | 1,393–1,725 ms | 94 | 1.5–1.8 s |
-  | Save tournament settings | 1,261–1,339 ms | 86 | 1.4–1.6 s |
-  | Start the qual timer | 1,260–1,281 ms | 86 | 1.4 s |
-  | Save a match score, **cold** (after 10 idle minutes) | 2,470 ms | 94 | 4.4 s |
+  | Save a match score | 1,393–1,725 ms / 94 | 451–481 ms / 26 | **81–118 ms / 26** |
+  | Save tournament settings | 1,261–1,339 ms / 86 | 1,520–1,584 ms / 92 | **125–138 ms / 28** |
+  | Start the qual timer | 1,260–1,281 ms / 86 | 1,582–1,595 ms / 92 | **121–137 ms / 28** |
+  | Delete a global player (not in any tournament) | 73–140 ms / 5 | 82–84 ms / 5 | **23–25 ms / 5** |
+  | Save a match score, **cold** (server / total round trip) | 2,470 ms / 4.4 s | 1,136 ms / 2.8 s | **862 ms / 2.7 s** |
 
-  * Score, settings and timer saves re-save the whole tournament: 86–94 sequential queries at roughly 15 ms each. ER.2–ER.4 target this; compare these rows after ER.4.
-  * The qual timer start costs the same as a full settings save because the client sends the whole tournament to change one field.
-  * Cold start adds about 3 s: about 1 s inside the handler (Neon waking, first connections) and about 2 s before it runs (Vercel function boot). ER.5's keep-warm cron targets this on event days.
+  * **ER.4** cut a score save from 94 queries (re-saving the whole tournament) to 26. Settings and timer saves got slightly slower: ER.3's lock and pre-load added queries, and skipping the match rewrite saved little because matches were already batch-inserted.
+  * **Region:** functions ran in `iad1` (Washington DC) against Neon in `us-east-2` (Ohio), so every query cost about 15–17 ms. In `cle1` a query costs about 3–4 ms.
+  * **Skip unchanged rows:** a full save sent one sequential UPDATE per player and per qual score (about 64 here). It now sends only the ones that changed.
+  * **Cold starts remain the largest cost:** about 2.5 s, mostly Vercel booting the function before the handler runs. ER.5's keep-warm cron targets this on event days.
   * Network and Vercel overhead outside the handler is about 100–200 ms when warm.
+  * **Reads not yet addressed:** `GET /api/tournaments` loads every tournament in full on every page load, for every visitor (preview: 4 tournaments, 33 queries, 338 KB). See backlog item 15.
 * **Already shipped with this phase (quick fixes):**
   * MAXOUT chips and callouts removed everywhere; the "# of maxes" count stays (qual score and kicker contexts).
   * Standings subtitles ("16 Bracket Competitors • Best of 5") removed; "competitors" now reads "players".
@@ -454,6 +459,29 @@ Agreed or recorded work that has no execution spec yet. Items are in rough prior
    * **Current state:** access is PIN-based with two tiers, System Admin and Tournament Admin. Organizations have no members or roles.
    * **Originally specified:** an `org_memberships` table (`organization_id`, `user_id`, `role`) with roles Org Owner (org settings, webhooks, assigning admins), Org Admin (create/manage the org's tournaments, edit org defaults, manage the player pool), and Org Judge / Tournament Admin (scoped score entry, qualifier verification, lock/unlock). Requires real user accounts, which don't exist yet.
    * **Related:** the "who may change a tournament's org" decision in item 11.
+
+#### Scheduled: after Phase 12, before Phase 13
+14. **Match data model consolidation**
+   * **Why:** every match result is stored three times: the `matches` and `games` tables, a JSON copy of the tier's whole bracket (`bracket_tiers.metadata.bracket`), and a JSON map of every result on the tournament (`tournaments.metadata.matchScores`). A score save therefore loads the whole tournament, rewrites the tier's bracket JSON, upserts every match in the tier, rewrites `matchScores`, and reloads the whole tournament (26 queries; a clean design needs about 4–6). ER.3's lock keeps the three copies consistent per write, but they remain a drift risk, and Phase 13's export wants one relational source.
+   * **Not urgent for speed:** after ER.4 and the region fix, a warm score save is about 100 ms on the server (see the ER baseline). This is a correctness and maintainability cleanup.
+   * **Scope:**
+     * One source of truth: the relational tables. Bracket structure (rounds, routing, winner and loser destinations) gets a relational home, so advancing a winner is an `UPDATE` of the next match's player slot instead of rewriting bracket JSON through `advanceMatchWinner`.
+     * Write endpoints return only what changed (the match, the match it feeds, and revisions), or just the new revision and let ER.6 live updates trigger the re-fetch. Update `store.tsx` to match.
+     * Remove `attachOrphanScoresToRuns` from every tournament load once the QR.1 backfill is confirmed complete in production. It runs inside every GET and can write.
+     * Quals have the same duplication: `qualifier_runs` is the source of truth since QR.1, but `qualifier_submissions` still carries the old copies (`authWord`, `timerLog`, `draft`, `status` and others). Stop reading and writing them.
+     * `tournaments.metadata` holds `matchScores`, `qualTimer`, `isTest` and the revision; starting the qual timer re-saves the whole tournament to change one field. Give the timer its own endpoint.
+   * **Constraints:** schema changes stay additive (keep the JSON columns readable during the transition, drop nothing); cover all four bracket formats (Single Elimination, Traditional Double, Flat Staged Double, Accelerated Hybrid) and the visualizer; migrate live data with a verified backfill.
+
+#### Needs a timing decision (found in the 2026-11-02 data review)
+15. **Tournament summary list instead of loading every tournament in full**
+   * **Why:** `GET /api/tournaments` runs `listFullTournaments()`: every tournament ever created, with all matches, games, quals, runs and players (about 8 queries each, 4 tournaments at a time). The store calls it on every page load for every visitor, even for a single bracket link, and it is not CDN-cached. Cost grows with every past and test tournament. Preview: 4 tournaments, 33 queries, 338 KB.
+   * **Fix:** a summary endpoint returning tournament rows only (id, slug, name, date, location, `isTest`, organization); the store loads the full tournament only for the current page (`refreshTournament` already does this). Update every consumer that assumes all tournaments are loaded in full.
+   * **Open question:** before the event (spectator traffic spike on one link) or after.
+16. **Store images outside the database**
+   * **Why:** player avatars (256 px WebP plus a 32 px thumbnail) are base64 data URLs in `players`, sent in `/api/players` on every page load and embedded in every tournament's player list. Each signed-in tab's live re-fetch (ER.6) downloads them again. Org logos and banners are stored as raw data URLs with no resizing (`readAsDataURL`), so a single row can be megabytes.
+   * **Quick fix:** embed only the thumbnail in tournament payloads; resize org images like avatars.
+   * **Proper fix:** object storage (for example Vercel Blob) with URLs in the database, cacheable by the browser and CDN.
+   * **Open question:** urgency depends on how many production players and orgs have uploaded images.
 
 ---
 

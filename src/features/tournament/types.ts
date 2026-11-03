@@ -102,6 +102,7 @@ export interface TournamentMetadata {
   qualTimer?: TournamentQualTimer;
   customAuthWords?: string[];
   isTest?: boolean;
+  revision?: number;
   [key: string]: unknown;
 }
 
@@ -165,6 +166,7 @@ export interface MatchScoreRecord {
   notes?: string;
   forfeitWinnerId?: string;
   hasTiebreaker?: boolean;
+  revision?: number; // +1 on every score, forfeit or best-of write to this match
 }
 
 export interface TournamentTier {
@@ -311,6 +313,7 @@ export interface Tournament {
   customAuthWords?: string[]; // custom organizer dictionary words
   qualsClosed?: boolean; // true = Qualifiers closed
   isTest?: boolean; // true = test tournament, hidden from the front page unless an admin shows test tournaments
+  revision?: number; // increases by 1 on every write; set by the server
   onlineQualsOpen?: boolean; // true = organizer has opened online qualifying (ONLINE/HYBRID only)
   isLocked: boolean; // false = Qualifiers Mode (Draft Preview), true = Match Play Mode (Locked)
   tiers: TournamentTier[];
