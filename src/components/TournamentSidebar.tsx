@@ -49,9 +49,9 @@ export type SidebarNavView =
   | 'organizations'
   | 'tournaments';
 
-export function filterTournamentsByQuery(tournaments: Tournament[], query: string): Tournament[] {
+export function filterTournamentsByQuery<T extends { id: string; name: string; slug: string }>(tournaments: T[], query: string): T[] {
   const seenIds = new Set<string>();
-  const uniqueTournaments: Tournament[] = [];
+  const uniqueTournaments: T[] = [];
   for (const t of tournaments) {
     if (t?.id && !seenIds.has(t.id)) {
       seenIds.add(t.id);
@@ -63,7 +63,11 @@ export function filterTournamentsByQuery(tournaments: Tournament[], query: strin
   return uniqueTournaments.filter(t => t.name.toLowerCase().includes(q) || t.slug.toLowerCase().includes(q));
 }
 
-export function getTournamentTargetUrl(targetTourney: Tournament, view?: SidebarNavView, isManage: boolean = true): string {
+export function getTournamentTargetUrl(
+  targetTourney: { slug: string; tiers?: Array<{ slug: string }> },
+  view?: SidebarNavView,
+  isManage: boolean = true
+): string {
   const storedTier = getStoredTierSlug(targetTourney.slug);
   const tierSlug =
     storedTier && targetTourney.tiers?.some(t => t.slug === storedTier)
@@ -129,7 +133,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
   isCollapsed: controlledIsCollapsed,
   onToggleCollapse,
 }) => {
-  const { tournaments, unlockBrackets, setActiveTournamentId, isDbConnected, retryConnection } = useTournament();
+  const { tournaments, tournamentSummaries, unlockBrackets, setActiveTournamentId, isDbConnected, retryConnection } = useTournament();
   const { getOrganizationById } = useOrganization();
   const navigate = useNavigate();
 
@@ -329,9 +333,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
     },
   ];
 
-  const manageableTournaments = tournaments.filter(
-    t => isSystemAdmin || canManage(t.slug) || canManage(t.id)
-  );
+  const manageableTournaments = tournamentSummaries.filter(t => isSystemAdmin || canManage(t.slug) || canManage(t.id));
   const filteredTournaments = filterTournamentsByQuery(manageableTournaments, tournamentSearchQuery);
 
   // Shared classes for the main nav and system links.

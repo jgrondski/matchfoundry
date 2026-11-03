@@ -8,8 +8,24 @@ import { qualFormatLabel } from '../../qualifiers/qualFormatLabel';
 import { PointsInfoTip } from '../../qualifiers/components/PointsInfoTip';
 import { buttonClasses, cn } from '../../../components/ui';
 
+/** The fields the card reads; both TournamentSummary and a full Tournament satisfy it. */
+type OpenQualsTournament = Pick<
+  Tournament,
+  | 'id'
+  | 'slug'
+  | 'name'
+  | 'organizationId'
+  | 'qualFormat'
+  | 'qualAverageCount'
+  | 'pointsConfig'
+  | 'qualMode'
+  | 'onlineQualsOpen'
+  | 'qualsClosed'
+  | 'isLocked'
+>;
+
 interface OpenQualsCardProps {
-  tournaments: Tournament[];
+  tournaments: OpenQualsTournament[];
 }
 
 /**

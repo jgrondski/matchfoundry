@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Tournament } from '../types';
+import { TournamentSummary } from '../types';
 import { useOrganization } from '../../organizations/store';
 import { colorWithAlpha } from '../../bracket/colorUtils';
 import {
@@ -29,8 +29,8 @@ const publicLinkClass = 'gap-1.5 py-2 px-3.5 text-caption';
 const adminLinkClass = 'gap-1.5 py-2 px-3 text-caption';
 
 interface TournamentCardProps {
-  tournament: Tournament;
-  onDeleteClick?: (tournament: Tournament) => void;
+  tournament: TournamentSummary;
+  onDeleteClick?: (tournament: TournamentSummary) => void;
   showOrgBadge?: boolean;
   variant?: 'public' | 'admin';
 }
@@ -50,17 +50,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const defaultTier = hasTiers ? tournament.tiers[0] : undefined;
   const totalPlayers = (tournament.tiers || []).reduce((acc, t) => acc + t.playerCount, 0);
 
-  const hasRecordedScoresOrQuals = (t: Tournament): boolean => {
-    const hasQuals = (t.qualifierSubmissions && t.qualifierSubmissions.length > 0) ||
-      (t.qualifiers && t.qualifiers.length > 0);
-    const hasMatchScores = Object.values(t.matchScores || {}).some(
-      m => m.isComplete || m.player1Wins > 0 || m.player2Wins > 0 ||
-        m.games?.some(g => g.player1Points !== null || g.player2Points !== null)
-    );
-    return Boolean(hasQuals || hasMatchScores);
-  };
-
-  const isDeleteDisabled = hasRecordedScoresOrQuals(tournament);
+  const isDeleteDisabled = tournament.hasRecordedResults;
 
   return (
     <div
@@ -151,7 +141,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             <Users size={15} color="var(--color-gold-bright, #ffc905)" />
             {hasTiers
               ? `${totalPlayers} Players`
-              : `${(tournament.playersPool || []).length} Competitors Registered`}
+              : `${tournament.registeredPlayerCount} Competitors Registered`}
           </span>
         </div>
 

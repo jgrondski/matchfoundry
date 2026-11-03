@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef, useId } from 'react';
 import { PlayerProfile, Playstyle, AvatarType } from '../../tournament/types';
-import { User, Check, X, AlertTriangle, Upload } from 'lucide-react';
+import { User, Check, X, AlertTriangle } from 'lucide-react';
 import { PlayerAvatar } from './PlayerAvatar';
 import { PlaystyleChip } from './PlaystyleChip';
 import { PLAYSTYLE_OPTIONS } from '../playstyleOptions';
 import { CountrySelect } from './CountrySelect';
-import { processAvatarImage } from '../../../utils/image';
 import { Overlay } from '../../../components/overlay';
 import { Button, IconButton, cn } from '../../../components/ui';
 
@@ -40,7 +39,6 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
   const [playstyle, setPlaystyle] = useState<Playstyle>('Rolling');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const initialRef = useRef<Record<string, unknown>>({});
   const titleId = useId();
 
@@ -294,36 +292,6 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      try {
-                        const res = await processAvatarImage(file);
-                        setAvatarUrl(res.avatarDataUrl);
-                        setAvatarThumbnailUrl(res.thumbnailDataUrl);
-                        setAvatarType('custom');
-                      } catch {
-                        setError('Failed to process avatar image');
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className={cn(
-                      'flex cursor-pointer items-center gap-1.5 rounded-sm border border-line px-3 py-1.5 text-caption font-semibold text-white',
-                      avatarType === 'custom' ? 'bg-blue-500' : 'bg-canvas'
-                    )}
-                  >
-                    <Upload size={14} />
-                    <span>{avatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
-                  </button>
-
                   {avatarType === 'custom' && (
                     <button
                       type="button"

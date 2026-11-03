@@ -20,7 +20,8 @@ import {
   deleteAllUnattachedPlayers,
 } from '../api/players';
 import {
-  listFullTournaments,
+  listTournamentSummaries,
+  listFullTournamentsForOrganization,
   getFullTournament,
   saveFullTournament,
   deleteTournament,
@@ -707,6 +708,14 @@ export function createApiMiddleware() {
         return sendJson(res, 201, created);
       }
 
+      // GET /api/organizations/:id/tournaments (full tournaments for the organization dashboard)
+      const orgTournamentsMatch = pathname.match(/^\/api\/organizations\/([^/]+)\/tournaments$/);
+      if (orgTournamentsMatch && method === 'GET') {
+        const session = getRequestSession(req);
+        const list = await listFullTournamentsForOrganization(orgTournamentsMatch[1]);
+        return sendJson(res, 200, list.map(t => redactTournamentForCaller(t, session)));
+      }
+
       // /api/organizations/:id
       const orgMatch = pathname.match(/^\/api\/organizations\/([^/]+)$/);
       if (orgMatch) {
@@ -733,11 +742,9 @@ export function createApiMiddleware() {
       }
 
       // --- TOURNAMENTS ENDPOINTS ---
-      // GET /api/tournaments
+      // GET /api/tournaments (summaries only; pages load their own tournament in full)
       if (pathname === '/api/tournaments' && method === 'GET') {
-        const fullTourneys = await listFullTournaments();
-        const session = getRequestSession(req);
-        return sendJson(res, 200, fullTourneys.map(t => redactTournamentForCaller(t, session)));
+        return sendJson(res, 200, await listTournamentSummaries());
       }
 
       // POST /api/tournaments

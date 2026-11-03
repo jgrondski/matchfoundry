@@ -1,17 +1,17 @@
 import React from 'react';
 import { Search, Plus, Trophy } from 'lucide-react';
 import { Button } from '../../../components/ui';
-import { Tournament } from '../../../features/tournament/types';
+import { TournamentSummary } from '../../../features/tournament/types';
 import { TournamentCard } from '../../tournament/components/TournamentCard';
 import { DEFAULT_TIER_THEME } from '../../../theme/palette';
 
 interface OrgTournamentsTabProps {
   orgName: string;
-  tournaments: Tournament[];
+  tournaments: TournamentSummary[];
   tourneySearch: string;
   onSearchChange: (val: string) => void;
   onCreateTourneyOpen: () => void;
-  onDeleteTournament: (t: Tournament) => void;
+  onDeleteTournament: (t: TournamentSummary) => void;
   primaryColor?: string;
 }
 

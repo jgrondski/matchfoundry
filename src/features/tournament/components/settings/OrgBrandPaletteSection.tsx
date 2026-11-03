@@ -11,14 +11,10 @@ interface OrgBrandPaletteSectionProps {
   organizationId: string;
   useOrgBranding: boolean;
   discordWebhookUrl: string;
-  logoUrl: string;
-  bannerUrl: string;
   webhookTestStatus: { ok: boolean; message: string } | null;
   onOrganizationIdChange: (id: string) => void;
   onUseOrgBrandingChange: (use: boolean) => void;
   onDiscordWebhookUrlChange: (url: string) => void;
-  onLogoUrlChange: (url: string) => void;
-  onBannerUrlChange: (url: string) => void;
   onApplyOrgColorsToTiers: () => void;
   onTestDiscordWebhook: () => void;
 }
@@ -29,14 +25,10 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
   organizationId,
   useOrgBranding,
   discordWebhookUrl,
-  logoUrl,
-  bannerUrl,
   webhookTestStatus,
   onOrganizationIdChange,
   onUseOrgBrandingChange,
   onDiscordWebhookUrlChange,
-  onLogoUrlChange,
-  onBannerUrlChange,
   onApplyOrgColorsToTiers,
   onTestDiscordWebhook,
 }) => {
@@ -148,37 +140,8 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Logo/Banner Overrides & Discord Webhooks */}
+        {/* Right Column: Discord Webhooks */}
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-[1fr_1fr] gap-3">
-            <div>
-              <label className={labelClass}>Tournament Logo URL</label>
-              <input
-                type="text"
-                value={logoUrl}
-                onChange={e => onLogoUrlChange(e.target.value)}
-                placeholder={selectedOrg?.branding?.logoUrl || 'https://.../logo.png'}
-                className={inputClass}
-              />
-              <span className="text-2xs text-fg-muted">
-                {logoUrl ? 'Custom tournament logo' : `Default: ${selectedOrg?.shortName || 'Org'} logo`}
-              </span>
-            </div>
-            <div>
-              <label className={labelClass}>Tournament Banner URL</label>
-              <input
-                type="text"
-                value={bannerUrl}
-                onChange={e => onBannerUrlChange(e.target.value)}
-                placeholder={selectedOrg?.branding?.bannerUrl || 'https://.../banner.png'}
-                className={inputClass}
-              />
-              <span className="text-2xs text-fg-muted">
-                {bannerUrl ? 'Custom tournament banner' : `Default: ${selectedOrg?.shortName || 'Org'} banner`}
-              </span>
-            </div>
-          </div>
-
           {/* Discord Webhook Field */}
           <div className="flex flex-col gap-2 rounded-md border border-line-subtle bg-elevated p-4">
             <div className="flex items-center justify-between">

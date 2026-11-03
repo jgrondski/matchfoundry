@@ -9,7 +9,7 @@ import { cn } from './ui';
 export const TopNavSwitcher: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { tournaments, activeTournament, globalPlayers } = useTournament();
+  const { tournamentSummaries, activeTournament, globalPlayers } = useTournament();
   const { organizations } = useOrganization();
   const { isSystemAdmin, session, logout } = usePinAuth();
 
@@ -25,7 +25,7 @@ export const TopNavSwitcher: React.FC = () => {
       to: '/',
       label: 'Tournaments',
       icon: Trophy,
-      count: tournaments.length,
+      count: tournamentSummaries.length,
       isActive: isTournaments,
       show: true,
     },

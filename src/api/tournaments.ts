@@ -166,7 +166,8 @@ export async function deleteTournament(id: string): Promise<boolean> {
 
 
 import { players, tournamentPlayers, qualifierSubmissions, qualifierRuns, matches, games } from '../db/schema';
-import { desc, inArray, getTableColumns } from 'drizzle-orm';
+import { desc, inArray, getTableColumns, sql } from 'drizzle-orm';
+import { hasMatchProgress } from '../features/tournament/summary';
 import { attachOrphanScoresToRuns, listRuns, type QualRunRow } from './qualRuns';
 import type {
   Tournament,
@@ -176,6 +177,7 @@ import type {
   QualifierSubmission,
   QualRun,
   MatchScoreRecord,
+  TournamentSummary,
 } from '../features/tournament/types';
 import { collectBracketMatches, buildMatchRow, buildGameRows } from './matchWrites';
 
@@ -456,6 +458,152 @@ export async function listFullTournaments(): Promise<Tournament[]> {
   return fullList;
 }
 
+/** One summary per tournament, newest first, in 5 queries regardless of tournament count. */
+export async function listTournamentSummaries(): Promise<TournamentSummary[]> {
+  // getDb() is untyped, so the selected row shapes are declared here.
+  type SummaryRow = {
+    id: string;
+    slug: string;
+    name: string;
+    organizationId: string | null;
+    qualFormat: string;
+    qualAverageCount: number | null;
+    pointsConfig: unknown;
+    qualMode: string | null;
+    onlineQualsOpen: boolean | null;
+    metaOrganizationId: string | null;
+    metaDate: string | null;
+    metaLocation: string | null;
+    metaQualMode: string | null;
+    metaSeedingMethod: string | null;
+    metaIsLocked: boolean | null;
+    metaIsTest: boolean | null;
+    metaRevision: number | null;
+    metaMatchScores: Record<string, MatchScoreRecord> | null;
+  };
+  type TierSummaryRow = {
+    id: string;
+    tournamentId: string;
+    priorityOrder: number;
+    name: string;
+    slug: string | null;
+    numPlayers: number;
+    primaryColor: string;
+    bestOf: number | null;
+  };
+  type PlayerLinkRow = { tournamentId: string; playerId: string };
+  const db = getDb();
+  const rows: SummaryRow[] = await db
+    .select({
+      id: tournaments.id,
+      slug: tournaments.slug,
+      name: tournaments.name,
+      organizationId: tournaments.organizationId,
+      qualFormat: tournaments.qualFormat,
+      qualAverageCount: tournaments.qualAverageCount,
+      pointsConfig: tournaments.pointsConfig,
+      qualMode: tournaments.qualMode,
+      onlineQualsOpen: tournaments.onlineQualsOpen,
+      metaOrganizationId: sql<string | null>`${tournaments.metadata} -> 'organizationId'`,
+      metaDate: sql<string | null>`${tournaments.metadata} -> 'date'`,
+      metaLocation: sql<string | null>`${tournaments.metadata} -> 'location'`,
+      metaQualMode: sql<string | null>`${tournaments.metadata} -> 'qualMode'`,
+      metaSeedingMethod: sql<string | null>`${tournaments.metadata} -> 'seedingMethod'`,
+      metaIsLocked: sql<boolean | null>`${tournaments.metadata} -> 'isLocked'`,
+      metaIsTest: sql<boolean | null>`${tournaments.metadata} -> 'isTest'`,
+      metaRevision: sql<number | null>`${tournaments.metadata} -> 'revision'`,
+      metaMatchScores: sql<Record<string, MatchScoreRecord> | null>`${tournaments.metadata} -> 'matchScores'`,
+    })
+    .from(tournaments)
+    .orderBy(desc(tournaments.createdAt));
+  if (rows.length === 0) return [];
+
+  const [tierRows, enrolledRows, submissionRows, runRows]: [
+    TierSummaryRow[],
+    PlayerLinkRow[],
+    PlayerLinkRow[],
+    PlayerLinkRow[],
+  ] = await Promise.all([
+    db
+      .select({
+        id: bracketTiers.id,
+        tournamentId: bracketTiers.tournamentId,
+        priorityOrder: bracketTiers.priorityOrder,
+        name: bracketTiers.name,
+        slug: bracketTiers.slug,
+        numPlayers: bracketTiers.numPlayers,
+        primaryColor: bracketTiers.primaryColor,
+        bestOf: sql<number | null>`${bracketTiers.metadata} -> 'bestOf'`,
+      })
+      .from(bracketTiers)
+      .orderBy(bracketTiers.priorityOrder),
+    db.select({ tournamentId: tournamentPlayers.tournamentId, playerId: tournamentPlayers.playerId }).from(tournamentPlayers),
+    db.select({ tournamentId: qualifierSubmissions.tournamentId, playerId: qualifierSubmissions.playerId }).from(qualifierSubmissions),
+    db.select({ tournamentId: qualifierRuns.tournamentId, playerId: qualifierRuns.playerId }).from(qualifierRuns),
+  ]);
+
+  const group = <T extends { tournamentId: string }>(list: T[]) => {
+    const byId = new Map<string, T[]>();
+    for (const row of list) {
+      const bucket = byId.get(row.tournamentId);
+      if (bucket) bucket.push(row);
+      else byId.set(row.tournamentId, [row]);
+    }
+    return byId;
+  };
+  const tiersBy = group(tierRows);
+  const enrolledBy = group(enrolledRows);
+  const submissionsBy = group(submissionRows);
+  const runsBy = group(runRows);
+
+  return rows.map(t => {
+    const enrolled = enrolledBy.get(t.id) || [];
+    const submissions = submissionsBy.get(t.id) || [];
+    const runs = runsBy.get(t.id) || [];
+    const playerIds = new Set<string>();
+    for (const r of [...enrolled, ...submissions, ...runs]) playerIds.add(r.playerId);
+    const isLocked = Boolean(t.metaIsLocked);
+    return {
+      id: t.id,
+      slug: t.slug,
+      name: t.name,
+      organizationId: t.organizationId || t.metaOrganizationId || undefined,
+      date: t.metaDate || '',
+      location: t.metaLocation || '',
+      qualFormat: t.qualFormat as TournamentSummary['qualFormat'],
+      qualAverageCount: t.qualAverageCount || undefined,
+      pointsConfig: (t.pointsConfig as TournamentSummary['pointsConfig']) || undefined,
+      qualMode: ((t.qualMode || t.metaQualMode || 'HYBRID') as TournamentSummary['qualMode']),
+      onlineQualsOpen: Boolean(t.onlineQualsOpen),
+      // Same rule as getFullTournament: quals close exactly when brackets lock.
+      qualsClosed: isLocked,
+      isLocked,
+      seedingMethod: ((t.metaSeedingMethod || 'QUALIFIERS') as TournamentSummary['seedingMethod']),
+      isTest: Boolean(t.metaIsTest),
+      revision: typeof t.metaRevision === 'number' ? t.metaRevision : 0,
+      tiers: (tiersBy.get(t.id) || []).map(tier => ({
+        id: tier.id,
+        slug: tier.slug || tier.id,
+        name: tier.name,
+        priority: tier.priorityOrder,
+        playerCount: tier.numPlayers,
+        bestOf: typeof tier.bestOf === 'number' ? tier.bestOf : 3,
+        primaryColor: tier.primaryColor,
+      })),
+      registeredPlayerCount: enrolled.length,
+      hasRecordedResults: submissions.length > 0 || hasMatchProgress(t.metaMatchScores),
+      playerIds: [...playerIds],
+    };
+  });
+}
+
+/** Every tournament of one organization, in full, newest first (organization dashboard metrics). */
+export async function listFullTournamentsForOrganization(organizationId: string): Promise<Tournament[]> {
+  const all = await listTournamentSummaries();
+  const ids = all.filter(s => s.organizationId === organizationId).map(s => s.id);
+  const full = await Promise.all(ids.map(id => getFullTournament(id)));
+  return full.filter((t): t is Tournament => Boolean(t));
+}
 export async function saveFullTournament(tourney: Tournament, options: { syncMatches?: boolean } = {}): Promise<Tournament> {
   const db = getDb();
   const tourneyUuid = isUuid(tourney.id) ? tourney.id : crypto.randomUUID();

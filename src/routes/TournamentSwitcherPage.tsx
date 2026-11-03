@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTournament } from '../features/tournament/store';
 import { TopNavSwitcher } from '../components/TopNavSwitcher';
 import { Layers, Plus, Trophy, AlertTriangle, Sparkles, ShieldCheck, Eye, LayoutDashboard, Globe, FlaskConical } from 'lucide-react';
-import { Tournament } from '../features/tournament/types';
+import { TournamentSummary } from '../features/tournament/types';
 import { TournamentCard } from '../features/tournament/components/TournamentCard';
 import { CreateTournamentModal } from '../features/tournament/components/CreateTournamentModal';
 import { usePinAuth } from '../features/auth/AuthContext';
@@ -17,7 +17,7 @@ export const TournamentSwitcherPage: React.FC = () => {
   const isTournamentAdmin = session?.role === 'TOURNAMENT_ADMIN';
   const [systemViewTab, setSystemViewTab] = useState<'admin' | 'public'>('admin');
   const {
-    tournaments,
+    tournamentSummaries,
     deleteTournament,
     isLoading,
     simulateSampleTournament,
@@ -27,15 +27,15 @@ export const TournamentSwitcherPage: React.FC = () => {
   } = useTournament();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [tournamentToDelete, setTournamentToDelete] = useState<Tournament | null>(null);
+  const [tournamentToDelete, setTournamentToDelete] = useState<TournamentSummary | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [showTestTournaments, setShowTestTournaments] = useState(false);
   const isAdminView = isSystemAdmin && systemViewTab === 'admin';
   // Public Preview always matches what the public sees, so test tournaments only appear in the admin view.
-  const listedTournaments = filterFrontPageTournaments(tournaments, {
+  const listedTournaments = filterFrontPageTournaments(tournamentSummaries, {
     showTest: isAdminView && showTestTournaments,
   });
-  const publicTournaments = filterFrontPageTournaments(tournaments, { showTest: false });
+  const publicTournaments = filterFrontPageTournaments(tournamentSummaries, { showTest: false });
 
   const confirmDeleteTournament = () => {
     if (tournamentToDelete) {
@@ -136,7 +136,7 @@ export const TournamentSwitcherPage: React.FC = () => {
               </Button>
             </div>
           </div>
-        ) : tournaments.length === 0 ? (
+        ) : tournamentSummaries.length === 0 ? (
           <div className="mx-auto mt-4 mb-12 flex max-w-155 flex-col items-center gap-4 rounded-lg border border-dashed border-line bg-surface px-8 py-16 text-center">
             <div className="mb-2 flex size-15 items-center justify-center rounded-full bg-gold-soft text-gold-bright">
               <Trophy size={30} />
@@ -179,7 +179,7 @@ export const TournamentSwitcherPage: React.FC = () => {
             {/* 1. Scoped Workspace for Tournament Admin */}
             {isTournamentAdmin && (
               (() => {
-                const managedTourneys = tournaments.filter(
+                const managedTourneys = tournamentSummaries.filter(
                   t => canManage(t.slug) || canManage(t.id)
                 );
                 if (managedTourneys.length === 0) return null;

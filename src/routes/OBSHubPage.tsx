@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTournament } from '../features/tournament/store';
 import { TournamentLayout } from '../components/TournamentLayout';
+import { LoadingScreen } from '../components/LoadingScreen';
 import { getDefaultTierColors, colorWithAlpha } from '../features/bracket/colorUtils';
 import {
   Video,
@@ -25,10 +26,14 @@ import { CHROMA_KEY_COLORS, THEME_FALLBACK } from '../theme/palette';
 export const OBSHubPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { getTournamentBySlug } = useTournament();
+  const { getTournamentBySlug, isLoading, isHydrated } = useTournament();
 
   const [selectedChroma, setSelectedChroma] = useState<'none' | 'green' | 'magenta' | 'blue'>('none');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  if (isLoading || !isHydrated) {
+    return <LoadingScreen message="Loading OBS hub..." />;
+  }
 
   const tournament = slug ? getTournamentBySlug(slug) : undefined;
   if (!tournament) {
