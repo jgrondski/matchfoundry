@@ -23,6 +23,7 @@ MatchFoundry runs live tournaments, where a broken bracket, a wrong tiebreaker, 
 ### Tier 2: API, Database & Component Output (Vitest)
 * **Database:** `setupTestDb()` from `src/db/testDb.ts` creates a fresh in-memory pg-mem database. Pass it to `setDb()` in `beforeEach` so each test starts clean.
   * **`testDb.ts` defines its tables in hand-written SQL, separate from `schema.ts`.** When you add or change a column in `schema.ts`, make the same change in `testDb.ts`, or tests will run against an outdated schema.
+  * pg-mem does not roll back transactions or block on row locks; prove those in a `*.pg.test.ts` file, which only `npm run test:pg` runs.
 * **API:** Build the real middleware with `createApiMiddleware()` and call it with mock request/response objects (`createMockReq` / `createMockRes` helpers in the test file). Authenticate with `createSessionToken({ role, tournamentId })`. See `src/features/online-quals/__tests__/runLinksAndCleanup.test.ts` for a complete example.
 * **Recovery PIN in tests:** Set `process.env.SYSTEM_ADMIN_RECOVERY_PIN` to an obviously fake value (e.g. `'999999'`) in the test. Never use a real PIN.
 * **Components:** Vitest runs in a Node environment with no DOM, and React Testing Library is not installed. Render with `renderToStaticMarkup` from `react-dom/server` and assert on the HTML (text present or absent, `data-testid` attributes). Pass `vi.fn()` for callbacks. This checks what a component renders for a given state, not click behavior; test the logic behind clicks in Tier 1.
@@ -74,6 +75,7 @@ Put tests in a `__tests__/` folder next to the code they cover (`src/features/<f
 | `npm run test:ui` | `src/components` and the tournament, qualifiers, players, organizations, and online-quals features | UI or feature changes |
 | `npm run typecheck` | `tsc --noEmit` | Every code change |
 | `npm test` | Full Vitest suite | Before finishing a milestone |
+| `npm run test:pg` | `*.pg.test.ts` against the local Docker database (transactions, row locks) | Changes to src/db/transaction.ts, write locks or targeted writes (local only) |
 | `npm run test:e2e` | Playwright golden journeys and overlay tests (`--project=chromium`) | Before finishing a milestone (local only) |
 | `npm run test:visual` | Visual regression screenshots against the baselines | Styling or layout changes (local only) |
 | `npm run test:visual:update` | Regenerates the screenshot baselines | Coordinator only, after reviewing the diffs |
