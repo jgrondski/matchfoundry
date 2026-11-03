@@ -15,12 +15,7 @@ interface OrgMetadataModalProps {
   setEditDescription: (val: string) => void;
   editWebsite: string;
   setEditWebsite: (val: string) => void;
-  editLogoUrl: string;
-  setEditLogoUrl: (val: string) => void;
-  editBannerUrl: string;
-  setEditBannerUrl: (val: string) => void;
   deleteError: string | null;
-  handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => void;
   onDeleteOrganization: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }
@@ -37,12 +32,7 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
   setEditDescription,
   editWebsite,
   setEditWebsite,
-  editLogoUrl,
-  setEditLogoUrl,
-  editBannerUrl,
-  setEditBannerUrl,
   deleteError,
-  handleFileUpload,
   onDeleteOrganization,
   onSubmit,
 }) => {
@@ -119,62 +109,6 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
                 onChange={e => setEditWebsite(e.target.value)}
                 className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
               />
-            </div>
-
-            {/* Logo with Local Browse Button */}
-            <div>
-              <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
-                Logo URL or Local File
-              </label>
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  placeholder="https://... or /assets/..."
-                  value={editLogoUrl}
-                  onChange={e => setEditLogoUrl(e.target.value)}
-                  className="flex-1 rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
-                />
-                <label
-                  className="inline-flex cursor-pointer items-center whitespace-nowrap rounded-sm border border-line bg-surface px-3 py-2 text-xs text-fg-secondary"
-                  title="Upload local image file"
-                >
-                  Browse
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => handleFileUpload(e, setEditLogoUrl)}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
-
-            {/* Banner with Local Browse Button */}
-            <div>
-              <label className="mb-1.5 block text-caption font-semibold text-fg-secondary">
-                Banner URL or Local File
-              </label>
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  placeholder="https://... or /assets/..."
-                  value={editBannerUrl}
-                  onChange={e => setEditBannerUrl(e.target.value)}
-                  className="flex-1 rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
-                />
-                <label
-                  className="inline-flex cursor-pointer items-center whitespace-nowrap rounded-sm border border-line bg-surface px-3 py-2 text-xs text-fg-secondary"
-                  title="Upload local image file"
-                >
-                  Browse
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={e => handleFileUpload(e, setEditBannerUrl)}
-                    className="hidden"
-                  />
-                </label>
-              </div>
             </div>
 
             {deleteError && (

@@ -1,11 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useOrganization } from '../store';
 import { useTournament } from '../../tournament/store';
 import { computeOrganizationMetrics } from '../metrics';
 import { TopNavSwitcher } from '../../../components/TopNavSwitcher';
 import { TierThemeColors } from '../../bracket/colorUtils';
-import { QualFormat, PointsThreshold, DEFAULT_POINTS_THRESHOLDS, OrgTierTheme, Tournament, Organization } from '../../tournament/types';
+import { QualFormat, PointsThreshold, DEFAULT_POINTS_THRESHOLDS, OrgTierTheme, Tournament, TournamentSummary, Organization } from '../../tournament/types';
 import { CreateTournamentModal } from '../../tournament/components/CreateTournamentModal';
 import {
   Building2,
@@ -63,7 +63,7 @@ export const OrganizationDashboard: React.FC = () => {
 
 const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) => {
   const { updateOrganization, deleteOrganization } = useOrganization();
-  const { tournaments, deleteTournament } = useTournament();
+  const { tournamentSummaries, deleteTournament } = useTournament();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<'tournaments' | 'branding' | 'settings'>('tournaments');
@@ -73,7 +73,7 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
   const [saveToast, setSaveToast] = useState<string | null>(null);
   const [webhookTestStatus, setWebhookTestStatus] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [tournamentToDelete, setTournamentToDelete] = useState<Tournament | null>(null);
+  const [tournamentToDelete, setTournamentToDelete] = useState<TournamentSummary | null>(null);
 
   const confirmDeleteTournament = async () => {
     if (tournamentToDelete) {
@@ -87,16 +87,12 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
   const [editSlug, setEditSlug] = useState(org.slug || '');
   const [editDescription, setEditDescription] = useState(org.description || '');
   const [editWebsite, setEditWebsite] = useState(org.website || '');
-  const [editLogoUrl, setEditLogoUrl] = useState(org.logoUrl || org.branding?.logoUrl || '');
-  const [editBannerUrl, setEditBannerUrl] = useState(org.bannerUrl || org.branding?.bannerUrl || '');
-  const editInitialRef = useRef({ editName, editSlug, editDescription, editWebsite, editLogoUrl, editBannerUrl });
+  const editInitialRef = useRef({ editName, editSlug, editDescription, editWebsite });
   const isEditMetadataDirty =
     editName !== editInitialRef.current.editName ||
     editSlug !== editInitialRef.current.editSlug ||
     editDescription !== editInitialRef.current.editDescription ||
-    editWebsite !== editInitialRef.current.editWebsite ||
-    editLogoUrl !== editInitialRef.current.editLogoUrl ||
-    editBannerUrl !== editInitialRef.current.editBannerUrl;
+    editWebsite !== editInitialRef.current.editWebsite;
 
   // Branding Primary & Multi-tier state
   const initialColors = org.themeColors || org.branding?.themeColors || {
@@ -124,21 +120,17 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
     setTimeout(() => setSaveToast(null), 3000);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setter(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const metrics = computeOrganizationMetrics(org.id, tournaments);
-  const orgTournaments = tournaments.filter(t => t.organizationId === org.id);
+  const orgTournaments = tournamentSummaries.filter(t => t.organizationId === org.id);
+  const [orgFullTournaments, setOrgFullTournaments] = useState<Tournament[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/organizations/${encodeURIComponent(org.id)}/tournaments`)
+      .then(res => (res.ok ? res.json() : []))
+      .then(list => { if (!cancelled && Array.isArray(list)) setOrgFullTournaments(list); })
+      .catch(() => { if (!cancelled) setOrgFullTournaments([]); });
+    return () => { cancelled = true; };
+  }, [org.id, orgTournaments.length]);
+  const metrics = computeOrganizationMetrics(org.id, orgFullTournaments);
 
   const handleSaveMetadata = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,8 +141,8 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
       slug: editSlug.trim(),
       description: editDescription.trim() || undefined,
       website: editWebsite.trim() || undefined,
-      logoUrl: editLogoUrl.trim() || undefined,
-      bannerUrl: editBannerUrl.trim() || undefined,
+      logoUrl: (org.logoUrl || org.branding?.logoUrl || '').trim() || undefined,
+      bannerUrl: (org.bannerUrl || org.branding?.bannerUrl || '').trim() || undefined,
     });
 
     setIsEditMetadataOpen(false);
@@ -299,15 +291,11 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
             setEditSlug(org.slug);
             setEditDescription(org.description || '');
             setEditWebsite(org.website || '');
-            setEditLogoUrl(org.logoUrl || org.branding?.logoUrl || '');
-            setEditBannerUrl(org.bannerUrl || org.branding?.bannerUrl || '');
             editInitialRef.current = {
               editName: org.name,
               editSlug: org.slug,
               editDescription: org.description || '',
               editWebsite: org.website || '',
-              editLogoUrl: org.logoUrl || org.branding?.logoUrl || '',
-              editBannerUrl: org.bannerUrl || org.branding?.bannerUrl || '',
             };
             setIsEditMetadataOpen(true);
           }}
@@ -386,12 +374,7 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
         setEditDescription={setEditDescription}
         editWebsite={editWebsite}
         setEditWebsite={setEditWebsite}
-        editLogoUrl={editLogoUrl}
-        setEditLogoUrl={setEditLogoUrl}
-        editBannerUrl={editBannerUrl}
-        setEditBannerUrl={setEditBannerUrl}
         deleteError={deleteError}
-        handleFileUpload={handleFileUpload}
         onDeleteOrganization={handleDeleteOrganization}
         onSubmit={handleSaveMetadata}
       />

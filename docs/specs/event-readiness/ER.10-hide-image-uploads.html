@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step ER.10 Hide Image Uploads</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Event readiness / ER.10</nav>
+<h1>Step ER.10: Remove image uploads and image URL fields</h1>
+<p class="subtitle">Remove every control that sets a player avatar, an organization logo or banner, or a tournament logo or banner. Images that are already saved keep displaying. The proper image feature (object storage) is in the implementation-plan backlog.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. <strong>Prerequisite:</strong> none. Can run in parallel with <a href="ER.9-tournament-summary-list.html">ER.9</a> (no shared files). <strong>Read first:</strong> <a href="../index.html">index.html</a> “Rules for every executor”, <code>docs/TESTING_STRATEGY.md</code>.</p></div>
+
+<h2>Why</h2>
+<p>Images are stored in the database as base64 data URLs. Player avatars are sent with every player list and embedded in every tournament payload; organization logos and banners are stored unresized and can be megabytes per row. The feature is unused and unfinished, so it is removed from the UI before the event instead of being fixed now.</p>
+
+<h2>Behavior after this step</h2>
+<ul>
+  <li>The player add/edit modal has no “Upload Photo” or “Change Photo” button. “Reset to Flag” still appears for a player who already has a custom avatar, so an admin can remove it.</li>
+  <li>Creating or editing an organization shows no logo or banner fields (neither the URL text box nor “Browse”). Saving an existing organization keeps its current logo and banner unchanged.</li>
+  <li>Tournament settings show no “Tournament Logo URL” or “Tournament Banner URL” fields. Saving settings keeps any existing values unchanged.</li>
+  <li>Everywhere images are displayed (avatars, org banners and logos), saved images still display. No data is deleted and no schema changes.</li>
+</ul>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Area</th><th>Files</th></tr>
+  <tr><td>Players</td><td><code>src/features/players/components/PlayerEditModal.tsx</code>; delete <code>src/utils/image.ts</code></td></tr>
+  <tr><td>Organizations</td><td><code>src/features/organizations/components/OrganizationDirectory.tsx</code>, <code>src/features/organizations/components/OrgMetadataModal.tsx</code>, <code>src/features/organizations/components/OrganizationDashboard.tsx</code></td></tr>
+  <tr><td>Tournament settings</td><td><code>src/features/tournament/components/settings/OrgBrandPaletteSection.tsx</code>, <code>src/features/tournament/components/TournamentAdminForm.tsx</code></td></tr>
+  <tr><td>Tests</td><td>create <code>src/components/__tests__/imageUploadsRemoved.test.tsx</code></td></tr>
+</table>
+<p><code>tsconfig.json</code> has <code>noUnusedLocals</code> and <code>noUnusedParameters</code> on, so every state variable, prop, import and helper left unused by these removals must be deleted too. The steps below list each one.</p>
+
+<h2>A. Player avatar (<code>PlayerEditModal.tsx</code>)</h2>
+<ol class="steps">
+  <li>In the “Avatar Section”, delete the hidden <code>&lt;input type="file" ref={fileInputRef} ... /&gt;</code> and the button that calls <code>fileInputRef.current?.click()</code> (the one showing <code>&lt;Upload size={14} /&gt;</code> and “Upload Photo” / “Change Photo”). Keep the <code>{avatarType === 'custom' &amp;&amp; (...)}</code> “Reset to Flag” button and the avatar preview.</li>
+  <li>Delete <code>const fileInputRef = useRef&lt;HTMLInputElement | null&gt;(null);</code>, the <code>import { processAvatarImage } from '../../../utils/image';</code> line, and <code>Upload</code> from the <code>lucide-react</code> import. Keep <code>useRef</code> in the React import (<code>initialRef</code> still uses it).</li>
+  <li>Keep the <code>avatarType</code>, <code>avatarUrl</code> and <code>avatarThumbnailUrl</code> state and the save payload unchanged, so saving a player keeps an existing avatar until “Reset to Flag” is pressed.</li>
+  <li>Delete <code>src/utils/image.ts</code>. Its only user was <code>PlayerEditModal.tsx</code>. If <code>npm run typecheck</code> finds another importer, stop and ask.</li>
+</ol>
+
+<h2>B. Create organization (<code>OrganizationDirectory.tsx</code>)</h2>
+<ol class="steps">
+  <li>Delete the <code>orgLogoUrl</code> and <code>orgBannerUrl</code> <code>useState</code> lines.</li>
+  <li>In <code>isCreateFormDirty</code>, delete the lines <code>orgLogoUrl !== '' ||</code> and <code>orgBannerUrl !== '' ||</code>.</li>
+  <li>Delete the <code>handleFileUpload</code> function and the module-level <code>browseClass</code> constant.</li>
+  <li>In the create payload, delete <code>logoUrl: orgLogoUrl.trim() || undefined,</code> and <code>bannerUrl: orgBannerUrl.trim() || undefined,</code>.</li>
+  <li>In the form, delete the <code>&lt;div&gt;</code> that starts with the label “Logo URL or Local File” and the <code>&lt;div&gt;</code> that starts with the label “Banner URL or Local File”. This leaves two <code>grid grid-cols-2 gap-3</code> rows with one field each (“Official Website”, then “Discord Webhook URL (Groundwork)”). Move the Discord webhook <code>&lt;div&gt;</code> into the first row after the website <code>&lt;div&gt;</code>, and delete the now-empty second row, so both fields sit side by side in one row.</li>
+</ol>
+
+<h2>C. Edit organization (<code>OrgMetadataModal.tsx</code> and <code>OrganizationDashboard.tsx</code>)</h2>
+<ol class="steps">
+  <li><code>OrgMetadataModal.tsx</code>: delete the two blocks commented “Logo with Local Browse Button” and “Banner with Local Browse Button” (each is a <code>&lt;div&gt;</code> with a label, a text input and a “Browse” label wrapping a file input). Delete the props <code>editLogoUrl</code>, <code>setEditLogoUrl</code>, <code>editBannerUrl</code>, <code>setEditBannerUrl</code> and <code>handleFileUpload</code> from <code>OrgMetadataModalProps</code> and from the component's destructuring.</li>
+  <li><code>OrganizationDashboard.tsx</code>:
+    <ol>
+      <li>Delete the <code>editLogoUrl</code> and <code>editBannerUrl</code> <code>useState</code> lines.</li>
+      <li>In <code>editInitialRef</code>'s initial object, the reset object that sets <code>editLogoUrl: ...</code> and <code>editBannerUrl: ...</code>, and <code>isEditMetadataDirty</code>, delete every <code>editLogoUrl</code> and <code>editBannerUrl</code> entry and comparison.</li>
+      <li>In the save payload, replace <code>logoUrl: editLogoUrl.trim() || undefined,</code> with <code>logoUrl: (org.logoUrl || org.branding?.logoUrl || '').trim() || undefined,</code> and <code>bannerUrl: editBannerUrl.trim() || undefined,</code> with <code>bannerUrl: (org.bannerUrl || org.branding?.bannerUrl || '').trim() || undefined,</code>. These are exactly the values the removed state was initialized with, so saving still sends the stored images back unchanged.</li>
+      <li>Delete the <code>handleFileUpload</code> function and the five props passed to <code>&lt;OrgMetadataModal&gt;</code>: <code>editLogoUrl</code>, <code>setEditLogoUrl</code>, <code>editBannerUrl</code>, <code>setEditBannerUrl</code>, <code>handleFileUpload</code>.</li>
+    </ol>
+  </li>
+</ol>
+
+<h2>D. Tournament settings</h2>
+<ol class="steps">
+  <li><code>OrgBrandPaletteSection.tsx</code>: delete the <code>&lt;div className="grid grid-cols-[1fr_1fr] gap-3"&gt;</code> block containing “Tournament Logo URL” and “Tournament Banner URL”. Delete <code>logoUrl</code>, <code>bannerUrl</code>, <code>onLogoUrlChange</code> and <code>onBannerUrlChange</code> from the props interface and the destructuring. Update the comment “Right Column: Logo/Banner Overrides &amp; Discord Webhooks” to “Right Column: Discord Webhooks”.</li>
+  <li><code>TournamentAdminForm.tsx</code>: in the <code>&lt;OrgBrandPaletteSection ... /&gt;</code> element, delete the four props <code>logoUrl</code>, <code>bannerUrl</code>, <code>onLogoUrlChange</code>, <code>onBannerUrlChange</code>. Keep the <code>logoUrl</code> and <code>bannerUrl</code> state, the dirty checks and the save payload, so saving settings still sends any existing values unchanged. If <code>npm run typecheck</code> reports <code>setLogoUrl</code> or <code>setBannerUrl</code> as unused, stop and ask (they are used by the form's reset code today).</li>
+</ol>
+
+<h2>E. Test: <code>src/components/__tests__/imageUploadsRemoved.test.tsx</code></h2>
+<p>Render with <code>renderToStaticMarkup</code> from <code>react-dom/server</code> (see <code>docs/TESTING_STRATEGY.md</code>, Tier 2 components). Wrap components in the providers they need, as existing component tests do (search <code>src/**/__tests__</code> for a test that renders each component and copy its provider setup). For each case assert the markup contains no <code>type="file"</code>:</p>
+<ul>
+  <li><code>PlayerEditModal</code> open for a new player: no “Upload Photo”.</li>
+  <li><code>PlayerEditModal</code> open for a player with <code>avatarType: 'custom'</code> and an <code>avatarUrl</code>: no “Change Photo”. (Do not assert “Reset to Flag”: the modal copies the player into state in a <code>useEffect</code>, which static rendering never runs.)</li>
+  <li><code>OrgMetadataModal</code> open: no “Logo URL”, no “Banner URL”, no “Browse”.</li>
+  <li><code>OrgBrandPaletteSection</code> with minimal props: no “Tournament Logo URL” and no “Tournament Banner URL”.</li>
+</ul>
+<p>The organization create form opens only after a click, which static rendering cannot do. Do not test it here; typecheck and the removed state cover it.</p>
+
+<h2>Commands</h2>
+<ol class="steps">
+  <li><code>npm run typecheck</code></li>
+  <li><code>npx vitest run src/components/__tests__/imageUploadsRemoved.test.tsx</code></li>
+  <li><code>npm run test:ui</code>, then <code>npm test</code></li>
+  <li><code>npm run test:visual</code> once ER.9 (if running in parallel) has finished. The settings page screenshots (desktop and mobile) are expected to change, because the logo and banner fields are gone; list every changed screenshot in the report. Do not update baselines.</li>
+</ol>
+
+<h2>Done when</h2>
+<ul class="check">
+  <li>No file input and no logo, banner or avatar URL field remains anywhere in the app (<code>grep -rn 'type="file"' src</code> returns nothing outside tests).</li>
+  <li>Existing avatars, logos and banners still display, and saving a player, organization or tournament keeps them unchanged.</li>
+  <li>“Reset to Flag” still clears an existing player avatar.</li>
+  <li>All commands above pass; the only changed screenshots are the settings page.</li>
+</ul>
+</main>
+</body>
+</html>

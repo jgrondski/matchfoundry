@@ -21,7 +21,7 @@ This document is the single source of truth for MatchFoundry's roadmap: complete
 | **Phase 9** | **Production Cloud Deployment, MatchFoundry™ Brand Launch & CI/CD** | **Complete** | Vercel Serverless runtime (`api/index.ts`), Neon cloud PostgreSQL migration, MatchFoundry™ rebrand & strategic trademark rollout, zero runtime git artifacts, and Branch/PR CI/CD deployment gating. |
 | **Phase 10**| **Live & Online Qualifiers Engine** | **Complete** | Competitor self-service portal (`/:slug/qualify`), Twitch OAuth 2.0 on production HTTPS, 6–8 char NES Authwords, qual window telemetry, review queue (`/:slug/manage/review`), Discord webhooks, tokened run links & draft recovery. |
 | **Phase 11**| **Styling Foundation & Tailwind Migration** | **Complete** | Tailwind v4 theme tokens and shared UI components, one overlay system with dirty-aware dismissal, every component converted off inline styles, lint-enforced. |
-| **ER**| **Event Readiness** | **In Progress** | Request timing, Neon WebSocket pool and transactions, per-tournament write lock, targeted match writes with conflict detection, Cloudflare live updates, inline loading with a 10 s timeout. Quick fixes and test-tournament hiding shipped. |
+| **ER**| **Event Readiness** | **In Progress** | Request timing, Neon WebSocket pool and transactions, per-tournament write lock, targeted match writes with conflict detection, Cloudflare live updates, inline loading with a 10 s timeout, a summary-only tournament list, image uploads removed. Quick fixes, test-tournament hiding, the `cle1` region pin and skip-unchanged full saves shipped. |
 | **Phase 12**| **Mobile-Friendly App (360×800)** | **Upcoming** | Spectator bottom nav and admin menu, floor judge scoring / qualifier entry / review queue on phones, compact visual bracket, card lists for tables, every route overflow-free. |
 | **Phase 13**| **Universal Match Data Export & Custom Analytics** | **Upcoming** | Universal match data export (CSV with UTF-8 BOM, Google Sheets TSV clipboard copy, JSON) with custom column selection and reordering. |
 
@@ -139,7 +139,7 @@ flowchart TD
     end
 
     subgraph ER["Event Readiness (ER) [IN PROGRESS]"]
-        PER["• Request Timing & Neon WebSocket Pool<br>• Per-Tournament Write Lock & Targeted Match Writes<br>• Cloudflare Live Updates & Keep-Warm<br>• Inline Loading, Global Busy Lock & 10s Timeout"]
+        PER["• Request Timing & Neon WebSocket Pool<br>• Per-Tournament Write Lock & Targeted Match Writes<br>• Cloudflare Live Updates & Keep-Warm<br>• Inline Loading, Global Busy Lock & 10s Timeout<br>• Tournament Summary List & Image Uploads Removed"]
     end
 
     subgraph Phase12["Phase 12: Mobile-Friendly App (360×800)"]
@@ -340,7 +340,7 @@ flowchart TD
 ---
 
 ### Event Readiness (ER) [IN PROGRESS]
-* **Goal:** before the event, writes take well under a second, two judges saving at once never lose each other's work, every open page updates without a refresh, and every action shows inline loading with a timeout.
+* **Goal:** before the event, writes take well under a second, two judges saving at once never lose each other's work, page loads fetch only what the page shows, every open page updates without a refresh, and every action shows inline loading with a timeout.
 * **Why:** most writes took 2–3 s (one HTTPS round trip per query on the `neon-http` driver, plus cold starts). Every match write re-saved the whole tournament (delete and re-insert all matches and games), so concurrent judges overwrote each other, and a settings save could undo scores on a locked tournament. Pages only refreshed on navigation or window focus.
 * **Steps and specs** (index: [`docs/specs/index.html`](specs/index.html)):
   1. **ER.1** [Request timing](specs/event-readiness/ER.1-request-timing.html): `Server-Timing` header and `[api]` log lines with duration and query count. Record a baseline before ER.2.
@@ -351,7 +351,9 @@ flowchart TD
   6. **ER.6** [Live updates](specs/event-readiness/ER.6-live-updates-client.html): the API publishes after each write; open pages refresh themselves; anonymous refreshes are CDN-cached per revision; the qual timer uses the server clock.
   7. **ER.7** [Loading foundation](specs/event-readiness/ER.7-busy-foundation.html): spinner, `useAction`, global busy lock, 10 s timeout, shared error banner.
   8. **ER.8** [Loading flows](specs/event-readiness/ER.8-busy-flows.html): judge, qualifier, review-queue and admin actions converted.
-* **Order:** ER.1 → ER.2 → ER.3 → ER.4 → ER.6 → ER.8. ER.5 any time; ER.7 alongside ER.2–ER.4 and before ER.6.
+  9. **ER.9** [Tournament summaries](specs/event-readiness/ER.9-tournament-summary-list.html): `GET /api/tournaments` returns small summaries in a fixed 5 queries instead of every tournament in full (about 8 queries and 85 KB per tournament, on every page load for every visitor). Each page loads only its own tournament; the organization dashboard gets its own endpoint for metrics.
+  10. **ER.10** [Hide image uploads](specs/event-readiness/ER.10-hide-image-uploads.html): remove the player avatar upload, organization logo and banner fields, and tournament logo and banner fields. Images are stored as base64 in the database and the feature is unused; saved images keep displaying. The proper fix is backlog item 15.
+* **Order:** ER.1 → ER.2 → ER.3 → ER.4 → ER.9 → ER.6 → ER.8. ER.5 any time; ER.7 alongside ER.2–ER.4 and before ER.6; ER.10 any time, including alongside ER.9. Done: ER.1–ER.4 and ER.7; ER.5's code is merged but the worker is not deployed yet.
 * **Decisions:** live updates use push (Cloudflare Durable Objects), not polling; messages carry only a revision and clients re-fetch through the API. Loading is inline on the clicked button, every other button is disabled, and a 10 s timeout shows an error banner.
 * **Write performance (measured 2026-11-02 on Vercel previews):** read from the `Server-Timing` header added in ER.1. Same test tournament at every stage: 32 players, Gold (16, traditional, 15 matches) and Silver (16, flat, 8 matches), locked. Warm = 3 consecutive runs; cold = first request after 10 idle minutes. Each cell is server time / query count.
   * **Before ER.2:** commit `2304566`, `neon-http` driver, functions in `iad1`.
@@ -371,7 +373,7 @@ flowchart TD
   * **Skip unchanged rows:** a full save sent one sequential UPDATE per player and per qual score (about 64 here). It now sends only the ones that changed.
   * **Cold starts remain the largest cost:** about 2.5 s, mostly Vercel booting the function before the handler runs. ER.5's keep-warm cron targets this on event days.
   * Network and Vercel overhead outside the handler is about 100–200 ms when warm.
-  * **Reads not yet addressed:** `GET /api/tournaments` loads every tournament in full on every page load, for every visitor (preview: 4 tournaments, 33 queries, 338 KB). See backlog item 15.
+  * **Reads:** `GET /api/tournaments` loads every tournament in full on every page load, for every visitor (preview: 4 tournaments, 33 queries, 338 KB). ER.9 replaces it with summaries.
 * **Already shipped with this phase (quick fixes):**
   * MAXOUT chips and callouts removed everywhere; the "# of maxes" count stays (qual score and kicker contexts).
   * Standings subtitles ("16 Bracket Competitors • Best of 5") removed; "competitors" now reads "players".
@@ -470,18 +472,14 @@ Agreed or recorded work that has no execution spec yet. Items are in rough prior
      * Remove `attachOrphanScoresToRuns` from every tournament load once the QR.1 backfill is confirmed complete in production. It runs inside every GET and can write.
      * Quals have the same duplication: `qualifier_runs` is the source of truth since QR.1, but `qualifier_submissions` still carries the old copies (`authWord`, `timerLog`, `draft`, `status` and others). Stop reading and writing them.
      * `tournaments.metadata` holds `matchScores`, `qualTimer`, `isTest` and the revision; starting the qual timer re-saves the whole tournament to change one field. Give the timer its own endpoint.
+     * Every full-tournament save sends the browser tab's whole copy of the tournament, so a tab opened before another admin's change can save the old values back over it (ER.3 protects only scores and brackets on locked tournaments). Move each setting change to a targeted write, starting with the qual timer.
    * **Constraints:** schema changes stay additive (keep the JSON columns readable during the transition, drop nothing); cover all four bracket formats (Single Elimination, Traditional Double, Flat Staged Double, Accelerated Hybrid) and the visualizer; migrate live data with a verified backfill.
 
-#### Needs a timing decision (found in the 2026-11-02 data review)
-15. **Tournament summary list instead of loading every tournament in full**
-   * **Why:** `GET /api/tournaments` runs `listFullTournaments()`: every tournament ever created, with all matches, games, quals, runs and players (about 8 queries each, 4 tournaments at a time). The store calls it on every page load for every visitor, even for a single bracket link, and it is not CDN-cached. Cost grows with every past and test tournament. Preview: 4 tournaments, 33 queries, 338 KB.
-   * **Fix:** a summary endpoint returning tournament rows only (id, slug, name, date, location, `isTest`, organization); the store loads the full tournament only for the current page (`refreshTournament` already does this). Update every consumer that assumes all tournaments are loaded in full.
-   * **Open question:** before the event (spectator traffic spike on one link) or after.
-16. **Store images outside the database**
-   * **Why:** player avatars (256 px WebP plus a 32 px thumbnail) are base64 data URLs in `players`, sent in `/api/players` on every page load and embedded in every tournament's player list. Each signed-in tab's live re-fetch (ER.6) downloads them again. Org logos and banners are stored as raw data URLs with no resizing (`readAsDataURL`), so a single row can be megabytes.
-   * **Quick fix:** embed only the thumbnail in tournament payloads; resize org images like avatars.
-   * **Proper fix:** object storage (for example Vercel Blob) with URLs in the database, cacheable by the browser and CDN.
-   * **Open question:** urgency depends on how many production players and orgs have uploaded images.
+#### Unscheduled
+15. **Player avatars and organization and tournament images, done properly**
+   * **Background:** ER.10 removed every image control before the event because images were stored as base64 data URLs in the database. Player avatars (256 px WebP plus a 32 px thumbnail) were sent in `/api/players` on every page load and embedded in every tournament's player list; org logos and banners were stored unresized (`readAsDataURL`), so one row could be megabytes.
+   * **Fix:** object storage (for example Vercel Blob) with only URLs in the database, cacheable by the browser and CDN; resize every upload; tournament payloads carry thumbnail URLs only. Then restore the avatar upload, the org logo and banner fields, and the tournament logo and banner fields.
+   * **Existing data:** migrate any base64 images already saved into storage, then clear the data URLs.
 
 ---
 

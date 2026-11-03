@@ -42,8 +42,10 @@ If the spec does not cover a situation, stop and ask instead of improvising.</co
   <tr><td>ER.6</td><td><a href="event-readiness/ER.6-live-updates-client.html">Live updates</a></td><td>ER.3, ER.5 (and ER.7 first if pending)</td><td>API publishes after writes; pages refresh on their own; CDN-cached anonymous refreshes; server clock for the qual timer.</td></tr>
   <tr><td>ER.7</td><td><a href="event-readiness/ER.7-busy-foundation.html">Loading foundation</a></td><td>None</td><td>Spinner, <code>useAction</code>, global busy lock, 10-second timeout, shared error banner.</td></tr>
   <tr><td>ER.8</td><td><a href="event-readiness/ER.8-busy-flows.html">Loading flows</a></td><td>ER.4, ER.6, ER.7</td><td>Judge, qualifier, review-queue and admin actions converted to the loading pattern.</td></tr>
+  <tr><td>ER.9</td><td><a href="event-readiness/ER.9-tournament-summary-list.html">Tournament summaries</a></td><td>ER.4</td><td><code>GET /api/tournaments</code> returns small summaries in 5 queries; each page loads only its own tournament in full.</td></tr>
+  <tr><td>ER.10</td><td><a href="event-readiness/ER.10-hide-image-uploads.html">Hide image uploads</a></td><td>None</td><td>Removes avatar, org logo/banner and tournament logo/banner controls; saved images keep displaying.</td></tr>
 </table>
-<p>Main chain: ER.1 → ER.2 → ER.3 → ER.4 → ER.6 → ER.8. ER.5 can run any time (it touches nothing under <code>src/</code>). ER.7 can run alongside ER.2–ER.4. ER.5 must be deployed by the user before live updates work in production (see ER.5 section G).</p>
+<p>Main chain: ER.1 → ER.2 → ER.3 → ER.4 → ER.9 → ER.6 → ER.8. ER.10 can run any time, including alongside ER.9 (no shared files). ER.5 can run any time (it touches nothing under <code>src/</code>). ER.7 can run alongside ER.2–ER.4. ER.5 must be deployed by the user before live updates work in production (see ER.5 section G).</p>
 
 <h2>Phase 12: Mobile-friendly app (360×800 and up)</h2>
 <p><strong>Goal:</strong> every page works on a 360×800 phone with no sideways page scroll, tap targets of at least 44px, and readable text. Priority order: spectators navigating from the landing page, then floor judges (match scoring, qualifier entry, review queue), then the compact bracket, then everything else. The work is not done until every route passes.</p>

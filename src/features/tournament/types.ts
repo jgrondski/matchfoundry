@@ -332,3 +332,41 @@ export interface Tournament {
   adminPin?: string; // transient/decrypted when viewed by authorized System Admin
 }
 
+/** One tier as shown on tournament cards and in the switcher. */
+export interface TournamentSummaryTier {
+  id: string;
+  slug: string;
+  name: string;
+  priority: number;
+  playerCount: number;
+  bestOf: number;
+  primaryColor?: string;
+}
+
+/** What GET /api/tournaments returns per tournament. Never contains PINs, webhooks, scores or player data. */
+export interface TournamentSummary {
+  id: string;
+  slug: string;
+  name: string;
+  organizationId?: string;
+  date: string;
+  location: string;
+  qualFormat: QualFormat;
+  qualAverageCount?: number;
+  pointsConfig?: PointsThreshold[];
+  qualMode: QualMode;
+  onlineQualsOpen: boolean;
+  qualsClosed: boolean;
+  isLocked: boolean;
+  seedingMethod: SeedingMethod;
+  isTest: boolean;
+  revision: number;
+  tiers: TournamentSummaryTier[];
+  /** Rows in tournament_players (the length of the full tournament's playersPool). */
+  registeredPlayerCount: number;
+  /** True when any qualifier score exists or any match has progress. Disables deleting from the card. */
+  hasRecordedResults: boolean;
+  /** Every player id enrolled, qualified or with a qual run in this tournament. */
+  playerIds: string[];
+}
+

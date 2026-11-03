@@ -812,14 +812,10 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         organizationId={organizationId}
         useOrgBranding={useOrgBranding}
         discordWebhookUrl={discordWebhookUrl}
-        logoUrl={logoUrl}
-        bannerUrl={bannerUrl}
         webhookTestStatus={webhookTestStatus}
         onOrganizationIdChange={setOrganizationId}
         onUseOrgBrandingChange={setUseOrgBranding}
         onDiscordWebhookUrlChange={setDiscordWebhookUrl}
-        onLogoUrlChange={setLogoUrl}
-        onBannerUrlChange={setBannerUrl}
         onApplyOrgColorsToTiers={handleApplyOrgColorsToTiers}
         onTestDiscordWebhook={handleTestDiscordWebhook}
       />

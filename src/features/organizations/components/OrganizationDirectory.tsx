@@ -21,14 +21,12 @@ import { DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
 const labelClass = 'mb-1.5 block text-caption font-semibold text-fg-secondary';
 const fieldClass = 'rounded-md border border-line bg-canvas px-3.5 py-2.5 text-sm text-white';
-const browseClass =
-  'inline-flex cursor-pointer items-center whitespace-nowrap rounded-md border border-line bg-surface px-3 py-2 text-xs text-fg-secondary';
 const swatchLabelClass = 'mb-1 block text-2xs text-fg-muted';
 const swatchInputClass = 'h-8 w-full cursor-pointer rounded-xs';
 
 export const OrganizationDirectory: React.FC = () => {
   const { organizations, createOrganization, isLoading, isHydrated } = useOrganization();
-  const { tournaments } = useTournament();
+  const { tournamentSummaries } = useTournament();
   const navigate = useNavigate();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,8 +38,6 @@ export const OrganizationDirectory: React.FC = () => {
   const [orgSlug, setOrgSlug] = useState('');
   const [orgDescription, setOrgDescription] = useState('');
   const [orgWebsite, setOrgWebsite] = useState('');
-  const [orgLogoUrl, setOrgLogoUrl] = useState('');
-  const [orgBannerUrl, setOrgBannerUrl] = useState('');
   const [brandColor, setBrandColor] = useState(DEFAULT_TIER_THEME.primaryColor);
   const [primaryColor, setPrimaryColor] = useState(DEFAULT_TIER_THEME.primaryColor);
   const [secondaryColor, setSecondaryColor] = useState(DEFAULT_TIER_THEME.secondaryColor);
@@ -58,8 +54,6 @@ export const OrganizationDirectory: React.FC = () => {
     orgSlug !== '' ||
     orgDescription !== '' ||
     orgWebsite !== '' ||
-    orgLogoUrl !== '' ||
-    orgBannerUrl !== '' ||
     brandColor !== DEFAULT_TIER_THEME.primaryColor ||
     primaryColor !== DEFAULT_TIER_THEME.primaryColor ||
     secondaryColor !== DEFAULT_TIER_THEME.secondaryColor ||
@@ -70,19 +64,6 @@ export const OrganizationDirectory: React.FC = () => {
     defaultAvgCount !== 2 ||
     defaultBestOf !== 5 ||
     discordWebhookUrl !== '';
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setter(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleNameChange = (name: string) => {
     setOrgName(name);
@@ -109,8 +90,6 @@ export const OrganizationDirectory: React.FC = () => {
         slug: orgSlug.trim(),
         description: orgDescription.trim() || undefined,
         website: orgWebsite.trim() || undefined,
-        logoUrl: orgLogoUrl.trim() || undefined,
-        bannerUrl: orgBannerUrl.trim() || undefined,
         brandColor,
         themeColors,
         discordWebhookUrl: discordWebhookUrl.trim() || undefined,
@@ -199,7 +178,7 @@ export const OrganizationDirectory: React.FC = () => {
         {/* Organizations Grid */}
         <div className="grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-6">
           {filteredOrgs.map(org => {
-            const orgTournaments = tournaments.filter(t => t.organizationId === org.id);
+            const orgTournaments = tournamentSummaries.filter(t => t.organizationId === org.id);
             const colors = org.themeColors || {
               primaryColor: org.brandColor || DEFAULT_TIER_THEME.primaryColor,
               secondaryColor: DEFAULT_TIER_THEME.secondaryColor,
@@ -410,55 +389,6 @@ export const OrganizationDirectory: React.FC = () => {
                       onChange={e => setOrgWebsite(e.target.value)}
                       className={cn(fieldClass, 'w-full')}
                     />
-                  </div>
-                  <div>
-                    <label className={labelClass}>
-                      Logo URL or Local File
-                    </label>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="https://... or /assets/..."
-                        value={orgLogoUrl}
-                        onChange={e => setOrgLogoUrl(e.target.value)}
-                        className={cn(fieldClass, 'flex-1')}
-                      />
-                      <label className={browseClass} title="Choose local image file">
-                        Browse
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={e => handleFileUpload(e, setOrgLogoUrl)}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelClass}>
-                      Banner URL or Local File
-                    </label>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="https://... or /assets/..."
-                        value={orgBannerUrl}
-                        onChange={e => setOrgBannerUrl(e.target.value)}
-                        className={cn(fieldClass, 'flex-1')}
-                      />
-                      <label className={browseClass} title="Choose local image file">
-                        Browse
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={e => handleFileUpload(e, setOrgBannerUrl)}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
                   </div>
                   <div>
                     <label className={labelClass}>

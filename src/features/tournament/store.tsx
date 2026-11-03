@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Tournament,
   TournamentTier,
@@ -6,7 +6,9 @@ import {
   PlayerProfile,
   QualifierSubmission,
   SeedingMethod,
+  TournamentSummary,
 } from './types';
+import { mergeTournamentSummaries } from './summary';
 import { canonicalizeBracketRounds } from '../bracket/types';
 import { generateDraftBracketsForTournament } from '../qualifiers/scoring';
 import {
@@ -19,6 +21,8 @@ import { MATCH_CONFLICT_CODE } from '../bracket/matchConflict';
 
 interface TournamentContextType {
   tournaments: Tournament[];
+  tournamentSummaries: TournamentSummary[];
+  isTournamentPending: (idOrSlug: string) => boolean;
   globalPlayers: PlayerProfile[];
   activeTournamentId: string | null;
   activeTournament?: Tournament;
@@ -270,6 +274,21 @@ export const TournamentProvider: React.FC<{
   initialHydrated?: boolean;
 }> = ({ children, initialTournaments, initialHydrated }) => {
   const [tournaments, setTournaments] = useState<Tournament[]>(initialTournaments || []);
+  const [serverSummaries, setServerSummaries] = useState<TournamentSummary[]>([]);
+  const [pendingTournamentKeys, setPendingTournamentKeys] = useState<ReadonlySet<string>>(() => new Set());
+  const tournamentSummaries = useMemo(
+    () => mergeTournamentSummaries(serverSummaries, tournaments),
+    [serverSummaries, tournaments]
+  );
+  const isTournamentPending = useCallback(
+    (idOrSlug: string) =>
+      pendingTournamentKeys.has(idOrSlug) && !tournaments.some(t => t.id === idOrSlug || t.slug === idOrSlug),
+    [pendingTournamentKeys, tournaments]
+  );
+  const isAwaitingTournament = useMemo(
+    () => [...pendingTournamentKeys].some(key => isTournamentPending(key)),
+    [pendingTournamentKeys, isTournamentPending]
+  );
   const [globalPlayers, setGlobalPlayers] = useState<PlayerProfile[]>([]);
   const [activeTournamentId, setActiveTournamentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(!initialHydrated);
@@ -308,7 +327,7 @@ export const TournamentProvider: React.FC<{
           apiCall('/api/tournaments').catch(() => []),
           apiCall('/api/players').catch(() => []),
         ]);
-        if (Array.isArray(tourneys)) setTournaments(tourneys);
+        if (Array.isArray(tourneys)) setServerSummaries(tourneys);
         if (Array.isArray(players)) setGlobalPlayers(players);
       } finally {
         setIsLoading(false);
@@ -320,6 +339,7 @@ export const TournamentProvider: React.FC<{
   const refreshTournament = useCallback(async (tournamentIdOrSlug: string): Promise<Tournament | null> => {
     if (typeof fetch === 'undefined') return null;
     try {
+      setPendingTournamentKeys(prev => new Set(prev).add(tournamentIdOrSlug));
       const fresh = await apiCall(`/api/tournaments/${tournamentIdOrSlug}`);
       if (fresh && fresh.id) {
         setIsDbConnected(true);
@@ -352,6 +372,13 @@ export const TournamentProvider: React.FC<{
     } catch (err: any) {
       console.warn(`[Store] Failed to refresh tournament "${tournamentIdOrSlug}":`, err);
       return null;
+    } finally {
+      setPendingTournamentKeys(prev => {
+        if (!prev.has(tournamentIdOrSlug)) return prev;
+        const next = new Set(prev);
+        next.delete(tournamentIdOrSlug);
+        return next;
+      });
     }
   }, []);
 
@@ -360,7 +387,7 @@ export const TournamentProvider: React.FC<{
     if (typeof fetch === 'undefined') return;
     try {
       const tourneys = await apiCall('/api/tournaments');
-      if (Array.isArray(tourneys)) setTournaments(tourneys);
+      if (Array.isArray(tourneys)) setServerSummaries(tourneys);
     } catch (err) {
       console.error('Failed to reload tournaments:', err);
     }
@@ -444,7 +471,7 @@ export const TournamentProvider: React.FC<{
       if (tournamentsFailed) return false;
       if (isMounted) {
         if (Array.isArray(tourneys)) {
-          setTournaments(tourneys);
+          setServerSummaries(tourneys);
         }
         if (Array.isArray(players)) {
           setGlobalPlayers(players);
@@ -1383,6 +1410,7 @@ export const TournamentProvider: React.FC<{
     try {
       await apiCall(`/api/tournaments/${targetId}`, { method: 'DELETE' });
       setTournaments(prev => prev.filter(t => t.id !== targetId && t.slug !== targetId));
+      setServerSummaries(prev => prev.filter(s => s.id !== targetId && s.slug !== targetId));
       if (activeTournamentId === targetId || activeTournament?.slug === targetId) {
         setActiveTournamentId(null);
       }
@@ -1931,10 +1959,12 @@ export const TournamentProvider: React.FC<{
     <TournamentContext.Provider
       value={{
         tournaments,
+        tournamentSummaries,
+        isTournamentPending,
         globalPlayers,
         activeTournamentId,
         activeTournament,
-        isLoading,
+        isLoading: isLoading || isAwaitingTournament,
         isHydrated,
         simulateSampleTournament,
         setActiveTournamentId,

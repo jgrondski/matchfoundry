@@ -23,7 +23,7 @@ import { SIMULATION_ENABLED } from '../../../utils/simulationEnv';
 export const PlayerDirectory: React.FC = () => {
   const {
     globalPlayers,
-    tournaments,
+    tournamentSummaries,
     addGlobalPlayer,
     updateGlobalPlayer,
     deleteGlobalPlayer,
@@ -49,21 +49,11 @@ export const PlayerDirectory: React.FC = () => {
   const orgPlayerIds = useMemo(() => {
     if (orgFilter === 'ALL') return null;
     const ids = new Set<string>();
-    tournaments
+    tournamentSummaries
       .filter(t => t.organizationId === orgFilter)
-      .forEach(t => {
-        (t.playersPool || []).forEach(p => ids.add(p.id));
-        (t.qualifiers || []).forEach(q => ids.add(q.id));
-        (t.qualifierSubmissions || []).forEach(s => ids.add(s.playerId));
-        (t.tiers || []).forEach(tier => {
-          Object.values(tier.bracket?.matchesById || {}).forEach(m => {
-            if (m.player1.player?.id) ids.add(m.player1.player.id);
-            if (m.player2.player?.id) ids.add(m.player2.player.id);
-          });
-        });
-      });
+      .forEach(t => t.playerIds.forEach(id => ids.add(id)));
     return ids;
-  }, [orgFilter, tournaments]);
+  }, [orgFilter, tournamentSummaries]);
 
   // Filtered & Sorted Players (includes orgPlayerIds in dependencies)
   const filteredPlayers = useMemo(() => {
@@ -169,12 +159,8 @@ export const PlayerDirectory: React.FC = () => {
 
   const enrolledTournamentsForDelete = useMemo(() => {
     if (!playerToDelete) return [];
-    return tournaments.filter(t =>
-      (t.playersPool || []).some(p => p.id === playerToDelete.id) ||
-      (t.qualifierSubmissions || []).some(s => s.playerId === playerToDelete.id) ||
-      Boolean(t.tournamentPlayers?.[playerToDelete.id])
-    );
-  }, [playerToDelete, tournaments]);
+    return tournamentSummaries.filter(t => t.playerIds.includes(playerToDelete.id));
+  }, [playerToDelete, tournamentSummaries]);
 
   const handleDeleteConfirm = async () => {
     if (playerToDelete && enrolledTournamentsForDelete.length === 0) {
@@ -187,15 +173,9 @@ export const PlayerDirectory: React.FC = () => {
 
   const enrolledPlayerIds = useMemo(() => {
     const ids = new Set<string>();
-    tournaments.forEach(t => {
-      (t.playersPool || []).forEach(p => ids.add(p.id));
-      (t.qualifierSubmissions || []).forEach(s => ids.add(s.playerId));
-      if (t.tournamentPlayers) {
-        Object.keys(t.tournamentPlayers).forEach(id => ids.add(id));
-      }
-    });
+    tournamentSummaries.forEach(t => t.playerIds.forEach(id => ids.add(id)));
     return ids;
-  }, [tournaments]);
+  }, [tournamentSummaries]);
 
   const { unattachedCount, enrolledCount } = useMemo(() => {
     const unattached = globalPlayers.filter(p => !enrolledPlayerIds.has(p.id)).length;

@@ -13,7 +13,7 @@ export const AdminLoginPage: React.FC = () => {
   const needSystem = searchParams.get('needSystem') === 'true';
 
   const { login, logout, isSystemAdmin, session, canManage } = usePinAuth();
-  const { tournaments } = useTournament();
+  const { tournamentSummaries } = useTournament();
 
   const [selectedTourneySlug, setSelectedTourneySlug] = useState(initialTourneySlug);
   const [pin, setPin] = useState('');
@@ -28,7 +28,7 @@ export const AdminLoginPage: React.FC = () => {
     if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
   }, []);
 
-  const availableTournaments = tournaments.filter(
+  const availableTournaments = tournamentSummaries.filter(
     t => !(session?.role === 'TOURNAMENT_ADMIN' && (canManage(t.slug) || canManage(t.id)))
   );
 
