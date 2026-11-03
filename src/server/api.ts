@@ -87,6 +87,7 @@ import { isSimulationAllowed, SIMULATION_DISABLED_MESSAGE } from '../utils/simul
 import { runWithRequestMetrics, getRequestMetrics, formatServerTiming } from './requestMetrics';
 import { NOT_HANDLED, UNLOCKED_SUBACTIONS, runLockedTournamentWrite } from './tournamentWriteLock';
 import { saveMatchResult } from '../api/matchWrites';
+import { publishTournamentChanged } from './realtime';
 import { MATCH_CONFLICT_CODE, MATCH_CONFLICT_MESSAGE } from '../features/bracket/matchConflict';
 
 /**
@@ -149,6 +150,7 @@ function sendJson(res: ServerResponse, status: number, data: unknown) {
   res.setHeader('Content-Type', 'application/json');
   const metrics = getRequestMetrics();
   if (metrics) res.setHeader('Server-Timing', formatServerTiming(metrics));
+  res.setHeader('X-Server-Time', String(Date.now()));
   res.end(JSON.stringify(data));
 }
 
@@ -774,7 +776,13 @@ export function createApiMiddleware() {
             if (method === 'GET') {
               const t = await getFullTournament(tourneyId);
               if (!t) return sendError(res, 404, 'Tournament not found');
-              return sendJson(res, 200, redactTournamentForCaller(t, getRequestSession(req)));
+              const session = getRequestSession(req);
+              const versioned = new URL(req.url || '', 'http://local').searchParams.has('v');
+              res.setHeader(
+                'Cache-Control',
+                !session && versioned ? 'public, max-age=0, s-maxage=300' : 'no-store'
+              );
+              return sendJson(res, 200, redactTournamentForCaller(t, session));
             }
             if (method === 'PUT') {
               if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
@@ -1730,7 +1738,12 @@ export function createApiMiddleware() {
           if ((await handleTournamentRoute()) !== NOT_HANDLED) return;
         } else {
           const locked = await runLockedTournamentWrite(res, tourneyId, handleTournamentRoute);
-          if (locked.result !== NOT_HANDLED) return;
+          if (locked.result !== NOT_HANDLED) {
+            if (locked.tournamentId && locked.revision !== null && res.statusCode >= 200 && res.statusCode < 300) {
+              publishTournamentChanged(locked.tournamentId, locked.revision);
+            }
+            return;
+          }
         }
       }
 

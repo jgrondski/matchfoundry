@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { setupTestDb } from '../../../db/testDb';
@@ -127,6 +127,18 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
   });
 
   describe('Assertion 2.2: Review Queue Badge Dynamic Count', () => {
+    // The count badge is shown only to signed-in staff. Tests run in Node; stub just enough of window
+    // for a stored admin session (same pattern as spectatorManageLinks.test.tsx).
+    beforeEach(() => {
+      const stored = JSON.stringify({ token: 't', role: 'SYSTEM_ADMIN', expiresAt: Date.now() + 60_000 });
+      (globalThis as any).window = {
+        localStorage: { getItem: (key: string) => (key === 'tm_admin_auth' ? stored : null), removeItem: () => {} },
+      };
+    });
+    afterEach(() => {
+      delete (globalThis as any).window;
+    });
+
     it('dynamically reflects exact count of pending online submissions in sidebar', async () => {
       // Starts with 0 pending submissions
       const tourneyZero: Tournament = {
@@ -185,7 +197,7 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
           </OrganizationProvider>
         </AuthProvider>
       );
-      expect(htmlTwo).toContain('Qual Review (2)');
+      expect(htmlTwo).toMatch(/data-testid="sidebar-badge-review"[^>]*>2</);
     });
 
     it('collapses multiple submitted scores from a single competitor into 1 review session in sidebar badge', () => {
@@ -238,8 +250,8 @@ describe('Journey 2: Mixed-Mode Adjudication & Ingestion (ATDD)', () => {
         </AuthProvider>
       );
       // Badge must count unique competitors left to review (1), NOT raw scores/submissions (3)
-      expect(html).toContain('Qual Review (1)');
-      expect(html).not.toContain('Qual Review (3)');
+      expect(html).toMatch(/data-testid="sidebar-badge-review"[^>]*>1</);
+      expect(html).not.toMatch(/data-testid="sidebar-badge-review"[^>]*>3</);
     });
 
     it('renders "Qual Total Time" as the column header instead of "Timer / Telemetry"', () => {

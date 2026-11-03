@@ -261,7 +261,6 @@ export default {
   <li>Generate a secret: <code>node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</code>. Keep it for ER.6.</li>
   <li><code>npm run realtime:deploy</code>. Note the printed URL, for example <code>https://matchfoundry-realtime.&lt;account&gt;.workers.dev</code>.</li>
   <li><code>npx wrangler secret put PUBLISH_SECRET --config realtime/wrangler.toml</code> and paste the secret.</li>
-  <li>Before the event: set <code>KEEP_WARM_FROM</code> and <code>KEEP_WARM_UNTIL</code> in <code>wrangler.toml</code> to the event dates (UTC) and deploy again.</li>
 </ol>
 
 <h2>Done when</h2>

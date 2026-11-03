@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { TournamentProvider, useTournament } from './features/tournament/store';
+import { useTournamentLive } from './features/tournament/live/useTournamentLive';
 import { OrganizationProvider } from './features/organizations/store';
 import { TournamentSwitcherPage } from './routes/TournamentSwitcherPage';
 import { OrganizationDirectoryPage } from './routes/OrganizationDirectoryPage';
@@ -29,9 +30,21 @@ import { ManageReviewPage } from './routes/ManageReviewPage';
  * LiveRouteSync: Automatically revalidates live tournament data from the PostgreSQL API
  * on every route change and whenever the browser window regains focus.
  */
+const LIVE_NON_TOURNAMENT_PREFIXES = new Set(['admin', 'login', 'organizations', 'org', 'players']);
+
 const LiveRouteSync: React.FC = () => {
   const location = useLocation();
-  const { refreshTournament, refreshGlobalPlayers, refreshAllTournaments } = useTournament();
+  const { tournaments, refreshTournament, refreshGlobalPlayers, refreshAllTournaments } = useTournament();
+
+  const activeSegments = location.pathname.split('/').filter(Boolean);
+  const activeSlug =
+    activeSegments.length > 0 && !LIVE_NON_TOURNAMENT_PREFIXES.has(activeSegments[0])
+      ? activeSegments[0] === 'obs' && activeSegments[1] === 'overlay'
+        ? activeSegments[2]
+        : activeSegments[0]
+      : undefined;
+  const activeId = activeSlug ? tournaments.find(t => t.slug === activeSlug || t.id === activeSlug)?.id : undefined;
+  useTournamentLive(activeId ?? null);
 
   useEffect(() => {
     if (typeof fetch === 'undefined') return;

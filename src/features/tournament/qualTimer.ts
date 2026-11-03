@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import type { Tournament, TournamentQualTimer } from './types';
 import { TournamentContext } from './store';
+import { serverNow } from '../../utils/serverClock';
 
 /**
  * Computes remaining seconds for a tournament qualification countdown timer.
@@ -8,7 +9,7 @@ import { TournamentContext } from './store';
 export function getQualTimerRemainingSeconds(
   timer?: TournamentQualTimer,
   qualWindowMinutes: number = 90,
-  nowMs: number = Date.now()
+  nowMs: number = serverNow()
 ): number {
   const duration = (timer?.durationMinutes || qualWindowMinutes || 90) * 60;
   if (!timer) return duration;
@@ -45,7 +46,7 @@ export function formatTimerSeconds(seconds: number): string {
 export function useTournamentQualTimer(tournament?: Tournament) {
   const context = useContext(TournamentContext);
   const updateTournament = context?.updateTournament;
-  const [nowMs, setNowMs] = useState<number>(Date.now());
+  const [nowMs, setNowMs] = useState<number>(serverNow());
 
   const timer = tournament?.qualTimer;
   const qualWindowMinutes = tournament?.qualWindowMinutes ?? 90;
@@ -54,9 +55,9 @@ export function useTournamentQualTimer(tournament?: Tournament) {
   // 1-second interval execution strictly when running
   useEffect(() => {
     if (!isRunning) return;
-    setNowMs(Date.now());
+    setNowMs(serverNow());
     const interval = setInterval(() => {
-      setNowMs(Date.now());
+      setNowMs(serverNow());
     }, 1000);
     return () => clearInterval(interval);
   }, [isRunning]);
@@ -74,14 +75,14 @@ export function useTournamentQualTimer(tournament?: Tournament) {
     if (currentTimer?.isRunning) {
       // Pause
       const additional = currentTimer.lastResumedAt
-        ? Math.max(0, Math.floor((Date.now() - currentTimer.lastResumedAt) / 1000))
+        ? Math.max(0, Math.floor((serverNow() - currentTimer.lastResumedAt) / 1000))
         : 0;
       const updatedTimer: TournamentQualTimer = {
         durationMinutes: dur,
         elapsedSeconds: (currentTimer.elapsedSeconds || 0) + additional,
         isRunning: false,
         lastResumedAt: null,
-        startedAt: currentTimer.startedAt || Date.now(),
+        startedAt: currentTimer.startedAt || serverNow(),
       };
       if (updateTournament) {
         await updateTournament(tournament.id, { qualTimer: updatedTimer });
@@ -92,8 +93,8 @@ export function useTournamentQualTimer(tournament?: Tournament) {
         durationMinutes: dur,
         elapsedSeconds: currentTimer?.elapsedSeconds || 0,
         isRunning: true,
-        lastResumedAt: Date.now(),
-        startedAt: currentTimer?.startedAt || Date.now(),
+        lastResumedAt: serverNow(),
+        startedAt: currentTimer?.startedAt || serverNow(),
       };
       if (updateTournament) {
         await updateTournament(tournament.id, { qualTimer: updatedTimer });
@@ -128,8 +129,8 @@ export function useTournamentQualTimer(tournament?: Tournament) {
         durationMinutes: dur,
         elapsedSeconds: newElapsed,
         isRunning: Boolean(tournament.qualTimer?.isRunning),
-        lastResumedAt: tournament.qualTimer?.isRunning ? Date.now() : null,
-        startedAt: tournament.qualTimer?.startedAt || Date.now(),
+        lastResumedAt: tournament.qualTimer?.isRunning ? serverNow() : null,
+        startedAt: tournament.qualTimer?.startedAt || serverNow(),
       };
       if (updateTournament) {
         await updateTournament(tournament.id, { qualTimer: updatedTimer });

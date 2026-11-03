@@ -301,7 +301,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
     },
     {
       key: 'review' as const,
-      label: pendingReviewCount > 0 ? `Qual Review (${pendingReviewCount})` : 'Qual Review',
+      label: 'Qual Review',
       icon: CheckCircle2,
       to: slug ? (isAuthorized ? `/${slug}/manage/review` : `/${slug}/manage/review`) : '/',
       badge: !isAuthorized
@@ -689,7 +689,10 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                 <Icon size={16} className="shrink-0" />
                 {!isCollapsed && <span className="flex-1 truncate">{item.label}</span>}
                 {!isCollapsed && item.badge && (
-                  <span className="rounded-full bg-white/8 px-1.5 py-0.5 text-3xs font-bold text-fg-muted">
+                  <span
+                    data-testid={`sidebar-badge-${item.key}`}
+                    className="rounded-full bg-white/8 px-1.5 py-0.5 text-3xs font-bold text-fg-muted"
+                  >
                     {item.badge}
                   </span>
                 )}

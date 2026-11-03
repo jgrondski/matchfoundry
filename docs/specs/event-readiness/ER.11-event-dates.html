@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step ER.11 Event Dates</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Event readiness / ER.11</nav>
+<h1>Step ER.11: Real event dates (start and end)</h1>
+<p class="subtitle">Replace the free-text tournament <code>date</code> with a validated <code>startDate</code> and optional <code>endDate</code> (both <code>YYYY-MM-DD</code>), stored in two new <code>date</code> columns, entered with date pickers, and shown as formatted text such as “Nov 14–16, 2026”.</p>
+
+<div class="box"><p><strong>Executor:</strong> any model. <strong>Prerequisite:</strong> ER.9 merged. <strong>Can run alongside</strong> <a href="ER.6-live-updates-client.html">ER.6</a>: the only shared file is <code>src/server/api.ts</code>, where this step edits exactly two places (section C). <strong>Run before</strong> <a href="ER.12-keep-warm-schedule.html">ER.12</a>, which reads the new columns. <strong>Read first:</strong> <a href="../index.html">index.html</a> “Rules for every executor”, <code>docs/TESTING_STRATEGY.md</code>.</p></div>
+
+<h2>Why</h2>
+<p>The event date is a free-text field (placeholder “e.g. March 21-22, 2026”). Stored values include <code>2026-10-18</code>, <code>Upcoming</code>, <code>Yah</code> and empty strings. Nothing can sort, filter or schedule by it, and ER.12 needs real dates to keep the API warm on event days. Multi-day events are common, so one field is not enough.</p>
+<p>Validation happens in the app (<code>validateEventDates</code>). The Postgres <code>date</code> type is a second guard only: it rejects impossible dates such as <code>2026-02-30</code>, but it accepts loose text such as <code>March 21-22</code>.</p>
+
+<h2>Behavior after this step</h2>
+<ul>
+  <li>Create Tournament and Settings show <strong>Start Date</strong> and <strong>End Date</strong> date pickers instead of the “Event Date” text box. Both are optional. End Date cannot be before Start Date, and cannot be set without a Start Date; the form shows the error under End Date and does not save.</li>
+  <li>Tournament cards show “Nov 14, 2026”, “Nov 14–16, 2026”, “Nov 30 – Dec 2, 2026”, “Dec 30, 2026 – Jan 2, 2027”, or “Date TBD” when no start date is set.</li>
+  <li>The API rejects an invalid date or range with HTTP 400 and the validation message. A save that omits <code>startDate</code> and <code>endDate</code> (for example an old browser tab) keeps the stored dates. Sending <code>''</code> clears a date.</li>
+  <li>An end date equal to the start date is stored as no end date (a single-day event).</li>
+  <li>Existing free-text dates are not converted. Those tournaments show “Date TBD” until an admin sets the dates in Settings.</li>
+</ul>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Area</th><th>Files</th></tr>
+  <tr><td>Shared</td><td>create <code>src/features/tournament/eventDates.ts</code>; <code>src/features/tournament/types.ts</code>, <code>src/features/tournament/summary.ts</code>, <code>src/features/tournament/defaults.ts</code>, <code>src/features/tournament/mock-data.ts</code></td></tr>
+  <tr><td>Database</td><td><code>src/db/schema.ts</code>, <code>src/db/testDb.ts</code></td></tr>
+  <tr><td>Server</td><td><code>src/api/tournaments.ts</code>; <code>src/server/api.ts</code> (only the two places in section C)</td></tr>
+  <tr><td>UI</td><td><code>src/features/tournament/components/CreateTournamentModal.tsx</code>, <code>src/features/tournament/components/TournamentAdminForm.tsx</code>, <code>src/features/tournament/components/settings/TournamentInfoSection.tsx</code>, <code>src/features/tournament/components/TournamentCard.tsx</code></td></tr>
+  <tr><td>Tests</td><td>create <code>src/features/tournament/__tests__/eventDates.test.ts</code>, <code>src/api/__tests__/eventDatesSave.test.ts</code>; existing test files that <code>npm run typecheck</code> reports for the removed <code>date</code> field (section F)</td></tr>
+</table>
+<p>Do not edit <code>src/routes/__tests__/omenAo3Data.json</code> or any other recorded JSON fixture; its <code>"date"</code> key is ignored at runtime.</p>
+
+<h2>A. Shared helpers: create <code>src/features/tournament/eventDates.ts</code></h2>
+<pre><code>const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** True for a real calendar date written YYYY-MM-DD (rejects 2026-02-30 and loose text). */
+export function isIsoDate(value: string): boolean {
+  if (!ISO_DATE.test(value)) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) &amp;&amp; d.toISOString().slice(0, 10) === value;
+}
+
+/** The validation message for an event date range, or null when valid. Empty strings mean "not set". */
+export function validateEventDates(startDate: string, endDate: string): string | null {
+  if (startDate &amp;&amp; !isIsoDate(startDate)) return 'Start date must be a real date (YYYY-MM-DD).';
+  if (endDate &amp;&amp; !isIsoDate(endDate)) return 'End date must be a real date (YYYY-MM-DD).';
+  if (endDate &amp;&amp; !startDate) return 'Set a start date before an end date.';
+  if (startDate &amp;&amp; endDate &amp;&amp; endDate &lt; startDate) return 'End date cannot be before the start date.';
+  return null;
+}
+
+const MONTH_DAY: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', timeZone: 'UTC' };
+const FULL: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' };
+const format = (iso: string, options: Intl.DateTimeFormatOptions) =&gt;
+  new Intl.DateTimeFormat('en-US', options).format(new Date(`${iso}T00:00:00Z`));
+
+/**
+ * Display text for an event's dates: "Nov 14, 2026", "Nov 14–16, 2026", "Nov 30 – Dec 2, 2026",
+ * "Dec 30, 2026 – Jan 2, 2027", or "Date TBD" when there is no valid start date.
+ * Dates are calendar days with no time zone, so they are formatted in UTC to avoid shifting a day.
+ */
+export function formatEventDates(startDate?: string | null, endDate?: string | null): string {
+  if (!startDate || !isIsoDate(startDate)) return 'Date TBD';
+  if (!endDate || !isIsoDate(endDate) || endDate &lt;= startDate) return format(startDate, FULL);
+  if (startDate.slice(0, 4) !== endDate.slice(0, 4)) return `${format(startDate, FULL)} – ${format(endDate, FULL)}`;
+  if (startDate.slice(5, 7) !== endDate.slice(5, 7)) return `${format(startDate, MONTH_DAY)} – ${format(endDate, FULL)}`;
+  return `${format(startDate, MONTH_DAY)}–${Number(endDate.slice(8, 10))}, ${endDate.slice(0, 4)}`;
+}</code></pre>
+<p>The dashes are typed characters: “–” (U+2013 en dash). In the same-month form there are no spaces around it; in the other two forms there is one space on each side.</p>
+
+<h2>B. Types, schema and test database</h2>
+<ol class="steps">
+  <li><code>types.ts</code>, interface <code>Tournament</code>: delete <code>date: string;</code> and add in its place:
+<pre><code>  /** First event day, YYYY-MM-DD (venue calendar date, no time zone). '' or undefined = not set. */
+  startDate?: string;
+  /** Last event day, YYYY-MM-DD, after startDate. '' or undefined = single-day event. */
+  endDate?: string;</code></pre></li>
+  <li><code>types.ts</code>, interface <code>TournamentSummary</code>: delete <code>date: string;</code> and add <code>startDate: string;</code> and <code>endDate: string;</code> (always present; <code>''</code> when not set).</li>
+  <li><code>types.ts</code>, interface <code>TournamentMetadata</code>: delete <code>date?: string;</code>.</li>
+  <li><code>schema.ts</code>: add <code>date</code> to the <code>drizzle-orm/pg-core</code> import. In the <code>tournaments</code> table, after the <code>metadata</code> line, add:
+<pre><code>  // Event days (venue calendar dates). Validated as YYYY-MM-DD by saveFullTournament; null = not set.
+  startDate: date('start_date', { mode: 'string' }),
+  endDate: date('end_date', { mode: 'string' }),</code></pre>
+  Both columns are nullable and new, so the change is additive (CLAUDE.md section 3).</li>
+  <li><code>testDb.ts</code>: in the <code>CREATE TABLE tournaments</code> statement, add <code>start_date DATE,</code> and <code>end_date DATE,</code> on two lines directly before its <code>created_at</code> line.</li>
+</ol>
+
+<h2>C. Server</h2>
+<ol class="steps">
+  <li><code>src/api/tournaments.ts</code>: import <code>validateEventDates</code> from <code>'../features/tournament/eventDates'</code>, and add near the other exports:
+<pre><code>/** A tournament save with an invalid event date or range. The API answers 400 with the message. */
+export class EventDateError extends Error {}</code></pre></li>
+  <li><code>saveFullTournament</code>: directly after the two lines that load <code>existing</code> (the <code>let existing = ...</code> line and its slug fallback <code>if</code>), add:
+<pre><code>  // Omitted (undefined) keeps the stored dates, so a client that never sent them can't clear them; '' clears.
+  const startDate =
+    tourney.startDate !== undefined ? tourney.startDate || null : (existing[0]?.startDate ?? null);
+  const requestedEndDate =
+    tourney.endDate !== undefined ? tourney.endDate || null : (existing[0]?.endDate ?? null);
+  const dateError = validateEventDates(startDate || '', requestedEndDate || '');
+  if (dateError) throw new EventDateError(dateError);
+  // An end date equal to the start date is a single-day event.
+  const endDate = requestedEndDate === startDate ? null : requestedEndDate;</code></pre>
+  In the <code>metadata</code> object, delete the line <code>date: tourney.date || '',</code>. Add <code>startDate,</code> and <code>endDate,</code> to <code>updatePayload</code> (after <code>metadata,</code>) and to the object passed to <code>.values({...})</code> in the insert branch (after its <code>metadata</code> entry).</li>
+  <li><code>getFullTournament</code>: in the returned object, replace <code>date: meta.date || '',</code> with:
+<pre><code>    startDate: t.startDate || '',
+    endDate: t.endDate || '',</code></pre>
+  (<code>t</code> is the tournament row, <code>tList[0]</code>.)</li>
+  <li><code>listTournamentSummaries</code>: in the first <code>.select({...})</code>, delete the <code>metaDate</code> line and add <code>startDate: tournaments.startDate,</code> and <code>endDate: tournaments.endDate,</code> after <code>onlineQualsOpen</code>. In the mapped result, replace <code>date: t.metaDate || '',</code> with <code>startDate: t.startDate || '',</code> and <code>endDate: t.endDate || '',</code>. The query count stays 5.</li>
+  <li><code>src/server/api.ts</code>, place 1 of 2: add <code>EventDateError</code> to the existing import from <code>'../api/tournaments'</code>. In the outer <code>catch (err: unknown)</code> of the API handler (the one that logs <code>[API Error]</code>), add before the <code>QualLockedError</code> line:
+<pre><code>      if (err instanceof EventDateError) return sendError(res, 400, err.message);</code></pre></li>
+  <li><code>src/server/api.ts</code>, place 2 of 2: in <code>simulateSampleTournament</code>'s <code>baseTourney</code>, replace <code>date: '2026-10-18',</code> with <code>startDate: '2026-10-18',</code>.</li>
+</ol>
+
+<h2>D. Shared data</h2>
+<ol class="steps">
+  <li><code>summary.ts</code>, <code>toTournamentSummary</code>: replace <code>date: t.date || '',</code> with <code>startDate: t.startDate || '',</code> and <code>endDate: t.endDate || '',</code>.</li>
+  <li><code>defaults.ts</code>, <code>createEmptyTournament</code>: delete <code>date: 'Upcoming',</code>.</li>
+  <li><code>mock-data.ts</code>: replace <code>date: 'March 21-22, 2026',</code> with <code>startDate: '2026-03-21',</code> and <code>endDate: '2026-03-22',</code>; replace <code>date: 'March 20, 2026',</code> with <code>startDate: '2026-03-20',</code>.</li>
+</ol>
+
+<h2>E. UI</h2>
+<p>Every date input is <code>type="date"</code> and adds the Tailwind class <code>scheme-dark</code> to its existing input class, so the browser's calendar icon is visible on the dark background. The error text uses <code>text-xs text-red-bright</code>.</p>
+<ol class="steps">
+  <li><strong><code>TournamentCard.tsx</code>:</strong> import <code>formatEventDates</code> and replace <code>{tournament.date}</code> with <code>{formatEventDates(tournament.startDate, tournament.endDate)}</code>.</li>
+  <li><strong><code>CreateTournamentModal.tsx</code>:</strong>
+    <ol>
+      <li>Replace the <code>newTourneyDate</code> state with <code>newTourneyStartDate</code> and <code>newTourneyEndDate</code> (both <code>useState('')</code>). In <code>isDirty</code>, replace <code>newTourneyDate !== '' ||</code> with <code>newTourneyStartDate !== '' ||</code> and <code>newTourneyEndDate !== '' ||</code>.</li>
+      <li>In <code>handleCreateSubmit</code>, directly after the existing first guard line (<code>if (!newTourneyName.trim() || ...) return;</code>), add <code>if (validateEventDates(newTourneyStartDate, newTourneyEndDate)) return;</code>.</li>
+      <li>In the <code>createEmptyTournament({...})</code> call, replace <code>date: newTourneyDate.trim() || 'Upcoming',</code> with <code>startDate: newTourneyStartDate,</code> and <code>endDate: newTourneyEndDate,</code>.</li>
+      <li>After <code>if (!isOpen) return null;</code>, add <code>const dateError = validateEventDates(newTourneyStartDate, newTourneyEndDate);</code>.</li>
+      <li>The <code>grid grid-cols-[1fr_1fr] gap-3</code> row that holds “Event Date” and “Location” becomes two cells: “Start Date” (date input bound to <code>newTourneyStartDate</code>) and “End Date” (date input bound to <code>newTourneyEndDate</code>, with <code>min={newTourneyStartDate || undefined}</code>, and below it <code>{dateError &amp;&amp; &lt;p className="mt-1 text-xs text-red-bright"&gt;{dateError}&lt;/p&gt;}</code>). Neither has a placeholder. Move the “Location” <code>&lt;div&gt;</code> out of that row, unchanged, to directly after it, so it spans the full width.</li>
+    </ol>
+  </li>
+  <li><strong><code>TournamentInfoSection.tsx</code>:</strong> in the props interface and the destructuring, replace <code>date</code> and <code>onDateChange</code> with <code>startDate: string</code>, <code>endDate: string</code>, <code>dateError: string | null</code>, <code>onStartDateChange: (date: string) =&gt; void</code>, <code>onEndDateChange: (date: string) =&gt; void</code>. Replace the “Event Date” <code>&lt;div&gt;</code> with two <code>&lt;div&gt;</code>s in the same grid: “Start Date” (date input, <code>value={startDate}</code>) and “End Date” (date input, <code>value={endDate}</code>, <code>min={startDate || undefined}</code>, and below it <code>{dateError &amp;&amp; &lt;p className="mt-1 text-xs text-red-bright"&gt;{dateError}&lt;/p&gt;}</code>). The grid is <code>auto-fit</code>, so the fifth cell wraps on its own; do not change the grid classes.</li>
+  <li><strong><code>TournamentAdminForm.tsx</code>:</strong>
+    <ol>
+      <li>Replace <code>const [date, setDate] = useState(tournament.date);</code> with <code>const [startDate, setStartDate] = useState(tournament.startDate || '');</code> and <code>const [endDate, setEndDate] = useState(tournament.endDate || '');</code>.</li>
+      <li>Dirty check: replace <code>if (date.trim() !== (tournament.date || '').trim()) return true;</code> with <code>if (startDate !== (tournament.startDate || '')) return true;</code> and <code>if (endDate !== (tournament.endDate || '')) return true;</code>. In that <code>useMemo</code>'s dependency array, replace <code>date,</code> with <code>startDate,</code> and <code>endDate,</code>.</li>
+      <li>Both reset blocks (<code>setDate(tournament.date || '');</code>): replace with <code>setStartDate(tournament.startDate || '');</code> and <code>setEndDate(tournament.endDate || '');</code>.</li>
+      <li><code>saveCurrentConfig</code>: directly after <code>if (tierConfigError) return false;</code>, add <code>if (validateEventDates(startDate, endDate)) return false;</code>. In the <code>updateTournament</code> payload, replace <code>date,</code> with <code>startDate,</code> and <code>endDate,</code>. In the post-save sync, replace <code>setDate(saved.date || '');</code> with <code>setStartDate(saved.startDate || '');</code> and <code>setEndDate(saved.endDate || '');</code>.</li>
+      <li><code>&lt;TournamentInfoSection&gt;</code>: replace <code>date={date}</code> and <code>onDateChange={setDate}</code> with <code>startDate={startDate}</code>, <code>endDate={endDate}</code>, <code>dateError={validateEventDates(startDate, endDate)}</code>, <code>onStartDateChange={setStartDate}</code>, <code>onEndDateChange={setEndDate}</code>.</li>
+    </ol>
+  </li>
+</ol>
+
+<h2>F. Existing tests</h2>
+<p>Run <code>npm run typecheck</code>. For each reported use of the removed <code>date</code> field in a test file:</p>
+<ul>
+  <li>An object literal that only sets <code>date: '...'</code> as filler: delete the property.</li>
+  <li><code>src/features/tournament/__tests__/manualSeeding.test.ts</code>: replace <code>date: overrides.date || '2026-09-29',</code> with <code>startDate: overrides.startDate || '2026-09-29',</code>.</li>
+  <li><code>src/features/tournament/__tests__/domainHooksAndDefaults.test.ts</code>: replace <code>expect(tourney.date).toBe('Upcoming');</code> with <code>expect(tourney.startDate).toBeUndefined();</code>.</li>
+  <li><code>src/features/tournament/__tests__/saveConfigurationAndDirtyStateRegression.test.ts</code> copies the form's dirty logic: mirror section E step 4 exactly (<code>startDate</code> and <code>endDate</code> compared without <code>.trim()</code>).</li>
+</ul>
+<p>Do not change what any test asserts beyond these replacements. If a test needs more than this, stop and report it.</p>
+
+<h2>G. New tests</h2>
+<ol class="steps">
+  <li><strong><code>src/features/tournament/__tests__/eventDates.test.ts</code></strong> (pure functions):
+    <ul>
+      <li><code>isIsoDate</code>: true for <code>2026-11-14</code> and <code>2028-02-29</code>; false for <code>2026-02-30</code>, <code>2027-02-29</code>, <code>2026-2-3</code>, <code>March 21</code>, <code>''</code>.</li>
+      <li><code>validateEventDates</code>: <code>('', '')</code>, <code>('2026-11-14', '')</code> and <code>('2026-11-14', '2026-11-16')</code> are null; each of the four messages is returned for <code>('Upcoming', '')</code>, <code>('2026-11-14', 'soon')</code>, <code>('', '2026-11-16')</code>, <code>('2026-11-16', '2026-11-14')</code>.</li>
+      <li><code>formatEventDates</code>: <code>('2026-11-14')</code> → <code>Nov 14, 2026</code>; <code>('2026-11-14', '2026-11-16')</code> → <code>Nov 14–16, 2026</code>; <code>('2026-11-30', '2026-12-02')</code> → <code>Nov 30 – Dec 2, 2026</code>; <code>('2026-12-30', '2027-01-02')</code> → <code>Dec 30, 2026 – Jan 2, 2027</code>; <code>('2026-11-14', '2026-11-14')</code> → <code>Nov 14, 2026</code>; <code>('')</code>, <code>(undefined)</code> and <code>('Upcoming')</code> → <code>Date TBD</code>.</li>
+    </ul>
+  </li>
+  <li><strong><code>src/api/__tests__/eventDatesSave.test.ts</code></strong> (pg-mem; build data with <code>createEmptyTournament</code> and <code>saveFullTournament</code>, following <code>src/api/__tests__/fullSaveSkipsUnchangedRows.test.ts</code>; slugs include a random run id):
+    <ul>
+      <li>Saving <code>startDate: '2026-11-14', endDate: '2026-11-16'</code>: <code>getFullTournament</code> and the matching entry of <code>listTournamentSummaries()</code> both return those two values.</li>
+      <li>Saving the loaded tournament again with <code>startDate</code> and <code>endDate</code> set to <code>undefined</code> keeps both stored dates.</li>
+      <li>Saving <code>startDate: '', endDate: ''</code> clears both (reload returns <code>''</code> for each).</li>
+      <li>Saving <code>endDate</code> equal to <code>startDate</code> stores no end date (reload returns <code>endDate: ''</code>).</li>
+      <li><code>startDate: 'March 21'</code> and the range <code>'2026-11-16'</code> to <code>'2026-11-14'</code> each reject with <code>EventDateError</code>; reloading shows the previous name and dates unchanged.</li>
+      <li>Through the API (copy the <code>makeHttpRequest</code> helper and SYSTEM_ADMIN session setup from <code>src/server/__tests__/tournamentWriteLock.test.ts</code>): <code>PUT /api/tournaments/:id</code> with <code>startDate: 'Upcoming'</code> returns 400 and a body containing <code>Start date must be a real date</code>.</li>
+    </ul>
+  </li>
+</ol>
+
+<h2>Commands</h2>
+<ol class="steps">
+  <li><code>npm run typecheck</code></li>
+  <li><code>npx vitest run src/features/tournament/__tests__/eventDates.test.ts src/api/__tests__/eventDatesSave.test.ts</code></li>
+  <li>Real Postgres (CLAUDE.md sections 1 and 3): confirm <code>.env</code> and <code>docker compose ps</code> agree on the port and point at <code>localhost</code>, then <code>npm run db:push</code> (it must add the two columns without any prompt), then <code>npm run test:pg</code>.</li>
+  <li><code>npm test</code></li>
+  <li><code>npm run test:visual</code>, after any step running in parallel has finished. Expected changes: <code>landing</code> (card shows “Oct 18, 2026” instead of “2026-10-18”) and <code>settings</code> (Start Date and End Date fields), desktop and mobile. List every changed screenshot in the report. Do not update baselines.</li>
+</ol>
+
+<h2>After merge (the user does this; list it in the report)</h2>
+<p>Open Settings for each real tournament, including the upcoming event, and set its Start Date and End Date. Old free-text dates are not converted, and ER.12 only keeps the API warm for tournaments that have a start date.</p>
+
+<h2>Done when</h2>
+<ul class="check">
+  <li>No <code>date</code> property remains on <code>Tournament</code>, <code>TournamentSummary</code> or <code>TournamentMetadata</code>, and no code reads or writes <code>metadata.date</code>.</li>
+  <li>Both forms use date pickers, block an invalid range with the message under End Date, and save valid dates.</li>
+  <li>The API answers 400 for an invalid date or range, and an omitted date keeps the stored value.</li>
+  <li>Cards show the formatted dates or “Date TBD”.</li>
+  <li>All commands above pass; the only changed screenshots are landing and settings.</li>
+</ul>
+</main>
+</body>
+</html>

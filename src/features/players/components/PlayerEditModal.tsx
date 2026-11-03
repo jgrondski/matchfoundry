@@ -42,6 +42,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
   const initialRef = useRef<Record<string, unknown>>({});
   const titleId = useId();
 
+  const resetKey = isOpen ? (initialPlayer?.id ?? 'new') : null;
   useEffect(() => {
     if (initialPlayer) {
       setName(initialPlayer.name);
@@ -96,7 +97,8 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
         notes: '',
       };
     }
-  }, [initialPlayer, isOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when a different player is opened; live refreshes must not wipe typing
+  }, [resetKey]);
 
   const currentValues = {
     name,
