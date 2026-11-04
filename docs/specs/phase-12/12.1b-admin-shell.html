@@ -16,7 +16,7 @@
 
 <h2>What it looks like on a phone</h2>
 <pre><code>┌──────────────────────────────────────────┐
-│ CTWC 2026 World Champi…        👁 Public │  AdminMobileTopBar, 48px, sticky top
+│ ← CTWC 2026 World Champ…       👁 Public │  AdminMobileTopBar, 48px, sticky top
 ├──────────────────────────────────────────┤
 │                                          │
 │              page content                │
@@ -51,7 +51,7 @@
   title: string;       // tournament name, or "MatchFoundry" when there is none
   publicUrl?: string;  // public view of the current tournament
 }</code></pre>
-<p>Root: <code>&lt;header className="sticky top-0 z-90 flex h-12 items-center gap-2 border-b border-line bg-surface px-3 md:hidden"&gt;</code>. Children: the title (<code>&lt;span className="min-w-0 flex-1 truncate text-sm font-bold text-fg"&gt;</code>), then, when <code>publicUrl</code> is set, <code>&lt;Link to={publicUrl} className={buttonClasses({ variant: 'ghost', size: 'sm' })}&gt;&lt;Eye size={16} /&gt;Public&lt;/Link&gt;</code>.</p>
+<p>Root: <code>&lt;header className="sticky top-0 z-90 flex h-12 items-center gap-2 border-b border-line bg-surface px-3 md:hidden"&gt;</code>. Children: a back link to the tournament list, <code>&lt;Link to="/" aria-label="All tournaments" className={cn(buttonClasses({ variant: 'ghost', size: 'sm' }), '-ml-2 px-2')}&gt;&lt;ArrowLeft size={18} /&gt;&lt;/Link&gt;</code> (the same target as the spectator header's back arrow from 12.1a), then the title (<code>&lt;span className="min-w-0 flex-1 truncate text-sm font-bold text-fg"&gt;</code>), then, when <code>publicUrl</code> is set, <code>&lt;Link to={publicUrl} className={buttonClasses({ variant: 'ghost', size: 'sm' })}&gt;&lt;Eye size={16} /&gt;Public&lt;/Link&gt;</code>.</p>
 
 <h2>C. AdminBottomNav.tsx</h2>
 <pre><code>export interface AdminBottomNavProps {
@@ -112,7 +112,7 @@ export const ADMIN_BOTTOM_NAV_HEIGHT_CLASS = 'h-14';</code></pre>
 <h2>E. Tests (adminMobileNav.test.tsx)</h2>
 <p><code>renderToStaticMarkup</code> inside a <code>MemoryRouter</code>:</p>
 <ul>
-  <li><code>AdminMobileTopBar</code> renders the title, and a “Public” link to <code>publicUrl</code> only when it is set.</li>
+  <li><code>AdminMobileTopBar</code> renders a link to <code>/</code> labelled “All tournaments”, the title, and a “Public” link to <code>publicUrl</code> only when it is set.</li>
   <li><code>AdminBottomNav</code> with a slug renders four links with the targets in the table (with and without <code>currentTierSlug</code>) plus a Menu button with <code>aria-expanded="false"</code>; with <code>menuOpen</code> the button reads “Close” and has <code>aria-expanded="true"</code>; the active link has <code>aria-current="page"</code>; a pending count of 3 renders “3” and the label “Review, 3 pending”; “Seeding” replaces “Quals” for manual seeding; without a slug only the Menu button renders.</li>
   <li><code>getPublicViewUrl</code>: the three cases.</li>
 </ul>
@@ -133,6 +133,9 @@ export const ADMIN_BOTTOM_NAV_HEIGHT_CLASS = 'h-14';</code></pre>
   <li>With unsaved settings changes, a shortcut or a menu item shows the Discard prompt, and Keep Editing stays on the page.</li>
   <li>Opening the score sheet on the judge page covers the bar; closing it shows the bar again.</li>
   <li>“Public” opens the public view of the current tournament.</li>
+  <li>The ← in the top bar returns to the tournament list.</li>
+  <li>In the Menu sheet, scroll to the bottom: Log Out is fully visible and tappable above the phone's own gesture bar or toolbar (test in Safari and Chrome on a real phone).</li>
+  <li>On the manage bracket page, the tier bar sticks directly under the 48px top bar with no gap and nothing scrolling through above it.</li>
 </ul>
 </main>
 </body>

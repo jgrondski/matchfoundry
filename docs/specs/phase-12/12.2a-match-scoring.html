@@ -40,7 +40,28 @@
   <li><strong>MatchScoreDrawer.tsx footer</strong> (the “Footer Actions” div, around line 534): add <code>max-md:sticky max-md:bottom-0 max-md:z-10 max-md:flex-col-reverse max-md:px-4</code>. It already has its own background. The Cancel button and the Save button get <code>max-md:w-full max-md:flex-none</code>. With <code>flex-col-reverse</code>, Save sits above Cancel.</li>
   <li>The drawer's other horizontal paddings of <code>px-6</code> get <code>max-md:px-4</code>, including the conflict notice's <code>mx-6</code> (<code>max-md:mx-4</code>).</li>
   <li><strong>GameScoreCard.tsx:</strong> the score inputs already use <code>inputMode="numeric"</code> and <code>text-base</code>; leave them. The two winner toggles (<code>size-5</code> round buttons, around lines 106 and 164) keep their size but get a 44px hit area on mobile: add <code>max-md:relative max-md:after:absolute max-md:after:-inset-3</code>. The TIE button (around line 142) gets <code>max-md:min-h-11 max-md:px-3</code>. The game card padding <code>px-4</code> gets <code>max-md:px-3</code>.</li>
-  <li><strong>MatchupBanner.tsx:</strong> player names get <code>min-w-0 truncate</code>; seeds stay visible (<code>shrink-0</code>); the banner's horizontal row gets <code>max-md:flex-wrap</code> if it has fixed-width children.</li>
+  <li><strong>Full-height sheet.</strong> The score sheet covers the whole screen on phones so the game inputs start at the top and a stray tap can't land on the backdrop. Add <code>panelClassName="max-md:h-dvh max-md:max-h-dvh max-md:rounded-none max-md:pt-[env(safe-area-inset-top)]"</code> to its <code>Overlay</code> (around line 282). <code>panelClassName</code> comes after the sheet classes from 12.0a, so these win. Don't change <code>Overlay.tsx</code>.</li>
+  <li><strong>MatchScoreDrawer.tsx header</strong> (the “Glow-up Header” div, around line 308) becomes one compact row on phones:
+    <ul>
+      <li>The header div gets <code>max-md:items-center max-md:px-4 max-md:py-2</code>.</li>
+      <li>The “Tournament Title &amp; Active Tier Badge” row (the <code>flex items-center gap-2 flex-wrap</code> div) gets <code>max-md:hidden</code>. The page behind the sheet already shows both.</li>
+      <li>The <code>h2</code> gets <code>max-md:text-lg</code>; the round name span gets <code>max-md:text-sm</code>. The hero row gets <code>max-md:flex-nowrap max-md:min-w-0</code> and the round span <code>max-md:truncate</code>.</li>
+      <li>The close button gets <code>max-md:min-h-11 max-md:min-w-11</code>.</li>
+    </ul>
+  </li>
+  <li><strong>MatchupBanner.tsx</strong> becomes a compact scoreboard on phones (about 110px tall instead of about 250px). Apply the same classes to the Player 1 and Player 2 sections:
+    <ul>
+      <li>Root div (<code>flex items-center py-5 px-6 gap-4</code>): add <code>max-md:gap-2 max-md:px-3 max-md:py-2</code>.</li>
+      <li>Each player section (<code>flex-1 text-center min-w-0 py-3 px-2 …</code>): add <code>max-md:py-1.5</code>.</li>
+      <li>Each avatar ring (<code>size-10.5 rounded-full …</code>): add <code>max-md:hidden</code>.</li>
+      <li>Each seed row (<code>flex items-center justify-center gap-1.5 mb-1.5</code>): add <code>max-md:mb-0.5</code>.</li>
+      <li>Each name div (<code>text-lg font-bold text-white truncate …</code>): add <code>max-md:text-sm</code>, and make the inner name <code>&lt;span&gt;</code> <code>min-w-0 truncate</code> so the OVERRIDE tag stays visible.</li>
+      <li>Each wins number (<code>font-mono tabular-nums … text-hero …</code>): add <code>max-md:text-3xl max-md:mt-0</code> to the static classes in its <code>cn(…)</code>.</li>
+      <li>The center column keeps “VS”, the best-of select and “First to N”; the VS span gets <code>max-md:mb-1</code>.</li>
+    </ul>
+  </li>
+  <li><strong>Forfeit section on phones</strong> (the “Quick Forfeit Option” div, around line 499) collapses behind a toggle so the games stay in view. Add <code>const isMobile = useIsMobile();</code> (from <code>src/components/ui/useMediaQuery</code>) and <code>const [forfeitOpen, setForfeitOpen] = useState(false);</code>. The header row (<code>ShieldAlert</code> and the label) becomes a <code>&lt;button type="button"&gt;</code> with the same classes plus <code>w-full cursor-pointer text-left</code>, <code>aria-expanded={!isMobile || forfeitOpen}</code>, and <code>onClick={() =&gt; setForfeitOpen(o =&gt; !o)}</code>, with a trailing <code>ChevronDown</code> (size 14, <code>ml-auto md:hidden</code>, rotated with <code>rotate-180</code> when open). The award buttons row renders when <code>!isMobile || forfeitOpen</code>; on desktop it always renders as today. On phones the award buttons get <code>max-md:min-h-11 max-md:flex-1</code> and the row gets <code>max-md:flex-col</code>.</li>
+  <li><code>ManualSlotOverrideSection</code> is already collapsed behind its own toggle button; leave its behaviour, apply only the bullet below.</li>
   <li><strong>BestOfSelect.tsx and ManualSlotOverrideSection.tsx:</strong> selects and buttons are <code>max-md:w-full</code>; any side-by-side selects stack (<code>max-md:flex-col max-md:items-stretch</code>).</li>
   <li><strong>ClearableNumberInput.tsx:</strong> add <code>inputMode="numeric"</code> to the <code>&lt;input&gt;</code>. Nothing else changes (it is also used in settings).</li>
 </ul>
@@ -60,6 +81,8 @@
 <ul class="check">
   <li>Score a match end to end: open the sheet, enter both scores (numeric keypad appears), pick the winner, Save &amp; Advance.</li>
   <li>Save stays visible without scrolling to the bottom of the sheet.</li>
+  <li>The sheet fills the screen; Game 1's score inputs are visible without scrolling on a 360×800 screen for a best-of-3 match.</li>
+  <li>The forfeit buttons appear only after tapping “Forfeit / Disqualification Overrides”; on desktop they show as before.</li>
   <li>Switch tiers and filter rounds by swiping the chip rows.</li>
 </ul>
 </main>

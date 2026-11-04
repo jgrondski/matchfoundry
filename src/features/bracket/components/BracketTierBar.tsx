@@ -169,7 +169,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
         )}
 
         {onChangeViewMode && (
-          <div className="inline-flex items-center gap-0.5 rounded-sm border border-line bg-canvas p-0.5">
+          <div className="inline-flex items-center gap-0.5 rounded-sm border border-line bg-canvas p-0.5 max-md:hidden">
             <Chip
               size="sm"
               active={viewMode === 'standard'}
