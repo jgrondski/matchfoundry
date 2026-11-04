@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.6 Sign-off</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.6</nav>
+<h1>Step 12.6: Sign-off</h1>
+<p class="subtitle">New mobile screenshots, the full overflow run, and the docs that describe the mobile rules. Phase 12 is done when this step passes.</p>
+
+<div class="box"><p><strong>Wave 3.</strong> Runs alone, after the wave 2 gate. Usually run by the coordinator. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions. This step may edit <code>e2e/visual/visual.spec.ts</code>.</p></div>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>e2e/visual/visual.spec.ts</code>, <code>docs/UI_ARCHITECTURE.md</code>, <code>docs/TESTING_STRATEGY.md</code>, <code>docs/MatchFoundry-Product-Spec.md</code>, <code>CLAUDE.md</code>, <code>docs/implementation_plan.md</code>, <code>docs/specs/index.html</code></td></tr>
+</table>
+
+<h2>A. New screenshots (visual.spec.ts)</h2>
+<ol class="steps">
+  <li>Add <code>{ name: 'bracket-compact', path: `/${FIXTURE_SLUG}/${FIXTURE_TIER_SLUG}?view=compact`, admin: false }</code> to <code>PAGES</code> (both projects).</li>
+  <li>Add <code>seeding</code>: <code>/${FIXTURE_SLUG}/manage/seeding</code>, admin, served with <code>MANUAL_SEEDING</code> (extend the <code>PAGES</code> entry type with an optional <code>options?: MockOptions</code> passed to <code>prepare</code>).</li>
+  <li>Add a mobile-only test <code>overlay: score sheet (mobile)</code>, the mirror of the existing desktop drawer test with <code>test.skip(testInfo.project.name !== 'visual-mobile', 'Mobile only')</code>, screenshot <code>overlay-score-sheet-mobile.png</code>.</li>
+  <li>Add a mobile-only test <code>overlay: admin menu (mobile)</code>: open <code>/${FIXTURE_SLUG}/manage/judge</code> as admin, click the bottom bar's “Menu” button, screenshot <code>overlay-admin-menu-mobile.png</code>.</li>
+  <li>Run <code>npm run test:visual</code>; the new screenshots fail as missing. Review them, and with the user's approval run <code>npm run test:visual:update</code>.</li>
+</ol>
+
+<h2>B. Full checks</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code>, <code>npm test</code> and <code>npx eslint src</code> (0 errors) pass.</li>
+  <li><code>npm run test:overflow</code> passes for every row.</li>
+  <li><code>npm run test:visual</code> passes; desktop baselines are the same files as before Phase 12 (check with <code>git log -- e2e/visual/__screenshots__/visual-desktop</code>: no Phase 12 commit touched them).</li>
+  <li><code>npm run test:e2e</code> and <code>npx playwright test e2e/overlays.spec.ts --project=chromium</code> pass.</li>
+  <li>Manual pass at 360×800 through every route in the overflow list: no control needs pinch-zoom, and every action on each page can be reached.</li>
+</ul>
+
+<h2>C. Docs</h2>
+<ul>
+  <li><code>docs/UI_ARCHITECTURE.md</code>: add a “Mobile” subsection under Styling covering the conventions from the index (breakpoint, <code>max-md:</code> vs <code>useIsMobile()</code>, 44px targets, 16px inputs, chip rows, sticky offsets, sheet footers, card lists), the overlay <code>mobile</code> prop, Back-button handling, the spectator bottom nav, the admin top and bottom bars (shortcuts, Menu sheet, bottom clearance), and the compact bracket view.</li>
+  <li><code>docs/TESTING_STRATEGY.md</code>: describe the overflow test (<code>npm run test:overflow</code>, the <code>mobile-overflow</code> project, step tags, the offender list) and update the screenshot count and list.</li>
+  <li><code>docs/MatchFoundry-Product-Spec.md</code>: describe the phone experience (bottom tab bar, admin menu, compact bracket default on public pages, card lists).</li>
+  <li><code>CLAUDE.md</code> §5: add one bullet: “Mobile: every route must pass <code>npm run test:overflow</code> at 360×800; follow the Mobile section of <code>docs/UI_ARCHITECTURE.md</code>.” Add <code>npm run test:overflow</code> to §6.</li>
+  <li><code>docs/implementation_plan.md</code>: mark Phase 12 <strong>Complete</strong> in the roadmap table and the mermaid chart, replace the Phase 12 section's execution detail with a short summary of what shipped, and set the current focus to the next item.</li>
+  <li>Delete <code>docs/specs/phase-12/</code> and remove Phase 12 from <code>docs/specs/index.html</code>; the implementation plan carries the record.</li>
+</ul>
+</main>
+</body>
+</html>

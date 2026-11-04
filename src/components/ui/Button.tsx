@@ -9,7 +9,7 @@ export type ButtonSize = 'sm' | 'md';
 const BASE =
   'inline-flex items-center justify-center font-sans font-semibold rounded-sm border border-transparent ' +
   'cursor-pointer no-underline whitespace-nowrap transition-all duration-150 ease-in-out ' +
-  'disabled:cursor-not-allowed disabled:opacity-60';
+  'disabled:cursor-not-allowed disabled:opacity-60 max-md:min-h-11';
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:

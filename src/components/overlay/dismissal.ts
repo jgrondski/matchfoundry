@@ -1,4 +1,4 @@
-export type DismissReason = 'backdrop' | 'escape' | 'button';
+export type DismissReason = 'backdrop' | 'escape' | 'back' | 'button';
 export type DismissResult = 'close' | 'confirm' | 'ignore';
 
 export interface DismissState {

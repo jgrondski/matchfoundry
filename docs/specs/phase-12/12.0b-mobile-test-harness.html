@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.0b Mobile Test Harness</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.0b</nav>
+<h1>Step 12.0b: Mobile test harness</h1>
+<p class="subtitle">One overflow test per route, written once and tagged with the step that owns the route, so later steps never edit a shared test file. Mocks for every route the test visits.</p>
+
+<div class="box"><p><strong>Wave 1.</strong> Runs in parallel with 12.0a, 12.1a and 12.1c. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions. This step is the only one in wave 1 or 2 allowed to edit <code>e2e/visual/*</code> and <code>scripts/generateVisualFixtures.ts</code>.</p></div>
+
+<h2>Files</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>e2e/visual/mockApi.ts</code>, <code>e2e/visual/visual.spec.ts</code>, <code>scripts/generateVisualFixtures.ts</code>, <code>playwright.config.ts</code>, <code>package.json</code> (scripts only)</td></tr>
+  <tr><td>Create</td><td><code>e2e/visual/mobileOverflow.spec.ts</code></td></tr>
+</table>
+
+<h2>Part A: Shared helpers in mockApi.ts</h2>
+<ol class="steps">
+  <li>Move <code>FIXED_TIME</code>, <code>prepare</code> and <code>settle</code> from <code>visual.spec.ts</code> into <code>mockApi.ts</code> and export all three. <code>visual.spec.ts</code> imports them. No behavior change: every existing screenshot test runs exactly as before.</li>
+  <li>Give <code>installApiMocks</code> and <code>prepare</code> an optional last parameter:
+<pre><code>export interface MockOptions {
+  /** Transforms the full tournament fixture before it is served (GET /api/tournaments/:slugOrId). */
+  tournament?: (t: any) =&gt; any;
+}
+export async function installApiMocks(page: Page, options: MockOptions = {}): Promise&lt;string[]&gt;
+export async function prepare(page: Page, admin: boolean, options: MockOptions = {}): Promise&lt;string[]&gt;</code></pre>
+  The single-tournament route serves <code>options.tournament ? options.tournament(structuredClone(fixtures.tournament)) : fixtures.tournament</code>. <code>prepare</code> passes <code>options</code> through.</li>
+  <li>Export <code>MANUAL_SEEDING: MockOptions</code> = <code>{ tournament: t =&gt; ({ ...t, seedingMethod: 'MANUAL', manualSeeds: t.playersPool.map((p: any) =&gt; p.id) }) }</code>. The fixture tournament uses qualifiers, so this is how the seeding manager gets rendered.</li>
+  <li>Export <code>FIXTURE_ORG_SLUG</code>: the <code>slug</code> of the organization in <code>fixtures.organizations</code> whose <code>id</code> equals <code>fixtures.tournament.organizationId</code>. Throw at module load if none matches.</li>
+</ol>
+
+<h2>Part B: Its own Playwright project and npm script</h2>
+<p>The overflow test must not run inside <code>npm run test:visual</code> (rows for unfinished steps fail by design until their step lands) or <code>npm run test:e2e</code>.</p>
+<ol class="steps">
+  <li><code>playwright.config.ts</code>: add <code>testIgnore: '**/mobileOverflow.spec.ts'</code> to the <code>visual-desktop</code> and <code>visual-mobile</code> projects. Add a project after them:
+<pre><code>{
+  name: 'mobile-overflow',
+  testDir: './e2e/visual',
+  testMatch: 'mobileOverflow.spec.ts',
+  use: {
+    ...devices['Desktop Chrome'],
+    viewport: { width: 360, height: 800 },
+    deviceScaleFactor: 1,
+    isMobile: true,
+    hasTouch: true,
+  },
+},</code></pre>
+  The <code>chromium</code> project already ignores <code>**/visual/**</code>.</li>
+  <li><code>package.json</code>: add <code>"test:overflow": "npm run visual:fixtures &amp;&amp; playwright test --project=mobile-overflow"</code> next to <code>test:visual</code>. Pass a step filter through npm with <code>npm run test:overflow -- --grep "\[12.2a\]"</code>; the npm-free form is <code>npx playwright test --project=mobile-overflow --grep "\[12.2a\]"</code>.</li>
+</ol>
+
+<h2>Part C: mobileOverflow.spec.ts</h2>
+<p>Write the file with this structure and exactly these rows. <code>S</code> is <code>FIXTURE_SLUG</code>, <code>T</code> is <code>FIXTURE_TIER_SLUG</code>, <code>O</code> is <code>FIXTURE_ORG_SLUG</code>.</p>
+<pre><code>import { test, expect } from '@playwright/test';
+import { prepare, settle, MANUAL_SEEDING, FIXTURE_SLUG as S, FIXTURE_TIER_SLUG as T, FIXTURE_ORG_SLUG as O, type MockOptions } from './mockApi';
+
+interface OverflowRoute { step: string; name: string; path: string; admin: boolean; options?: MockOptions }
+
+// Every non-OBS route in src/App.tsx, tagged with the Phase 12 step that makes it mobile-ready.
+// Alias routes that render the same page (/:slug/brackets, /:slug/view, /:slug/bracket,
+// /:slug/quals, /login, /:slug/sheet, /:slug/judge, /:slug/players, /:slug/settings) are covered by their targets.
+const ROUTES: OverflowRoute[] = [
+  { step: '12.1c', name: 'landing', path: '/', admin: false },
+  { step: '12.1a', name: 'public-bracket', path: `/${S}/${T}`, admin: false },
+  { step: '12.1b', name: 'manage-bracket', path: `/${S}/manage/bracket/${T}`, admin: true },
+  { step: '12.2a', name: 'judge', path: `/${S}/manage/judge`, admin: true },
+  { step: '12.2b', name: 'leaderboard', path: `/${S}/leaderboard`, admin: false },
+  { step: '12.2b', name: 'manage-qualifiers', path: `/${S}/manage/qualifiers`, admin: true },
+  { step: '12.2c', name: 'review', path: `/${S}/manage/review`, admin: true },
+  { step: '12.3', name: 'public-bracket-compact', path: `/${S}/${T}?view=compact`, admin: false },
+  { step: '12.4a', name: 'standings', path: `/${S}/standings`, admin: false },
+  { step: '12.4a', name: 'manage-standings', path: `/${S}/manage/standings`, admin: true },
+  { step: '12.4b', name: 'manage-players', path: `/${S}/manage/players`, admin: true },
+  { step: '12.4c', name: 'players', path: '/players', admin: true },
+  { step: '12.5a', name: 'settings', path: `/${S}/manage/settings`, admin: true },
+  { step: '12.5b', name: 'manage-seeding', path: `/${S}/manage/seeding`, admin: true, options: MANUAL_SEEDING },
+  { step: '12.5b', name: 'public-seeding', path: `/${S}/seeding`, admin: false, options: MANUAL_SEEDING },
+  { step: '12.5c', name: 'manage-sheet', path: `/${S}/manage/sheet`, admin: true },
+  { step: '12.5d', name: 'organizations', path: '/organizations', admin: true },
+  { step: '12.5d', name: 'org-detail', path: `/org/${O}`, admin: true },
+  { step: '12.5e', name: 'obs-hub', path: `/${S}/obs`, admin: false },
+  { step: '12.5e', name: 'admin-login', path: '/admin', admin: false },
+  { step: '12.5f', name: 'qualify', path: `/${S}/qualify`, admin: false },
+];
+
+for (const r of ROUTES) {
+  test(`[${r.step}] no horizontal overflow: ${r.name}`, async ({ page }) =&gt; {
+    const unmocked = await prepare(page, r.admin, r.options);
+    await page.goto(r.path);
+    await settle(page);
+    const offenders = await page.evaluate(() =&gt; {
+      // clientWidth, not innerWidth: with isMobile, Chromium widens innerWidth to fit wide content.
+      const limit = document.documentElement.clientWidth + 0.5;
+      const out: string[] = [];
+      for (const el of Array.from(document.body.querySelectorAll('*'))) {
+        if (el.getBoundingClientRect().right &lt;= limit) continue;
+        // Skip content clipped by a scroll or hidden-overflow ancestor (it doesn't widen the page).
+        let clipped = false;
+        for (let p = el.parentElement; p &amp;&amp; p !== document.body; p = p.parentElement) {
+          const ox = getComputedStyle(p).overflowX;
+          if (ox !== 'visible' &amp;&amp; p.getBoundingClientRect().right &lt;= limit) { clipped = true; break; }
+        }
+        if (clipped) continue;
+        const testId = el.getAttribute('data-testid');
+        const cls = (el.getAttribute('class') ?? '').slice(0, 80);
+        out.push(`${el.tagName.toLowerCase()}${testId ? `[data-testid=${testId}]` : ''} .${cls}`);
+        if (out.length &gt;= 10) break;
+      }
+      return out;
+    });
+    const overflow = await page.evaluate(() =&gt; document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(unmocked, 'unmocked API GETs').toEqual([]);
+    expect(overflow, `page is ${overflow}px too wide. Elements past the right edge:\n${offenders.join('\n')}`).toBeLessThanOrEqual(0);
+  });
+}</code></pre>
+
+<h2>Part D: Make every route render under the mocks</h2>
+<p>Run <code>npm run test:overflow</code> (with <code>npm run dev</code> running). Overflow failures are expected and are not yours to fix. <strong>Unmocked-GET failures are yours:</strong> for each distinct unmocked endpoint:</p>
+<ol class="steps">
+  <li>In <code>scripts/generateVisualFixtures.ts</code>, append a <code>write('&lt;camelCaseName&gt;', await getJson(middleware, '&lt;url&gt;'))</code> call after the existing ones, using the fixture tournament's or organization's real id or slug in the URL. Pass <code>token</code> as the third argument only if the endpoint returns 401 or 403 without it. New calls go last so the existing fixtures stay identical.</li>
+  <li>In <code>mockApi.ts</code>, load the new fixture in <code>fixtures</code> and add a route that matches the endpoint's path pattern (with a regex like the existing <code>qualify/sessions</code> one), placed before the final unmocked fallback.</li>
+  <li>Known in advance: the organization dashboard fetches <code>/api/organizations/:id/tournaments</code>; fixture name <code>orgTournaments</code>, generated with the fixture tournament's <code>organizationId</code>.</li>
+  <li>If a page shows an error state or a “not found” screen instead of its content even with no unmocked GETs, report the route and what it shows; do not change application code.</li>
+</ol>
+<p>Then run <code>npm run visual:fixtures</code> twice and confirm the second run writes byte-identical files (compare with a checksum, for example <code>node -e</code> hashing each file, since fixtures are gitignored).</p>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx playwright test --project=visual-desktop</code> passes unchanged and lists no overflow tests (proves the helper move changed nothing and the ignore works). Do not run the <code>visual-mobile</code> project; 12.0a changes it.</li>
+  <li><code>npx playwright test --project=chromium --list</code> lists no overflow tests.</li>
+  <li><code>npm run test:overflow</code>: no test fails on unmocked GETs. In your report, list every route with its overflow result (pass, or the pixel count and first offender).</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.1a\]"</code> runs exactly one test (proves the tag filter works).</li>
+</ul>
+</main>
+</body>
+</html>

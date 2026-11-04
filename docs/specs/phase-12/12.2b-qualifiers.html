@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.2b Qualifiers</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.2b</nav>
+<h1>Step 12.2b: Qualifiers</h1>
+<p class="subtitle">The qualifiers leaderboard (public <code>/:slug/leaderboard</code> and <code>/:slug/manage/qualifiers</code>) becomes a card list on phones, Record Qual Score is always in reach, and the entry and detail sheets fit.</p>
+
+<div class="box"><p><strong>Wave 2.</strong> Needs wave 1's gate. Runs in parallel with every other wave 2 step. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions, especially “Card lists”.</p></div>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>src/features/qualifiers/components/LeaderboardTable.tsx</code>, <code>src/features/qualifiers/components/QualifierEntryModal.tsx</code>, <code>src/features/qualifiers/components/CreatablePlayerSelect.tsx</code>, <code>src/features/qualifiers/components/PlayerDetailDrawer.tsx</code>, <code>src/features/qualifiers/components/TournamentQualTimerHud.tsx</code></td></tr>
+  <tr><td>Create</td><td><code>src/features/qualifiers/components/LeaderboardCardList.tsx</code>, <code>src/features/qualifiers/__tests__/leaderboardCardList.test.tsx</code></td></tr>
+</table>
+<p><code>src/routes/PublicLeaderboardPage.tsx</code> is not in this step: it also renders the seeding manager, which belongs to 12.5b. The page header (<code>TournamentPageHeader</code>) was done in 12.1c.</p>
+
+<h2>A. LeaderboardCardList.tsx</h2>
+<ol class="steps">
+  <li>In <code>LeaderboardTable.tsx</code>, the rows already come from <code>deriveLeaderboard(tournament)</code> filtered into <code>filteredRows</code>, and tier cutoffs are in <code>cutoffRanks</code>. Leave that as is. For each cell value the card shows (below) whose formatting is inline JSX in the table, extract that expression into an exported function in <code>LeaderboardTable.tsx</code> (for example <code>formatPrimaryMetric(row, format)</code>, <code>getVerifiedStatus(row)</code>) and call it from both the table cell and the card. Rendering in the table must stay identical.</li>
+  <li>Props:
+<pre><code>interface LeaderboardCardListProps {
+  rows: LeaderboardRankRow[];
+  format: Tournament['qualFormat'];
+  targetX: number;
+  hasBrackets: boolean;
+  cutoffRanks: Map&lt;number, { tierName: string; color: string; count: number }&gt;;
+  isObsMode: boolean;
+  onSelectRow: (row: LeaderboardRankRow) =&gt; void;
+}</code></pre></li>
+  <li><code>LeaderboardTable</code> renders <code>&lt;LeaderboardCardList … /&gt;</code> in place of the <code>&lt;table&gt;</code> (and its scroll wrapper) when <code>useIsMobile()</code> is true. The header, filter chips, empty-state text and <code>PlayerDetailDrawer</code> stay shared. <code>onSelectRow</code> does what the table row's <code>onClick</code> does (set the selected player and rank row); in OBS mode the cards are not buttons.</li>
+  <li>Each row is an <code>&lt;li&gt;</code> with a <code>Card padding="sm"</code> containing a <code>&lt;button type="button" className="w-full text-left"&gt;</code>. Tier-qualified rows get a left border in the tier color, as the table row does (<code>border-l-4</code> with the runtime color as an inline style, using the same eslint-disable comment format the table uses).</li>
+</ol>
+<table>
+  <tr><th>Card line</th><th>Content (by qual format)</th></tr>
+  <tr><td>Line 1</td><td>Rank (<code>w-8 shrink-0 font-mono text-sm font-bold</code>), flag and name (<code>min-w-0 flex-1 truncate font-semibold</code>), primary metric right-aligned (<code>shrink-0 font-mono font-bold</code>): <code>AVERAGE_OF_X</code> → average score; <code>HIGH_SCORE</code> → top score; <code>POINTS</code> → total points. Same values and formatting as the table cells.</td></tr>
+  <tr><td>Line 2</td><td>Status badge (the same states as the Verified column), playstyle chip, and the bracket seed when <code>hasBrackets</code>. Wraps (<code>flex flex-wrap gap-1.5</code>).</td></tr>
+  <tr><td>Line 3</td><td><code>AVERAGE_OF_X</code>: the top-score chips. <code>HIGH_SCORE</code>: “Maxes 3 · Kicker 812,340” built from the same values as the two columns. <code>POINTS</code>: the points breakdown in its existing compact form.</td></tr>
+</table>
+<p>Tier cutoff dividers render between cards, after the row whose rank is a key of <code>cutoffRanks</code>, as a full-width <code>&lt;li role="separator"&gt;</code> with the same text the table divider shows, in the tier color.</p>
+
+<h2>B. Record Qual Score on phones</h2>
+<p>The <code>Button</code> with <code>data-testid="open-qualifier-entry"</code> (around line 112) stays one element. Add <code>max-md:fixed max-md:inset-x-3 max-md:bottom-[calc(4.25rem+env(safe-area-inset-bottom))] max-md:z-40 max-md:py-3 max-md:shadow-lg</code> so it floats full width just above the admin bottom bar (see “Admin bottom bar clearance” in the conventions). When <code>canManage</code>, the component's root gets <code>max-md:pb-20</code> so the button never covers the last card.</p>
+
+<h2>C. Entry and detail sheets</h2>
+<ul>
+  <li><strong>QualifierEntryModal.tsx:</strong> every score input gets <code>inputMode="numeric"</code> (if not already) and <code>max-md:text-base</code>. The submit/cancel footer uses the sticky sheet footer classes from the conventions with full-width buttons.</li>
+  <li><strong>CreatablePlayerSelect.tsx:</strong> the dropdown list gets <code>max-md:max-h-[40dvh] overflow-y-auto max-md:w-full</code>; options get <code>max-md:min-h-11</code>; the input gets <code>max-md:text-base</code>.</li>
+  <li><strong>PlayerDetailDrawer.tsx:</strong> sections stack; stat grids with 3 or more columns get <code>max-md:grid-cols-2</code>; any score input gets <code>inputMode="numeric"</code>; horizontal paddings above <code>px-4</code> get <code>max-md:px-4</code>.</li>
+  <li><strong>TournamentQualTimerHud.tsx:</strong> the <code>compact</code> variant fits in 328px: its row gets <code>flex-wrap</code> and text items <code>min-w-0</code>.</li>
+</ul>
+
+<h2>D. Tests</h2>
+<p><code>leaderboardCardList.test.tsx</code> (<code>renderToStaticMarkup</code>): for each of <code>AVERAGE_OF_X</code>, <code>HIGH_SCORE</code> and <code>POINTS</code>, build a small tournament fixture in the test (follow the fixture builders used by existing tests in <code>src/features/qualifiers/__tests__</code>), run <code>deriveLeaderboard</code>, render the card list, and assert each row's rank, name and primary metric text appear. Assert one cutoff separator appears when a tier cutoff falls inside the rows. Existing leaderboard tests pass unchanged.</p>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/features/qualifiers</code> passes.</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.2b\]"</code> passes, or fails only on elements in other steps' files (report them).</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>Public leaderboard shows cards; tapping one opens the player sheet.</li>
+  <li>As an admin on manage qualifiers, Record Qual Score floats at the bottom; record a score with the numeric keypad.</li>
+</ul>
+</main>
+</body>
+</html>

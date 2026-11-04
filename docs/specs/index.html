@@ -9,94 +9,128 @@
 <body>
 <main>
 <h1>MatchFoundry Execution Specs</h1>
-<p class="subtitle">Event readiness (speed, safe concurrent writes, live updates, loading states), then Phase 12 (mobile-friendly app). Start here.</p>
+<p class="subtitle">Phase 12: mobile-friendly app (360×800 and up), split into steps that run in parallel. Start here.</p>
 
 <h2>How to use these specs</h2>
-<p>Each step of each phase has its own HTML file. A step file is written so that one session, of any model, can execute it from start to finish without making design decisions. To hand a step to a session, use this prompt:</p>
-<pre><code>Read docs/specs/index.html (the "Rules for every executor" section), then execute
-docs/specs/&lt;folder&gt;/&lt;step file&gt;.html exactly as written. Do not start any other step.
-If the spec does not cover a situation, stop and ask instead of improvising.</code></pre>
+<p>Each step has its own HTML file. A step file is written so that one session, of any model, can execute it from start to finish without making design decisions. To hand a step to a session, use this prompt:</p>
+<pre><code>Read docs/specs/index.html (the "Rules for every executor" and "Phase 12 conventions"
+sections), then execute docs/specs/phase-12/&lt;step file&gt;.html exactly as written.
+Do not start any other step. If the spec does not cover a situation, stop and ask
+instead of improvising.</code></pre>
+<p>The coordinator (the user, or a session the user names) launches the steps of one wave at the same time, waits for all of them, then runs that wave's gate before starting the next wave.</p>
 
 <h2>Rules for every executor</h2>
 <ol class="steps">
-  <li><strong>Git.</strong> Confirm the current branch with <code>git branch --show-current</code>. If it is not the branch the user named for this work, or <code>main</code>, stop and ask. Never create branches, never commit, never push. Leave all changes uncommitted.</li>
-  <li><strong>Stay in scope.</strong> Edit only the files the step lists. If a fix seems to need a file outside the list, stop and report it instead of editing it.</li>
-  <li><strong>Frozen shared files.</strong> These files are frozen for every step except the steps that name them explicitly: <code>src/index.css</code>, <code>src/components/ui/*</code>, <code>src/components/overlay/*</code>, <code>eslint.config.js</code>, <code>playwright.config.ts</code>, <code>e2e/visual/*</code>. If you need a new shared component or token, write the request in your final report and continue without it.</li>
-  <li><strong>No behavior changes</strong> unless the step explicitly asks for one.</li>
+  <li><strong>Git.</strong> Confirm the current branch with <code>git branch --show-current</code>. If it is not the branch the user named for this work, or <code>main</code>, stop and ask. Never create branches, never commit, never push, never stage. Leave all changes uncommitted.</li>
+  <li><strong>Stay in scope.</strong> Edit only the files your step lists. Create only the files your step lists. If a fix seems to need a file outside the list, stop and report it instead of editing it.</li>
+  <li><strong>Frozen shared files.</strong> These files are frozen for every step except the steps that name them explicitly: <code>src/index.css</code>, <code>index.html</code>, <code>src/components/ui/*</code>, <code>src/components/overlay/*</code>, <code>eslint.config.js</code>, <code>playwright.config.ts</code>, <code>package.json</code>, <code>e2e/visual/*</code>, <code>scripts/generateVisualFixtures.ts</code>. If you need a new shared component or token, write the request in your final report and continue without it.</li>
+  <li><strong>No behavior changes</strong> unless the step explicitly asks for one. Desktop (768px and wider) must look exactly as it does today.</li>
   <li><strong>Cross-platform.</strong> Scripts and npm commands must work in PowerShell and in Bash/Zsh. Normalize paths with <code>.replace(/\\/g, '/')</code> before comparing them. Never hardcode a database port.</li>
-  <li><strong>Commands.</strong> Run the narrowest check that proves the work: <code>npm run typecheck</code>, then <code>npx vitest run &lt;paths&gt;</code>. Run full <code>npm test</code> only where the step says to. Do not run <code>npm run lint</code> across the whole repo.</li>
-  <li><strong>Visual tests.</strong> <code>npm run test:visual</code> is run where the step says. Never run <code>npm run test:visual:update</code> unless the step tells you to; updating baselines is a coordinator decision.</li>
-  <li><strong>Parallel steps.</strong> Steps that run in parallel edit the same working tree at the same time. <code>npm run typecheck</code> and some Vitest runs cover more than your step, so they can show errors from another step's unfinished file. If every error is in a file outside your step, list each one (file and line) in your report and keep working; never edit another step's file to make it pass. Errors in your own files must be fixed. Do not run <code>npm run test:visual</code> while other steps are running; run it once all parallel steps finish.</li>
-  <li><strong>Final report.</strong> End with: files changed, commands run with pass/fail, anything skipped and why, any <code>eslint-disable</code> lines added (file, line and reason), requests for shared changes, and visual test results.</li>
+  <li><strong>Commands.</strong> Run the narrowest check that proves the work: <code>npm run typecheck</code>, then <code>npx vitest run &lt;paths&gt;</code>. Do not run full <code>npm test</code>, <code>npm run test:visual</code> or <code>npm run lint</code> across the whole repo; the coordinator runs them at the gate. You may run <code>npx eslint &lt;your files&gt;</code>.</li>
+  <li><strong>Overflow check.</strong> From wave 2 on, each step runs only its own rows of the overflow test: <code>npx playwright test --project=mobile-overflow --grep "\[&lt;step id&gt;\]"</code> (for example <code>--grep "\[12.2a\]"</code>). A failure message lists the elements that stick out past the right edge. Fix every one that is inside your files. If an offending element is in a file another step owns (for example the admin sidebar before 12.1b lands), list it in your report and do not fix it. Never run <code>npm run test:visual</code> or <code>test:visual:update</code>.</li>
+  <li><strong>Parallel steps share one working tree.</strong> <code>npm run typecheck</code> and some Vitest runs cover more than your step, so they can show errors from another step's unfinished file. If every error is in a file outside your step, list each one (file and line) in your report and keep working; never edit another step's file to make it pass. Errors in your own files must be fixed.</li>
+  <li><strong>Final report.</strong> End with: files changed and created, commands run with pass/fail, overflow results for your rows, anything skipped and why, any <code>eslint-disable</code> lines added (file, line and reason), requests for shared changes, and errors seen in other steps' files.</li>
 </ol>
 
-<h2>Event readiness (ER): before the event</h2>
-<p><strong>Goal:</strong> writes take well under a second, two judges saving at once never lose each other's work, every open page updates without a refresh, and every action shows inline loading with a 10-second timeout. Then Phase 12 steps 12.0–12.2.</p>
-<table>
-  <tr><th>Step</th><th>File</th><th>Depends on</th><th>Summary</th></tr>
-  <tr><td>ER.1</td><td><a href="event-readiness/ER.1-request-timing.html">Request timing</a></td><td>None</td><td><code>Server-Timing</code> header and <code>[api]</code> log lines with duration and query count.</td></tr>
-  <tr><td>ER.2</td><td><a href="event-readiness/ER.2-db-driver-and-transactions.html">Driver and transactions</a></td><td>ER.1</td><td>Neon WebSocket pool, real transactions, parallel tournament loads, real-Postgres test tier (<code>npm run test:pg</code>).</td></tr>
-  <tr><td>ER.3</td><td><a href="event-readiness/ER.3-tournament-write-lock.html">Tournament write lock</a></td><td>ER.2</td><td>Every tournament write runs under a row lock with a revision bump; a stale settings save can no longer undo scores.</td></tr>
-  <tr><td>ER.4</td><td><a href="event-readiness/ER.4-targeted-match-writes.html">Targeted match writes</a></td><td>ER.3</td><td>Score, forfeit and best-of write only their own rows; per-match revision returns a clear conflict message.</td></tr>
-  <tr><td>ER.5</td><td><a href="event-readiness/ER.5-realtime-worker.html">Realtime worker</a></td><td>None</td><td>Cloudflare Worker and Durable Object that fans out “tournament changed” messages; event-day keep-warm cron.</td></tr>
-  <tr><td>ER.6</td><td><a href="event-readiness/ER.6-live-updates-client.html">Live updates</a></td><td>ER.3, ER.5 (and ER.7 first if pending)</td><td>API publishes after writes; pages refresh on their own; CDN-cached anonymous refreshes; server clock for the qual timer.</td></tr>
-  <tr><td>ER.7</td><td><a href="event-readiness/ER.7-busy-foundation.html">Loading foundation</a></td><td>None</td><td>Spinner, <code>useAction</code>, global busy lock, 10-second timeout, shared error banner.</td></tr>
-  <tr><td>ER.8</td><td><a href="event-readiness/ER.8-busy-flows.html">Loading flows</a></td><td>ER.4, ER.6, ER.7</td><td>Judge, qualifier, review-queue and admin actions converted to the loading pattern.</td></tr>
-  <tr><td>ER.9</td><td><a href="event-readiness/ER.9-tournament-summary-list.html">Tournament summaries</a></td><td>ER.4</td><td><code>GET /api/tournaments</code> returns small summaries in 5 queries; each page loads only its own tournament in full.</td></tr>
-  <tr><td>ER.10</td><td><a href="event-readiness/ER.10-hide-image-uploads.html">Hide image uploads</a></td><td>None</td><td>Removes avatar, org logo/banner and tournament logo/banner controls; saved images keep displaying.</td></tr>
-  <tr><td>ER.11</td><td><a href="event-readiness/ER.11-event-dates.html">Event dates</a></td><td>ER.9</td><td>Free-text date replaced by validated start and end dates in two <code>date</code> columns, with date pickers and formatted display.</td></tr>
-  <tr><td>ER.12</td><td><a href="event-readiness/ER.12-keep-warm-schedule.html">Keep-warm schedule</a></td><td>ER.11</td><td>The worker fetches event-day windows from the API once a day instead of hand-edited dates in <code>wrangler.toml</code>.</td></tr>
-</table>
-<p>Main chain: ER.1 → ER.2 → ER.3 → ER.4 → ER.9 → ER.6 → ER.8. ER.11 can run alongside ER.6 (the only shared file is <code>src/server/api.ts</code>, two small edits); ER.12 follows ER.11 and must not run alongside ER.6. ER.10 can run any time, including alongside ER.9 (no shared files). ER.5 can run any time (it touches nothing under <code>src/</code>). ER.7 can run alongside ER.2–ER.4. ER.5 must be deployed by the user before live updates work in production (see ER.5 section G).</p>
+<h2>Phase 12 conventions</h2>
+<p><strong>Goal:</strong> every route works on a 360×800 phone with no sideways page scroll, tap targets of at least 44px, and readable text. Priority: spectators navigating from the landing page, then floor judges (match scoring, qualifier entry, review queue), then the compact bracket, then everything else. Read the Styling section of <a href="../UI_ARCHITECTURE.md">docs/UI_ARCHITECTURE.md</a> first; it governs every class choice.</p>
+<ul>
+  <li><strong>Mobile</strong> means below Tailwind's <code>md</code> breakpoint (768px). Phone-only styles use the <code>max-md:</code> variant layered on top of the existing desktop classes. Desktop classes are not rewritten or removed.</li>
+  <li><strong><code>useIsMobile()</code></strong> (exported from <code>src/components/ui</code>, defined in <code>src/components/ui/useMediaQuery.ts</code>) is used only when the structure differs: a table becomes a card list, or a sidebar becomes a menu. Everything else uses <code>max-md:</code> classes. In unit tests <code>useIsMobile()</code> returns false, so existing desktop assertions stay valid.</li>
+  <li><strong>Targets:</strong> a 360×800 viewport has no page-level horizontal scroll; interactive controls in phone layouts are at least 44×44px (<code>min-h-11</code>, <code>min-w-11</code>); body text is at least <code>text-xs</code>; text inputs are <code>max-md:text-base</code> (16px stops iOS from zooming on focus).</li>
+  <li><strong>Numeric inputs</strong> (scores, PINs, seeds) get <code>inputMode="numeric"</code>. URL inputs get <code>inputMode="url"</code>.</li>
+  <li><strong>Wide content that has to stay wide</strong> (the organizer sheet, the full bracket views, the round overrides grid) scrolls inside its own <code>overflow-x-auto</code> container, never the page.</li>
+  <li><strong>Sideways-scrolling chip rows</strong> use exactly: <code>max-md:-mx-3 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3 max-md:[scrollbar-width:none]</code> on the row and <code>shrink-0</code> on each chip.</li>
+  <li><strong>Admin bottom bar clearance.</strong> On phones, admin pages have a fixed bottom bar (12.1b) that is 56px plus the safe area. <code>TournamentLayout</code> already pads the content for it. Anything fixed or sticky at the bottom of an admin page uses <code>max-md:bottom-[calc(3.5rem+env(safe-area-inset-bottom))]</code> (plus any gap, for example <code>max-md:bottom-[calc(4.25rem+env(safe-area-inset-bottom))]</code> for a 0.75rem gap) instead of <code>bottom-0</code>, and does not add its own safe-area padding. Overlays (sheets, modals) cover the bar and need nothing.</li>
+  <li><strong>Sticky bars under the admin shell</strong> use <code>max-md:top-12</code> (the admin top bar from 12.1b is 48px tall). Sticky bars under the spectator header also use <code>max-md:top-12</code> (the spectator header from 12.1a is 48px tall on mobile).</li>
+  <li><strong>Forms:</strong> multi-column form grids become one column (<code>max-md:grid-cols-1</code>); side-by-side field rows stack (<code>max-md:flex-col max-md:items-stretch</code>); inputs and selects are <code>max-md:w-full</code>. Page containers use <code>max-md:px-4 max-md:py-4</code>; page titles drop one size step (for example <code>text-3xl</code> gets <code>max-md:text-2xl</code>). Toolbars with several buttons get <code>flex-wrap</code>; a page's primary action is <code>max-md:w-full</code>.</li>
+  <li><strong>Sticky footers inside bottom sheets</strong> (Save bars in overlays) use exactly: <code>max-md:sticky max-md:bottom-0 max-md:z-10 max-md:-mx-4 max-md:border-t max-md:border-line max-md:bg-surface max-md:px-4 max-md:py-3</code>, and their buttons get <code>max-md:w-full</code> (stack them with <code>max-md:flex-col</code>). If the overlay's panel padding is not <code>p-4</code>, use the matching negative margin and padding instead of <code>-mx-4</code>/<code>px-4</code>.</li>
+  <li><strong>Card lists</strong> (a table that becomes cards on phones):
+    <ol>
+      <li>The card list takes the same row data the table already computes. If that computation is inline in the JSX, first extract it into an exported function in the same file, then use it for both.</li>
+      <li>The parent renders the card list when <code>useIsMobile()</code> is true and the table otherwise. Search, filter and sort controls above the table stay shared and render in both cases.</li>
+      <li>The list is <code>&lt;ul className="flex flex-col gap-2"&gt;</code>; each item is an <code>&lt;li&gt;</code> holding a <code>Card padding="sm"</code>. If a table row is clickable, the whole card is one <code>&lt;button type="button"&gt;</code> doing the same thing. If a row has action buttons, they are <code>IconButton</code>s with plain-word <code>aria-label</code>s in the card's top-right corner (outside the row button).</li>
+      <li>Values and formatting come from the same helper calls the table cells use; never reimplement them.</li>
+      <li>Unit tests use <code>renderToStaticMarkup</code> on the card list component directly (not through the parent, which renders the table in tests).</li>
+    </ol>
+  </li>
+  <li><strong>Screenshots:</strong> desktop screenshots must not change in any Phase 12 step. Mobile screenshots are expected to change; the coordinator reviews and re-baselines them at each gate.</li>
+</ul>
 
-<h2>Phase 12: Mobile-friendly app (360×800 and up)</h2>
-<p><strong>Goal:</strong> every page works on a 360×800 phone with no sideways page scroll, tap targets of at least 44px, and readable text. Priority order: spectators navigating from the landing page, then floor judges (match scoring, qualifier entry, review queue), then the compact bracket, then everything else. The work is not done until every route passes.</p>
-<table>
-  <tr><th>Step</th><th>File</th><th>Depends on</th><th>Summary</th></tr>
-  <tr><td>12.0</td><td><a href="phase-12/12.0-mobile-foundation.html">Mobile foundation</a></td><td>Phase 11 complete</td><td>Phone presentation for overlays (bottom sheets), back-gesture handling, layout helpers, overflow test, new mobile baselines.</td></tr>
-  <tr><td>12.1</td><td><a href="phase-12/12.1-navigation-shell.html">Navigation shell</a></td><td>12.0</td><td>Spectator bottom tab bar and compact header, bracket tier bar, admin top bar and slide-out menu, landing page.</td></tr>
-  <tr><td>12.2</td><td><a href="phase-12/12.2-floor-judge.html">Floor judge tools</a></td><td>12.1</td><td>Judge feed, score sheet, qualifiers management and entry, review queue and adjudication.</td></tr>
-  <tr><td>12.3</td><td><a href="phase-12/12.3-compact-bracket.html">Compact bracket</a></td><td>12.1</td><td>New <code>compact</code> bracket view: seed, name and match wins, keeping the bracket shape.</td></tr>
-  <tr><td>12.4</td><td><a href="phase-12/12.4-data-tables.html">Data tables</a></td><td>12.1</td><td>Leaderboard, standings, roster and global player directory become card lists on phones.</td></tr>
-  <tr><td>12.5</td><td><a href="phase-12/12.5-remaining-pages.html">Remaining pages</a></td><td>12.1–12.4</td><td>Settings, seeding, sheet, OBS hub, organizations, login and competitor portal; then the full-app overflow test for every route.</td></tr>
-</table>
-<p>12.2, 12.3 and 12.4 touch disjoint files and can run in parallel after 12.1.</p>
+<h2>Phase 12 plan: three waves</h2>
+<p>Every step in a wave owns a disjoint set of files, so all steps in a wave can run at the same time. Run them in any order or in batches within the wave; the listed order is priority order. <span class="tag">event</span> marks the steps that must land before the event.</p>
 
-<h2>Qual review workflow</h2>
-<p><strong>Goal:</strong> a qual is its own record that survives having zero scores; saving and verifying are separate; verified quals are locked until unverified; pending quals seed provisional brackets. Run QR.1 then QR.2, both before Phase 12 step 12.2 (12.2 restyles the same review screens).</p>
+<h3>Wave 1: foundation and public shell (4 steps)</h3>
 <table>
-  <tr><th>Step</th><th>File</th><th>Depends on</th><th>Summary</th></tr>
-  <tr><td>QR.1</td><td><a href="qual-review/QR.1-qual-runs.html">Qual records</a></td><td>None</td><td>New <code>qualifier_runs</code> table with lazy backfill; every qual API reads and writes the run; zero-score quals persist.</td></tr>
-  <tr><td>QR.2</td><td><a href="qual-review/QR.2-review-workflow.html">Review workflow</a></td><td>QR.1</td><td>Save vs Verify, Unverify, verified lock, submitted date/time, provisional brackets, lock warning, pending simulated quals, walk-in wording removed.</td></tr>
+  <tr><th>Step</th><th>File</th><th>Owns</th><th>Summary</th></tr>
+  <tr><td>12.0a <span class="tag">event</span></td><td><a href="phase-12/12.0a-overlays-and-touch.html">Overlays and touch sizing</a></td><td><code>src/components/ui/*</code>, <code>src/components/overlay/*</code>, <code>src/index.css</code>, <code>index.html</code>, <code>e2e/overlays.spec.ts</code></td><td>44px shared controls, bottom-sheet overlays, Back closes overlays.</td></tr>
+  <tr><td>12.0b <span class="tag">event</span></td><td><a href="phase-12/12.0b-mobile-test-harness.html">Mobile test harness</a></td><td><code>e2e/visual/*</code>, <code>scripts/generateVisualFixtures.ts</code>, <code>playwright.config.ts</code>, <code>package.json</code> scripts</td><td>Overflow test (<code>npm run test:overflow</code>) for every route, tagged by owning step; shared <code>prepare</code>/<code>settle</code>; mocks for every route.</td></tr>
+  <tr><td>12.1a <span class="tag">event</span></td><td><a href="phase-12/12.1a-spectator-shell.html">Spectator shell</a></td><td><code>SpectatorLayout.tsx</code>, new <code>SpectatorBottomNav.tsx</code>, <code>BracketTierBar.tsx</code></td><td>Compact spectator header, bottom tab bar, tier chip strip.</td></tr>
+  <tr><td>12.1c <span class="tag">event</span></td><td><a href="phase-12/12.1c-landing-and-page-header.html">Landing and page header</a></td><td><code>TopNavSwitcher.tsx</code>, <code>TournamentSwitcherPage.tsx</code>, <code>TournamentCard.tsx</code>, <code>TournamentPageHeader.tsx</code></td><td>Global top nav, landing grid and cards, the shared page header.</td></tr>
+</table>
+<p>12.1a and 12.1c don't use anything from 12.0a or 12.0b. If <code>e2e/visual/mobileOverflow.spec.ts</code> doesn't exist yet when they finish, they skip the overflow command and say so; the gate runs it.</p>
+
+<h3>Wave 2: every page (14 steps)</h3>
+<table>
+  <tr><th>Step</th><th>File</th><th>Summary</th></tr>
+  <tr><td>12.1b <span class="tag">event</span></td><td><a href="phase-12/12.1b-admin-shell.html">Admin shell</a></td><td>Admin top bar (tournament name, Public link) and bottom bar (Judge, Quals, Review, Bracket, Menu sheet) replacing the sidebar rail on phones.</td></tr>
+  <tr><td>12.2a <span class="tag">event</span></td><td><a href="phase-12/12.2a-match-scoring.html">Match scoring</a></td><td>Judge feed, score sheet, number inputs.</td></tr>
+  <tr><td>12.2b <span class="tag">event</span></td><td><a href="phase-12/12.2b-qualifiers.html">Qualifiers</a></td><td>Leaderboard card list, record-score bar, qualifier entry and player detail sheets, timer HUD.</td></tr>
+  <tr><td>12.2c <span class="tag">event</span></td><td><a href="phase-12/12.2c-review-queue.html">Review queue</a></td><td>Review queue card list, adjudication and identity sheets.</td></tr>
+  <tr><td>12.3</td><td><a href="phase-12/12.3-compact-bracket.html">Compact bracket</a></td><td>New <code>compact</code> bracket view: seed, name and match wins, keeping the bracket shape.</td></tr>
+  <tr><td>12.4a</td><td><a href="phase-12/12.4a-final-standings.html">Final standings</a></td><td>Standings card list.</td></tr>
+  <tr><td>12.4b</td><td><a href="phase-12/12.4b-roster.html">Tournament roster</a></td><td>Roster card list.</td></tr>
+  <tr><td>12.4c</td><td><a href="phase-12/12.4c-player-directory.html">Player directory</a></td><td>Global player directory card list and the <code>/players</code> page.</td></tr>
+  <tr><td>12.5a</td><td><a href="phase-12/12.5a-settings.html">Settings</a></td><td>Settings form, tiers, round overrides, theme editor.</td></tr>
+  <tr><td>12.5b</td><td><a href="phase-12/12.5b-seeding.html">Seeding</a></td><td>Touch reordering, seeding modals.</td></tr>
+  <tr><td>12.5c</td><td><a href="phase-12/12.5c-organizer-sheet.html">Organizer sheet</a></td><td>Matrix scrolls inside its container with a sticky first column.</td></tr>
+  <tr><td>12.5d</td><td><a href="phase-12/12.5d-organizations.html">Organizations</a></td><td>Organization directory and dashboard.</td></tr>
+  <tr><td>12.5e</td><td><a href="phase-12/12.5e-obs-hub-and-login.html">OBS hub and login</a></td><td>OBS hub copy rows, admin login page and modal.</td></tr>
+  <tr><td>12.5f</td><td><a href="phase-12/12.5f-competitor-portal.html">Competitor portal</a></td><td><code>/:slug/qualify</code> and its cards and modals.</td></tr>
+</table>
+<p>Wave 2 needs wave 1's gate passed. 12.3 edits <code>BracketTierBar.tsx</code> after 12.1a. Every admin page's overflow depends on 12.1b; until 12.1b lands, admin routes can fail on the sidebar rail. Steps report that instead of fixing it (rule 7), and the gate is the authoritative check. If you can’t run all fourteen at once, start the four <span class="tag">event</span> steps first.</p>
+
+<h3>Wave 3: sign-off (1 step)</h3>
+<table>
+  <tr><th>Step</th><th>File</th><th>Summary</th></tr>
+  <tr><td>12.6</td><td><a href="phase-12/12.6-sign-off.html">Sign-off</a></td><td>New mobile screenshots, full overflow run, docs, Phase 12 marked complete.</td></tr>
 </table>
 
-<h2>Backlog</h2>
-<p>Agreed work without step specs yet (Twitch login removal, one shared player modal, a single name field, tournament status and sorting, test players, simulation) is listed in priority order in the “Prioritized Backlog” of <a href="../implementation_plan.md">docs/implementation_plan.md</a>, the roadmap for every phase.</p>
+<h2>Wave gates (coordinator)</h2>
+<p><strong>Before launching a wave:</strong> start <code>npm run dev</code> in its own terminal and leave it running for the whole wave. Playwright reuses it (<code>reuseExistingServer</code>), so parallel steps don't start and stop competing dev servers.</p>
+<p><strong>After every step in the wave has reported:</strong></p>
+<ol class="steps">
+  <li>Read every report. Resolve requests for shared changes and errors reported in other steps' files before continuing.</li>
+  <li><code>npm run typecheck</code> and <code>npm test</code> pass.</li>
+  <li>Overflow: wave 1 runs <code>npx playwright test --project=mobile-overflow --grep "\[12.1a\]|\[12.1c\]"</code>; wave 2 and later run <code>npm run test:overflow</code> (every row).</li>
+  <li>Wave 1 only: <code>npx playwright test e2e/overlays.spec.ts --project=chromium</code> passes, including the new Back-button tests.</li>
+  <li><code>npm run test:e2e</code> passes (golden journeys run at desktop size, where nothing should change).</li>
+  <li><code>npm run test:visual</code>: every desktop screenshot passes unchanged. Mobile failures are expected; open each diff in <code>test-results/</code> and check it matches the wave's intent. With the user's approval, run <code>npm run test:visual:update</code>.</li>
+  <li>Manual check at 360×800 in Chrome DevTools, using the checklist at the bottom of each step file in the wave.</li>
+  <li>Hand the working tree to the user to commit and open a PR.</li>
+</ol>
 
 <h2>Decisions already made</h2>
 <table>
   <tr><th>Topic</th><th>Decision</th></tr>
-  <tr><td>Styling approach</td><td>Tailwind v4 plus a small set of shared components in <code>src/components/ui</code>. Runtime values (tier colors, layout coordinates) are passed as CSS custom properties or inline styles; everything static uses classes.</td></tr>
-  <tr><td>Order</td><td>Convert the whole app to Tailwind first (Phase 11), then make it mobile (Phase 12). The phases run back to back.</td></tr>
-  <tr><td>Scope of mobile</td><td>The entire app. Priority: spectator navigation, then floor judge tools including the review queue, then compact bracket, then everything else.</td></tr>
-  <tr><td>Dismissal rule</td><td>Read-only overlays close on an outside click or tap and on Escape. A form with unsaved changes asks first: “Discard unsaved changes?” with <strong>Keep Editing</strong> and <strong>Discard Changes</strong>. An outside click or Escape on that prompt means Keep Editing.</td></tr>
-  <tr><td>Compact bracket</td><td>Shows seed, name and match wins only (for example 2–1). Brackets never show game scores.</td></tr>
-  <tr><td>Screenshot tests</td><td>Light touch: 18 screenshots, mocked API, fixtures generated in code (seeded, no database), frozen clock, their own command, never part of <code>npm test</code> or CI.</td></tr>
-  <tr><td>Spec location</td><td><code>docs/specs/</code> in the repo, one HTML file per step.</td></tr>
-  <tr><td>Realtime</td><td>Cloudflare Durable Objects (free tier), one per tournament. Messages carry only a revision; clients re-fetch through the API. No polling.</td></tr>
-  <tr><td>Write model</td><td>Per-tournament row lock and revision on every write; match writes touch only their own rows; per-match revision returns 409 <code>MATCH_CONFLICT</code> instead of overwriting.</td></tr>
-  <tr><td>Loading</td><td>Inline spinner and loading text on the clicked button, every other button disabled, 10-second timeout with an error banner.</td></tr>
-  <tr><td>Test tournaments</td><td>Stored as <code>metadata.isTest</code>; hidden from the front page unless an admin turns on “Show test tournaments”. Test players, status, sorting and simulation are in the <a href="../implementation_plan.md">implementation plan</a> backlog.</td></tr>
+  <tr><td>Styling approach</td><td>Tailwind v4 plus the shared components in <code>src/components/ui</code>. Runtime values (tier colors, layout coordinates) are passed as CSS custom properties or inline styles; everything static uses classes.</td></tr>
+  <tr><td>Scope of mobile</td><td>The entire app except OBS overlay routes (<code>/:slug/obs/bracket…</code>, <code>/:slug/obs/match/…</code>, <code>/obs/…</code> and any page with <code>?obs=true</code>), which are fixed-size broadcast surfaces. The OBS hub (<code>/:slug/obs</code>) is in scope.</td></tr>
+  <tr><td>Phone overlays</td><td>Modals and drawers become bottom sheets on phones; confirmations stay centered. No swipe-to-dismiss. The browser Back button or back swipe is treated like any other close attempt.</td></tr>
+  <tr><td>Dismissal rule</td><td>Read-only overlays close on an outside click or tap, on Escape and on Back. A form with unsaved changes asks first: “Discard unsaved changes?” with <strong>Keep Editing</strong> and <strong>Discard Changes</strong>.</td></tr>
+  <tr><td>Spectator navigation</td><td>A bottom tab bar on phones, built from the same items as the desktop header pills.</td></tr>
+  <tr><td>Admin navigation</td><td>A 48px top bar showing the tournament name and a Public link, plus a bottom bar with Judge, Quals, Review (with its pending count) and Bracket shortcuts and a Menu button. Menu slides the full sidebar up as a sheet above the bar; tapping Menu again collapses it.</td></tr>
+  <tr><td>Compact bracket</td><td>Shows seed, name and match wins only (for example 2–1). Brackets never show game scores. Default on public bracket pages on phones; the manage bracket page defaults to the list on phones.</td></tr>
+  <tr><td>Tables</td><td>Leaderboard, review queue, standings, roster and player directory become card lists on phones. The organizer sheet stays a matrix and scrolls inside its container.</td></tr>
+  <tr><td>Screenshot tests</td><td>Mocked API, fixtures generated in code, frozen clock, their own command, never part of <code>npm test</code> or CI. Only the coordinator updates baselines, with the user's approval.</td></tr>
 </table>
 
-<h2>Definition of done</h2>
+<h2>Definition of done for Phase 12</h2>
 <ul class="check">
+  <li>Every non-OBS route passes the mobile overflow test at 360×800.</li>
+  <li>Every overlay uses <code>Overlay</code> or <code>ConfirmDialog</code> and follows the dismissal rule, including Back.</li>
   <li>No file under <code>src/</code> contains a static inline style; <code>npm run lint</code> enforces this.</li>
-  <li>No legacy global component classes (<code>btn</code>, <code>badge</code>, and the others) remain; <code>src/index.css</code> holds only the theme, base styles and keyframes.</li>
-  <li>Every overlay uses <code>Overlay</code> or <code>ConfirmDialog</code> and follows the dismissal rule.</li>
-  <li>Every route passes the mobile overflow test at 360×800.</li>
   <li><code>npm run typecheck</code>, <code>npm test</code>, <code>npm run test:e2e</code> and <code>npm run test:visual</code> all pass.</li>
-  <li><code>CLAUDE.md</code>, <code>AGENTS.md</code>, <code>docs/UI_ARCHITECTURE.md</code>, <code>docs/TESTING_STRATEGY.md</code> and the product spec describe the new rules.</li>
+  <li><code>CLAUDE.md</code>, <code>docs/UI_ARCHITECTURE.md</code>, <code>docs/TESTING_STRATEGY.md</code> and the product spec describe the mobile rules.</li>
 </ul>
 </main>
 </body>

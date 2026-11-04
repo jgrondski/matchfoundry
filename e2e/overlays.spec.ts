@@ -104,3 +104,66 @@ test('Escape on the discard prompt keeps editing', async ({ page }) => {
   await expect(input).toHaveValue(TYPED_SCORE);
   expect(unmocked).toEqual([]);
 });
+
+// Back button / back swipe (spec 12.0a): Back is a close attempt, never leaves the page while
+// an overlay is open, and closing an overlay another way leaves no stale history entry.
+
+test('Back closes a clean drawer without leaving the page', async ({ page }) => {
+  const unmocked = await prepare(page, true);
+  await page.goto(`/${FIXTURE_SLUG}/manage/judge`);
+  await settle(page);
+  const url = page.url();
+
+  await page.getByTestId('feed-match-card').first().click();
+  const drawer = page.getByTestId('match-score-drawer');
+  await expect(drawer).toBeVisible();
+
+  await page.goBack();
+  await expect(drawer).toHaveCount(0);
+  expect(page.url()).toBe(url);
+  expect(unmocked).toEqual([]);
+});
+
+test('Back on a dirty drawer asks before discarding, every time', async ({ page }) => {
+  const unmocked = await prepare(page, true);
+  const { drawer, input } = await openDirtyScoreDrawer(page);
+  const url = page.url();
+  const prompt = page.getByRole('dialog', { name: 'Discard unsaved changes?' });
+
+  await page.goBack();
+  await expect(prompt).toBeVisible();
+  await expect(drawer).toBeVisible();
+  expect(page.url()).toBe(url);
+
+  await prompt.getByRole('button', { name: 'Keep Editing' }).click();
+  await expect(prompt).toHaveCount(0);
+  await expect(drawer).toBeVisible();
+  await expect(input).toHaveValue(TYPED_SCORE);
+
+  await page.goBack();
+  await expect(prompt).toBeVisible();
+  await expect(drawer).toBeVisible();
+  expect(page.url()).toBe(url);
+  expect(unmocked).toEqual([]);
+});
+
+test('closing a drawer with its X leaves no stale history entry', async ({ page }) => {
+  const unmocked = await prepare(page, true);
+  await page.goto(`/${FIXTURE_SLUG}/manage/qualifiers`);
+  await settle(page);
+  const previousUrl = page.url();
+  await page.goto(`/${FIXTURE_SLUG}/manage/judge`);
+  await settle(page);
+
+  await page.getByTestId('feed-match-card').first().click();
+  const drawer = page.getByTestId('match-score-drawer');
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole('button', { name: 'Close drawer' }).click();
+  await expect(drawer).toHaveCount(0);
+  // The overlay's own history entry is removed asynchronously after it closes.
+  await page.waitForFunction(() => !window.history.state?.overlay);
+
+  await page.goBack();
+  await expect(page).toHaveURL(previousUrl);
+  expect(unmocked).toEqual([]);
+});

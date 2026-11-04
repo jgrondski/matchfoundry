@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.5f Competitor Portal</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.5f</nav>
+<h1>Step 12.5f: Competitor portal</h1>
+<p class="subtitle">An online competitor can start, run and submit a qual from a phone (<code>/:slug/qualify</code>).</p>
+<div class="box"><p><strong>Wave 2.</strong> Needs wave 1’s gate. Runs in parallel with every other wave 2 step. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions (the “Forms” bullet applies to every form here).</p></div>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>src/routes/PublicQualifyPage.tsx</code>, and in <code>src/features/online-quals/components/</code>: <code>CompetitorPortalView.tsx</code>, <code>AuthwordHudCard.tsx</code>, <code>AwaitingVerificationCard.tsx</code>, <code>OpenQualsCard.tsx</code>, <code>SubmissionFormCard.tsx</code>, <code>PreFlightModal.tsx</code></td></tr>
+</table>
+
+<p><code>IdentityClaimModal.tsx</code> is not rendered anywhere in the app (backlog item 1 deletes it); leave it alone.</p>
+<h2>Changes</h2>
+<ul>
+  <li><code>AuthwordHudCard.tsx</code>: the authword stays readable at 328px: <code>font-mono</code>, and <code>break-all</code> if it can't fit on one line at its mobile size (drop its size one step on mobile if needed). Timer items wrap.</li>
+  <li><code>SubmissionFormCard.tsx</code>: score inputs get <code>inputMode="numeric"</code> and <code>max-md:text-base</code>; the VOD URL input (<code>type="url"</code>, around line 194) gets <code>inputMode="url"</code> and <code>max-md:text-base</code>; Submit is <code>max-md:w-full</code>.</li>
+  <li><code>PreFlightModal.tsx</code>: each checklist item's <code>&lt;label&gt;</code> gets <code>min-h-11 flex items-center gap-3</code>; the footer uses the sticky sheet footer classes with full-width buttons.</li>
+  <li><code>OpenQualsCard.tsx</code>, <code>AwaitingVerificationCard.tsx</code>: rows wrap; buttons are <code>max-md:w-full</code>.</li>
+  <li><code>CompetitorPortalView.tsx</code> and <code>PublicQualifyPage.tsx</code>: page padding and title follow the conventions; text inputs (name, Twitch handle) get <code>max-md:w-full max-md:text-base</code>.</li>
+</ul>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/features/online-quals</code> passes with no edits to existing tests.</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.5f\]"</code> passes, or fails only on elements in other steps' files (report them).</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>Start an online qual, see the authword, enter scores and a VOD URL, and submit.</li>
+</ul>
+</main>
+</body>
+</html>

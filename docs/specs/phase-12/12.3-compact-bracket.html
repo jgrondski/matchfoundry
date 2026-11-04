@@ -12,7 +12,7 @@
 <h1>Step 12.3: Compact bracket view</h1>
 <p class="subtitle">A new <code>compact</code> view that keeps the bracket's shape (rounds, connectors, champion) but shows only seed, name and match wins, so a whole bracket reads on a phone.</p>
 
-<div class="box"><p><strong>Executor:</strong> any model. Can run in parallel with 12.2 and 12.4. <strong>Prerequisite:</strong> 12.1 committed. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules, <a href="12.0-mobile-foundation.html">12.0's “Conventions”</a>, and the Styling section of <a href="../../UI_ARCHITECTURE.md">docs/UI_ARCHITECTURE.md</a> (it governs every class choice).</p></div>
+<div class="box"><p><strong>Wave 2.</strong> Needs wave 1’s gate (12.1a has already restyled <code>BracketTierBar.tsx</code>; build on it). Runs in parallel with every other wave 2 step. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions.</p></div>
 
 <h2>Design</h2>
 <table>
@@ -32,7 +32,7 @@
   <tr><td>Modify</td><td><code>src/features/bracket/layout/types.ts</code>, <code>src/features/bracket/layout/index.ts</code></td></tr>
   <tr><td>Create</td><td><code>src/features/bracket/matchCardModel.ts</code>, <code>src/features/bracket/components/visualizer/CompactMatchCard.tsx</code></td></tr>
   <tr><td>Modify</td><td><code>visualizer/BracketMatchCard.tsx</code> (use the extracted model), <code>visualizer/BracketCanvas.tsx</code>, <code>visualizer/BracketChampionNode.tsx</code>, <code>visualizer/BracketStageNavBar.tsx</code>, <code>BracketVisualizer.tsx</code>, <code>BracketTierBar.tsx</code>, <code>src/routes/PublicTierBracketPage.tsx</code></td></tr>
-  <tr><td>Tests</td><td><code>src/features/bracket/__tests__/compactBracket.test.ts</code>; <code>e2e/visual/visual.spec.ts</code> and <code>mobileOverflow.spec.ts</code> (append)</td></tr>
+  <tr><td>Create</td><td><code>src/features/bracket/__tests__/compactBracket.test.ts</code></td></tr>
 </table>
 
 <h2>Step 1: Layout</h2>
@@ -52,7 +52,7 @@
   championHeight: 44,
 };</code></pre></li>
   <li>In <code>calculateBracketLayout</code>, when <code>viewMode === 'compact'</code>, merge <code>COMPACT_LAYOUT_CONFIG</code> under <code>customConfig</code> and call the same engine as <code>'standard'</code> (pass <code>'standard'</code> as the engine's view mode). Return <code>viewMode: 'compact'</code> in the metadata.</li>
-  <li>Add and export <code>supportsCompactView(bracket: BracketStructure): boolean</code>. It returns <code>false</code> when <code>bracket.bracketRouting === 'ACCELERATED_HYBRID'</code> or when the bracket uses Flat Staged routing (reuse the exact check the visualizer uses to choose the flat staged layout; extract it into <code>layout/index.ts</code> if it's inline). Otherwise it returns <code>true</code>. Support both <code>'TRADITIONAL'</code> and <code>'TRADITIONAL_TREE'</code> (CLAUDE.md §3).</li>
+  <li>Add and export <code>supportsCompactView(bracket: BracketStructure): boolean</code>. It returns <code>false</code> when <code>bracket.bracketRouting</code> is <code>'ACCELERATED_HYBRID'</code> or <code>'FLAT_STAGED'</code>, and <code>true</code> otherwise (including when <code>bracketRouting</code> is undefined). Support both <code>'TRADITIONAL'</code> and <code>'TRADITIONAL_TREE'</code> (CLAUDE.md §3).</li>
 </ol>
 
 <h2>Step 2: Match card model</h2>
@@ -107,7 +107,7 @@ export function getMatchCardModel(args: {
 
 <h2>Step 5: Page and toggle</h2>
 <ol class="steps">
-  <li><code>BracketTierBar</code>: add a “Compact” chip to the view toggle (label “Bracket” on mobile, “Compact” on desktop). Show it only when <code>supportsCompactView(activeTier.bracket)</code>. On mobile the toggle shows exactly List and Bracket.</li>
+  <li><code>BracketTierBar</code>: add a <code>Chip</code> to the view toggle, after the feed chip, with <code>active={viewMode === 'compact'}</code> and <code>onClick={() =&gt; onChangeViewMode('compact')}</code>. Label: <code>&lt;span className="max-md:hidden"&gt;Compact&lt;/span&gt;&lt;span className="md:hidden"&gt;Bracket&lt;/span&gt;</code>. Render it only when the active tier has a bracket and <code>supportsCompactView(activeTier.bracket)</code> is true. 12.1a already hides Standard, Fit and Split on mobile, so the mobile toggle shows exactly List and Bracket. Don't change anything else 12.1a did in this file.</li>
   <li><code>PublicTierBracketPage</code>, in the <code>localViewMode</code> initializer: if <code>urlView</code> is set, use it. Else if OBS, use <code>'fit'</code>. Else if <code>window.innerWidth &lt; 768</code>: on manage routes use <code>'feed'</code>, on public routes use <code>supportsCompactView(tier.bracket) ? 'compact' : 'feed'</code>. Else use <code>'standard'</code>.</li>
   <li>If <code>localViewMode === 'compact'</code> and the bracket doesn't support it, render the feed branch.</li>
   <li>Compact renders through the existing non-feed <code>&lt;main&gt;</code> branch with <code>BracketVisualizer obsView="compact"</code>.</li>
@@ -123,21 +123,26 @@ export function getMatchCardModel(args: {
       <li><code>getMatchCardModel</code>: a decided match marks exactly one side <code>won</code>; a tiebreaker produces <code>"N (t)"</code>; an empty slot produces <code>isPlaceholder: true</code> with seed <code>null</code>.</li>
     </ol>
   </li>
-  <li>Visual: add <code>bracket-compact</code> (<code>/${FIXTURE_SLUG}/${FIXTURE_TIER_SLUG}?view=compact</code>) to <code>PAGES</code> for both projects. These are new baselines; the coordinator reviews and generates them.</li>
-  <li>Overflow: append <code>public-bracket-compact</code> with the same path.</li>
+  <li>The overflow row <code>[12.3] public-bracket-compact</code> already exists (12.0b). The <code>bracket-compact</code> screenshot is added in 12.6.</li>
 </ul>
 
 <h2>Verification</h2>
 <ul class="check">
-  <li><code>npm run typecheck</code>, <code>npm test</code> pass, including every existing bracket test with no edits.</li>
-  <li><code>npm run test:visual</code>: existing desktop screenshots unchanged (proving the <code>BracketMatchCard</code> refactor didn't change anything). Mobile <code>bracket</code> changes, because the default view is now compact. <code>bracket-compact</code> is new.</li>
-  <li>Manual check at 360×800 on the fixture tournament (16-player double elim):
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/features/bracket</code> passes, including every existing bracket test with no edits.</li>
+  <li>Exception to rule 7, read-only: <code>npx playwright test --project=visual-desktop --grep "page: bracket|overlay: match score drawer"</code> passes unchanged (proves the <code>BracketMatchCard</code> refactor changed nothing). Never pass <code>--update-snapshots</code>.</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.3\]"</code> passes.</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>On the fixture tournament (16-player double elim):
     <ul>
       <li>The bracket opens in compact view.</li>
       <li>Swiping sideways snaps by round.</li>
       <li>The winners and losers brackets are both reachable.</li>
       <li>The champion is visible at the end.</li>
-      <li>On a manage route, tapping a playable match opens the score sheet.</li>
+      <li>On a manage route, switch to Bracket; tapping a playable match opens the score sheet.</li>
     </ul>
   </li>
 </ul>

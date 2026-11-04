@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.5e OBS Hub and Login</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.5e</nav>
+<h1>Step 12.5e: OBS hub and admin login</h1>
+<p class="subtitle">The OBS hub (<code>/:slug/obs</code>), the admin login page (<code>/admin</code>) and the admin login modal fit a phone.</p>
+<div class="box"><p><strong>Wave 2.</strong> Needs wave 1’s gate. Runs in parallel with every other wave 2 step. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions (the “Forms” bullet applies to every form here).</p></div>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>src/routes/OBSHubPage.tsx</code>, <code>src/routes/AdminLoginPage.tsx</code>, <code>src/features/auth/AdminLoginModal.tsx</code></td></tr>
+</table>
+
+<p>OBS overlay routes themselves are out of scope (see “Decisions” in the index).</p>
+<h2>A. OBSHubPage.tsx</h2>
+<ul>
+  <li>The card grid is already one column below 681px; leave it.</li>
+  <li>Copy-URL rows: the URL text gets <code>min-w-0 truncate</code>; the row is <code>flex items-center gap-2</code> with the URL as <code>flex-1</code>. The two “Copy URL” buttons (around lines 157 and 201) keep their label on desktop; on mobile the label span gets <code>max-md:sr-only</code> and the button gets <code>max-md:size-11 max-md:justify-center max-md:p-0</code> and <code>aria-label="Copy URL"</code>.</li>
+  <li>Page padding and title follow the conventions.</li>
+</ul>
+<h2>B. AdminLoginPage.tsx and AdminLoginModal.tsx</h2>
+<ul>
+  <li>The login card is full width on mobile with <code>max-md:px-4</code>; the page container uses <code>max-md:px-4</code>.</li>
+  <li>The PIN inputs (around line 213 in the page, line 114 in the modal) get <code>inputMode="numeric"</code> and <code>max-md:text-base</code>. Keep their <code>type</code> unchanged.</li>
+  <li>The submit button is <code>max-md:w-full</code>.</li>
+</ul>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/features/auth src/routes</code> passes with no edits to existing tests.</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.5e\]"</code> passes, or fails only on elements in other steps' files (report them).</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>Copy an OBS URL by tapping the copy icon.</li>
+  <li>Log in at /admin with the numeric keypad.</li>
+</ul>
+</main>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.5d Organizations</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.5d</nav>
+<h1>Step 12.5d: Organizations</h1>
+<p class="subtitle">The organization directory (<code>/organizations</code>) and dashboard (<code>/org/:orgSlug</code>) fit a phone.</p>
+<div class="box"><p><strong>Wave 2.</strong> Needs wave 1’s gate. Runs in parallel with every other wave 2 step. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions (the “Forms” bullet applies to every form here).</p></div>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td>every file in <code>src/features/organizations/components/</code>, <code>src/routes/OrganizationDirectoryPage.tsx</code>, <code>src/routes/OrganizationDetailPage.tsx</code></td></tr>
+</table>
+
+<p><code>TopNavSwitcher</code> (the global header on these pages) was done in 12.1c.</p>
+<h2>Changes</h2>
+<ul>
+  <li><code>OrganizationDirectory.tsx</code>: the directory grid becomes <code>grid-cols-1</code> on mobile (prefix the existing column classes with <code>md:</code> and add <code>grid-cols-1</code>, as 12.1c did for the landing grid); header actions wrap and go full width.</li>
+  <li><code>OrgHeaderBanner.tsx</code>: the banner height scales down (<code>max-md:h-32</code>); the logo is smaller (<code>max-md:size-16</code>) and overlaps the banner less; the org name truncates.</li>
+  <li><code>OrganizationDashboard.tsx</code>: the tab row scrolls sideways (the conventions' chip row classes; <code>shrink-0</code> tabs). Stat card grids get <code>max-md:grid-cols-2</code>.</li>
+  <li><code>OrgSettingsTab.tsx</code>, <code>OrgBrandingTab.tsx</code>, <code>OrgMetadataModal.tsx</code>: apply the conventions' “Forms” rules; modal footers use the sticky sheet footer classes.</li>
+  <li><code>OrgTournamentsTab.tsx</code>: tournament lists or grids are one column on mobile; rows wrap.</li>
+</ul>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/features/organizations</code> passes with no edits to existing tests.</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.5d\]"</code> passes, or fails only on elements in other steps' files (report them).</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>Open the directory, then an organization; switch dashboard tabs by swiping.</li>
+</ul>
+</main>
+</body>
+</html>

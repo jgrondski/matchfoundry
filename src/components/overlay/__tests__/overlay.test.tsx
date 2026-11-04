@@ -19,14 +19,22 @@ function expected(reason: DismissReason, dirty: boolean, busy: boolean, dismissi
 }
 
 describe('resolveDismissal', () => {
-  const reasons: DismissReason[] = ['backdrop', 'escape', 'button'];
+  const reasons: DismissReason[] = ['backdrop', 'escape', 'back', 'button'];
   const bools = [false, true];
   const cases = reasons.flatMap(reason =>
     bools.flatMap(dirty => bools.flatMap(busy => bools.map(dismissible => ({ reason, dirty, busy, dismissible }))))
   );
 
-  it('covers all 24 combinations', () => {
-    expect(cases).toHaveLength(24);
+  it('covers all 32 combinations', () => {
+    expect(cases).toHaveLength(32);
+  });
+
+  it('treats Back exactly like Escape', () => {
+    for (const { dirty, busy, dismissible } of cases) {
+      expect(resolveDismissal('back', { dirty, busy, dismissible })).toBe(
+        resolveDismissal('escape', { dirty, busy, dismissible })
+      );
+    }
   });
 
   it.each(cases)('$reason dirty=$dirty busy=$busy dismissible=$dismissible', ({ reason, dirty, busy, dismissible }) => {
@@ -57,6 +65,25 @@ describe('Overlay', () => {
     expect(html).toContain('aria-modal="true"');
     expect(html).toContain('data-testid="test-panel"');
     expect(html).toContain('content');
+  });
+
+  it('renders a bottom sheet on phones by default', () => {
+    const html = renderToStaticMarkup(
+      <Overlay open onClose={noop}>
+        content
+      </Overlay>
+    );
+    expect(html).toContain('max-md:animate-slide-in-up');
+  });
+
+  it('keeps a centered dialog on phones when mobile is center', () => {
+    const html = renderToStaticMarkup(
+      <Overlay open onClose={noop} mobile="center">
+        content
+      </Overlay>
+    );
+    expect(html).not.toContain('max-md:animate-slide-in-up');
+    expect(html).toContain('max-md:max-h-[85dvh]');
   });
 });
 

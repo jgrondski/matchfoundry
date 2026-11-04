@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.1b Admin Shell</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.1b</nav>
+<h1>Step 12.1b: Admin shell</h1>
+<p class="subtitle">On phones the admin sidebar rail is replaced by a slim top bar (which tournament, and a link to its public view) and a bottom bar with four shortcuts and a Menu button that slides the full sidebar up as a sheet.</p>
+
+<div class="box"><p><strong>Wave 2.</strong> Needs wave 1's gate. Runs in parallel with every other wave 2 step. Every admin page's overflow result depends on this step. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions (especially “Admin bottom bar clearance”).</p></div>
+
+<h2>What it looks like on a phone</h2>
+<pre><code>┌──────────────────────────────────────────┐
+│ CTWC 2026 World Champi…        👁 Public │  AdminMobileTopBar, 48px, sticky top
+├──────────────────────────────────────────┤
+│                                          │
+│              page content                │
+│                                          │
+├────────┬────────┬────────┬────────┬──────┤
+│ Judge  │ Quals  │ Review │Bracket │ Menu │  AdminBottomNav, 56px + safe area, fixed bottom
+│        │        │  (3)   │        │  ☰   │
+└────────┴────────┴────────┴────────┴──────┘</code></pre>
+<ul>
+  <li>Tapping <strong>Menu</strong> slides a bottom sheet up from just above the bar, holding the full sidebar (tournament switcher, Lock/Unlock, Public View, every section, system pages, Log Out). The Menu icon becomes ✕ and stays tappable; tapping it again collapses the sheet. Choosing an item, tapping the dimmed area, or pressing Back also closes it.</li>
+  <li>The four shortcuts always navigate (and close the sheet if it is open). Every navigation from the bar or the sheet goes through the layout's <code>onNavigate</code> guard, so Settings with unsaved changes still shows the Discard prompt.</li>
+  <li>Score sheets and other overlays slide up over the bar (they sit above it); the bar is visible again when they close.</li>
+</ul>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Create</td><td><code>src/components/AdminMobileTopBar.tsx</code>, <code>src/components/AdminBottomNav.tsx</code>, <code>src/components/__tests__/adminMobileNav.test.tsx</code></td></tr>
+  <tr><td>Modify</td><td><code>src/components/TournamentLayout.tsx</code>, <code>src/components/TournamentSidebar.tsx</code></td></tr>
+</table>
+
+<h2>A. Shared helpers in TournamentSidebar.tsx</h2>
+<ol class="steps">
+  <li>Extract the “Public View” link target (inline around line 643: <code>slug ? (currentTierSlug ? `/${slug}/${currentTierSlug}` : `/${slug}/brackets`) : '/'</code>) into <code>export function getPublicViewUrl(slug: string | undefined, currentTierSlug: string | undefined): string</code> and use it in the link.</li>
+  <li>Extract the <code>currentTierSlug</code> computation (around line 170) into <code>export function resolveCurrentTierSlug(tournament: Tournament | undefined, activeTier: TournamentTier | undefined): string | undefined</code>, keeping the stored-tier lookup, and use it in the sidebar.</li>
+  <li>Add the prop <code>variant?: 'rail' | 'sheet'</code> (default <code>'rail'</code>). In <code>'sheet'</code> mode: always expanded (ignore the stored collapsed state and don't render the collapse toggle); the root uses <code>w-full min-w-0</code> with no fixed height, no sticky positioning, no rail width classes and no right border; nav item rows get <code>min-h-11</code>. Rail mode is unchanged.</li>
+  <li>Every navigation must go through <code>onNavigate</code> so the sheet closes and the unsaved-changes guard runs. The link click handler and <code>handleDropdownNavigate</code> already do. Two calls go straight to <code>navigate(…)</code>: the logout button (around line 753) and the admin login modal's <code>onSuccess</code> (around line 800). Change both to <code>if (onNavigate?.(url) === false) return; navigate(url);</code> with <code>url</code> being the path each one navigates to today.</li>
+</ol>
+
+<h2>B. AdminMobileTopBar.tsx</h2>
+<pre><code>interface AdminMobileTopBarProps {
+  title: string;       // tournament name, or "MatchFoundry" when there is none
+  publicUrl?: string;  // public view of the current tournament
+}</code></pre>
+<p>Root: <code>&lt;header className="sticky top-0 z-90 flex h-12 items-center gap-2 border-b border-line bg-surface px-3 md:hidden"&gt;</code>. Children: the title (<code>&lt;span className="min-w-0 flex-1 truncate text-sm font-bold text-fg"&gt;</code>), then, when <code>publicUrl</code> is set, <code>&lt;Link to={publicUrl} className={buttonClasses({ variant: 'ghost', size: 'sm' })}&gt;&lt;Eye size={16} /&gt;Public&lt;/Link&gt;</code>.</p>
+
+<h2>C. AdminBottomNav.tsx</h2>
+<pre><code>export interface AdminBottomNavProps {
+  slug?: string;                    // undefined: only the Menu button renders
+  currentTierSlug?: string;
+  seedingMethod?: Tournament['seedingMethod'];
+  pendingReviewCount: number;
+  activeView?: SidebarNavView;
+  menuOpen: boolean;
+  onToggleMenu: () =&gt; void;
+  onNavigate: (url: string) =&gt; boolean | void;  // the layout's guarded navigate
+}
+export const ADMIN_BOTTOM_NAV_HEIGHT_CLASS = 'h-14';</code></pre>
+<table>
+  <tr><th>Item</th><th>Label</th><th>Icon (lucide)</th><th>Target</th><th>Active when <code>activeView</code> is</th></tr>
+  <tr><td>Judge</td><td>“Judge”</td><td><code>Scale</code></td><td><code>/${slug}/manage/judge</code>, plus <code>?tier=${currentTierSlug}</code> when set</td><td><code>'judge'</code></td></tr>
+  <tr><td>Quals</td><td>“Seeding” when <code>seedingMethod === 'MANUAL'</code>, else “Quals”</td><td><code>BarChart3</code></td><td><code>/${slug}/manage/qualifiers</code></td><td><code>'leaderboard'</code></td></tr>
+  <tr><td>Review</td><td>“Review”</td><td><code>CheckCircle2</code></td><td><code>/${slug}/manage/review</code></td><td><code>'review'</code></td></tr>
+  <tr><td>Bracket</td><td>“Bracket”</td><td><code>GitBranch</code></td><td><code>/${slug}/manage/bracket/${currentTierSlug}</code>, or <code>/${slug}/manage/bracket</code> when there is no tier</td><td><code>'bracket'</code></td></tr>
+  <tr><td>Menu</td><td>“Menu”, or “Close” when open</td><td><code>Menu</code>, or <code>X</code> when open</td><td>calls <code>onToggleMenu</code></td><td><code>menuOpen</code></td></tr>
+</table>
+<ul>
+  <li>Root: <code>&lt;nav aria-label="Tournament management" className="fixed inset-x-0 bottom-0 grid grid-cols-5 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"&gt;</code> plus <code>z-1001</code> when <code>menuOpen</code> (above the overlay backdrop, so Menu stays tappable) and <code>z-50</code> otherwise. When <code>slug</code> is undefined, render only the Menu button, in the last column.</li>
+  <li>The four shortcuts are <code>&lt;Link&gt;</code>s with <code>aria-current={active ? 'page' : undefined}</code> and an <code>onClick</code> that calls <code>onNavigate(target)</code> and, when it returns <code>false</code>, calls <code>e.preventDefault()</code>. Classes: <code>relative flex h-14 flex-col items-center justify-center gap-0.5 text-2xs font-semibold no-underline</code>, plus <code>text-gold-bright</code> when active or <code>text-fg-muted</code> otherwise. Icon <code>size={20}</code>.</li>
+  <li>Review count: when <code>pendingReviewCount &gt; 0</code>, render <code>&lt;span className="absolute top-1.5 left-1/2 ml-2 min-w-4 rounded-full bg-gold px-1 text-center text-3xs font-bold text-canvas"&gt;{count}&lt;/span&gt;</code> and give the link <code>aria-label={`Review, ${count} pending`}</code>.</li>
+  <li>Menu is a <code>&lt;button type="button" aria-expanded={menuOpen} aria-controls="admin-menu-sheet"&gt;</code> with the same classes, gold when open.</li>
+</ul>
+
+<h2>D. TournamentLayout.tsx</h2>
+<ol class="steps">
+  <li>Add <code>const [menuOpen, setMenuOpen] = useState(false); const isMobile = useIsMobile(); const navigate = useNavigate();</code>.</li>
+  <li>When <code>!isMobile</code>, render exactly what it renders today.</li>
+  <li>When <code>isMobile</code>:
+    <ul>
+      <li>The root gets <code>flex-col</code> (use <code>max-md:flex-col</code> on the existing root).</li>
+      <li>Render <code>&lt;AdminMobileTopBar title={tournament?.name ?? 'MatchFoundry'} publicUrl={tournament ? getPublicViewUrl(tournament.slug, tierSlug) : undefined} /&gt;</code> before the content wrapper, where <code>tierSlug = resolveCurrentTierSlug(tournament, activeTier)</code>.</li>
+      <li>The content wrapper gets <code>max-md:pb-[calc(3.5rem+env(safe-area-inset-bottom))]</code>.</li>
+      <li>After the content wrapper, render <code>AdminBottomNav</code> with <code>slug={tournament?.slug}</code>, <code>currentTierSlug={tierSlug}</code>, <code>seedingMethod={tournament?.seedingMethod}</code>, <code>pendingReviewCount={countPendingReviewSessions(tournament)}</code> (from <code>src/features/online-quals/sessionDerivation.ts</code>), <code>activeView</code>, <code>menuOpen</code>, <code>onToggleMenu={() =&gt; setMenuOpen(o =&gt; !o)}</code> and <code>onNavigate={handleMenuNavigate}</code>.</li>
+      <li>Then the sheet:
+<pre><code>&lt;Overlay
+  open={menuOpen}
+  onClose={() =&gt; setMenuOpen(false)}
+  variant="drawer"
+  aria-label="Tournament menu"
+  panelClassName="max-md:mb-[calc(3.5rem+env(safe-area-inset-bottom))] max-md:pb-0 max-md:max-h-[calc(92dvh-3.5rem)] border-t border-line bg-surface"
+&gt;
+  &lt;div id="admin-menu-sheet"&gt;
+    &lt;TournamentSidebar tournament={tournament} activeTier={activeTier} activeView={activeView}
+      variant="sheet" onNavigate={handleMenuNavigate} /&gt;
+  &lt;/div&gt;
+&lt;/Overlay&gt;</code></pre></li>
+    </ul>
+  </li>
+  <li><code>handleMenuNavigate(url: string)</code>: <code>const allowed = onNavigate?.(url); if (allowed !== false) setMenuOpen(false); return allowed;</code>. The bottom bar's links navigate themselves (they are <code>Link</code>s); the sidebar's links do too.</li>
+</ol>
+<div class="box warn"><p>While the sheet is open, the bar sits above the overlay backdrop (<code>z-1001</code>). If a Discard prompt opens from the sheet, the bar stays tappable above that prompt's backdrop too; its taps still go through the guard, so nothing is lost. That is accepted.</p></div>
+
+<h2>E. Tests (adminMobileNav.test.tsx)</h2>
+<p><code>renderToStaticMarkup</code> inside a <code>MemoryRouter</code>:</p>
+<ul>
+  <li><code>AdminMobileTopBar</code> renders the title, and a “Public” link to <code>publicUrl</code> only when it is set.</li>
+  <li><code>AdminBottomNav</code> with a slug renders four links with the targets in the table (with and without <code>currentTierSlug</code>) plus a Menu button with <code>aria-expanded="false"</code>; with <code>menuOpen</code> the button reads “Close” and has <code>aria-expanded="true"</code>; the active link has <code>aria-current="page"</code>; a pending count of 3 renders “3” and the label “Review, 3 pending”; “Seeding” replaces “Quals” for manual seeding; without a slug only the Menu button renders.</li>
+  <li><code>getPublicViewUrl</code>: the three cases.</li>
+</ul>
+<p>Existing tests in <code>src/components/__tests__</code> pass unchanged.</p>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/components/__tests__</code> passes.</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.1b\]"</code> passes.</li>
+  <li>Run every admin row once to confirm the rail is gone: <code>npx playwright test --project=mobile-overflow --grep "manage-|judge|review|settings"</code>. Report results; failures inside page content belong to other steps.</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>As an admin, the four shortcuts reach Judge, Quals, Review and Bracket; the Review count matches the desktop sidebar.</li>
+  <li>Menu opens the sheet above the bar; tapping Menu (now ✕) again closes it; Back closes it; choosing Settings from it navigates and closes it.</li>
+  <li>With unsaved settings changes, a shortcut or a menu item shows the Discard prompt, and Keep Editing stays on the page.</li>
+  <li>Opening the score sheet on the judge page covers the bar; closing it shows the bar again.</li>
+  <li>“Public” opens the public view of the current tournament.</li>
+</ul>
+</main>
+</body>
+</html>

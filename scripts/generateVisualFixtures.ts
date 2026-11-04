@@ -117,6 +117,7 @@ async function main(): Promise<void> {
   write('organizations', await getJson(middleware, '/api/organizations'));
   write('players', await getJson(middleware, '/api/players'));
   write('sessions', await getJson(middleware, `/api/tournaments/${tournament.id}/qualify/sessions`, token));
+  write('orgTournaments', await getJson(middleware, `/api/organizations/${tournament.organizationId}/tournaments`));
 }
 
 main().catch(err => {

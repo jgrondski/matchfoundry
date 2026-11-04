@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.0a Overlays and Touch Sizing</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.0a</nav>
+<h1>Step 12.0a: Overlays and touch sizing</h1>
+<p class="subtitle">The shared pieces every later step builds on: 44px shared controls, bottom-sheet overlays on phones, and the Back button closing overlays.</p>
+
+<div class="box"><p><strong>Wave 1.</strong> Runs in parallel with 12.0b, 12.1a and 12.1c. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions. This step is the only one allowed to edit <code>src/components/ui/*</code>, <code>src/components/overlay/*</code>, <code>src/index.css</code> and <code>index.html</code>.</p></div>
+
+<h2>Files</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>src/components/ui/Button.tsx</code>, <code>src/components/ui/IconButton.tsx</code>, <code>src/components/ui/Chip.tsx</code>, <code>index.html</code>, <code>src/index.css</code></td></tr>
+  <tr><td>Modify</td><td><code>src/components/overlay/Overlay.tsx</code>, <code>src/components/overlay/dismissal.ts</code>, <code>src/components/overlay/ConfirmDialog.tsx</code>, <code>src/components/overlay/__tests__/overlay.test.tsx</code></td></tr>
+  <tr><td>Create</td><td><code>src/components/overlay/useOverlayHistory.ts</code></td></tr>
+  <tr><td>Modify</td><td><code>e2e/overlays.spec.ts</code></td></tr>
+</table>
+
+<h2>Part A: Touch-size the shared components</h2>
+<table>
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>src/components/ui/Button.tsx</code></td><td>Append <code>max-md:min-h-11</code> to the <code>BASE</code> class string.</td></tr>
+  <tr><td><code>src/components/ui/IconButton.tsx</code></td><td>Add <code>max-md:min-h-11 max-md:min-w-11</code> to the base classes (before <code>className</code> in the <code>cn(…)</code> call).</td></tr>
+  <tr><td><code>src/components/ui/Chip.tsx</code></td><td>Add <code>max-md:min-h-11</code> to the shared classes, so both sizes get it.</td></tr>
+  <tr><td><code>index.html</code></td><td>Set the viewport meta content to <code>width=device-width, initial-scale=1.0, viewport-fit=cover</code>.</td></tr>
+  <tr><td><code>src/index.css</code>, <code>@layer base</code></td><td>Add <code>html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }</code> and <code>button, a, [role='button'] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }</code>. If <code>@layer base</code> already has an <code>html</code> rule, add the two declarations to it instead of a second rule.</td></tr>
+  <tr><td><code>src/index.css</code>, <code>@theme</code></td><td>Add <code>--animate-slide-in-up: slideInUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);</code>. Next to the existing keyframes, add <code>@keyframes slideInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }</code>.</td></tr>
+</table>
+
+<h2>Part B: Overlay phone presentation</h2>
+<p>Add one prop to <code>OverlayProps</code> in <code>Overlay.tsx</code>:</p>
+<pre><code>/** Phone presentation. 'sheet' = bottom sheet (default). 'center' = stays a centered dialog. */
+mobile?: 'sheet' | 'center';</code></pre>
+<p>Destructure <code>mobile = 'sheet'</code> in <code>OverlayInner</code>. Let <code>sheet = mobile === 'sheet'</code>. Add these classes (keep every existing class):</p>
+<table>
+  <tr><th>Case</th><th>Backdrop classes added</th><th>Panel classes added</th></tr>
+  <tr><td><code>sheet</code> (modal or drawer)</td><td><code>max-md:items-end max-md:p-0</code></td><td><code>max-md:mt-auto max-md:h-auto max-md:max-h-[92dvh] max-md:w-full max-md:max-w-none max-md:overflow-y-auto max-md:rounded-b-none max-md:rounded-t-lg max-md:animate-slide-in-up max-md:pb-[env(safe-area-inset-bottom)]</code></td></tr>
+  <tr><td><code>mobile="center"</code></td><td>none</td><td><code>max-md:max-h-[85dvh]</code></td></tr>
+</table>
+<p>The panel's added classes go before <code>panelClassName</code> in the <code>cn(…)</code> call, so a caller's classes still apply on desktop.</p>
+<p>For sheets, render a decorative drag handle as the first child of the panel, before <code>children</code>: <code>&lt;div aria-hidden className="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-white/20 md:hidden" /&gt;</code>. There is no swipe-to-dismiss.</p>
+<p><code>ConfirmDialog.tsx</code> passes <code>mobile="center"</code> to its <code>Overlay</code>. Every other existing overlay keeps the default (sheet). Do not edit any overlay outside <code>src/components/overlay</code>.</p>
+
+<h2>Part C: Back gesture and Back button</h2>
+<p>Pressing the browser Back button or swiping back on a phone while an overlay is open acts like any other close attempt and does not leave the page. Create <code>src/components/overlay/useOverlayHistory.ts</code> with exactly:</p>
+<pre><code>import { useEffect, useRef } from 'react';
+
+const pendingBack = new Map&lt;string, ReturnType&lt;typeof setTimeout&gt;&gt;();
+
+/**
+ * True while the popstate from our own history.back() (removing a closed overlay's entry) is
+ * being dispatched. It is not a user Back press, so an overlay still open underneath (for
+ * example the drawer under a closed Discard prompt) must ignore it.
+ */
+let selfInitiatedPop = false;
+
+function removeOwnEntry(): void {
+  selfInitiatedPop = true;
+  // Registered after every overlay listener, so it runs last and clears the flag.
+  window.addEventListener('popstate', () =&gt; { selfInitiatedPop = false; }, { once: true });
+  window.history.back();
+}
+
+/**
+ * Pushes a same-URL history entry while an overlay is open, so Back closes the overlay
+ * instead of leaving the page. onBack returns true when the overlay is closing, or false
+ * when it stays open (dirty prompt or busy); in that case the entry is pushed again.
+ */
+export function useOverlayHistory(id: string, isTop: () =&gt; boolean, onBack: () =&gt; boolean): void {
+  const onBackRef = useRef(onBack);
+  onBackRef.current = onBack;
+  const closedByBack = useRef(false);
+
+  useEffect(() =&gt; {
+    const hrefAtOpen = window.location.href;
+    const scheduled = pendingBack.get(id);
+    if (scheduled) {
+      // StrictMode remount: the previous entry is still in place.
+      clearTimeout(scheduled);
+      pendingBack.delete(id);
+    } else {
+      window.history.pushState({ ...window.history.state, overlay: id }, '');
+    }
+    const onPopState = () =&gt; {
+      if (selfInitiatedPop) return;
+      if (!isTop()) return;
+      if (onBackRef.current()) {
+        closedByBack.current = true;
+      } else {
+        window.history.pushState({ ...window.history.state, overlay: id }, '');
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () =&gt; {
+      window.removeEventListener('popstate', onPopState);
+      if (closedByBack.current) return;
+      // Closed by a button, the backdrop or Escape: remove our entry, unless the app navigated away.
+      pendingBack.set(
+        id,
+        setTimeout(() =&gt; {
+          pendingBack.delete(id);
+          if (window.location.href === hrefAtOpen &amp;&amp; window.history.state?.overlay === id) {
+            removeOwnEntry();
+          }
+        }, 0)
+      );
+    };
+  }, [id, isTop]);
+}</code></pre>
+<ol class="steps">
+  <li>In <code>dismissal.ts</code>, add <code>'back'</code> to <code>DismissReason</code>. <code>resolveDismissal</code> already treats every non-<code>'button'</code> reason like Escape; confirm that and leave the function body unchanged.</li>
+  <li>In <code>OverlayInner</code>, import <code>useCallback</code> and call, after <code>requestClose</code> is defined:
+<pre><code>const isTop = useCallback(() =&gt; isTopOverlay(id), [id]);
+useOverlayHistory(id, isTop, () =&gt; {
+  const result = resolveDismissal('back', { dirty, busy, dismissible });
+  if (result === 'close') { onClose(); return true; }
+  if (result === 'confirm') setConfirmOpen(true);
+  return false;
+});</code></pre></li>
+  <li>React Router's <code>BrowserRouter</code> keeps working because the pushed entry carries the router's existing <code>history.state</code> (<code>usr</code>, <code>key</code>, <code>idx</code>) plus the <code>overlay</code> key, and the URL doesn't change.</li>
+</ol>
+
+<h2>Part D: Tests</h2>
+<ol class="steps">
+  <li><code>overlay.test.tsx</code>: the test “covers all 24 combinations” becomes “covers all 32 combinations” and includes <code>'back'</code> in its reason list; <code>'back'</code> must give the same result as <code>'escape'</code> for all 8 states. Add render tests: an <code>Overlay</code> with default props renders a panel whose class contains <code>max-md:animate-slide-in-up</code>, and one with <code>mobile="center"</code> does not and contains <code>max-md:max-h-[85dvh]</code>.</li>
+  <li><code>e2e/overlays.spec.ts</code>: add three tests, following the setup the file's existing tests use to open the score drawer:
+    <ul>
+      <li>Open the score drawer and call <code>page.goBack()</code>. The drawer closes and <code>page.url()</code> is unchanged.</li>
+      <li>Open it, make it dirty (type a score), then <code>page.goBack()</code>. The Discard prompt appears, the drawer is still open and the URL is unchanged. Click Keep Editing, then <code>page.goBack()</code> again: the prompt appears again.</li>
+      <li>Open it, close it with its X, then <code>page.goBack()</code>. The browser goes to the page visited before the judge page (no stale overlay entry left behind). Navigate to a known first page in the test so the expected URL is exact.</li>
+    </ul>
+  </li>
+</ol>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/components/overlay src/components/ui</code> passes, including the 32-case table.</li>
+  <li><code>npx playwright test e2e/overlays.spec.ts --project=chromium</code> passes, including the three Back tests.</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>The score drawer on the judge page opens as a bottom sheet with a drag handle.</li>
+  <li>A confirmation (for example a delete prompt) stays centered.</li>
+  <li>Back closes an open sheet without leaving the page.</li>
+</ul>
+</main>
+</body>
+</html>
