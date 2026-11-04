@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.5a Settings</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.5a</nav>
+<h1>Step 12.5a: Settings</h1>
+<p class="subtitle">Tournament settings (<code>/:slug/manage/settings</code>) fit a phone, with Save always in reach.</p>
+<div class="box"><p><strong>Wave 2.</strong> Needs wave 1’s gate. Runs in parallel with every other wave 2 step. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions (the “Forms” bullet applies to every form here).</p></div>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>src/routes/ManageTournamentSettingsPage.tsx</code>, <code>src/features/tournament/components/TournamentAdminForm.tsx</code>, <code>QualFormatEditor.tsx</code>, <code>RoundOverridesEditor.tsx</code>, <code>PointsThresholdsDrawer.tsx</code> (all in <code>src/features/tournament/components/</code>), every file in <code>src/features/tournament/components/settings/</code>, <code>src/features/bracket/components/BracketThemeEditor.tsx</code></td></tr>
+</table>
+
+<p>Not in this step: <code>src/components/ClearableNumberInput.tsx</code> (12.2a adds <code>inputMode</code> to it).</p>
+
+<h2>Changes</h2>
+<ul>
+  <li>Apply the conventions' “Forms” rules to every form section in the listed files. This includes the event date pickers in <code>TournamentInfoSection.tsx</code> (each <code>max-md:w-full max-md:text-base</code>).</li>
+  <li>The “Save Configuration” bar (<code>TournamentAdminForm.tsx</code>, around line 872, already <code>sticky bottom-4</code>) gets <code>max-md:bottom-[calc(3.5rem+env(safe-area-inset-bottom))] max-md:-mx-4 max-md:rounded-none max-md:px-4 max-md:flex-col max-md:items-stretch max-md:gap-2</code> so it sits directly above the admin bottom bar (see “Admin bottom bar clearance” in the conventions); its buttons get <code>max-md:w-full</code>.</li>
+  <li><code>TierManagementSection.tsx</code>: each tier row stacks into a card on mobile (<code>max-md:flex-col max-md:items-stretch</code>); color swatches and pickers sit in a <code>max-md:grid max-md:grid-cols-2 max-md:gap-2</code>; per-tier action buttons wrap.</li>
+  <li><code>RoundOverridesEditor.tsx</code>: the per-round grid sits in an <code>overflow-x-auto</code> wrapper (if it isn't already), and its first column is sticky (<code>sticky left-0 z-10 bg-surface</code>, or the row's background token if rows alternate).</li>
+  <li><code>BracketThemeEditor.tsx</code>: the preview stacks below the controls on mobile (<code>max-md:flex-col</code> or <code>max-md:grid-cols-1</code>, whichever its layout uses).</li>
+  <li>Overlays opened from settings (<code>PointsThresholdsDrawer</code>, the modals in <code>settings/AdminFormModals.tsx</code>, <code>SharedPinWarningModal</code>): their footers use the conventions' sticky sheet footer classes with full-width buttons.</li>
+  <li><code>DataSimulationSection.tsx</code>: its button groups wrap and go full width on mobile.</li>
+</ul>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/features/tournament</code> passes with no edits to existing tests.</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.5a\]"</code> passes, or fails only on elements in other steps' files (report them).</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>Change a setting, scroll to the bottom, and save.</li>
+  <li>With unsaved changes, open the admin menu and tap another page: the Discard prompt appears.</li>
+  <li>Add a tier and pick its colors.</li>
+</ul>
+</main>
+</body>
+</html>

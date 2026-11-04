@@ -1,7 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
-import { installApiMocks, ADMIN_SESSION, FIXTURE_SLUG, FIXTURE_TIER_SLUG } from './mockApi';
-
-const FIXED_TIME = new Date('2026-06-01T12:00:00Z');
+import { test, expect } from '@playwright/test';
+import { prepare, settle, FIXTURE_SLUG, FIXTURE_TIER_SLUG } from './mockApi';
 
 const PAGES: Array<{ name: string; path: string; admin: boolean; fullPage?: boolean }> = [
   { name: 'landing', path: '/', admin: false },
@@ -14,23 +12,6 @@ const PAGES: Array<{ name: string; path: string; admin: boolean; fullPage?: bool
   // Full page: settings is a long form whose lower sections would otherwise go unchecked.
   { name: 'settings', path: `/${FIXTURE_SLUG}/manage/settings`, admin: true, fullPage: true },
 ];
-
-async function prepare(page: Page, admin: boolean): Promise<string[]> {
-  const unmocked = await installApiMocks(page);
-  await page.clock.setFixedTime(FIXED_TIME);
-  if (admin) {
-    await page.addInitScript(session => {
-      window.localStorage.setItem('tm_admin_auth', JSON.stringify(session));
-    }, ADMIN_SESSION);
-  }
-  return unmocked;
-}
-
-async function settle(page: Page): Promise<void> {
-  await page.waitForLoadState('networkidle');
-  await expect(page.getByText(/^Loading/)).toHaveCount(0);
-  await page.evaluate(() => document.fonts.ready);
-}
 
 for (const target of PAGES) {
   test(`page: ${target.name}`, async ({ page }) => {

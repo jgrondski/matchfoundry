@@ -25,6 +25,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         className={cn(
           'inline-flex items-center justify-center rounded-sm border-0 bg-transparent p-1 text-fg-muted cursor-pointer',
           'transition-colors duration-150 enabled:hover:bg-white/5 enabled:hover:text-fg disabled:cursor-not-allowed disabled:opacity-60',
+          'max-md:min-h-11 max-md:min-w-11',
           className
         )}
         {...props}

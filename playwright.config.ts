@@ -39,11 +39,25 @@ export default defineConfig({
     {
       name: 'visual-desktop',
       testDir: './e2e/visual',
+      testIgnore: '**/mobileOverflow.spec.ts',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
     },
     {
       name: 'visual-mobile',
       testDir: './e2e/visual',
+      testIgnore: '**/mobileOverflow.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 360, height: 800 },
+        deviceScaleFactor: 1,
+        isMobile: true,
+        hasTouch: true,
+      },
+    },
+    {
+      name: 'mobile-overflow',
+      testDir: './e2e/visual',
+      testMatch: 'mobileOverflow.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 360, height: 800 },

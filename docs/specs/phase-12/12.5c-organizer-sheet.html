@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.5c Organizer Sheet</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.5c</nav>
+<h1>Step 12.5c: Organizer sheet</h1>
+<p class="subtitle">The organizer sheet (<code>/:slug/manage/sheet</code>) stays a dense matrix and scrolls inside its own container on phones.</p>
+<div class="box"><p><strong>Wave 2.</strong> Needs wave 1’s gate. Runs in parallel with every other wave 2 step. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions (the “Forms” bullet applies to every form here).</p></div>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>src/routes/ManageSheetPage.tsx</code>, <code>src/features/bracket/components/OrganizerSheetMatrix.tsx</code>, <code>src/features/bracket/components/sheet/SheetMatchRow.tsx</code>, <code>src/features/bracket/components/sheet/SheetTelemetryBar.tsx</code></td></tr>
+</table>
+
+<h2>Changes</h2>
+<ul>
+  <li>The matrix's table or grid sits inside an <code>overflow-x-auto overscroll-x-contain</code> wrapper (if it isn't already). The page itself must not overflow.</li>
+  <li>The match/player identity column is sticky: its cells get <code>sticky left-0 z-10</code> plus the row's background (the same background class or runtime color the row uses, so content doesn't show through).</li>
+  <li><code>SheetTelemetryBar</code>: its row gets <code>flex-wrap</code>; stat items get <code>min-w-0</code>.</li>
+  <li>Any sticky header in <code>ManageSheetPage</code> at <code>top-0</code> gets <code>max-md:top-12</code>. Page padding follows the conventions.</li>
+</ul>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/features/bracket</code> passes with no edits to existing tests.</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.5c\]"</code> passes, or fails only on elements in other steps' files (report them).</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>Scroll the sheet sideways; the identity column stays put.</li>
+  <li>Tap a match row; the score sheet opens.</li>
+</ul>
+</main>
+</body>
+</html>

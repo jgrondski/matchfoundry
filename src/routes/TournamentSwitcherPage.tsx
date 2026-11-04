@@ -57,19 +57,19 @@ export const TournamentSwitcherPage: React.FC = () => {
     <div className="min-h-screen bg-canvas px-0 pt-0 pb-16">
       <TopNavSwitcher />
 
-      <div className="mx-auto flex w-full max-w-295 flex-col gap-8 px-6 py-8">
+      <div className="mx-auto flex w-full max-w-295 flex-col gap-8 px-6 py-8 max-md:px-4">
         {/* Hero Section */}
         <header className="px-4 py-6 text-center">
           <div className="mb-4 inline-flex items-center gap-2">
             <div className="flex size-9 items-center justify-center rounded-md bg-linear-135 from-gold-bright to-gold shadow-gold">
               <Layers size={24} className="text-canvas" />
             </div>
-            <span className="text-2xl font-extrabold text-fg">
+            <span className="text-2xl font-extrabold text-fg max-md:text-xl">
               MATCH<span className="text-gold-bright">FOUNDRY</span>
               <sup className="ml-0.5 text-[0.6em] text-gold-bright">™</sup>
             </span>
           </div>
-          <h1 className="mb-3 text-hero font-extrabold tracking-tight text-white">
+          <h1 className="mb-3 text-hero font-extrabold tracking-tight text-white max-md:text-4xl">
             Tournaments
           </h1>
           <p className="mx-auto mt-0 mb-6 max-w-162.5 text-lg text-fg-secondary">
@@ -77,11 +77,11 @@ export const TournamentSwitcherPage: React.FC = () => {
           </p>
 
           {isSystemAdmin && (
-            <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3 max-md:flex-col max-md:items-stretch">
               <Button
                 variant="primary"
                 onClick={() => setIsCreateModalOpen(true)}
-                className="px-6 py-2.5 text-base shadow-gold enabled:hover:shadow-gold"
+                className="px-6 py-2.5 text-base shadow-gold enabled:hover:shadow-gold max-md:w-full"
               >
                 <Plus size={18} />
                 Create New Tournament
@@ -91,7 +91,7 @@ export const TournamentSwitcherPage: React.FC = () => {
                   variant="secondary"
                   onClick={handleSimulateSample}
                   disabled={isSimulating}
-                  className="px-6 py-2.5 text-base"
+                  className="px-6 py-2.5 text-base max-md:w-full"
                 >
                   <Sparkles size={18} />
                   {isSimulating ? 'Simulating...' : 'Simulate Sample Tournament'}
@@ -113,7 +113,7 @@ export const TournamentSwitcherPage: React.FC = () => {
             <div className="mb-2 flex size-15 items-center justify-center rounded-full bg-red/15 text-red">
               <AlertTriangle size={32} />
             </div>
-            <h2 className="text-2xl font-bold text-fg">
+            <h2 className="text-2xl font-bold text-fg max-md:text-xl">
               PostgreSQL Database Offline
             </h2>
             <p className="max-w-115 text-base leading-normal text-fg-secondary">
@@ -126,11 +126,11 @@ export const TournamentSwitcherPage: React.FC = () => {
                 npm run db:up
               </div>
             )}
-            <div className="mt-3 flex flex-wrap justify-center gap-3">
+            <div className="mt-3 flex flex-wrap justify-center gap-3 max-md:flex-col max-md:items-stretch max-md:self-stretch">
               <Button
                 variant="primary"
                 onClick={() => retryConnection()}
-                className="px-7 py-3 text-base"
+                className="px-7 py-3 text-base max-md:w-full"
               >
                 Retry Connection
               </Button>
@@ -141,7 +141,7 @@ export const TournamentSwitcherPage: React.FC = () => {
             <div className="mb-2 flex size-15 items-center justify-center rounded-full bg-gold-soft text-gold-bright">
               <Trophy size={30} />
             </div>
-            <h2 className="text-2xl font-bold text-fg">
+            <h2 className="text-2xl font-bold text-fg max-md:text-xl">
               No Tournaments Created Yet
             </h2>
             <p className="max-w-110 text-base leading-normal text-fg-secondary">
@@ -149,11 +149,11 @@ export const TournamentSwitcherPage: React.FC = () => {
                 ? 'Get started by creating your first competitive tournament, or launch an instant end-to-end simulation with authentic competitive Tetris players.'
                 : 'Get started by creating your first competitive tournament.'}
             </p>
-            <div className="mt-3 flex flex-wrap justify-center gap-3">
+            <div className="mt-3 flex flex-wrap justify-center gap-3 max-md:flex-col max-md:items-stretch max-md:self-stretch">
               <Button
                 variant="primary"
                 onClick={() => setIsCreateModalOpen(true)}
-                className="px-7 py-3 text-base shadow-gold enabled:hover:shadow-gold"
+                className="px-7 py-3 text-base shadow-gold enabled:hover:shadow-gold max-md:w-full"
               >
                 <Plus size={18} />
                 Create New Tournament
@@ -163,7 +163,7 @@ export const TournamentSwitcherPage: React.FC = () => {
                   variant="secondary"
                   onClick={handleSimulateSample}
                   disabled={isSimulating}
-                  className="px-7 py-3 text-base"
+                  className="px-7 py-3 text-base max-md:w-full"
                 >
                   <Sparkles size={18} />
                   {isSimulating ? 'Simulating...' : 'Simulate Sample Tournament'}
@@ -188,7 +188,7 @@ export const TournamentSwitcherPage: React.FC = () => {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <ShieldCheck size={20} color="var(--color-gold-bright)" />
-                        <h2 className="m-0 text-xl font-extrabold text-white">
+                        <h2 className="m-0 text-xl font-extrabold text-white max-md:text-lg">
                           {managedTourneys.length > 1
                             ? `Your Managed Tournaments (${managedTourneys.length})`
                             : 'Your Managed Tournament'}
@@ -198,7 +198,7 @@ export const TournamentSwitcherPage: React.FC = () => {
                         🏆 Tournament Director Access Active
                       </span>
                     </div>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(480px,1fr))] gap-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-[repeat(auto-fill,minmax(480px,1fr))]">
                       {managedTourneys.map(tournament => (
                         <TournamentCard
                           key={`managed-${tournament.id}`}
@@ -237,10 +237,10 @@ export const TournamentSwitcherPage: React.FC = () => {
 
             {/* 3. Public Directory (Or System Admin Full List) */}
             <section className="flex flex-col gap-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 max-md:flex-col max-md:items-stretch">
                 <div className="flex items-center gap-2">
                   <Globe size={18} color="var(--color-gold-bright)" />
-                  <h2 className="m-0 text-xl font-extrabold text-white">
+                  <h2 className="m-0 text-xl font-extrabold text-white max-md:text-lg">
                     {isAdminView ? 'All Managed Tournaments' : 'Active Tournaments'}
                   </h2>
                 </div>
@@ -248,6 +248,7 @@ export const TournamentSwitcherPage: React.FC = () => {
                   <Chip
                     active={showTestTournaments}
                     onClick={() => setShowTestTournaments(v => !v)}
+                    className="max-md:w-full"
                     data-testid="show-test-tournaments-toggle"
                   >
                     <FlaskConical size={13} />
@@ -260,7 +261,7 @@ export const TournamentSwitcherPage: React.FC = () => {
                 <p className="m-0 text-sm text-fg-muted">No tournaments to show.</p>
               )}
 
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(480px,1fr))] gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-[repeat(auto-fill,minmax(480px,1fr))]">
                 {listedTournaments.map(tournament => (
                   <TournamentCard
                     key={tournament.id}

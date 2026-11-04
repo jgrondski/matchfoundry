@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.2a Match Scoring</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.2a</nav>
+<h1>Step 12.2a: Match scoring</h1>
+<p class="subtitle">A floor judge scores matches from a phone: the judge feed fits the screen, and the score sheet (a bottom sheet since 12.0a) keeps Save in reach.</p>
+
+<div class="box"><p><strong>Wave 2.</strong> Needs wave 1's gate. Runs in parallel with every other wave 2 step. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions.</p></div>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>src/routes/ManageJudgePage.tsx</code>, <code>src/features/bracket/components/MatchCardFeed.tsx</code>, <code>src/features/bracket/components/MatchScoreDrawer.tsx</code>, <code>src/features/bracket/components/drawer/GameScoreCard.tsx</code>, <code>src/features/bracket/components/drawer/MatchupBanner.tsx</code>, <code>src/features/bracket/components/drawer/ManualSlotOverrideSection.tsx</code>, <code>src/features/bracket/components/BestOfSelect.tsx</code>, <code>src/components/ClearableNumberInput.tsx</code></td></tr>
+  <tr><td>Create</td><td><code>src/features/bracket/__tests__/matchCardFeedKeyboard.test.tsx</code></td></tr>
+</table>
+
+<h2>A. Judge page tier selector (ManageJudgePage.tsx)</h2>
+<ul>
+  <li>The sticky tier bar (around line 95) gets <code>max-md:top-12 max-md:px-3</code>.</li>
+  <li>The chip row inside it gets the sideways-scrolling chip row classes from the conventions; each <code>Chip</code> gets <code>shrink-0</code>.</li>
+  <li>The “Tier:” label gets <code>max-md:hidden</code>.</li>
+</ul>
+
+<h2>B. Feed (MatchCardFeed.tsx)</h2>
+<ul>
+  <li>The stage filter and round filter rows each become one sideways-scrolling row on mobile (the chip row classes from the conventions; <code>shrink-0</code> on each chip). The row at line 159 already scrolls; give it <code>shrink-0</code> chips only.</li>
+  <li>The clickable card <code>&lt;div data-testid="feed-match-card"&gt;</code> (around line 343): when it is clickable (<code>tournament.isLocked &amp;&amp; isPlayable</code>), add <code>role="button"</code>, <code>tabIndex={0}</code>, and <code>onKeyDown</code> that runs the same handler on Enter and on Space (calling <code>e.preventDefault()</code> for Space). When not clickable, add none of them. Keep the element a <code>div</code>, since it contains other buttons.</li>
+  <li>The two player rows inside each card (around lines 429 and 528) get <code>max-md:min-h-11</code>.</li>
+</ul>
+
+<h2>C. Score sheet</h2>
+<ul>
+  <li><strong>MatchScoreDrawer.tsx footer</strong> (the “Footer Actions” div, around line 534): add <code>max-md:sticky max-md:bottom-0 max-md:z-10 max-md:flex-col-reverse max-md:px-4</code>. It already has its own background. The Cancel button and the Save button get <code>max-md:w-full max-md:flex-none</code>. With <code>flex-col-reverse</code>, Save sits above Cancel.</li>
+  <li>The drawer's other horizontal paddings of <code>px-6</code> get <code>max-md:px-4</code>, including the conflict notice's <code>mx-6</code> (<code>max-md:mx-4</code>).</li>
+  <li><strong>GameScoreCard.tsx:</strong> the score inputs already use <code>inputMode="numeric"</code> and <code>text-base</code>; leave them. The two winner toggles (<code>size-5</code> round buttons, around lines 106 and 164) keep their size but get a 44px hit area on mobile: add <code>max-md:relative max-md:after:absolute max-md:after:-inset-3</code>. The TIE button (around line 142) gets <code>max-md:min-h-11 max-md:px-3</code>. The game card padding <code>px-4</code> gets <code>max-md:px-3</code>.</li>
+  <li><strong>Full-height sheet.</strong> The score sheet covers the whole screen on phones so the game inputs start at the top and a stray tap can't land on the backdrop. Add <code>panelClassName="max-md:h-dvh max-md:max-h-dvh max-md:rounded-none max-md:pt-[env(safe-area-inset-top)]"</code> to its <code>Overlay</code> (around line 282). <code>panelClassName</code> comes after the sheet classes from 12.0a, so these win. Don't change <code>Overlay.tsx</code>.</li>
+  <li><strong>MatchScoreDrawer.tsx header</strong> (the “Glow-up Header” div, around line 308) becomes one compact row on phones:
+    <ul>
+      <li>The header div gets <code>max-md:items-center max-md:px-4 max-md:py-2</code>.</li>
+      <li>The “Tournament Title &amp; Active Tier Badge” row (the <code>flex items-center gap-2 flex-wrap</code> div) gets <code>max-md:hidden</code>. The page behind the sheet already shows both.</li>
+      <li>The <code>h2</code> gets <code>max-md:text-lg</code>; the round name span gets <code>max-md:text-sm</code>. The hero row gets <code>max-md:flex-nowrap max-md:min-w-0</code> and the round span <code>max-md:truncate</code>.</li>
+      <li>The close button gets <code>max-md:min-h-11 max-md:min-w-11</code>.</li>
+    </ul>
+  </li>
+  <li><strong>MatchupBanner.tsx</strong> becomes a compact scoreboard on phones (about 110px tall instead of about 250px). Apply the same classes to the Player 1 and Player 2 sections:
+    <ul>
+      <li>Root div (<code>flex items-center py-5 px-6 gap-4</code>): add <code>max-md:gap-2 max-md:px-3 max-md:py-2</code>.</li>
+      <li>Each player section (<code>flex-1 text-center min-w-0 py-3 px-2 …</code>): add <code>max-md:py-1.5</code>.</li>
+      <li>Each avatar ring (<code>size-10.5 rounded-full …</code>): add <code>max-md:hidden</code>.</li>
+      <li>Each seed row (<code>flex items-center justify-center gap-1.5 mb-1.5</code>): add <code>max-md:mb-0.5</code>.</li>
+      <li>Each name div (<code>text-lg font-bold text-white truncate …</code>): add <code>max-md:text-sm</code>, and make the inner name <code>&lt;span&gt;</code> <code>min-w-0 truncate</code> so the OVERRIDE tag stays visible.</li>
+      <li>Each wins number (<code>font-mono tabular-nums … text-hero …</code>): add <code>max-md:text-3xl max-md:mt-0</code> to the static classes in its <code>cn(…)</code>.</li>
+      <li>The center column keeps “VS”, the best-of select and “First to N”; the VS span gets <code>max-md:mb-1</code>.</li>
+    </ul>
+  </li>
+  <li><strong>Forfeit section on phones</strong> (the “Quick Forfeit Option” div, around line 499) collapses behind a toggle so the games stay in view. Add <code>const isMobile = useIsMobile();</code> (from <code>src/components/ui/useMediaQuery</code>) and <code>const [forfeitOpen, setForfeitOpen] = useState(false);</code>. The header row (<code>ShieldAlert</code> and the label) becomes a <code>&lt;button type="button"&gt;</code> with the same classes plus <code>w-full cursor-pointer text-left</code>, <code>aria-expanded={!isMobile || forfeitOpen}</code>, and <code>onClick={() =&gt; setForfeitOpen(o =&gt; !o)}</code>, with a trailing <code>ChevronDown</code> (size 14, <code>ml-auto md:hidden</code>, rotated with <code>rotate-180</code> when open). The award buttons row renders when <code>!isMobile || forfeitOpen</code>; on desktop it always renders as today. On phones the award buttons get <code>max-md:min-h-11 max-md:flex-1</code> and the row gets <code>max-md:flex-col</code>.</li>
+  <li><code>ManualSlotOverrideSection</code> is already collapsed behind its own toggle button; leave its behaviour, apply only the bullet below.</li>
+  <li><strong>BestOfSelect.tsx and ManualSlotOverrideSection.tsx:</strong> selects and buttons are <code>max-md:w-full</code>; any side-by-side selects stack (<code>max-md:flex-col max-md:items-stretch</code>).</li>
+  <li><strong>ClearableNumberInput.tsx:</strong> add <code>inputMode="numeric"</code> to the <code>&lt;input&gt;</code>. Nothing else changes (it is also used in settings).</li>
+</ul>
+
+<h2>D. Tests</h2>
+<p><code>matchCardFeedKeyboard.test.tsx</code>: render <code>MatchCardFeed</code> with <code>renderToStaticMarkup</code> using the existing test helpers for a locked tournament with a generated bracket (copy the setup from an existing <code>MatchCardFeed</code> or feed-filtering test in <code>src/features/bracket/__tests__</code>). Assert that playable cards have <code>role="button"</code> and <code>tabindex="0"</code>, and that a card for an unplayable match (a player slot still TBD) has neither.</p>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/features/bracket src/components</code> passes.</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.2a\]"</code> passes, or fails only on elements in other steps' files (report them).</li>
+  <li><code>npx playwright test e2e/overlays.spec.ts --project=chromium</code> still passes.</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>Score a match end to end: open the sheet, enter both scores (numeric keypad appears), pick the winner, Save &amp; Advance.</li>
+  <li>Save stays visible without scrolling to the bottom of the sheet.</li>
+  <li>The sheet fills the screen; Game 1's score inputs are visible without scrolling on a 360×800 screen for a best-of-3 match.</li>
+  <li>The forfeit buttons appear only after tapping “Forfeit / Disqualification Overrides”; on desktop they show as before.</li>
+  <li>Switch tiers and filter rounds by swiping the chip rows.</li>
+</ul>
+</main>
+</body>
+</html>

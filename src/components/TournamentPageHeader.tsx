@@ -28,7 +28,7 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
   isObsMode = false,
 }) => {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="flex flex-wrap items-center justify-between gap-4 max-md:flex-wrap">
       {/* Title & Eyebrow */}
       <div>
         <div className="mb-1 flex items-center gap-2">
@@ -37,7 +37,7 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
         <h1
           className={cn(
             'm-0 flex items-center gap-2.5 font-extrabold tracking-tight text-white',
-            isObsMode ? 'text-2xl' : 'text-3xl'
+            isObsMode ? 'text-2xl' : 'text-3xl max-md:text-2xl'
           )}
         >
           {icon || <Trophy color="var(--color-gold-bright)" size={isObsMode ? 24 : 28} />}
@@ -48,7 +48,7 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
 
       {/* Action Controls & Search Group */}
       {!isObsMode && (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 max-md:w-full">
           {action}
 
           {obsUrl && (
@@ -70,7 +70,7 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
           )}
 
           {onSearchChange !== undefined && (
-            <div className="relative w-70 max-w-full">
+            <div className="relative w-70 max-w-full max-md:w-full">
               <Search
                 size={16}
                 color="var(--color-fg-muted)"
@@ -82,7 +82,7 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
                 value={searchTerm || ''}
                 onChange={e => onSearchChange(e.target.value)}
                 className={cn(
-                  'w-full rounded-md border border-line bg-surface py-2 pl-9 text-sm text-fg outline-none transition-colors duration-150',
+                  'w-full rounded-md border border-line bg-surface py-2 pl-9 text-sm text-fg outline-none transition-colors duration-150 max-md:w-full max-md:text-base',
                   searchTerm ? 'pr-8' : 'pr-3.5'
                 )}
               />

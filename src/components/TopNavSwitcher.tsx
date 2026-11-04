@@ -53,12 +53,12 @@ export const TopNavSwitcher: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-1000 flex w-full items-center justify-center border-b border-line-subtle bg-canvas/85 px-6 py-3 backdrop-blur-md">
-      <div className="relative flex w-full max-w-295 items-center justify-between">
+    <header className="sticky top-0 z-1000 flex w-full items-center justify-center border-b border-line-subtle bg-canvas/85 px-6 py-3 backdrop-blur-md max-md:px-3 max-md:py-2">
+      <div className="relative flex w-full max-w-295 items-center justify-between max-md:flex-wrap max-md:gap-y-2">
         {/* Left: Brand / Switcher Home Link */}
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-base font-extrabold tracking-tight text-fg no-underline"
+          className="inline-flex items-center gap-2 text-base font-extrabold tracking-tight text-fg no-underline max-md:text-base"
         >
           <Trophy size={18} color="var(--color-gold-bright, #ffc905)" />
           <span>
@@ -73,7 +73,8 @@ export const TopNavSwitcher: React.FC = () => {
             aria-label="Global System Navigation"
             className={cn(
               'mx-auto grid w-full items-center gap-1 rounded-full border border-line bg-elevated p-1 shadow-[0_4px_14px_rgba(0,0,0,0.35)]',
-              navTabs.length === 2 ? 'max-w-90' : 'max-w-130'
+              navTabs.length === 2 ? 'max-w-90' : 'max-w-130',
+              'max-md:order-last max-md:w-full max-md:max-w-none'
             )}
             style={{ gridTemplateColumns: `repeat(${navTabs.length}, minmax(0, 1fr))` }}
           >
@@ -84,7 +85,7 @@ export const TopNavSwitcher: React.FC = () => {
                   key={tab.to}
                   to={tab.to}
                   className={cn(
-                    'inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm whitespace-nowrap no-underline transition-all duration-200',
+                    'inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm whitespace-nowrap no-underline transition-all duration-200 max-md:min-h-11 max-md:text-xs',
                     tab.isActive
                       ? 'bg-gold-bright font-bold text-canvas shadow-[0_2px_8px_rgba(255,201,5,0.4)]'
                       : 'bg-transparent font-medium text-fg-secondary shadow-none'
@@ -118,7 +119,7 @@ export const TopNavSwitcher: React.FC = () => {
               to={activeTournament.isLocked && activeTournament.tiers?.length
                 ? `/${activeTournament.slug}/manage/bracket/${activeTournament.tiers[0].slug}`
                 : `/${activeTournament.slug}/manage/qualifiers`}
-              className="inline-flex items-center gap-2 rounded-full border border-tier-gold/30 bg-tier-gold/10 px-3 py-1.5 text-caption font-bold text-gold-bright no-underline transition-all duration-200"
+              className="inline-flex items-center gap-2 max-md:hidden rounded-full border border-tier-gold/30 bg-tier-gold/10 px-3 py-1.5 text-caption font-bold text-gold-bright no-underline transition-all duration-200"
               title={`Return to active tournament: ${activeTournament.name}`}
             >
               <Zap size={12} color="var(--color-gold-bright, #ffc905)" className="shrink-0" />
@@ -158,21 +159,23 @@ export const TopNavSwitcher: React.FC = () => {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-white/6 px-2.5 py-1 text-xs font-semibold text-fg-secondary transition-all duration-150"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-white/6 px-2.5 py-1 text-xs font-semibold text-fg-secondary transition-all duration-150 max-md:min-h-11 max-md:min-w-11 max-md:justify-center"
                 title="Log out and reset session to public spectator"
+                aria-label="Log Out"
               >
                 <LogOut size={12} />
-                <span>Log Out</span>
+                <span className="max-md:sr-only">Log Out</span>
               </button>
             </div>
           ) : (
             <Link
               to="/admin"
-              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white/5 px-3 py-1.5 text-caption font-semibold text-fg-secondary no-underline transition-all duration-150"
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white/5 px-3 py-1.5 text-caption font-semibold text-fg-secondary no-underline transition-all duration-150 max-md:min-h-11 max-md:min-w-11 max-md:justify-center"
               title="Staff & Organizer Login"
+              aria-label="Staff Login"
             >
               <KeyRound size={13} color="var(--color-gold-bright, #ffc905)" />
-              <span>Staff Login</span>
+              <span className="max-md:sr-only">Staff Login</span>
             </Link>
           )}
         </div>

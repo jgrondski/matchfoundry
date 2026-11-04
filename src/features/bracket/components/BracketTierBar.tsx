@@ -67,13 +67,13 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
       ref={tierBarRef}
       id="bracket-tier-bar"
       className={cn(
-        'z-42 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface py-2.5 px-5 select-none',
+        'z-42 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface py-2.5 px-5 select-none max-md:top-12 max-md:flex-col max-md:items-stretch max-md:gap-2 max-md:px-3 max-md:py-2',
         viewMode === 'fit' ? 'relative top-0' : ['sticky', canManage ? 'top-0' : 'top-14']
       )}
     >
       {/* Left: Tier Filter Chips */}
-      <div className="flex flex-wrap items-center gap-3.5">
-        <span className="mr-1 text-2xs font-bold uppercase tracking-wider text-fg-muted">
+      <div className="flex flex-wrap items-center gap-3.5 max-md:-mx-3 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3 max-md:[scrollbar-width:none]">
+        <span className="mr-1 text-2xs font-bold uppercase tracking-wider text-fg-muted max-md:hidden">
           Tier:
         </span>
 
@@ -87,6 +87,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
               key={tier.id}
               active={isActive}
               accent={{ color: tierColor, textColor: contrastColor }}
+              className="shrink-0"
               onClick={() => {
                 if (!isActive) {
                   setStoredTierSlug(tournament.slug, tier.slug);
@@ -115,7 +116,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
             className={buttonClasses({
               variant: 'secondary',
               className:
-                'gap-1 rounded-full py-1 px-2.5 text-xs text-fg-muted hover:bg-highlight hover:border-fg-secondary',
+                'gap-1 rounded-full py-1 px-2.5 text-xs text-fg-muted hover:bg-highlight hover:border-fg-secondary max-md:hidden',
             })}
             title="Configure Tiers in Tournament Settings"
           >
@@ -126,11 +127,11 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
       </div>
 
       {/* Right: Player Search, View Mode Toggle & Share Button */}
-      <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-2.5 max-md:flex-wrap max-md:justify-between">
         {!canManage && <TournamentQualTimerHud tournament={tournament} compact readOnly={true} />}
         {/* Bracket Player Search - Hidden on Mobile Feed */}
         {viewMode !== 'feed' && onPlayerSearchTermChange !== undefined && (
-          <div className="relative flex w-46.25 max-w-full items-center">
+          <div className="relative flex w-46.25 max-w-full items-center max-md:hidden">
             <Search
               size={13}
               color={highlightedPlayerName ? 'var(--color-gold-bright)' : 'var(--color-fg-muted)'}
@@ -168,12 +169,13 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
         )}
 
         {onChangeViewMode && (
-          <div className="inline-flex items-center gap-0.5 rounded-sm border border-line bg-canvas p-0.5">
+          <div className="inline-flex items-center gap-0.5 rounded-sm border border-line bg-canvas p-0.5 max-md:hidden">
             <Chip
               size="sm"
               active={viewMode === 'standard'}
               onClick={() => onChangeViewMode('standard')}
               title="Standard Tree with Horizontal Scroll"
+              className="max-md:hidden"
             >
               <Maximize2 size={12} />
               <span>Standard</span>
@@ -184,6 +186,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
               active={viewMode === 'fit'}
               onClick={() => onChangeViewMode('fit')}
               title="Auto-Fit to 1080p / Window (No scroll)"
+              className="max-md:hidden"
             >
               <Monitor size={12} />
               <span>Fit Screen</span>
@@ -193,6 +196,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
               size="sm"
               active={viewMode === 'split'}
               onClick={() => onChangeViewMode('split')}
+              className="max-md:hidden"
               title={isAcceleratedHybrid ? 'Side-by-Side Pods (Pod 3 to right of Pod 2)' : 'Bilateral Split Wings (Center Finals)'}
             >
               <Split size={12} />
@@ -206,7 +210,8 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
               title="Mobile Bracket Feed"
             >
               <ListFilter size={12} />
-              <span>Mobile</span>
+              <span className="max-md:hidden">Mobile</span>
+              <span className="md:hidden">List</span>
             </Chip>
           </div>
         )}
@@ -218,9 +223,10 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
             size="sm"
             onClick={onOpenShare}
             title="Share bracket link & venue QR code"
+            aria-label="Share bracket"
           >
             <Share2 size={13} />
-            <span>Share</span>
+            <span className="max-md:sr-only">Share</span>
           </Button>
         )}
       </div>

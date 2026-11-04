@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 const FIXTURE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
 
@@ -16,12 +16,31 @@ const fixtures = {
   organizations: load('organizations'),
   players: load('players'),
   sessions: load('sessions'),
+  orgTournaments: load('orgTournaments'),
 };
 
 export const FIXTURE_SLUG: string = fixtures.tournament.slug;
 export const FIXTURE_TIER_SLUG: string = [...fixtures.tournament.tiers].sort(
   (a: any, b: any) => a.priority - b.priority
 )[0].slug;
+
+const fixtureOrg = (fixtures.organizations as any[]).find(o => o.id === fixtures.tournament.organizationId);
+if (!fixtureOrg) {
+  throw new Error(`No organization fixture matches tournament organizationId ${fixtures.tournament.organizationId}.`);
+}
+export const FIXTURE_ORG_SLUG: string = fixtureOrg.slug;
+
+export const FIXED_TIME = new Date('2026-06-01T12:00:00Z');
+
+export interface MockOptions {
+  /** Transforms the full tournament fixture before it is served (GET /api/tournaments/:slugOrId). */
+  tournament?: (t: any) => any;
+}
+
+/** Serves the fixture tournament with manual seeding, so the seeding manager renders. */
+export const MANUAL_SEEDING: MockOptions = {
+  tournament: t => ({ ...t, seedingMethod: 'MANUAL', manualSeeds: t.playersPool.map((p: any) => p.id) }),
+};
 
 export const ADMIN_SESSION = {
   token: 'visual-test-token',
@@ -32,7 +51,7 @@ export const ADMIN_SESSION = {
 };
 
 /** Routes every /api/* request to frozen fixtures. Returns a list that collects unmocked GETs. */
-export async function installApiMocks(page: Page): Promise<string[]> {
+export async function installApiMocks(page: Page, options: MockOptions = {}): Promise<string[]> {
   const unmocked: string[] = [];
   await page.route(
     url => url.pathname.startsWith('/api/'),
@@ -49,13 +68,36 @@ export async function installApiMocks(page: Page): Promise<string[]> {
       if (/^\/api\/tournaments\/[^/]+\/qualify\/sessions$/.test(pathname)) {
         return route.fulfill({ json: fixtures.sessions });
       }
+      const orgTournaments = pathname.match(/^\/api\/organizations\/([^/]+)\/tournaments$/);
+      if (orgTournaments && orgTournaments[1] === fixtures.tournament.organizationId) {
+        return route.fulfill({ json: fixtures.orgTournaments });
+      }
       const single = pathname.match(/^\/api\/tournaments\/([^/]+)$/);
       if (single && (single[1] === fixtures.tournament.slug || single[1] === fixtures.tournament.id)) {
-        return route.fulfill({ json: fixtures.tournament });
+        return route.fulfill({
+          json: options.tournament ? options.tournament(structuredClone(fixtures.tournament)) : fixtures.tournament,
+        });
       }
       unmocked.push(`GET ${pathname}`);
       return route.fulfill({ status: 404, json: { error: `visual mock: unmocked GET ${pathname}` } });
     }
   );
   return unmocked;
+}
+
+export async function prepare(page: Page, admin: boolean, options: MockOptions = {}): Promise<string[]> {
+  const unmocked = await installApiMocks(page, options);
+  await page.clock.setFixedTime(FIXED_TIME);
+  if (admin) {
+    await page.addInitScript(session => {
+      window.localStorage.setItem('tm_admin_auth', JSON.stringify(session));
+    }, ADMIN_SESSION);
+  }
+  return unmocked;
+}
+
+export async function settle(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByText(/^Loading/)).toHaveCount(0);
+  await page.evaluate(() => document.fonts.ready);
 }

@@ -21,7 +21,7 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(
         aria-pressed={active}
         style={accentStyle ? { ...accentStyle, ...style } : style}
         className={cn(
-          'inline-flex items-center gap-2 rounded-full border font-semibold transition-all duration-150',
+          'inline-flex items-center gap-2 rounded-full border font-semibold transition-all duration-150 max-md:min-h-11',
           size === 'md' ? 'px-3.5 py-1.5 text-caption' : 'px-2.5 py-1 text-xs',
           active ? 'cursor-default font-extrabold' : 'cursor-pointer bg-canvas text-fg-secondary border-line',
           active && !accent && 'bg-gold-soft text-gold-bright border-gold shadow-gold-glow',

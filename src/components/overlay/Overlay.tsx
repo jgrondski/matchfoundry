@@ -1,9 +1,10 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../ui';
 import { resolveDismissal, type DismissReason } from './dismissal';
 import { pushOverlay, removeOverlay, isTopOverlay } from './overlayStack';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
+import { useOverlayHistory } from './useOverlayHistory';
 
 export interface OverlayRenderApi {
   /** Use for every X and Cancel button. Applies the dirty/busy rules. */
@@ -15,6 +16,8 @@ export interface OverlayProps {
   /** Actually closes the overlay (parent sets its open state to false). */
   onClose: () => void;
   variant?: 'modal' | 'drawer';
+  /** Phone presentation. 'sheet' = bottom sheet (default). 'center' = stays a centered dialog. */
+  mobile?: 'sheet' | 'center';
   dirty?: boolean;
   busy?: boolean;
   dismissible?: boolean;
@@ -35,6 +38,7 @@ export const Overlay: React.FC<OverlayProps> = props => (props.open ? <OverlayIn
 const OverlayInner: React.FC<OverlayProps> = ({
   onClose,
   variant = 'modal',
+  mobile = 'sheet',
   dirty = false,
   busy = false,
   dismissible = true,
@@ -56,6 +60,18 @@ const OverlayInner: React.FC<OverlayProps> = ({
   };
   const requestCloseRef = useRef(requestClose);
   requestCloseRef.current = requestClose;
+
+  // Browser Back (or a back swipe) is a close attempt like Escape, and never leaves the page.
+  const isTop = useCallback(() => isTopOverlay(id), [id]);
+  useOverlayHistory(id, isTop, () => {
+    const result = resolveDismissal('back', { dirty, busy, dismissible });
+    if (result === 'close') {
+      onClose();
+      return true;
+    }
+    if (result === 'confirm') setConfirmOpen(true);
+    return false;
+  });
 
   // Stack registration, focus capture/restore.
   useEffect(() => {
@@ -107,11 +123,15 @@ const OverlayInner: React.FC<OverlayProps> = ({
     }
   };
 
+  const sheet = mobile === 'sheet';
+
   const content = (
     <div
       className={cn(
         'fixed inset-0 z-1000 flex bg-black/75 backdrop-blur-overlay animate-fade-in',
-        variant === 'drawer' ? 'justify-end' : 'items-center justify-center p-4'
+        variant === 'drawer' && 'justify-end',
+        variant === 'modal' && 'items-center justify-center p-4',
+        sheet && 'max-md:items-end max-md:p-0'
       )}
       onMouseDown={e => {
         pressStartedOnBackdrop.current = e.target === e.currentTarget;
@@ -133,12 +153,17 @@ const OverlayInner: React.FC<OverlayProps> = ({
         style={panelStyle}
         className={cn(
           'relative outline-none',
-          variant === 'drawer'
-            ? 'flex h-full w-full max-w-[520px] flex-col overflow-hidden animate-slide-in-right'
-            : 'max-h-[calc(100vh-2rem)] w-full overflow-y-auto animate-fade-in',
+          variant === 'drawer' && 'flex h-full w-full max-w-[520px] flex-col overflow-hidden animate-slide-in-right',
+          variant === 'modal' && 'max-h-[calc(100vh-2rem)] w-full overflow-y-auto animate-fade-in',
+          sheet &&
+            'max-md:mt-auto max-md:h-auto max-md:max-h-[92dvh] max-md:w-full max-md:max-w-none max-md:overflow-y-auto max-md:rounded-b-none max-md:rounded-t-lg max-md:animate-slide-in-up max-md:pb-[env(safe-area-inset-bottom)]',
+          mobile === 'center' && 'max-md:max-h-[85dvh]',
           panelClassName
         )}
       >
+        {sheet && (
+          <div aria-hidden className="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-white/20 md:hidden" />
+        )}
         {typeof children === 'function' ? children({ requestClose: () => requestClose('button') }) : children}
       </div>
       <DiscardChangesDialog

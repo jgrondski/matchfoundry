@@ -87,13 +87,15 @@
 
   --animate-fade-in: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-slide-in-right: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-in-up: slideInUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   --animate-pulse-border: pulseBorder 2s infinite ease-in-out;
   --animate-match-zoom-pulse: matchZoomPulse 2.4s ease-in-out;
 }
 
 @layer base {
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { overflow-y: scroll; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--color-line) var(--color-canvas); }
+  html { overflow-y: scroll; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: var(--color-line) var(--color-canvas); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  button, a, [role='button'] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   html, body {
     min-height: 100%;
     font-family: var(--font-sans);
@@ -141,6 +143,11 @@ select:disabled { cursor: not-allowed; opacity: 0.6; }
 @keyframes slideInRight {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 @keyframes matchZoomPulse {

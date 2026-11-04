@@ -4,9 +4,9 @@ This document is the single source of truth for MatchFoundry's roadmap: complete
 
 ---
 
-## 1. Master Roadmap & Global Status (Phases 1–13, Event Readiness)
+## 1. Master Roadmap & Global Status (Phases 1–13, Event Readiness, Qual Review)
 
-**Current focus (event in under 3 weeks, as of 2026-11-02):** Event Readiness (ER), then Phase 12 steps 12.0–12.2. Execution specs for both are indexed in [`docs/specs/index.html`](specs/index.html).
+**Current focus (as of 2026-11-04):** Phase 12, run as three waves of parallel steps. Wave 1, plus 12.1b and 12.2a–c from wave 2, must land before the event. Execution specs are indexed in [`docs/specs/index.html`](specs/index.html).
 
 | Phase | Title | Status | Description |
 | :--- | :--- | :--- | :--- |
@@ -21,8 +21,9 @@ This document is the single source of truth for MatchFoundry's roadmap: complete
 | **Phase 9** | **Production Cloud Deployment, MatchFoundry™ Brand Launch & CI/CD** | **Complete** | Vercel Serverless runtime (`api/index.ts`), Neon cloud PostgreSQL migration, MatchFoundry™ rebrand & strategic trademark rollout, zero runtime git artifacts, and Branch/PR CI/CD deployment gating. |
 | **Phase 10**| **Live & Online Qualifiers Engine** | **Complete** | Competitor self-service portal (`/:slug/qualify`), Twitch OAuth 2.0 on production HTTPS, 6–8 char NES Authwords, qual window telemetry, review queue (`/:slug/manage/review`), Discord webhooks, tokened run links & draft recovery. |
 | **Phase 11**| **Styling Foundation & Tailwind Migration** | **Complete** | Tailwind v4 theme tokens and shared UI components, one overlay system with dirty-aware dismissal, every component converted off inline styles, lint-enforced. |
-| **ER**| **Event Readiness** | **In Progress** | Request timing, Neon WebSocket pool and transactions, per-tournament write lock, targeted match writes with conflict detection, Cloudflare live updates, inline loading with a 10 s timeout, a summary-only tournament list, image uploads removed. Quick fixes, test-tournament hiding, the `cle1` region pin and skip-unchanged full saves shipped. |
-| **Phase 12**| **Mobile-Friendly App (360×800)** | **Upcoming** | Spectator bottom nav and admin menu, floor judge scoring / qualifier entry / review queue on phones, compact visual bracket, card lists for tables, every route overflow-free. |
+| **QR**| **Qual Review Workflow** | **Complete** | Quals as their own records (`qualifier_runs`), Save vs Verify, Unverify, verified lock, provisional brackets from pending quals. |
+| **ER**| **Event Readiness** | **Complete** | Request timing, Neon WebSocket pool and transactions, per-tournament write lock, targeted match writes with conflict detection, Cloudflare live updates, inline loading with a 10 s timeout, a summary-only tournament list, image uploads removed, validated event dates, keep-warm schedule from event dates. Quick fixes, test-tournament hiding, the `cle1` region pin and skip-unchanged full saves shipped. |
+| **Phase 12**| **Mobile-Friendly App (360×800)** | **In Progress** | Spectator bottom nav and admin menu, floor judge scoring / qualifier entry / review queue on phones, compact visual bracket, card lists for tables, every route overflow-free. |
 | **Phase 13**| **Universal Match Data Export & Custom Analytics** | **Upcoming** | Universal match data export (CSV with UTF-8 BOM, Google Sheets TSV clipboard copy, JSON) with custom column selection and reordering. |
 
 ---
@@ -138,11 +139,11 @@ flowchart TD
         P11["• Visual Regression Harness & Tailwind v4 Theme Tokens<br>• Shared UI Components & Overlay System (Dirty-Aware Dismissal)<br>• Full Component Conversion (10 Parallel Batches)<br>• Preflight, Palette Module & Lint Enforcement"]
     end
 
-    subgraph ER["Event Readiness (ER) [IN PROGRESS]"]
-        PER["• Request Timing & Neon WebSocket Pool<br>• Per-Tournament Write Lock & Targeted Match Writes<br>• Cloudflare Live Updates & Keep-Warm<br>• Inline Loading, Global Busy Lock & 10s Timeout<br>• Tournament Summary List & Image Uploads Removed"]
+    subgraph ER["Qual Review (QR) & Event Readiness (ER) [COMPLETE]"]
+        PER["• Qual Records, Save vs Verify & Verified Lock<br>• Request Timing & Neon WebSocket Pool<br>• Per-Tournament Write Lock & Targeted Match Writes<br>• Cloudflare Live Updates & Keep-Warm<br>• Inline Loading, Global Busy Lock & 10s Timeout<br>• Tournament Summary List, Event Dates & Image Uploads Removed"]
     end
 
-    subgraph Phase12["Phase 12: Mobile-Friendly App (360×800)"]
+    subgraph Phase12["Phase 12: Mobile-Friendly App (360×800) [IN PROGRESS]"]
         P12["• Bottom Sheets & Back-Gesture Handling<br>• Spectator Bottom Nav & Admin Menu<br>• Floor Judge Scoring, Qualifier Entry & Review Queue<br>• Compact Visual Bracket & Table Card Lists"]
     end
 
@@ -339,23 +340,30 @@ flowchart TD
 
 ---
 
-### Event Readiness (ER) [IN PROGRESS]
+### Qual Review Workflow (QR) [COMPLETE]
+* **Goal:** a qual is its own record that survives having zero scores; saving and verifying are separate; verified quals are locked until unverified; pending quals seed provisional brackets.
+* **QR.1 Qual records:** new `qualifier_runs` table with a lazy backfill (`attachOrphanScoresToRuns`); every qual API reads and writes the run; zero-score quals persist.
+* **QR.2 Review workflow:** Save vs Verify, Unverify, verified lock, submitted date and time, provisional brackets from pending quals, a lock warning, pending simulated quals, and walk-in wording removed.
+
+---
+
+### Event Readiness (ER) [COMPLETE]
 * **Goal:** before the event, writes take well under a second, two judges saving at once never lose each other's work, page loads fetch only what the page shows, every open page updates without a refresh, and every action shows inline loading with a timeout.
 * **Why:** most writes took 2–3 s (one HTTPS round trip per query on the `neon-http` driver, plus cold starts). Every match write re-saved the whole tournament (delete and re-insert all matches and games), so concurrent judges overwrote each other, and a settings save could undo scores on a locked tournament. Pages only refreshed on navigation or window focus.
-* **Steps and specs** (index: [`docs/specs/index.html`](specs/index.html)):
-  1. **ER.1** [Request timing](specs/event-readiness/ER.1-request-timing.html): `Server-Timing` header and `[api]` log lines with duration and query count. Record a baseline before ER.2.
-  2. **ER.2** [Driver and transactions](specs/event-readiness/ER.2-db-driver-and-transactions.html): Neon WebSocket pool, real transactions, parallel tournament loads, real-Postgres test tier (`npm run test:pg`).
-  3. **ER.3** [Tournament write lock](specs/event-readiness/ER.3-tournament-write-lock.html): row lock and revision on every tournament write; a locked tournament's settings save no longer touches scores or brackets.
-  4. **ER.4** [Targeted match writes](specs/event-readiness/ER.4-targeted-match-writes.html): score, forfeit and best-of write only their own rows; per-match revision returns 409 `MATCH_CONFLICT`; the score drawer never wipes a judge's typing on refresh.
-  5. **ER.5** [Realtime worker](specs/event-readiness/ER.5-realtime-worker.html): Cloudflare Worker with one Durable Object per tournament (free tier), plus an event-day keep-warm cron. Needs the user to deploy it and set its secret.
-  6. **ER.6** [Live updates](specs/event-readiness/ER.6-live-updates-client.html): the API publishes after each write; open pages refresh themselves; anonymous refreshes are CDN-cached per revision; the qual timer uses the server clock.
-  7. **ER.7** [Loading foundation](specs/event-readiness/ER.7-busy-foundation.html): spinner, `useAction`, global busy lock, 10 s timeout, shared error banner.
-  8. **ER.8** [Loading flows](specs/event-readiness/ER.8-busy-flows.html): judge, qualifier, review-queue and admin actions converted.
-  9. **ER.9** [Tournament summaries](specs/event-readiness/ER.9-tournament-summary-list.html): `GET /api/tournaments` returns small summaries in a fixed 5 queries instead of every tournament in full (about 8 queries and 85 KB per tournament, on every page load for every visitor). Each page loads only its own tournament; the organization dashboard gets its own endpoint for metrics.
-  10. **ER.10** [Hide image uploads](specs/event-readiness/ER.10-hide-image-uploads.html): remove the player avatar upload, organization logo and banner fields, and tournament logo and banner fields. Images are stored as base64 in the database and the feature is unused; saved images keep displaying. The proper fix is backlog item 15.
-  11. **ER.11** [Event dates](specs/event-readiness/ER.11-event-dates.html): the free-text event date (stored values include `Upcoming` and `Yah`) becomes a validated `startDate` and optional `endDate`, stored in two new `date` columns, entered with date pickers and shown as "Nov 14–16, 2026". Old free-text dates are not converted; set real dates in Settings after merge.
-  12. **ER.12** [Keep-warm schedule](specs/event-readiness/ER.12-keep-warm-schedule.html): the worker's keep-warm cron fetches event-day windows from `GET /api/keep-warm-schedule` once a day and stores them in a Durable Object, replacing the hand-edited `KEEP_WARM_FROM`/`KEEP_WARM_UNTIL`. The user redeploys the worker after merge.
-* **Order:** ER.1 → ER.2 → ER.3 → ER.4 → ER.9 → ER.6 → ER.8, and ER.11 → ER.12. ER.11 can run alongside ER.6; ER.12 must not. ER.5 any time; ER.7 alongside ER.2–ER.4 and before ER.6; ER.10 any time, including alongside ER.9. Done: ER.1–ER.5, ER.7, ER.9 and ER.10; the realtime worker is deployed at `matchfoundry-realtime.matchfoundry.workers.dev` (one worker for all environments; deploying it from CI is a post-event backlog item).
+* **Steps:**
+  1. **ER.1** Request timing: `Server-Timing` header and `[api]` log lines with duration and query count.
+  2. **ER.2** Driver and transactions: Neon WebSocket pool, real transactions, parallel tournament loads, real-Postgres test tier (`npm run test:pg`).
+  3. **ER.3** Tournament write lock: row lock and revision on every tournament write; a locked tournament's settings save no longer touches scores or brackets.
+  4. **ER.4** Targeted match writes: score, forfeit and best-of write only their own rows; per-match revision returns 409 `MATCH_CONFLICT`; the score drawer never wipes a judge's typing on refresh.
+  5. **ER.5** Realtime worker: Cloudflare Worker with one Durable Object per tournament (free tier), plus an event-day keep-warm cron.
+  6. **ER.6** Live updates: the API publishes after each write; open pages refresh themselves; anonymous refreshes are CDN-cached per revision; the qual timer uses the server clock.
+  7. **ER.7** Loading foundation: spinner, `useAction`, global busy lock, 10 s timeout, shared error banner.
+  8. **ER.8** Loading flows: judge, qualifier, review-queue and admin actions converted.
+  9. **ER.9** Tournament summaries: `GET /api/tournaments` returns small summaries in a fixed 5 queries instead of every tournament in full (about 8 queries and 85 KB per tournament, on every page load for every visitor). Each page loads only its own tournament; the organization dashboard gets its own endpoint for metrics.
+  10. **ER.10** Hide image uploads: remove the player avatar upload, organization logo and banner fields, and tournament logo and banner fields. Images are stored as base64 in the database and the feature is unused; saved images keep displaying. The proper fix is backlog item 15.
+  11. **ER.11** Event dates: the free-text event date (stored values include `Upcoming` and `Yah`) becomes a validated `startDate` and optional `endDate`, stored in two new `date` columns, entered with date pickers and shown as "Nov 14–16, 2026". Old free-text dates were not converted; real dates are set in Settings.
+  12. **ER.12** Keep-warm schedule: the worker's keep-warm cron fetches event-day windows from `GET /api/keep-warm-schedule` once a day and stores them in a Durable Object, replacing the hand-edited `KEEP_WARM_FROM`/`KEEP_WARM_UNTIL`.
+* **Shipped:** PRs #20–#26. The realtime worker is deployed at `matchfoundry-realtime.matchfoundry.workers.dev` (one worker for all environments, deployed by hand with `npm run realtime:deploy`; deploying it from CI is backlog item 16).
 * **Decisions:** live updates use push (Cloudflare Durable Objects), not polling; messages carry only a revision and clients re-fetch through the API. Loading is inline on the clicked button, every other button is disabled, and a 10 s timeout shows an error banner.
 * **Write performance (measured 2026-11-02 on Vercel previews):** read from the `Server-Timing` header added in ER.1. Same test tournament at every stage: 32 players, Gold (16, traditional, 15 matches) and Silver (16, flat, 8 matches), locked. Warm = 3 consecutive runs; cold = first request after 10 idle minutes. Each cell is server time / query count.
   * **Before ER.2:** commit `2304566`, `neon-http` driver, functions in `iad1`.
@@ -385,12 +393,15 @@ flowchart TD
 
 ---
 
-### Phase 12: Mobile-Friendly App (360×800) [UPCOMING]
-* **Goal:** Every route usable on a 360×800 phone with no page-level horizontal scroll and 44px tap targets. Runs after Event Readiness; steps 12.0–12.2 (foundation, navigation, floor judge tools) must land before the event.
-* **Priority order:** (1) spectator navigation from the landing page (bottom tab bar, tier chip strip, landing grid) and the admin menu; (2) floor judge tools: score sheet, qualifier entry, review queue and adjudication; (3) compact visual bracket (seed, name, match wins, keeping the bracket shape); (4) card lists for standings, roster and the player directory; (5) every remaining page.
-* **Steps:** 12.0 mobile foundation (bottom sheets, back gesture, overflow test); 12.1 navigation shell; 12.2 floor judge; 12.3 compact bracket; 12.4 data tables; 12.5 remaining pages and full-app sign-off.
-* **Execution specs:** [`docs/specs/index.html`](specs/index.html): [12.0](specs/phase-12/12.0-mobile-foundation.html), [12.1](specs/phase-12/12.1-navigation-shell.html), [12.2](specs/phase-12/12.2-floor-judge.html), [12.3](specs/phase-12/12.3-compact-bracket.html), [12.4](specs/phase-12/12.4-data-tables.html), [12.5](specs/phase-12/12.5-remaining-pages.html).
-* **Interaction with the backlog:** 12.5 restyles `IdentityClaimModal.tsx`, which backlog item 1 (Twitch login removal) deletes. If item 1 lands first, drop that file from 12.5.
+### Phase 12: Mobile-Friendly App (360×800) [IN PROGRESS]
+* **Goal:** every route usable on a 360×800 phone with no page-level horizontal scroll, 44px tap targets and 16px inputs. OBS overlay routes are out of scope; the OBS hub is in scope.
+* **Priority order:** (1) spectator navigation from the landing page (bottom tab bar, tier chip strip, landing grid) and admin navigation (top bar, plus a bottom bar with Judge, Quals, Review and Bracket shortcuts and a Menu sheet); (2) floor judge tools: score sheet, qualifier entry, review queue and adjudication; (3) compact visual bracket (seed, name, match wins, keeping the bracket shape); (4) card lists for standings, roster and the player directory; (5) every remaining page.
+* **Execution:** three waves; every step in a wave owns a disjoint set of files, so a wave's steps run as parallel agents. Each wave ends with a coordinator gate (typecheck, full tests, overflow test, screenshot review and re-baselining with approval, manual check at 360×800). Specs: [`docs/specs/index.html`](specs/index.html).
+  * **Wave 1 (4 parallel):** 12.0a overlays and touch sizing (bottom sheets, Back closes overlays); 12.0b mobile test harness (`npm run test:overflow`, one row per route tagged with its owning step); 12.1a spectator shell; 12.1c landing page and page header.
+  * **Wave 2 (14 parallel):** 12.1b admin shell; 12.2a match scoring; 12.2b qualifiers; 12.2c review queue; 12.3 compact bracket; 12.4a final standings; 12.4b roster; 12.4c player directory; 12.5a settings; 12.5b seeding; 12.5c organizer sheet; 12.5d organizations; 12.5e OBS hub and login; 12.5f competitor portal.
+  * **Wave 3:** 12.6 sign-off (new mobile screenshots, full overflow run, docs).
+* **Before the event:** all of wave 1, then 12.1b and 12.2a–c from wave 2.
+* **Interaction with the backlog:** `IdentityClaimModal.tsx` is no longer rendered anywhere; Phase 12 leaves it alone and backlog item 1 deletes it.
 
 ---
 
@@ -411,9 +422,10 @@ flowchart TD
 ### Prioritized Backlog
 Agreed or recorded work that has no execution spec yet. Items are in rough priority order; each needs a step spec (in `docs/specs/`, linked from [`docs/specs/index.html`](specs/index.html)) before it is executed. Items 1–10 come from the 2026-11-02 event-readiness review; their decisions are already made. Phase 13 (export) has not been ranked against these; decide when Phase 12 finishes.
 
-#### Priority 1: Players and competitor flow (right after Phase 12; item 1 ideally before 12.5)
+#### Priority 1: Players and competitor flow (right after Phase 12)
+Items 2 and 3 edit files that Phase 12 wave 2 also edits (`IdentityResolutionModal` in 12.2c, `PlayerDetailDrawer` in 12.2b, the roster page in 12.4b, the player directory in 12.4c), so start them only after the wave 2 gate. Item 1 touches no Phase 12 file and can run at any time.
 1. **Remove the competitor-facing Twitch login and claim flow**
-   * Delete the Twitch OAuth endpoints (`/api/auth/twitch/*` in `src/server/api.ts`), the `claim-identity` endpoint and `IdentityClaimModal`. They are dead code; the competitor portal already uses a typed handle plus a VOD link.
+   * Delete the Twitch OAuth endpoints (`/api/auth/twitch/*` in `src/server/api.ts`), the `claim-identity` endpoint and `IdentityClaimModal` (no longer rendered anywhere; only `competitorJourney.test.tsx` imports it). They are dead code; the competitor portal already uses a typed handle plus a VOD link.
    * Keep: online players must submit a VOD URL and their Twitch handle (used for identification). Tournament staff resolve identity; nothing extra is asked of competitors.
    * Update the Phase 10 description and the product spec, which still describe Twitch OAuth.
 2. **One shared add/edit global player modal**
@@ -425,6 +437,7 @@ Agreed or recorded work that has no execution spec yet. Items are in rough prior
    * The `nickname` column stays in the schema, unused (schema changes must be additive).
 
 #### Priority 2: Test data and tournament status (nice to have in production; not needed for the event)
+Items 4 and 6 edit `TournamentSwitcherPage.tsx` (Phase 12 step 12.1c), `DataSimulationSection.tsx` (12.5a) and the player directory (12.4c); schedule them after Phase 12.
 4. **Tournament status and front-page sorting**
    * **Active** is automatic while quals are open or a bracket is in progress; **Completed** is automatic once a champion exists. **Archived** and **Test** are manual flags (Test already exists).
    * The front page hides archived and test tournaments by default; the toggle becomes "Show archived/test".
@@ -440,8 +453,8 @@ Agreed or recorded work that has no execution spec yet. Items are in rough prior
 8. **Simulate quals around existing quals:** keep players who already have quals; fill in only the rest.
 
 #### Priority 3: Verification and data integrity
-9. **Verify `hasTiebreaker` survives reads:** relational match records may override `metadata.matchScores` and drop `hasTiebreaker`. Check after ER.4; fix with a regression test if still true.
-10. **Org silent re-attach bug** (from item 11): an org-less tournament's settings save attaches it to the first org. Fixable on its own before the policy decisions in item 11.
+9. **`hasTiebreaker` is lost on read (confirmed 2026-11-04):** the score save writes `hasTiebreaker` into `metadata.matchScores`, but the tournament load (`src/api/tournaments.ts`, around line 433) spreads the relational records over it, and they never carry the flag. Brackets still show “(t)” when a game is tied or more games than the best-of were played, because the card infers it; an explicitly flagged tiebreaker is lost. Fix: carry `hasTiebreaker` from `meta.matchScores[m.id]` into the relational record, with a regression test. Touches no Phase 12 file, so it can run alongside any wave.
+10. **Org silent re-attach bug** (from item 11, confirmed still present 2026-11-04): `TournamentAdminForm.tsx` initializes `organizationId` to `tournament.organizationId || organizations[0]?.id`, so an org-less tournament's settings save attaches it to the first org. Because the initial value differs from the saved one, the form also counts as dirty as soon as it opens, so leaving Settings always shows the Discard prompt (on phones too, through the 12.1b menu). Fixable on its own before the policy decisions in item 11. It edits the same file as Phase 12 step 12.5a, so run it before or after 12.5a, not alongside.
 
 #### Priority 4: Needs decisions before scheduling
 11. **Tournament ↔ Organization Association**

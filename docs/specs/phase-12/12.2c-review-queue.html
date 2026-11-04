@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Step 12.2c Review Queue</title>
+<link rel="stylesheet" href="../spec.css">
+</head>
+<body>
+<main>
+<nav class="crumbs"><a href="../index.html">Specs</a> / Phase 12 / 12.2c</nav>
+<h1>Step 12.2c: Review queue</h1>
+<p class="subtitle">A judge works the qual review queue (<code>/:slug/manage/review</code>) from a phone: one card per qual, and the adjudication and identity sheets fit.</p>
+
+<div class="box"><p><strong>Wave 2.</strong> Needs wave 1's gate. Runs in parallel with every other wave 2 step. <strong>Read first:</strong> <a href="../index.html">index.html</a> rules and Phase 12 conventions, especially “Card lists”.</p></div>
+
+<h2>Files (only these)</h2>
+<table>
+  <tr><th>Action</th><th>Path</th></tr>
+  <tr><td>Modify</td><td><code>src/routes/ManageReviewPage.tsx</code>, <code>src/features/online-quals/components/ReviewQueueView.tsx</code>, <code>src/features/online-quals/components/ReviewQueueTable.tsx</code>, <code>src/features/online-quals/components/AdjudicationModal.tsx</code>, <code>src/features/online-quals/components/IdentityResolutionModal.tsx</code></td></tr>
+  <tr><td>Create</td><td><code>src/features/online-quals/components/ReviewQueueCardList.tsx</code>, <code>src/features/online-quals/__tests__/reviewQueueCardList.test.tsx</code></td></tr>
+</table>
+
+<h2>A. ReviewQueueCardList.tsx</h2>
+<ol class="steps">
+  <li><code>ReviewQueueTable</code> keeps its filter pills and search box (they render in both layouts). Below them, it renders <code>&lt;ReviewQueueCardList&gt;</code> in place of the table container (the <code>overflow-hidden rounded-md border</code> div holding the <code>&lt;table&gt;</code>) when <code>useIsMobile()</code> is true, passing the already-filtered sessions.</li>
+  <li>Props:
+<pre><code>interface ReviewQueueCardListProps {
+  sessions: ReviewQueueSessionSummary[];   // already filtered
+  onOpenAdjudicate: (session: ReviewQueueSessionSummary) =&gt; void;
+  onOpenIdentityModal: (session: ReviewQueueSessionSummary) =&gt; void;
+  onDiscardRun?: (session: ReviewQueueSessionSummary) =&gt; void;
+  qualWindowMinutes: number;
+}</code></pre></li>
+  <li>For any cell whose content the card repeats and whose logic is inline JSX (identity badge, status badge, qual total time, abandoned flag, scores), extract it into an exported function or small component in <code>ReviewQueueTable.tsx</code> and use it in both. The table must render identically.</li>
+  <li>When the list is empty, render the same empty-state text the table shows.</li>
+</ol>
+<table>
+  <tr><th>Card area</th><th>Content (same data and formatting as the table cells)</th></tr>
+  <tr><td>Header</td><td>Competitor name (<code>min-w-0 truncate font-semibold</code>) and identity status badge on the left; status badge on the right.</td></tr>
+  <tr><td>Meta row</td><td>Source badge (Online / In-person), submitted date and time via <code>formatQualTimestamp</code> (or “Started …” when not submitted, as the table does), qual total time. <code>flex flex-wrap gap-x-3 gap-y-1 text-xs text-fg-secondary</code>.</td></tr>
+  <tr><td>Scores</td><td>Submitted scores as chips that wrap.</td></tr>
+  <tr><td>Actions</td><td>A full-width primary <code>Button</code> “Review” → <code>onOpenAdjudicate(session)</code>. Below it, a <code>flex flex-wrap gap-2</code> row of secondary buttons: “VOD” (an <code>&lt;a&gt;</code> styled with <code>buttonClasses({ variant: 'secondary', size: 'sm' })</code>, <code>target="_blank" rel="noopener noreferrer"</code>, only when <code>session.twitchVodUrl</code> is set and the table would show a VOD link), “Identity” → <code>onOpenIdentityModal(session)</code>, and “Discard” (<code>variant="danger"</code>) → <code>onDiscardRun(session)</code>, shown only when <code>session.status === 'IN_PROGRESS' &amp;&amp; onDiscardRun</code> (the table's condition).</td></tr>
+</table>
+
+<h2>B. ReviewQueueView.tsx and ManageReviewPage.tsx</h2>
+<ul>
+  <li>The filter pill row in <code>ReviewQueueTable</code> gets the sideways-scrolling chip row classes (replacing <code>flex-wrap</code> on mobile with <code>max-md:flex-nowrap</code>); each pill gets <code>shrink-0</code>. The search box wrapper gets <code>max-md:w-full</code> and its input <code>max-md:text-base</code>.</li>
+  <li>In <code>ReviewQueueView</code>, the “Verify All” button gets <code>max-md:w-full</code>; the header stats row gets <code>flex-wrap</code>.</li>
+  <li>In <code>ManageReviewPage</code>, the page container follows the conventions' page padding and title rules.</li>
+</ul>
+
+<h2>C. Sheets</h2>
+<ul>
+  <li><strong>AdjudicationModal.tsx:</strong> the VOD link is a full-width secondary button near the top on mobile (<code>max-md:w-full</code>; move nothing on desktop). Score inputs get <code>inputMode="numeric"</code> and <code>max-md:text-base</code>. The decision buttons (Save, Verify Qual / Save &amp; Verify, Unverify, Mark DNQ, Disqualify) stack full width on mobile (<code>max-md:flex-col max-md:items-stretch</code> on their rows, <code>max-md:w-full</code> on each), keeping their current order. The judge notes textarea is <code>w-full max-md:text-base</code>.</li>
+  <li><strong>IdentityResolutionModal.tsx:</strong> its tabs scroll sideways (chip row classes); the search input is <code>max-md:w-full max-md:text-base</code>; the result list is full width and its rows are <code>min-h-11</code>.</li>
+</ul>
+
+<h2>D. Tests</h2>
+<p><code>reviewQueueCardList.test.tsx</code> (<code>renderToStaticMarkup</code>, with sessions built in the test following <code>src/features/online-quals/__tests__/reviewWorkflow.test.tsx</code>): every session renders its name and a Review button; Discard appears only for an <code>IN_PROGRESS</code> session when <code>onDiscardRun</code> is passed, and never when it is undefined; a VOD link renders with <code>rel="noopener noreferrer"</code> when the session has a VOD URL.</p>
+
+<h2>Verification</h2>
+<ul class="check">
+  <li><code>npm run typecheck</code> passes for your files.</li>
+  <li><code>npx vitest run src/features/online-quals</code> passes.</li>
+  <li><code>npx playwright test --project=mobile-overflow --grep "\[12.2c\]"</code> passes, or fails only on elements in other steps' files (report them).</li>
+</ul>
+
+<h2>Manual check at 360×800 (gate)</h2>
+<ul class="check">
+  <li>Open a review item, then verify it. Unverify it again.</li>
+  <li>Switch filters by swiping the pill row.</li>
+</ul>
+</main>
+</body>
+</html>

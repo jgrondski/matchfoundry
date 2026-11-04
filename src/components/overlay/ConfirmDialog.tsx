@@ -50,6 +50,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <Overlay
       open={open}
       onClose={onCancel}
+      mobile="center"
       busy={isBusy}
       aria-labelledby={titleId}
       panelClassName={cn('max-w-[460px] overflow-hidden rounded-lg border bg-surface shadow-lg', TONE[tone].border)}

@@ -60,18 +60,18 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     >
       <div>
         {/* Top Badges & Delete */}
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between">
           <div className="flex flex-wrap items-center gap-2">
             {showOrgBadge && org && (
               <Link
                 to={`/org/${org.slug}`}
                 onClick={e => e.stopPropagation()}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/12 bg-white/7 py-1 px-2.5 text-xs font-semibold uppercase tracking-wide no-underline"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-white/12 bg-white/7 py-1 px-2.5 text-xs font-semibold uppercase tracking-wide no-underline min-w-0 max-w-full"
                 style={{ color: org.branding?.themeColors?.primaryColor || 'var(--color-gold-bright, #ffc905)' }}
                 title={`Hosted by ${org.name}`}
               >
-                <Building2 size={12} />
-                {org.shortName || org.name}
+                <Building2 size={12} className="shrink-0" />
+                <span className="min-w-0 truncate">{org.shortName || org.name}</span>
               </Link>
             )}
 
@@ -124,7 +124,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         </div>
 
         {/* Tournament Name */}
-        <h2 className="mb-2 text-2xl font-bold text-white">
+        <h2 className="mb-2 min-w-0 text-2xl font-bold break-words text-white">
           {tournament.name}
         </h2>
 
