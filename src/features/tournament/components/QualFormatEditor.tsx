@@ -6,7 +6,7 @@ import { Sliders } from 'lucide-react';
 import { Button } from '../../../components/ui';
 
 const labelClass = 'mb-1.5 block text-caption font-semibold text-fg-secondary';
-const inputClass = 'w-full rounded-sm border border-line bg-canvas py-2.5 px-3 text-sm text-fg outline-none';
+const inputClass = 'w-full rounded-sm border border-line bg-canvas py-2.5 px-3 text-sm text-fg outline-none max-md:text-base';
 
 interface QualFormatEditorProps {
   qualFormat: QualFormat;
@@ -58,7 +58,7 @@ export const QualFormatEditor: React.FC<QualFormatEditorProps> = ({
 
   return (
     <div className="flex flex-col gap-3.5">
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] items-start gap-3.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] items-start gap-3.5 max-md:grid-cols-1">
         <div>
           <label className={labelClass}>Qualifying Format</label>
           <select
@@ -120,7 +120,7 @@ export const QualFormatEditor: React.FC<QualFormatEditorProps> = ({
             className="gap-1.5 whitespace-nowrap py-2 px-3.5 text-caption"
           >
             <Sliders size={14} color="var(--color-gold-bright, #ffc905)" />
-            Configure Points Cutoffs
+            Points Cutoffs
           </Button>
         </div>
       )}

@@ -7,7 +7,7 @@ import { TournamentLayout } from '../components/TournamentLayout';
 import { SpectatorLayout } from '../components/SpectatorLayout';
 import { BracketVisualizer } from '../features/bracket/components/BracketVisualizer';
 import { BracketTierBar } from '../features/bracket/components/BracketTierBar';
-import { BracketViewMode } from '../features/bracket/bracketLayout';
+import { BracketViewMode, supportsCompactView } from '../features/bracket/bracketLayout';
 import { MatchCardFeed } from '../features/bracket/components/MatchCardFeed';
 import { ShareBracketModal } from '../features/bracket/components/ShareBracketModal';
 import { useBracketTier } from '../features/bracket/hooks/useBracketTier';
@@ -75,7 +75,7 @@ export const PublicTierBracketPage: React.FC = () => {
             </Button>
             {isManageRoute && (
               <Button variant="primary" onClick={() => navigate(`/${tournamentFallback.slug}/manage/settings`)}>
-                ⚙️ Configure Tiers in Settings
+                ⚙️ Configure Tiers
               </Button>
             )}
           </div>
@@ -98,7 +98,7 @@ export const PublicTierBracketPage: React.FC = () => {
         <h2 className="text-2xl font-bold">Bracket Not Found</h2>
         <p>Could not find tier "{tierSlug}" in tournament "{slug}".</p>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
-          Back to Tournaments
+          All Tournaments
         </Button>
       </div>
     );
@@ -143,22 +143,31 @@ const TierBracketView: React.FC<TierBracketViewProps> = ({
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [playerSearchTerm, setPlayerSearchTerm] = useState('');
 
-  // View mode resolution
+  const supportsCompact = Boolean(tier.bracket) && supportsCompactView(tier.bracket);
+  const isPhone = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // View mode resolution. ?view=compact means the standard layout with compact cards.
   const [localViewMode, setLocalViewMode] = useState<BracketViewMode>(() => {
+    if (urlView === 'compact') return supportsCompact ? 'standard' : 'feed';
     if (urlView) return urlView;
     if (isObsMode) return 'fit';
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      return 'feed';
-    }
+    if (isPhone) return isManageRoute || !supportsCompact ? 'feed' : 'standard';
     return 'standard';
   });
+  // Card size, separate from the view mode. Phones default to compact; desktop to full.
+  const [isCompactCards, setIsCompactCards] = useState(
+    () => supportsCompact && (urlView === 'compact' || (!urlView && !isObsMode && isPhone))
+  );
 
   // Sync with explicit URL view changes
   useEffect(() => {
-    if (urlView) {
+    if (urlView === 'compact') {
+      setLocalViewMode(supportsCompact ? 'standard' : 'feed');
+      setIsCompactCards(supportsCompact);
+    } else if (urlView) {
       setLocalViewMode(urlView);
     }
-  }, [urlView]);
+  }, [urlView, supportsCompact]);
 
   // Synchronize OBS body styling
   useEffect(() => {
@@ -219,6 +228,8 @@ const TierBracketView: React.FC<TierBracketViewProps> = ({
         activeTier={tier}
         viewMode={localViewMode}
         onChangeViewMode={setLocalViewMode}
+        isCompact={isCompactCards}
+        onChangeCompact={setIsCompactCards}
         canManage={canManage}
         onOpenShare={() => setIsShareModalOpen(true)}
         playerSearchTerm={playerSearchTerm}
@@ -266,6 +277,7 @@ const TierBracketView: React.FC<TierBracketViewProps> = ({
             isObsMode={false}
             canManage={canManage}
             obsView={localViewMode}
+            compact={isCompactCards}
             highlightedPlayerId={highlightedPlayer?.id || null}
           />
         </main>

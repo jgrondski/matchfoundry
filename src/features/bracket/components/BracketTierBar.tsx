@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Tournament, TournamentTier } from '../../tournament/types';
 import { setStoredTierSlug } from '../../tournament/tierStorage';
 import { getContrastingTextColor } from '../colorUtils';
-import { BracketViewMode } from '../bracketLayout';
+import { BracketViewMode, supportsCompactView } from '../bracketLayout';
 import {
   Plus,
   Monitor,
@@ -23,6 +23,9 @@ interface BracketTierBarProps {
   activeTier: TournamentTier;
   viewMode?: BracketViewMode;
   onChangeViewMode?: (mode: BracketViewMode) => void;
+  /** Card size, separate from the view mode. Only applies to brackets that support compact. */
+  isCompact?: boolean;
+  onChangeCompact?: (compact: boolean) => void;
   canManage?: boolean;
   onOpenShare?: () => void;
   playerSearchTerm?: string;
@@ -35,6 +38,8 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
   activeTier,
   viewMode = 'standard',
   onChangeViewMode,
+  isCompact = false,
+  onChangeCompact,
   canManage = true,
   onOpenShare,
   playerSearchTerm,
@@ -44,6 +49,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
   const navigate = useNavigate();
   const sortedTiers = [...tournament.tiers].sort((a, b) => a.priority - b.priority);
   const isAcceleratedHybrid = activeTier.bracket?.bracketRouting === 'ACCELERATED_HYBRID';
+  const showCompact = Boolean(activeTier.bracket) && supportsCompactView(activeTier.bracket);
   const tierBarRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -118,7 +124,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
               className:
                 'gap-1 rounded-full py-1 px-2.5 text-xs text-fg-muted hover:bg-highlight hover:border-fg-secondary max-md:hidden',
             })}
-            title="Configure Tiers in Tournament Settings"
+            title="Configure Tiers"
           >
             <Plus size={13} />
             <span>Add Tier</span>
@@ -129,8 +135,8 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
       {/* Right: Player Search, View Mode Toggle & Share Button */}
       <div className="flex flex-wrap items-center gap-2.5 max-md:flex-wrap max-md:justify-between">
         {!canManage && <TournamentQualTimerHud tournament={tournament} compact readOnly={true} />}
-        {/* Bracket Player Search - Hidden on Mobile Feed */}
-        {viewMode !== 'feed' && onPlayerSearchTermChange !== undefined && (
+        {/* Bracket Player Search - Hidden on Mobile Feed and Compact (compact shows no highlight) */}
+        {viewMode !== 'feed' && !isCompact && onPlayerSearchTermChange !== undefined && (
           <div className="relative flex w-46.25 max-w-full items-center max-md:hidden">
             <Search
               size={13}
@@ -153,13 +159,13 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
                   ? 'border-gold-bright shadow-[0_0_8px_rgba(245,158,11,0.25)]'
                   : 'border-line shadow-none'
               )}
-              title="Search player to highlight their bracket journey"
+              title="Find Competitor"
             />
             {playerSearchTerm && (
               <IconButton
                 onClick={() => onPlayerSearchTermChange('')}
-                title="Clear player search"
-                aria-label="Clear player search"
+                title="Clear Search"
+                aria-label="Clear Search"
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5"
               >
                 <X size={12} />
@@ -169,12 +175,19 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
         )}
 
         {onChangeViewMode && (
-          <div className="inline-flex items-center gap-0.5 rounded-sm border border-line bg-canvas p-0.5 max-md:hidden">
+          <div
+            className={cn(
+              'inline-flex items-center gap-0.5 rounded-sm border border-line bg-canvas p-0.5',
+              showCompact
+                ? 'max-md:grid max-md:w-full max-md:grid-cols-2 max-md:gap-1 max-md:border-0 max-md:bg-transparent max-md:p-0'
+                : 'max-md:hidden'
+            )}
+          >
             <Chip
               size="sm"
               active={viewMode === 'standard'}
               onClick={() => onChangeViewMode('standard')}
-              title="Standard Tree with Horizontal Scroll"
+              title="Standard View"
               className="max-md:hidden"
             >
               <Maximize2 size={12} />
@@ -185,7 +198,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
               size="sm"
               active={viewMode === 'fit'}
               onClick={() => onChangeViewMode('fit')}
-              title="Auto-Fit to 1080p / Window (No scroll)"
+              title="Fit Screen"
               className="max-md:hidden"
             >
               <Monitor size={12} />
@@ -197,7 +210,7 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
               active={viewMode === 'split'}
               onClick={() => onChangeViewMode('split')}
               className="max-md:hidden"
-              title={isAcceleratedHybrid ? 'Side-by-Side Pods (Pod 3 to right of Pod 2)' : 'Bilateral Split Wings (Center Finals)'}
+              title={isAcceleratedHybrid ? 'Side-by-Side Pods' : 'Split Wings'}
             >
               <Split size={12} />
               <span>Split Wings</span>
@@ -207,11 +220,38 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
               size="sm"
               active={viewMode === 'feed'}
               onClick={() => onChangeViewMode('feed')}
-              title="Mobile Bracket Feed"
+              title="List View"
             >
               <ListFilter size={12} />
               <span className="max-md:hidden">Mobile</span>
               <span className="md:hidden">List</span>
+            </Chip>
+
+            {/* Phones only have two views: the list and the compact bracket */}
+            {showCompact && (
+              <Chip
+                size="sm"
+                active={viewMode !== 'feed'}
+                onClick={() => {
+                  onChangeCompact?.(true);
+                  onChangeViewMode('standard');
+                }}
+                className="md:hidden"
+              >
+                Bracket
+              </Chip>
+            )}
+          </div>
+        )}
+
+        {/* Desktop card size, separate from the view modes above. The list has no bracket cards. */}
+        {onChangeCompact && showCompact && viewMode !== 'feed' && (
+          <div className="inline-flex items-center gap-0.5 rounded-sm border border-line bg-canvas p-0.5 max-md:hidden">
+            <Chip size="sm" active={!isCompact} onClick={() => onChangeCompact(false)} title="Full Cards">
+              Full
+            </Chip>
+            <Chip size="sm" active={isCompact} onClick={() => onChangeCompact(true)} title="Compact Cards">
+              Compact
             </Chip>
           </div>
         )}
@@ -222,8 +262,8 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
             variant="primary"
             size="sm"
             onClick={onOpenShare}
-            title="Share bracket link & venue QR code"
-            aria-label="Share bracket"
+            title="Share Bracket"
+            aria-label="Share Bracket"
           >
             <Share2 size={13} />
             <span className="max-md:sr-only">Share</span>

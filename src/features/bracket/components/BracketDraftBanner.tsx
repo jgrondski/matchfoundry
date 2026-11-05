@@ -42,7 +42,7 @@ export const BracketDraftBanner: React.FC<BracketDraftBannerProps> = ({
                 QUALIFIERS MODE — Seeding preview active
               </div>
               <div className="text-caption text-fg">
-                Bracket seeds update dynamically with incoming qualifier scores. Match scoring is disabled. Click &quot;Lock Brackets &amp; Begin Match Play&quot; to start matches.
+                Bracket seeds update dynamically with incoming qualifier scores. Match scoring is disabled. Click &quot;Lock Brackets&quot; to start matches.
               </div>
             </div>
           </div>
@@ -50,7 +50,7 @@ export const BracketDraftBanner: React.FC<BracketDraftBannerProps> = ({
           {canManage && (
             <Button variant="primary" onClick={() => setIsVerifyModalOpen(true)}>
               <Lock size={15} />
-              Lock Brackets &amp; Begin Match Play
+              Lock Brackets
             </Button>
           )}
         </div>
@@ -73,7 +73,7 @@ export const BracketDraftBanner: React.FC<BracketDraftBannerProps> = ({
                 variant="secondary"
                 onClick={handleUnlockClick}
                 className="py-1 px-2.5 text-xs"
-                title="Revert tournament to Qualifiers Mode"
+                title="Revert Tournament"
               >
                 <Unlock size={13} />
                 Unlock Brackets

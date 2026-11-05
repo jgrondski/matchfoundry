@@ -112,7 +112,7 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder="Search or enter competitor name..."
-          className="w-full py-2.5 px-9 rounded-sm border border-line bg-canvas text-fg text-sm"
+          className="w-full py-2.5 px-9 rounded-sm border border-line bg-canvas text-fg text-sm max-md:text-base"
         />
         <Search
           size={16}
@@ -121,10 +121,10 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
         />
         {query && (
           <IconButton
-            aria-label="Clear player selection"
+            aria-label="Clear Selection"
             onClick={handleClear}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5"
-            title="Clear player selection"
+            title="Clear Selection"
           >
             <X size={15} />
           </IconButton>
@@ -132,7 +132,7 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
       </div>
 
       {isOpen && (
-        <div className="absolute top-[calc(100%+4px)] left-0 right-0 max-h-85 overflow-y-auto bg-elevated border border-line rounded-md shadow-[0_12px_28px_rgba(0,0,0,0.45),0_0_0_1px_var(--color-line)] z-1000">
+        <div className="absolute top-[calc(100%+4px)] left-0 right-0 max-h-85 overflow-y-auto max-md:max-h-[40dvh] max-md:w-full bg-elevated border border-line rounded-md shadow-[0_12px_28px_rgba(0,0,0,0.45),0_0_0_1px_var(--color-line)] z-1000">
           {/* In-Tournament Players */}
           {filteredInTournament.map(p => {
             const isSelected = selectedPlayer?.id === p.id;
@@ -141,7 +141,7 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
                 key={p.id}
                 onClick={() => handleSelect(p)}
                 className={cn(
-                  'flex items-center justify-between py-2.5 px-3.5 cursor-pointer border-b border-line-subtle',
+                  'flex items-center justify-between py-2.5 px-3.5 cursor-pointer border-b border-line-subtle max-md:min-h-11',
                   isSelected ? 'bg-gold-soft' : 'bg-transparent'
                 )}
               >
@@ -186,7 +186,7 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
                 <div
                   key={p.id}
                   onClick={() => handleSelectGlobal(p)}
-                  className="flex items-center justify-between py-2.5 px-3.5 cursor-pointer border-b border-line-subtle bg-transparent"
+                  className="flex items-center justify-between py-2.5 px-3.5 cursor-pointer border-b border-line-subtle bg-transparent max-md:min-h-11"
                 >
                   <div className="flex items-center gap-2">
                     <User size={15} color="var(--color-gold-bright)" />
@@ -221,7 +221,7 @@ export const CreatablePlayerSelect: React.FC<CreatablePlayerSelectProps> = ({
           {query.trim().length > 0 && !exactMatch && (
             <div
               onClick={handleCreateNew}
-              className="flex items-center gap-2 py-3 px-3.5 cursor-pointer bg-gold/10 border-t border-dashed border-gold text-gold-bright font-semibold text-sm"
+              className="flex items-center gap-2 py-3 px-3.5 cursor-pointer max-md:min-h-11 bg-gold/10 border-t border-dashed border-gold text-gold-bright font-semibold text-sm"
             >
               <Plus size={16} />
               <span>Add &quot;{query.trim()}&quot; as new competitor</span>

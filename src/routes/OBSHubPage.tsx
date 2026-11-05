@@ -41,7 +41,7 @@ export const OBSHubPage: React.FC = () => {
       <div className="p-12 text-center text-fg-secondary">
         <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
-          Back to Tournaments
+          All Tournaments
         </Button>
       </div>
     );
@@ -63,7 +63,7 @@ export const OBSHubPage: React.FC = () => {
 
   return (
     <TournamentLayout tournament={tournament} activeView="obs">
-      <main className="mx-auto flex w-full max-w-300 flex-1 flex-col gap-9 px-6 py-8">
+      <main className="mx-auto flex w-full max-w-300 flex-1 flex-col gap-9 px-6 py-8 max-md:px-4 max-md:py-4">
         {/* Hub Header */}
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div>
@@ -72,12 +72,12 @@ export const OBSHubPage: React.FC = () => {
                 Broadcast &amp; OBS Studio Hub
               </span>
             </div>
-            <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white">
+            <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white max-md:text-2xl">
               <Video color="var(--color-gold-bright)" size={28} />
               {tournament.name}
             </h1>
-            <p className="mx-0 mt-1.5 mb-0 max-w-170 text-sm text-fg-muted">
-              Clean, transparent browser sources tailored for OBS Studio, vMix, and Twitch streams. Click to copy or test in a popout window.
+            <p className="mx-0 mt-1.5 mb-0 max-w-170 text-sm text-fg-muted max-md:hidden">
+              OBS-ready views of brackets and more
             </p>
           </div>
 
@@ -86,7 +86,7 @@ export const OBSHubPage: React.FC = () => {
             <div className="text-xs font-bold tracking-wide text-fg-muted uppercase">
               Chroma Background
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 max-md:flex-wrap">
               {[
                 { id: 'none' as const, label: 'Transparent', color: 'transparent' },
                 { id: 'green' as const, label: 'Green', color: CHROMA_KEY_COLORS.green },
@@ -100,7 +100,7 @@ export const OBSHubPage: React.FC = () => {
                     type="button"
                     onClick={() => setSelectedChroma(opt.id)}
                     className={cn(
-                      'flex cursor-pointer items-center gap-1.5 rounded-sm border px-2.5 py-1 text-xs',
+                      'flex cursor-pointer items-center gap-1.5 rounded-sm border px-2.5 py-1 text-xs max-md:min-h-11',
                       isSelected
                         ? 'border-gold bg-gold-soft font-bold text-gold-bright'
                         : 'border-line bg-canvas font-medium text-fg-secondary'
@@ -152,16 +152,17 @@ export const OBSHubPage: React.FC = () => {
                       <Button
                         variant="primary"
                         onClick={() => copyUrl(url, key)}
-                        className="gap-1.5 px-3 py-1.5 text-xs"
+                        className="gap-1.5 px-3 py-1.5 text-xs max-md:size-11 max-md:justify-center max-md:p-0"
+                        aria-label="Copy URL"
                       >
                         {isCopied ? <Check size={13} /> : <Copy size={13} />}
-                        <span>{isCopied ? 'Copied URL!' : 'Copy URL'}</span>
+                        <span className="max-md:sr-only">{isCopied ? 'Copied URL!' : 'Copy URL'}</span>
                       </Button>
                       <Button
                         variant="primary"
                         onClick={() => openPopout(url)}
                         className="px-2.5 py-1.5 text-xs"
-                        title="Open popout window"
+                        title="Open Popout"
                       >
                         <ExternalLink size={13} />
                       </Button>
@@ -196,16 +197,17 @@ export const OBSHubPage: React.FC = () => {
                       <Button
                         variant="primary"
                         onClick={() => copyUrl(url, key)}
-                        className="gap-1.5 px-3 py-1.5 text-xs"
+                        className="gap-1.5 px-3 py-1.5 text-xs max-md:size-11 max-md:justify-center max-md:p-0"
+                        aria-label="Copy URL"
                       >
                         {isCopied ? <Check size={13} /> : <Copy size={13} />}
-                        <span>{isCopied ? 'Copied URL!' : 'Copy URL'}</span>
+                        <span className="max-md:sr-only">{isCopied ? 'Copied URL!' : 'Copy URL'}</span>
                       </Button>
                       <Button
                         variant="primary"
                         onClick={() => openPopout(url)}
                         className="px-2.5 py-1.5 text-xs"
-                        title="Open popout window"
+                        title="Open Popout"
                       >
                         <ExternalLink size={13} />
                       </Button>
@@ -386,16 +388,17 @@ export const OBSHubPage: React.FC = () => {
                             <Button
                               variant="primary"
                               onClick={() => copyUrl(c.url, key)}
-                              className="gap-1.5 px-3 py-1.5 text-xs"
+                              className="gap-1.5 px-3 py-1.5 text-xs max-md:size-11 max-md:justify-center max-md:p-0"
+                              aria-label="Copy URL"
                             >
                               {isCopied ? <Check size={13} /> : <Copy size={13} />}
-                              <span>{isCopied ? 'Copied URL!' : 'Copy URL'}</span>
+                              <span className="max-md:sr-only">{isCopied ? 'Copied URL!' : 'Copy URL'}</span>
                             </Button>
                             <Button
                               variant="primary"
                               onClick={() => openPopout(c.url)}
                               className="px-2.5 py-1.5 text-xs"
-                              title="Open popout window"
+                              title="Open Popout"
                             >
                               <ExternalLink size={13} />
                             </Button>

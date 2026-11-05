@@ -16,13 +16,14 @@ import {
 import { QualFormat } from '../../tournament/types';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { Overlay } from '../../../components/overlay';
+import { FULL_PAGE_PANEL_CLASS } from '../../../components/fullPagePanel';
 import { Button, IconButton, buttonClasses, cn } from '../../../components/ui';
 import { DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
 const labelClass = 'mb-1.5 block text-caption font-semibold text-fg-secondary';
-const fieldClass = 'rounded-md border border-line bg-canvas px-3.5 py-2.5 text-sm text-white';
+const fieldClass = 'rounded-md border border-line bg-canvas px-3.5 py-2.5 text-sm text-white max-md:text-base';
 const swatchLabelClass = 'mb-1 block text-2xs text-fg-muted';
-const swatchInputClass = 'h-8 w-full cursor-pointer rounded-xs';
+const swatchInputClass = 'h-8 w-full cursor-pointer rounded-xs max-md:h-11';
 
 export const OrganizationDirectory: React.FC = () => {
   const { organizations, createOrganization, isLoading, isHydrated } = useOrganization();
@@ -127,7 +128,7 @@ export const OrganizationDirectory: React.FC = () => {
     <div className="min-h-screen bg-canvas pb-16">
       <TopNavSwitcher />
 
-      <div className="mx-auto flex w-full max-w-295 flex-col gap-8 px-6 py-8">
+      <div className="mx-auto flex w-full max-w-295 flex-col gap-8 px-6 py-8 max-md:px-4 max-md:py-4">
         {/* Header Hero */}
         <header className="px-4 pb-0 pt-6 text-center">
           <div className="mb-3 inline-flex items-center gap-2">
@@ -138,10 +139,10 @@ export const OrganizationDirectory: React.FC = () => {
               ORGANIZATION <span className="text-gold-bright">DIRECTORY</span>
             </span>
           </div>
-          <h1 className="mb-3 text-4xl font-extrabold tracking-tight text-white">
+          <h1 className="mb-3 text-4xl font-extrabold tracking-tight text-white max-md:text-3xl">
             Organizations
           </h1>
-          <p className="mx-auto mb-6 mt-0 max-w-162.5 text-base text-fg-secondary">
+          <p className="mx-auto mb-6 mt-0 max-w-162.5 text-base text-fg-secondary max-md:hidden">
             Manage your organization's themes and tournaments.
           </p>
 
@@ -149,10 +150,10 @@ export const OrganizationDirectory: React.FC = () => {
             <Button
               variant="primary"
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-6 py-2.5 text-base shadow-[0_4px_14px_rgba(255,201,5,0.35)]"
+              className="px-6 py-2.5 text-base shadow-[0_4px_14px_rgba(255,201,5,0.35)] max-md:w-full"
             >
               <Plus size={18} />
-              Create New Organization
+              New Organization
             </Button>
           </div>
         </header>
@@ -170,13 +171,13 @@ export const OrganizationDirectory: React.FC = () => {
               placeholder="Search organizations by name, description, or slug..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full rounded-full border border-line bg-surface py-3 pl-11 pr-4 text-sm text-fg outline-none"
+              className="w-full rounded-full border border-line bg-surface py-3 pl-11 pr-4 text-sm text-fg outline-none max-md:text-base"
             />
           </div>
         </div>
 
         {/* Organizations Grid */}
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(350px,1fr))] gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
           {filteredOrgs.map(org => {
             const orgTournaments = tournamentSummaries.filter(t => t.organizationId === org.id);
             const colors = org.themeColors || {
@@ -235,7 +236,7 @@ export const OrganizationDirectory: React.FC = () => {
                 <div className="flex flex-1 flex-col gap-4 px-5 pb-5 pt-7">
                   <div>
                     <div className="flex items-center justify-between gap-2">
-                      <Link to={`/org/${org.slug}`} className="text-inherit no-underline">
+                      <Link to={`/org/${org.slug}`} className="text-inherit no-underline max-md:flex max-md:min-h-11 max-md:min-w-0 max-md:items-center">
                         <h3 className="m-0 text-lg font-extrabold text-fg">
                           {org.name}
                         </h3>
@@ -245,8 +246,8 @@ export const OrganizationDirectory: React.FC = () => {
                           href={org.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          title="Visit official website"
-                          className="text-fg-muted transition-colors duration-150"
+                          title="Visit Website"
+                          className="text-fg-muted transition-colors duration-150 max-md:flex max-md:size-11 max-md:shrink-0 max-md:items-center max-md:justify-center"
                         >
                           <ExternalLink size={15} />
                         </a>
@@ -270,7 +271,7 @@ export const OrganizationDirectory: React.FC = () => {
                           <Link
                             key={t.id}
                             to={`/${t.slug}/leaderboard`}
-                            className="flex items-center justify-between rounded-sm border border-white/4 bg-canvas px-2.5 py-1.5 text-caption text-fg-secondary no-underline"
+                            className="flex items-center justify-between rounded-sm border border-white/4 bg-canvas px-2.5 py-1.5 text-caption text-fg-secondary no-underline max-md:min-h-11"
                           >
                             <span className="truncate">
                               {t.name}
@@ -319,7 +320,11 @@ export const OrganizationDirectory: React.FC = () => {
           dirty={isCreateFormDirty}
           busy={isSubmitting}
           aria-labelledby={createTitleId}
-          panelClassName="max-h-[90vh] max-w-140 overflow-y-auto rounded-lg border border-line bg-elevated p-7 shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
+          mobile="center"
+          panelClassName={cn(
+            'max-h-[90vh] max-w-140 overflow-y-auto rounded-lg border border-line bg-elevated p-7 shadow-[0_20px_40px_rgba(0,0,0,0.6)] max-md:p-4 max-md:pb-[calc(1rem+env(safe-area-inset-bottom))]',
+            FULL_PAGE_PANEL_CLASS
+          )}
         >
           {({ requestClose }) => (
             <>
@@ -327,7 +332,7 @@ export const OrganizationDirectory: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Building2 size={20} color="var(--color-gold-bright, #ffc905)" />
                   <h2 id={createTitleId} className="m-0 text-xl font-extrabold text-fg">
-                    Create New Organization
+                    New Organization
                   </h2>
                 </div>
                 <IconButton aria-label="Close" onClick={requestClose}>
@@ -377,13 +382,14 @@ export const OrganizationDirectory: React.FC = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
                   <div>
                     <label className={labelClass}>
                       Official Website
                     </label>
                     <input
                       type="url"
+                      inputMode="url"
                       placeholder="https://..."
                       value={orgWebsite}
                       onChange={e => setOrgWebsite(e.target.value)}
@@ -396,6 +402,7 @@ export const OrganizationDirectory: React.FC = () => {
                     </label>
                     <input
                       type="url"
+                      inputMode="url"
                       placeholder="https://discord.com/api/webhooks/..."
                       value={discordWebhookUrl}
                       onChange={e => setDiscordWebhookUrl(e.target.value)}
@@ -405,7 +412,7 @@ export const OrganizationDirectory: React.FC = () => {
                 </div>
 
                 {/* Default Rules */}
-                <div className="grid grid-cols-[2fr_1fr_1fr] gap-3">
+                <div className="grid grid-cols-[2fr_1fr_1fr] gap-3 max-md:grid-cols-1">
                   <div>
                     <label className={labelClass}>
                       Default Qual Format
@@ -426,6 +433,7 @@ export const OrganizationDirectory: React.FC = () => {
                     </label>
                     <input
                       type="number"
+                      inputMode="numeric"
                       min={1}
                       max={10}
                       value={defaultAvgCount}
@@ -481,11 +489,11 @@ export const OrganizationDirectory: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-2 flex justify-end gap-3">
-                  <Button variant="secondary" onClick={requestClose} disabled={isSubmitting}>
+                <div className="mt-2 flex justify-end gap-3 max-md:sticky max-md:bottom-0 max-md:z-10 max-md:-mx-7 max-md:flex-col max-md:border-t max-md:border-line max-md:bg-surface max-md:px-7 max-md:py-3">
+                  <Button variant="secondary" onClick={requestClose} disabled={isSubmitting} className="max-md:w-full">
                     Cancel
                   </Button>
-                  <Button type="submit" variant="primary" disabled={isSubmitting}>
+                  <Button type="submit" variant="primary" disabled={isSubmitting} className="max-md:w-full">
                     {isSubmitting && (
                       <div className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                     )}

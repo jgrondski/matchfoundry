@@ -42,7 +42,7 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     // 1. Spectator sees the public directory and no privileged organizer buttons
     await expect(page.getByRole('heading', { name: 'Tournaments', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Active Tournaments', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: /create new tournament/i })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /new tournament/i })).not.toBeVisible();
     await expect(page.getByRole('button', { name: /simulate sample tournament/i })).not.toBeVisible();
 
     // Spectator top nav shows "Staff Login" and no global management tabs
@@ -64,7 +64,7 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await expect(page.getByPlaceholder('Enter PIN or Key')).not.toBeVisible();
 
     // Header has return link to all tournaments and Staff Login
-    const backToAllLink = page.getByTitle('Return to All Tournaments Directory');
+    const backToAllLink = page.getByTitle('All Tournaments');
     await expect(backToAllLink).toBeVisible();
     await expect(page.getByRole('link', { name: /staff login/i })).toBeVisible();
 
@@ -114,7 +114,7 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await page.getByRole('link', { name: /tournaments/i }).first().click();
     await expect(page).toHaveURL('/');
     await expect(page.getByText('System Admin Workspace:')).toBeVisible();
-    await expect(page.getByRole('button', { name: /create new tournament/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /new tournament/i })).toBeVisible();
   });
 
   test('Journey 3: Tournament Admin Scoped Delegation & Isolation', async ({ page, context }) => {
@@ -181,7 +181,7 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await expect(page.getByRole('heading', { name: 'Active Tournaments', exact: true })).toBeVisible();
 
     // Cannot create or simulate tournaments (System Admin only)
-    await expect(page.getByRole('button', { name: /create new tournament/i })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /new tournament/i })).not.toBeVisible();
     await expect(page.getByRole('button', { name: /simulate sample tournament/i })).not.toBeVisible();
 
     // Step E: Attempt unauthorized escalation to global admin view

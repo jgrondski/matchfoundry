@@ -10,13 +10,203 @@ import { PlaystyleChip } from '../../players/components/PlaystyleChip';
 import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { getContrastingTextColor, getAlternateShade } from '../../bracket/colorUtils';
 import { TournamentQualTimerHud } from './TournamentQualTimerHud';
-import { Badge, Button, Card, cn } from '../../../components/ui';
+import { Badge, Button, Card, cn, useIsMobile } from '../../../components/ui';
 import { THEME_FALLBACK } from '../../../theme/palette';
+import { LeaderboardCardList } from './LeaderboardCardList';
 
 const thClass = 'py-3 px-3.5 text-fg-secondary font-semibold text-caption uppercase tracking-wide';
 const tdClass = 'py-2.5 px-3.5';
 const filterPillClass = 'py-1.5 px-3 rounded-full border text-caption font-bold cursor-pointer';
 const filterPillIdleClass = 'border-line bg-surface text-fg-secondary';
+
+export interface CutoffInfo {
+  tierName: string;
+  color: string;
+  count: number;
+}
+
+/** Tier accent for a leaderboard row: qualified rows take their tier's color. */
+export function getRowTierAccent(row: LeaderboardRankRow, hasBrackets: boolean) {
+  const assignedTier = row.assignedTier;
+  const isTierQualified = Boolean(hasBrackets && assignedTier && !row.isDNQ);
+  const tierColor = assignedTier?.primaryColor || THEME_FALLBACK.primaryColor;
+  const tierContrastColor = getContrastingTextColor(tierColor);
+  return { isTierQualified, tierColor, tierContrastColor };
+}
+
+/** Primary metric text: average (AVERAGE_OF_X), top score (HIGH_SCORE) or total points (POINTS). */
+export function formatPrimaryMetric(row: LeaderboardRankRow, format: Tournament['qualFormat']): string {
+  if (format === 'POINTS') return `${row.finalScore} pts`;
+  return row.finalScore > 0 ? row.finalScore.toLocaleString() : '—';
+}
+
+/** # of Maxes value, or undefined when the player has none. */
+export function formatMaxoutCount(row: LeaderboardRankRow): string | undefined {
+  return row.maxoutCount && row.maxoutCount > 0 ? String(row.maxoutCount) : undefined;
+}
+
+export type KickerDisplayKind = 'kicker' | 'noKicker' | 'best' | 'empty';
+
+/** Kicker column value: the kicker, "No kicker" after maxes, else the best score, else a dash. */
+export function getKickerDisplay(row: LeaderboardRankRow): { kind: KickerDisplayKind; text: string } {
+  if (row.kickerScore && row.kickerScore > 0) return { kind: 'kicker', text: row.kickerScore.toLocaleString() };
+  if (row.maxoutCount && row.maxoutCount > 0) return { kind: 'noKicker', text: 'No kicker' };
+  if (row.finalScore > 0) return { kind: 'best', text: row.finalScore.toLocaleString() };
+  return { kind: 'empty', text: '—' };
+}
+
+export function formatCutoffLabel(info: CutoffInfo): string {
+  return `▲ ${info.tierName} Cutoff (${info.count} competitors advance to ${info.tierName}) ▲`;
+}
+
+/** Verified column badge for a row's qualifier status. */
+export function renderVerifiedStatus(row: LeaderboardRankRow): React.ReactNode {
+  return (
+    <>
+      {row.status === 'verified' && (
+        <span
+          className="text-2xs font-bold py-0.5 px-2 rounded-sm bg-green-500/15 text-green-400 border border-green-500/30 inline-flex items-center gap-1"
+          title="Qualifier verified"
+        >
+          <Check size={11} /> Verified
+        </span>
+      )}
+      {row.status === 'awaiting verification' && (
+        <span
+          className="text-2xs font-bold py-0.5 px-2 rounded-sm bg-gold/15 text-gold-bright border border-gold/30 inline-flex items-center gap-1"
+          title="Awaiting Verification"
+        >
+          ⏳ Awaiting Verification
+        </span>
+      )}
+      {row.status === 'dnq' && (
+        <span
+          className="text-2xs font-bold py-0.5 px-2 rounded-sm bg-red/15 text-red-bright border border-red/30"
+          title="Did not qualify"
+        >
+          DNQ
+        </span>
+      )}
+      {row.status === 'dq' && (
+        <span
+          className="text-2xs font-bold py-0.5 px-2 rounded-sm bg-red/25 text-red border border-red/50"
+          title="Disqualified"
+        >
+          DQ
+        </span>
+      )}
+      {row.status === 'in progress' && (
+        <span
+          className="text-2xs font-semibold py-0.5 px-2 rounded-sm bg-gold/15 text-gold-bright border border-gold/30"
+          title="In Progress"
+        >
+          In Progress
+        </span>
+      )}
+      {row.status === 'not started' && (
+        <span
+          className="text-xs text-fg-muted"
+          title="Not started"
+        >
+          —
+        </span>
+      )}
+    </>
+  );
+}
+
+/** AVERAGE_OF_X attempt chips, one slot per counted attempt: the highest X scores. */
+export function renderAttemptChips(row: LeaderboardRankRow, targetX: number, className?: string): React.ReactNode {
+  const topAttempts = [...row.attempts].sort((a, b) => b - a);
+  return (
+    <div className={cn('inline-flex gap-1.5 items-center', className)}>
+      {Array.from({ length: targetX }).map((_, slotIdx) => {
+        const score = topAttempts[slotIdx];
+        const hasScore = typeof score === 'number';
+        return (
+           <span
+            key={slotIdx}
+            className={cn(
+              'font-mono tabular-nums tracking-tight py-0.5 px-2 rounded-sm text-xs font-semibold border border-line-subtle',
+              hasScore ? 'bg-white/8 text-fg' : 'bg-white/2 text-fg-muted border-dashed'
+            )}
+          >
+            {hasScore ? score.toLocaleString() : '—'}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/** POINTS breakdown: earned points per attempt, or the top score when no points are earned yet. */
+export function renderPointsBreakdown(row: LeaderboardRankRow, tournament: Tournament): React.ReactNode {
+  const submissionsForPlayer = (tournament.qualifierSubmissions || [])
+    .filter(s => s.playerId === row.player.id)
+    .sort((a, b) => a.submittedAt - b.submittedAt);
+  const ptsResult = calculatePoints(submissionsForPlayer, tournament.pointsConfig || []);
+
+  if (submissionsForPlayer.length === 0) {
+    return <span className="text-xs text-fg-muted">No submissions</span>;
+  }
+
+  if (ptsResult.totalPoints === 0) {
+    const topScore = Math.max(...submissionsForPlayer.map(s => s.score));
+    return (
+      <span className="font-mono tabular-nums tracking-tight text-caption text-fg-secondary">
+        Top Score: <strong className="text-fg">{topScore.toLocaleString()}</strong>
+      </span>
+    );
+  }
+
+  const earnedAttempts = submissionsForPlayer
+    .map((submission, idx) => ({ id: submission.id, score: submission.score, pts: ptsResult.pointsPerAttempt[idx] }))
+    .filter(attempt => attempt.pts > 0);
+
+  return (
+    <div className="inline-flex gap-1.5 items-center flex-wrap justify-center">
+      {earnedAttempts.map(attempt => (
+        <span
+          key={attempt.id}
+          title={attempt.score.toLocaleString()}
+          className="font-mono tabular-nums tracking-tight py-0.5 px-2 rounded-sm text-xs font-bold bg-gold/15 text-gold-bright border border-gold/30"
+        >
+          +{attempt.pts}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Bracket Seed column badge: tier and seed when qualified, otherwise DQ / DNQ / Pending. */
+export function renderSeedBadge(row: LeaderboardRankRow, hasBrackets: boolean): React.ReactNode {
+  const { isTierQualified, tierColor, tierContrastColor } = getRowTierAccent(row, hasBrackets);
+  if (isTierQualified && row.tierSeed !== undefined) {
+    return (
+      <span
+        className="inline-block py-1 px-2.5 rounded-full text-xs font-bold"
+        style={{ background: tierColor, color: tierContrastColor }}
+      >
+        {row.assignedTier!.name} #{row.tierSeed}
+      </span>
+    );
+  }
+  if (row.isDisqualified) {
+    return (
+      <Badge variant="muted" title="Disqualified">
+        DQ
+      </Badge>
+    );
+  }
+  if (row.isDNQ) {
+    return (
+      <Badge variant="muted" title="Did Not Qualify">
+        DNQ
+      </Badge>
+    );
+  }
+  return <Badge variant="muted">Pending</Badge>;
+}
 
 interface LeaderboardTableProps {
   tournament: Tournament;
@@ -33,13 +223,12 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerProfile | null>(null);
   const [selectedRankRow, setSelectedRankRow] = useState<LeaderboardRankRow | undefined>(undefined);
-  const [sourceFilter, setSourceFilter] = useState<'ALL' | 'IN_PERSON' | 'ONLINE' | 'AWAITING'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'AWAITING'>('ALL');
+  const isMobile = useIsMobile();
 
   const allRows = deriveLeaderboard(tournament);
   const filteredRows = allRows.filter(r => {
-    if (sourceFilter === 'IN_PERSON' && r.submissionSource !== 'IN_PERSON') return false;
-    if (sourceFilter === 'ONLINE' && r.submissionSource !== 'ONLINE') return false;
-    if (sourceFilter === 'AWAITING' && r.status !== 'awaiting verification') return false;
+    if (statusFilter === 'AWAITING' && r.status !== 'awaiting verification') return false;
 
     const q = searchTerm.trim().toLowerCase();
     if (!q) return true;
@@ -53,7 +242,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
 
   // Calculate cutoff rank boundaries for dividers
   const sortedTiers = [...tournament.tiers].sort((a, b) => a.priority - b.priority);
-  const cutoffRanks = new Map<number, { tierName: string; color: string; count: number }>();
+  const cutoffRanks = new Map<number, CutoffInfo>();
   let runningCutoff = 0;
   sortedTiers.forEach(tier => {
     runningCutoff += tier.playerCount;
@@ -68,9 +257,17 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
   const format = tournament.qualFormat;
   const targetX = tournament.qualAverageCount || 2;
   const tableColSpan = hasBrackets ? 6 : 5;
+  const emptyStateText = searchTerm
+    ? `No competitors found matching "${searchTerm}".`
+    : 'No competitors registered yet. Register competitors in Settings or click "Record Score" to add a player.';
+
+  const handleSelectRow = (row: LeaderboardRankRow) => {
+    setSelectedPlayer(row.player);
+    setSelectedRankRow(row);
+  };
 
   return (
-    <div className={cn('w-full mx-auto flex flex-col gap-6', isObsMode ? 'max-w-full p-4' : 'max-w-300 p-0')}>
+    <div className={cn('w-full mx-auto flex flex-col gap-6', isObsMode ? 'max-w-full p-4' : 'max-w-300 p-0', canManage && 'max-md:pb-20')}>
       {/* OBS: TournamentPageHeader hides its action slot, so the read-only timer renders on its own */}
       {isObsMode && (
         <div className="flex justify-end">
@@ -78,7 +275,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
         </div>
       )}
 
-      {/* Header with Search, OBS Overlay, and Record Qual Score */}
+      {/* Header with Search, OBS Overlay, and Record Score */}
       <TournamentPageHeader
         eyebrow="Qualifying Leaderboard"
         title={tournament.name}
@@ -112,10 +309,10 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                 data-testid="open-qualifier-entry"
                 variant="primary"
                 onClick={() => setIsEntryModalOpen(true)}
-                className="text-sm py-2 px-4 gap-2 whitespace-nowrap font-semibold"
+                className="text-sm py-2 px-4 gap-2 whitespace-nowrap font-semibold max-md:fixed max-md:inset-x-3 max-md:bottom-[calc(4.25rem+env(safe-area-inset-bottom))] max-md:z-40 max-md:py-3 max-md:shadow-lg"
               >
                 <Plus size={16} />
-                <span>Record Qual Score</span>
+                <span>Record Score</span>
               </Button>
             )}
           </div>
@@ -123,41 +320,43 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
         isObsMode={isObsMode}
       />
 
-      {/* Multi-Source Filtering Pills */}
+      {/* Filter Pills */}
       {!isObsMode && (
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
-            onClick={() => setSourceFilter('ALL')}
-            className={cn(filterPillClass, sourceFilter === 'ALL' ? 'border-white bg-white/15 text-white' : filterPillIdleClass)}
+            onClick={() => setStatusFilter('ALL')}
+            className={cn(filterPillClass, statusFilter === 'ALL' ? 'border-white bg-white/15 text-white' : filterPillIdleClass)}
           >
             All ({allRows.length})
           </button>
           <button
             type="button"
-            onClick={() => setSourceFilter('IN_PERSON')}
-            className={cn(filterPillClass, sourceFilter === 'IN_PERSON' ? 'border-blue-500 bg-blue-500/20 text-blue-400' : filterPillIdleClass)}
-          >
-            🏢 In-Person ({allRows.filter(r => r.submissionSource === 'IN_PERSON').length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setSourceFilter('ONLINE')}
-            className={cn(filterPillClass, sourceFilter === 'ONLINE' ? 'border-purple-500 bg-purple-500/20 text-purple-400' : filterPillIdleClass)}
-          >
-            🌐 Online ({allRows.filter(r => r.submissionSource === 'ONLINE').length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setSourceFilter('AWAITING')}
-            className={cn(filterPillClass, sourceFilter === 'AWAITING' ? 'border-gold-bright bg-gold/20 text-gold-bright' : filterPillIdleClass)}
+            onClick={() => setStatusFilter('AWAITING')}
+            className={cn(filterPillClass, statusFilter === 'AWAITING' ? 'border-gold-bright bg-gold/20 text-gold-bright' : filterPillIdleClass)}
           >
             ⏳ Pending Review ({allRows.filter(r => r.status === 'awaiting verification').length})
           </button>
         </div>
       )}
 
-      {/* Main Leaderboard Table */}
+      {/* Main Leaderboard: card list on phones, table otherwise */}
+      {isMobile ? (
+        filteredRows.length === 0 ? (
+          <Card>
+            <p className="py-6 text-center text-sm text-fg-muted m-0">{emptyStateText}</p>
+          </Card>
+        ) : (
+          <LeaderboardCardList
+            rows={filteredRows}
+            format={format}
+            hasBrackets={hasBrackets}
+            cutoffRanks={cutoffRanks}
+            isObsMode={isObsMode}
+            onSelectRow={handleSelectRow}
+          />
+        )
+      ) : (
       <Card padding="none" className="overflow-hidden">
         <table className="w-full border-collapse text-left">
           <thead>
@@ -197,18 +396,16 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
             {filteredRows.length === 0 ? (
               <tr>
                 <td colSpan={tableColSpan} className="py-10 px-6 text-center text-fg-muted">
-                  {searchTerm
-                    ? `No competitors found matching "${searchTerm}".`
-                    : 'No competitors registered yet. Register competitors in Settings or click "Record Qual Score" to add a player.'}
+                  {emptyStateText}
                 </td>
               </tr>
             ) : (
               filteredRows.map((row: LeaderboardRankRow, idx) => {
                 const cutoffInfo = typeof row.rank === 'number' ? cutoffRanks.get(row.rank) : undefined;
                 const assignedTier = row.assignedTier;
-                const isTierQualified = Boolean(hasBrackets && assignedTier && !row.isDNQ);
-                const tierColor = assignedTier?.primaryColor || THEME_FALLBACK.primaryColor;
-                const tierContrastColor = getContrastingTextColor(tierColor);
+                const { isTierQualified, tierColor, tierContrastColor } = getRowTierAccent(row, hasBrackets);
+                const kicker = getKickerDisplay(row);
+                const maxoutCount = formatMaxoutCount(row);
 
                 // Row background and accenting based on tier bracket palette
                 let rowBg = idx % 2 === 0 ? 'var(--color-surface)' : 'var(--color-elevated)';
@@ -222,10 +419,9 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                     <tr
                       onClick={() => {
                         if (isObsMode) return;
-                        setSelectedPlayer(row.player);
-                        setSelectedRankRow(row);
+                        handleSelectRow(row);
                       }}
-                      title={isObsMode ? undefined : "Click to view detailed competitor profile, audit log, and match stats"}
+                      title={isObsMode ? undefined : "View Competitor"}
                       className={cn(
                         'border-b border-l-4 transition-all duration-150',
                         !isTierQualified && 'border-b-black/65 border-l-transparent',
@@ -271,54 +467,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
 
                       {/* Verified Column */}
                       <td className={cn(tdClass, 'w-32.5 text-center')}>
-                        {row.status === 'verified' && (
-                          <span
-                            className="text-2xs font-bold py-0.5 px-2 rounded-sm bg-green-500/15 text-green-400 border border-green-500/30 inline-flex items-center gap-1"
-                            title="Qualifier verified"
-                          >
-                            <Check size={11} /> Verified
-                          </span>
-                        )}
-                        {row.status === 'awaiting verification' && (
-                          <span
-                            className="text-2xs font-bold py-0.5 px-2 rounded-sm bg-gold/15 text-gold-bright border border-gold/30 inline-flex items-center gap-1"
-                            title="Awaiting verification by judge"
-                          >
-                            ⏳ Awaiting Verification
-                          </span>
-                        )}
-                        {row.status === 'dnq' && (
-                          <span
-                            className="text-2xs font-bold py-0.5 px-2 rounded-sm bg-red/15 text-red-bright border border-red/30"
-                            title="Did not qualify"
-                          >
-                            DNQ
-                          </span>
-                        )}
-                        {row.status === 'dq' && (
-                          <span
-                            className="text-2xs font-bold py-0.5 px-2 rounded-sm bg-red/25 text-red border border-red/50"
-                            title="Disqualified"
-                          >
-                            DQ
-                          </span>
-                        )}
-                        {row.status === 'in progress' && (
-                          <span
-                            className="text-2xs font-semibold py-0.5 px-2 rounded-sm bg-gold/15 text-gold-bright border border-gold/30"
-                            title="Qualifier in progress"
-                          >
-                            In Progress
-                          </span>
-                        )}
-                        {row.status === 'not started' && (
-                          <span
-                            className="text-xs text-fg-muted"
-                            title="Not started"
-                          >
-                            —
-                          </span>
-                        )}
+                        {renderVerifiedStatus(row)}
                       </td>
 
                       {/* Format-Dense Column Layout */}
@@ -326,9 +475,9 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                         <>
                           {/* # of Maxes Column */}
                           <td className={cn(tdClass, 'w-35 text-center')}>
-                            {row.maxoutCount && row.maxoutCount > 0 ? (
+                            {maxoutCount !== undefined ? (
                               <span className="font-mono tabular-nums text-base font-bold text-fg">
-                                {row.maxoutCount}
+                                {maxoutCount}
                               </span>
                             ) : (
                               <span className="text-caption text-fg-muted">
@@ -339,21 +488,21 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
 
                           {/* Kicker Column */}
                           <td className={cn(tdClass, 'font-mono tabular-nums tracking-tight w-35 text-center font-bold text-base')}>
-                            {row.kickerScore && row.kickerScore > 0 ? (
+                            {kicker.kind === 'kicker' ? (
                               <span className={cn(!isTierQualified && 'text-white')} style={{ color: isTierQualified ? tierColor : undefined }}>
-                                {row.kickerScore.toLocaleString()}
+                                {kicker.text}
                               </span>
-                            ) : row.maxoutCount && row.maxoutCount > 0 ? (
+                            ) : kicker.kind === 'noKicker' ? (
                               <span className="text-xs text-fg-muted">
-                                No kicker
+                                {kicker.text}
                               </span>
-                            ) : row.finalScore > 0 ? (
+                            ) : kicker.kind === 'best' ? (
                               <span className={cn(!isTierQualified && 'text-fg-secondary')} style={{ color: isTierQualified ? tierColor : undefined }}>
-                                {row.finalScore.toLocaleString()}
+                                {kicker.text}
                               </span>
                             ) : (
                               <span className="text-caption text-fg-muted">
-                                —
+                                {kicker.text}
                               </span>
                             )}
                           </td>
@@ -364,23 +513,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                         <>
                           {/* Attempts Breakdown Chips */}
                           <td className={cn(tdClass, 'min-w-45 text-center')}>
-                            <div className="inline-flex gap-1.5 items-center">
-                              {Array.from({ length: targetX }).map((_, slotIdx) => {
-                                const score = row.attempts[slotIdx];
-                                const hasScore = typeof score === 'number';
-                                return (
-                                   <span
-                                    key={slotIdx}
-                                    className={cn(
-                                      'font-mono tabular-nums tracking-tight py-0.5 px-2 rounded-sm text-xs font-semibold border border-line-subtle',
-                                      hasScore ? 'bg-white/8 text-fg' : 'bg-white/2 text-fg-muted border-dashed'
-                                    )}
-                                  >
-                                    {hasScore ? score.toLocaleString() : '—'}
-                                  </span>
-                                );
-                              })}
-                            </div>
+                            {renderAttemptChips(row, targetX)}
                           </td>
 
                           {/* Average Score Column */}
@@ -390,7 +523,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                                 className={cn('font-mono tabular-nums tracking-tight font-bold text-base', !isTierQualified && 'text-gold-bright')}
                                 style={{ color: isTierQualified ? tierColor : undefined }}
                               >
-                                {row.finalScore > 0 ? row.finalScore.toLocaleString() : '—'}
+                                {formatPrimaryMetric(row, format)}
                               </span>
                               <span className={cn('text-2xs', row.attempts.length >= targetX ? 'text-green-bright' : 'text-fg-muted')}>
                                 {row.attempts.length >= targetX ? 'Completed' : `Running (${row.attempts.length}/${targetX})`}
@@ -404,40 +537,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                         <>
                           {/* Points Breakdown Column */}
                           <td className={cn(tdClass, 'min-w-45 text-center')}>
-                            {(() => {
-                              const submissionsForPlayer = (tournament.qualifierSubmissions || [])
-                                .filter(s => s.playerId === row.player.id)
-                                .sort((a, b) => a.submittedAt - b.submittedAt);
-                              const ptsResult = calculatePoints(submissionsForPlayer, tournament.pointsConfig || []);
-
-                              if (submissionsForPlayer.length === 0) {
-                                return <span className="text-xs text-fg-muted">No submissions</span>;
-                              }
-
-                              if (ptsResult.totalPoints === 0) {
-                                const topScore = Math.max(...submissionsForPlayer.map(s => s.score));
-                                return (
-                                  <span className="font-mono tabular-nums tracking-tight text-caption text-fg-secondary">
-                                    Top Score: <strong className="text-fg">{topScore.toLocaleString()}</strong>
-                                  </span>
-                                );
-                              }
-
-                              const earnedPoints = ptsResult.pointsPerAttempt.filter(pts => pts > 0);
-
-                              return (
-                                <div className="inline-flex gap-1.5 items-center flex-wrap justify-center">
-                                  {earnedPoints.map((pts, pIdx) => (
-                                    <span
-                                      key={pIdx}
-                                      className="font-mono tabular-nums tracking-tight py-0.5 px-2 rounded-sm text-xs font-bold bg-gold/15 text-gold-bright border border-gold/30"
-                                    >
-                                      +{pts}
-                                    </span>
-                                  ))}
-                                </div>
-                              );
-                            })()}
+                            {renderPointsBreakdown(row, tournament)}
                           </td>
 
                           {/* Total Points Column */}
@@ -449,7 +549,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                             )}
                             style={{ color: isTierQualified ? tierColor : undefined }}
                           >
-                            {row.finalScore} pts
+                            {formatPrimaryMetric(row, format)}
                           </td>
                         </>
                       )}
@@ -458,24 +558,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                       {hasBrackets && (
                         <td className={cn(tdClass, 'w-35 text-center')}>
                           <div className="inline-flex items-center justify-center gap-1.5">
-                            {isTierQualified && row.tierSeed !== undefined ? (
-                              <span
-                                className="inline-block py-1 px-2.5 rounded-full text-xs font-bold"
-                                style={{ background: tierColor, color: tierContrastColor }}
-                              >
-                                {assignedTier!.name} #{row.tierSeed}
-                              </span>
-                            ) : row.isDisqualified ? (
-                              <Badge variant="muted" title="Disqualified from this tournament">
-                                DQ
-                              </Badge>
-                            ) : row.isDNQ ? (
-                              <Badge variant="muted" title="Did Not Qualify for active brackets">
-                                DNQ
-                              </Badge>
-                            ) : (
-                              <Badge variant="muted">Pending</Badge>
-                            )}
+                            {renderSeedBadge(row, hasBrackets)}
 
                             <ChevronRight size={14} color="var(--color-fg-muted)" />
                           </div>
@@ -498,7 +581,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                           className="py-2 px-4 text-center text-xs font-bold tracking-widest uppercase"
                           style={{ color: cutoffInfo.color }}
                         >
-                          ▲ {cutoffInfo.tierName} Cutoff ({cutoffInfo.count} competitors advance to {cutoffInfo.tierName}) ▲
+                          {formatCutoffLabel(cutoffInfo)}
                         </td>
                       </tr>
                     )}
@@ -509,6 +592,7 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
           </tbody>
         </table>
       </Card>
+      )}
 
       {/* Qualifier Score Submission Modal */}
       {isEntryModalOpen && (

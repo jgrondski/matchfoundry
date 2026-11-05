@@ -198,7 +198,7 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
       </div>
 
       {draftRows.length > 0 && (
-        <div className="grid grid-cols-2 gap-2.5 transition-all duration-300">
+        <div className="grid grid-cols-2 gap-2.5 transition-all duration-300 max-md:grid-cols-1">
           {draftRows.map(row => {
             const otherDraftKeys = new Set(
               draftRows.filter(r => r.id !== row.id).map(r => String(r.roundKey))
@@ -232,7 +232,7 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
                         const parsedKey = !isNaN(num) && String(num) === val ? num : val;
                         handleRoundChange(row.id, parsedKey);
                       }}
-                      className="w-full rounded-sm border border-line bg-canvas py-1.5 px-2 text-caption text-fg"
+                      className="w-full rounded-sm border border-line bg-canvas py-1.5 px-2 text-caption text-fg max-md:text-base"
                     >
                       {selectableRounds.map(r => {
                         const optVal = String(r.roundIdentifier || r.roundNumber);
@@ -269,9 +269,9 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
                     type="button"
                     disabled={!row.isDirty}
                     onClick={() => handleSaveRow(row.id)}
-                    title={row.isDirty ? 'Save round override' : 'No unsaved changes'}
+                    title={row.isDirty ? 'Save Override' : 'No Changes'}
                     className={cn(
-                      'inline-flex items-center gap-1 rounded-sm border py-1 px-2 text-xs font-semibold transition-all duration-200',
+                      'inline-flex items-center gap-1 rounded-sm border py-1 px-2 text-xs font-semibold transition-all duration-200 max-md:min-h-11',
                       row.isDirty
                         ? 'cursor-pointer border-gold-bright bg-gold-soft text-gold-bright opacity-100'
                         : 'cursor-not-allowed border-line-subtle bg-transparent text-fg-muted opacity-40'
@@ -284,8 +284,8 @@ export const RoundOverridesEditor: React.FC<RoundOverridesEditorProps> = ({ tier
                   <button
                     type="button"
                     onClick={() => handleDeleteRow(row.id)}
-                    title="Remove round override"
-                    className="inline-flex cursor-pointer items-center gap-1 rounded-sm border border-line-subtle bg-transparent py-1 px-2 text-xs font-semibold text-fg-muted transition-all duration-200 hover:border-red hover:text-red"
+                    title="Remove Override"
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-sm border border-line-subtle bg-transparent py-1 px-2 text-xs font-semibold text-fg-muted transition-all duration-200 hover:border-red hover:text-red max-md:min-h-11"
                   >
                     <Trash2 size={13} />
                     <span>Delete</span>

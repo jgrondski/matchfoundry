@@ -45,6 +45,7 @@ describe('PlayerDirectorySections Component Decomposition', () => {
       expect(html).toContain('1,350,000');
       expect(html).toContain('Held by Blue Scuti');
       expect(html).toContain('Average Personal Best');
+      expect(html).not.toContain('Ready for tournament roster import');
     });
 
     it('handles empty players array gracefully', () => {
@@ -102,8 +103,8 @@ describe('PlayerDirectorySections Component Decomposition', () => {
       expect(html).not.toContain('MAXOUT');
       expect(html).toContain('US');
       // Must contain action buttons
-      expect(html).toContain('title="Edit competitor profile"');
-      expect(html).toContain('title="Delete competitor from catalog"');
+      expect(html).toContain('title="Edit Competitor"');
+      expect(html).toContain('title="Delete Competitor"');
     });
   });
 
@@ -140,7 +141,7 @@ describe('PlayerDirectorySections Component Decomposition', () => {
       );
 
       expect(html).toContain('No Competitors Match Your Filter');
-      expect(html).not.toContain('Generate Fake Players');
+      expect(html).not.toContain('Generate Players');
     });
 
     it('renders empty directory state with action buttons when catalog has 0 players', () => {
@@ -156,7 +157,7 @@ describe('PlayerDirectorySections Component Decomposition', () => {
       );
 
       expect(html).toContain('Global Player Directory is Empty');
-      expect(html).toContain('Generate Fake Players');
+      expect(html).toContain('Generate Players');
       expect(html).toContain('Add Competitor');
     });
   });

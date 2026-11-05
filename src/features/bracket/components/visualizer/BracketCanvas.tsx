@@ -11,6 +11,8 @@ import { ACCELERATED_HYBRID_POD_PALETTE, getMatchBranchColor } from '../../routi
 import { BracketSvgConnectors } from './BracketSvgConnectors';
 import { BracketMatchCard } from './BracketMatchCard';
 import { BracketChampionNode } from './BracketChampionNode';
+import { CompactMatchCard } from './CompactMatchCard';
+import { getMatchCardModel, isDoubleElimBracket, isLosersBracketMatch } from '../../matchCardModel';
 import { cn } from '../../../../components/ui';
 
 interface BracketCanvasProps {
@@ -53,6 +55,7 @@ interface BracketCanvasProps {
   onPlayerClick: (pId: string, pName: string, country?: string) => void;
   onChipClick: (targetMatchId: string) => void;
   onSelectMatch: (match: BracketMatch, roundName: string) => void;
+  compact?: boolean;
 }
 
 export const BracketCanvas: React.FC<BracketCanvasProps> = ({
@@ -89,6 +92,7 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
   onPlayerClick,
   onChipClick,
   onSelectMatch,
+  compact = false,
 }) => {
   const champProfile = targetChampPlayer
     ? (tournament.playersPool || []).find((p: PlayerProfile) => p.id === targetChampPlayer.id)
@@ -103,6 +107,21 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
       ? ACCELERATED_HYBRID_POD_PALETTE.LB.border
       : null
     : null;
+
+  const connectors = (
+    <BracketSvgConnectors
+      totalWidth={targetLayout.totalWidth}
+      totalHeight={targetLayout.totalHeight}
+      paths={targetLayout.paths}
+      championPath={targetLayout.championPath}
+      tournamentMatchScores={tournament.matchScores}
+      matchesById={bracket.matchesById}
+      hoveredAncestry={hoveredAncestry}
+      targetChampPlayer={targetChampPlayer}
+      primaryColor={primaryColor}
+      secondaryColor={secondaryColor}
+    />
+  );
 
   return (
     <div
@@ -181,10 +200,14 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
           <div
             key={header.roundNumber}
             className={cn(
-              'absolute z-10 flex items-center justify-center uppercase tracking-widest rounded-sm',
-              isFinals
-                ? 'h-11 text-base font-black border-2'
-                : 'h-8.5 text-caption font-extrabold border-[1.5px] shadow-[0_2px_8px_rgba(0,0,0,0.4)]',
+              compact
+                ? 'absolute z-10 flex h-8.5 items-center justify-center rounded-sm border-[1.5px] text-2xs font-bold uppercase tracking-wider'
+                : [
+                    'absolute z-10 flex items-center justify-center uppercase tracking-widest rounded-sm',
+                    isFinals
+                      ? 'h-11 text-base font-black border-2'
+                      : 'h-8.5 text-caption font-extrabold border-[1.5px] shadow-[0_2px_8px_rgba(0,0,0,0.4)]',
+                  ],
               roundAccentColor && 'border-x-4'
             )}
             style={{
@@ -206,25 +229,40 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
         );
       })}
 
-      {/* Dynamic SVG Orthogonal Connector Lines */}
-      <BracketSvgConnectors
-        totalWidth={targetLayout.totalWidth}
-        totalHeight={targetLayout.totalHeight}
-        paths={targetLayout.paths}
-        championPath={targetLayout.championPath}
-        tournamentMatchScores={tournament.matchScores}
-        matchesById={bracket.matchesById}
-        hoveredAncestry={hoveredAncestry}
-        targetChampPlayer={targetChampPlayer}
-        primaryColor={primaryColor}
-        secondaryColor={secondaryColor}
-      />
+      {/* Dynamic SVG Orthogonal Connector Lines (compact: 1.5px stroke via CSS, which overrides the SVG attribute) */}
+      {compact ? <div className="contents [&_path]:[stroke-width:1.5px]">{connectors}</div> : connectors}
 
       {/* Match Cards */}
       {targetRounds.map((round) =>
         round.matches.map((match: BracketMatch, mIdx: number) => {
           const pos = targetLayout.matchPositions[match.id];
           if (!pos) return null;
+
+          const isClickable = !isObsMode && tournament.isLocked;
+          const selectRoundName = match.stage === 'GRAND_FINALS_RESET' ? 'Grand Finals' : round.name;
+
+          if (compact) {
+            const model = getMatchCardModel({
+              match,
+              mIdx,
+              bracket,
+              tier,
+              record: tournament.matchScores[match.id],
+            });
+            const isLowerBracket =
+              !isAcceleratedHybrid && isDoubleElimBracket(bracket, tier) && isLosersBracketMatch(match, round);
+            return (
+              <CompactMatchCard
+                key={match.id}
+                model={model}
+                pos={pos}
+                accentColor={isLowerBracket && lowerBracketColor ? lowerBracketColor : primaryColor}
+                cardBg={effectiveCardBg}
+                matchDomId={`bracket-match-${match.id}`}
+                onSelect={isClickable && model.isPlayable ? () => onSelectMatch(match, selectRoundName) : undefined}
+              />
+            );
+          }
 
           return (
             <BracketMatchCard
@@ -280,6 +318,7 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
           hoveredAncestry={hoveredAncestry}
           onChampHover={onChampHover}
           onPlayerClick={onPlayerClick}
+          compact={compact}
         />
       )}
     </div>

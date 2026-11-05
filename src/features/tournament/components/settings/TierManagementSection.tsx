@@ -56,7 +56,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
               No bracket tiers configured for this tournament.
             </p>
             <Button variant="primary" onClick={onAddTier}>
-              <Plus size={16} /> Add First Bracket Tier
+              <Plus size={16} /> Add Tier
             </Button>
           </div>
         ) : (
@@ -71,7 +71,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
             return (
               <div
                 key={tier.id}
-                className="flex flex-col gap-3.5 rounded-md py-4 px-4.5 shadow-sm"
+                className="flex flex-col gap-3.5 rounded-md py-4 px-4.5 shadow-sm max-md:items-stretch"
                 style={{
                   background: `linear-gradient(135deg, var(--color-elevated) 0%, ${colorWithAlpha(priColor, 0.05)} 100%)`,
                   border: `1px solid ${colorWithAlpha(priColor, 0.28)}`,
@@ -79,7 +79,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                 }}
               >
                 {/* Header: Priority, Name, Swatch Pill, Cutoff Badge & Controls */}
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 max-md:flex-col max-md:items-stretch">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span
                       className="size-3 shrink-0 rounded-full"
@@ -113,7 +113,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                     <div
                       className="inline-flex items-center gap-1 rounded-full bg-canvas py-0.5 px-2"
                       style={{ border: `1px solid ${colorWithAlpha(priColor, 0.25)}` }}
-                      title={`Theme: Primary (${priColor}), Secondary (${secColor}), Card (${cardBg}), Text (${txtColor})`}
+                      title="Tier Theme"
                     >
                       <span className="size-2 rounded-full border border-black/40" style={{ background: priColor }} />
                       <span className="size-2 rounded-full border border-black/40" style={{ background: secColor }} />
@@ -123,12 +123,12 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                   </div>
 
                   {/* Move up / down / delete */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <Button
                       onClick={() => onMoveTier(idx, 'up')}
                       disabled={idx === 0}
                       className="py-1 px-2"
-                      title="Move tier up in priority"
+                      title="Move Up"
                     >
                       <ArrowUp size={13} />
                     </Button>
@@ -136,7 +136,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                       onClick={() => onMoveTier(idx, 'down')}
                       disabled={idx === tiers.length - 1}
                       className="py-1 px-2"
-                      title="Move tier down in priority"
+                      title="Move Down"
                     >
                       <ArrowDown size={13} />
                     </Button>
@@ -144,7 +144,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                       variant="danger"
                       onClick={() => onRequestDeleteTier(idx, tier)}
                       className="py-1 px-2"
-                      title="Delete bracket tier"
+                      title="Delete Tier"
                     >
                       <Trash2 size={13} />
                     </Button>
@@ -152,7 +152,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                 </div>
 
                 {/* Form Fields Grid */}
-                <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] items-end gap-2.5">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] items-end gap-2.5 max-md:grid-cols-1">
                   <div className="min-w-0">
                     <label className={tierLabelClass}>Tier Name</label>
                     <input
@@ -221,7 +221,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
 
                   {tier.eliminationType === 'DOUBLE' && tier.bracketRouting === 'FLAT_STAGED' && (
                     <div className="min-w-0">
-                      <label className={tierLabelTruncateClass} title="Flat Width (Matches Per Round)">
+                      <label className={tierLabelTruncateClass} title="Flat Width">
                         Flat Width
                       </label>
                       <select
@@ -263,7 +263,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
 
                   {tier.eliminationType !== 'DOUBLE' && tier.bracketType === 'FLAT' && (
                     <div className="min-w-0">
-                      <label className={tierLabelTruncateClass} title="Flat Width (Matches Per Round)">
+                      <label className={tierLabelTruncateClass} title="Flat Width">
                         Flat Width (Per Round)
                       </label>
                       <select
@@ -330,7 +330,7 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                         type="button"
                         onClick={() => onToggleThemeCollapse(tier.id)}
                         className={cn(
-                          'flex w-full cursor-pointer items-center justify-between gap-3 border-0 py-2.5 px-4 text-left transition-colors duration-150 hover:bg-elevated',
+                          'flex w-full cursor-pointer items-center justify-between gap-3 border-0 py-2.5 px-4 text-left transition-colors duration-150 hover:bg-elevated max-md:min-h-11 max-md:flex-wrap',
                           isThemeOpen ? 'border-b bg-surface' : 'bg-elevated'
                         )}
                         style={{ borderBottomColor: isThemeOpen ? colorWithAlpha(priColor, 0.25) : undefined }}
@@ -340,14 +340,14 @@ export const TierManagementSection: React.FC<TierManagementSectionProps> = ({
                           <div className="flex items-center gap-2">
                             <Palette size={15} color={priColor} />
                             <span className="text-sm font-bold text-fg">
-                              Bracket Theme &amp; Palette
+                              Bracket Theme
                             </span>
                           </div>
 
                           {/* Palette Color Swatches Preview */}
                           <div
                             className="flex items-center gap-1.5 rounded-full border border-line-subtle bg-canvas py-0.5 px-2"
-                            title={`Current theme: Primary (${priColor}), Secondary (${secColor}), Card (${cardBg}), Text (${txtColor}), Canvas (${canvasBg}), Lower Bracket (${lowerColor})`}
+                            title="Current Theme"
                           >
                             <span className="size-2.25 shrink-0 rounded-full border border-black/30" style={{ background: priColor }} />
                             <span className="size-2.25 shrink-0 rounded-full border border-black/30" style={{ background: secColor }} />

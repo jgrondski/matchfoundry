@@ -24,6 +24,7 @@ export const TopNavSwitcher: React.FC = () => {
     {
       to: '/',
       label: 'Tournaments',
+      shortLabel: 'Tourneys',
       icon: Trophy,
       count: tournamentSummaries.length,
       isActive: isTournaments,
@@ -32,6 +33,7 @@ export const TopNavSwitcher: React.FC = () => {
     {
       to: '/organizations',
       label: 'Organizations',
+      shortLabel: 'Orgs',
       icon: Building2,
       count: organizations.length,
       isActive: isOrganizations,
@@ -40,6 +42,7 @@ export const TopNavSwitcher: React.FC = () => {
     {
       to: '/players',
       label: 'Players',
+      shortLabel: 'Players',
       icon: Users,
       count: globalPlayers ? globalPlayers.length : 0,
       isActive: isPlayers,
@@ -70,7 +73,7 @@ export const TopNavSwitcher: React.FC = () => {
         {/* Center: Global Navigation Pills (Restricted to Authenticated Admins) */}
         {showAdminNav ? (
           <nav
-            aria-label="Global System Navigation"
+            aria-label="Site Navigation"
             className={cn(
               'mx-auto grid w-full items-center gap-1 rounded-full border border-line bg-elevated p-1 shadow-[0_4px_14px_rgba(0,0,0,0.35)]',
               navTabs.length === 2 ? 'max-w-90' : 'max-w-130',
@@ -85,18 +88,19 @@ export const TopNavSwitcher: React.FC = () => {
                   key={tab.to}
                   to={tab.to}
                   className={cn(
-                    'inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm whitespace-nowrap no-underline transition-all duration-200 max-md:min-h-11 max-md:text-xs',
+                    'inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm whitespace-nowrap no-underline transition-all duration-200 max-md:min-h-11 max-md:gap-1.5 max-md:px-1 max-md:text-xs',
                     tab.isActive
                       ? 'bg-gold-bright font-bold text-canvas shadow-[0_2px_8px_rgba(255,201,5,0.4)]'
                       : 'bg-transparent font-medium text-fg-secondary shadow-none'
                   )}
                 >
                   <Icon size={16} className="shrink-0" />
-                  <span>{tab.label}</span>
+                  <span className="max-md:hidden">{tab.label}</span>
+                  <span className="md:hidden">{tab.shortLabel}</span>
                   {tab.count !== null && (
                     <span
                       className={cn(
-                        'rounded-full px-2 py-0.5 text-2xs font-bold',
+                        'rounded-full px-2 py-0.5 text-2xs font-bold max-md:hidden',
                         tab.isActive ? 'bg-black/20 text-canvas' : 'bg-white/8 text-fg-muted'
                       )}
                     >
@@ -120,7 +124,7 @@ export const TopNavSwitcher: React.FC = () => {
                 ? `/${activeTournament.slug}/manage/bracket/${activeTournament.tiers[0].slug}`
                 : `/${activeTournament.slug}/manage/qualifiers`}
               className="inline-flex items-center gap-2 max-md:hidden rounded-full border border-tier-gold/30 bg-tier-gold/10 px-3 py-1.5 text-caption font-bold text-gold-bright no-underline transition-all duration-200"
-              title={`Return to active tournament: ${activeTournament.name}`}
+              title="Active Tournament"
             >
               <Zap size={12} color="var(--color-gold-bright, #ffc905)" className="shrink-0" />
               <span className="max-w-35 truncate">{activeTournament.name}</span>
@@ -160,7 +164,7 @@ export const TopNavSwitcher: React.FC = () => {
                 type="button"
                 onClick={handleLogout}
                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-line bg-white/6 px-2.5 py-1 text-xs font-semibold text-fg-secondary transition-all duration-150 max-md:min-h-11 max-md:min-w-11 max-md:justify-center"
-                title="Log out and reset session to public spectator"
+                title="Log Out"
                 aria-label="Log Out"
               >
                 <LogOut size={12} />
@@ -171,7 +175,7 @@ export const TopNavSwitcher: React.FC = () => {
             <Link
               to="/admin"
               className="inline-flex items-center gap-1.5 rounded-full border border-line bg-white/5 px-3 py-1.5 text-caption font-semibold text-fg-secondary no-underline transition-all duration-150 max-md:min-h-11 max-md:min-w-11 max-md:justify-center"
-              title="Staff & Organizer Login"
+              title="Staff Login"
               aria-label="Staff Login"
             >
               <KeyRound size={13} color="var(--color-gold-bright, #ffc905)" />

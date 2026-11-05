@@ -6,7 +6,7 @@ import { Overlay } from '../../../components/overlay';
 import { Button, IconButton } from '../../../components/ui';
 
 const labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-fg-muted';
-const inputClass = 'w-full rounded-sm border border-line bg-canvas py-2 px-2.5 text-sm text-fg';
+const inputClass = 'w-full rounded-sm border border-line bg-canvas py-2 px-2.5 text-sm text-fg max-md:text-base';
 
 interface PointsThresholdsDrawerProps {
   isOpen: boolean;
@@ -108,7 +108,7 @@ export const PointsThresholdsDrawer: React.FC<PointsThresholdsDrawerProps> = ({
                     <button
                       type="button"
                       onClick={() => onRemoveThreshold(idx)}
-                      className="mt-4.5 shrink-0 cursor-pointer border-0 bg-transparent p-1.5 text-red"
+                      className="mt-4.5 shrink-0 cursor-pointer border-0 bg-transparent p-1.5 text-red max-md:flex max-md:min-h-11 max-md:min-w-11 max-md:items-center max-md:justify-center"
                       title="Remove threshold"
                     >
                       <Trash2 size={16} />
@@ -124,7 +124,7 @@ export const PointsThresholdsDrawer: React.FC<PointsThresholdsDrawerProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="border-t border-line bg-elevated py-4 px-5">
+          <div className="border-t border-line bg-elevated py-4 px-5 max-md:sticky max-md:bottom-0 max-md:z-10 max-md:border-t max-md:border-line max-md:bg-surface max-md:py-3 max-md:px-5">
             <Button variant="primary" onClick={requestClose} className="w-full gap-1.5 p-2 text-sm">
               <Check size={16} /> Done
             </Button>

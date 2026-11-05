@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { prepare, settle, MANUAL_SEEDING, FIXTURE_SLUG as S, FIXTURE_TIER_SLUG as T, FIXTURE_ORG_SLUG as O, type MockOptions } from './mockApi';
+import { prepare, settle, MANUAL_SEEDING, DOUBLE_ELIM, FIXTURE_SLUG as S, FIXTURE_TIER_SLUG as T, FIXTURE_ORG_SLUG as O, type MockOptions } from './mockApi';
 
 interface OverflowRoute { step: string; name: string; path: string; admin: boolean; options?: MockOptions }
 
@@ -15,6 +15,7 @@ const ROUTES: OverflowRoute[] = [
   { step: '12.2b', name: 'manage-qualifiers', path: `/${S}/manage/qualifiers`, admin: true },
   { step: '12.2c', name: 'review', path: `/${S}/manage/review`, admin: true },
   { step: '12.3', name: 'public-bracket-compact', path: `/${S}/${T}?view=compact`, admin: false },
+  { step: '12.3', name: 'public-bracket-compact-double', path: `/${S}/${T}?view=compact`, admin: false, options: DOUBLE_ELIM },
   { step: '12.4a', name: 'standings', path: `/${S}/standings`, admin: false },
   { step: '12.4a', name: 'manage-standings', path: `/${S}/manage/standings`, admin: true },
   { step: '12.4b', name: 'manage-players', path: `/${S}/manage/players`, admin: true },

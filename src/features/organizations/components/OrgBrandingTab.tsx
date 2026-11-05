@@ -87,7 +87,7 @@ export const OrgBrandingTab: React.FC<OrgBrandingTabProps> = ({
             onClick={onAddTierTheme}
           >
             <Plus size={15} />
-            <span>Add Tier Theme</span>
+            <span>Add Theme</span>
           </Button>
         </div>
 
@@ -97,12 +97,12 @@ export const OrgBrandingTab: React.FC<OrgBrandingTabProps> = ({
             className="relative rounded-lg border border-line bg-surface p-6"
           >
             <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 max-md:w-full max-md:flex-col max-md:items-stretch">
                 <input
                   type="text"
                   value={tierTheme.name}
                   onChange={e => onUpdateTierTheme(idx, { name: e.target.value })}
-                  className="rounded-sm border border-line bg-canvas px-2.5 py-1.5 text-base font-bold text-white"
+                  className="rounded-sm border border-line bg-canvas px-2.5 py-1.5 text-base font-bold text-white max-md:min-h-11 max-md:w-full"
                 />
                 <span className="text-xs text-fg-muted">
                   Tier #{idx + 2} in tournament lineup
@@ -135,10 +135,10 @@ export const OrgBrandingTab: React.FC<OrgBrandingTabProps> = ({
         <Button
           type="submit"
           variant="primary"
-          className="px-7 py-2.5 text-base"
+          className="px-7 py-2.5 text-base max-md:w-full"
           style={{ boxShadow: `0 2px 12px ${primaryTheme.primaryColor || 'var(--color-tier-gold)'}55` }}
         >
-          Save Branding &amp; Palettes
+          Save Branding
         </Button>
       </div>
     </form>

@@ -68,7 +68,7 @@ export const OpenQualsCard: React.FC<OpenQualsCardProps> = ({ tournaments }) => 
                 <div className="text-base font-bold text-fg wrap-anywhere">
                   {tournament.name}
                 </div>
-                <div className="mt-0.5 flex items-center gap-1.5 text-caption text-fg-muted">
+                <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-caption text-fg-muted">
                   {[org?.shortName || org?.name, qualFormatLabel(tournament.qualFormat, tournament.qualAverageCount)]
                     .filter(Boolean)
                     .join(' · ')}
@@ -79,7 +79,7 @@ export const OpenQualsCard: React.FC<OpenQualsCardProps> = ({ tournaments }) => 
                 to={`/${tournament.slug}/qualify`}
                 className={buttonClasses({
                   variant: 'primary',
-                  className: 'shrink-0 px-4.5 py-2 text-sm hover:-translate-y-px hover:shadow-gold-hover hover:brightness-110',
+                  className: 'shrink-0 px-4.5 py-2 text-sm max-md:w-full hover:-translate-y-px hover:shadow-gold-hover hover:brightness-110',
                 })}
               >
                 <Gamepad2 size={16} />

@@ -309,7 +309,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                       }}
                       className="cursor-pointer rounded-sm border border-line bg-transparent px-2.5 py-1.5 text-xs text-fg-muted"
                     >
-                      Reset to Flag
+                      Use Flag
                     </button>
                   )}
                 </div>

@@ -77,18 +77,18 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
         {/* Tournament Mode Status Indicator in Header */}
         <div className="flex items-center gap-2">
           {!isLocked ? (
-            <Badge variant="gold" title="Qualifiers active. Brackets dynamically seed.">
+            <Badge variant="gold" title="Qualifiers Active">
               <AlertTriangle size={12} /> Qualifiers Mode
             </Badge>
           ) : (
-            <Badge variant="green" title="Brackets locked. Live match scoring active.">
+            <Badge variant="green" title="Brackets Locked">
               <ShieldCheck size={12} /> Match Play Mode
             </Badge>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3.5 max-md:grid-cols-1">
         <div>
           <label className={labelClass}>Tournament Name</label>
           <input
@@ -120,7 +120,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
             type="date"
             value={startDate}
             onChange={e => onStartDateChange(e.target.value)}
-            className={cn(inputClass, 'scheme-dark')}
+            className={cn(inputClass, 'scheme-dark max-md:w-full max-md:text-base')}
           />
         </div>
 
@@ -131,7 +131,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
             value={endDate}
             onChange={e => onEndDateChange(e.target.value)}
             min={startDate || undefined}
-            className={cn(inputClass, 'scheme-dark')}
+            className={cn(inputClass, 'scheme-dark max-md:w-full max-md:text-base')}
           />
           {dateError && <p className="mt-1 text-xs text-red-bright">{dateError}</p>}
         </div>
@@ -158,7 +158,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
               onClick={() => onSeedingMethodChange('QUALIFIERS')}
               variant={seedingMethod === 'QUALIFIERS' ? 'primary' : 'secondary'}
               className="py-1.5 px-3.5 text-caption"
-              title={isLocked ? 'Cannot change seeding method during match play' : 'Qualifiers Leaderboard: Players submit scores, leaderboard determines seeds'}
+              title={isLocked ? 'Seeding Locked' : 'Qualifier Seeding'}
             >
               🏆 Qualifiers Leaderboard
             </Button>
@@ -167,9 +167,9 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
               onClick={() => onSeedingMethodChange('MANUAL')}
               variant={seedingMethod === 'MANUAL' ? 'primary' : 'secondary'}
               className="py-1.5 px-3.5 text-caption"
-              title={isLocked ? 'Cannot change seeding method during match play' : 'Direct / Manual Seeding: Enter players manually or paste a list, arrange seeds directly without quals'}
+              title={isLocked ? 'Seeding Locked' : 'Manual Seeding'}
             >
-              ✍️ Direct / Manual Seeding (No Quals)
+              ✍️ Manual Seeding
             </Button>
           </div>
           <span className="text-xs text-fg-muted">
@@ -184,7 +184,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
       {seedingMethod === 'QUALIFIERS' ? (
         <div className="flex flex-col gap-3.5 border-t border-line-subtle pt-3.5">
           {/* Mode & Duration Row */}
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3.5">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3.5 max-md:grid-cols-1">
             <div>
               <label className={labelClass}>Qualifying Mode</label>
               <select
@@ -206,16 +206,16 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between max-md:flex-wrap max-md:gap-x-2">
                 <label className={labelClass}>Qualifying Duration (Minutes)</label>
-                <div className="flex gap-1">
+                <div className="flex gap-1 max-md:mb-1.5">
                   {[60, 90, 120].map(mins => (
                     <button
                       key={mins}
                       type="button"
                       onClick={() => onQualWindowMinutesChange(mins)}
                       className={cn(
-                        'cursor-pointer rounded-xs border border-line py-0.5 px-1.5 text-2xs',
+                        'cursor-pointer rounded-xs border border-line py-0.5 px-1.5 text-2xs max-md:min-h-11 max-md:min-w-11 max-md:text-xs',
                         qualWindowMinutes === mins
                           ? 'bg-gold font-extrabold text-black'
                           : 'bg-elevated font-medium text-fg-secondary'
@@ -228,6 +228,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
               </div>
               <input
                 type="number"
+                inputMode="numeric"
                 min={1}
                 max={1440}
                 value={qualWindowMinutes}
@@ -243,9 +244,9 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
             </div>
           </div>
 
-          <div className="flex w-full items-start gap-4">
+          <div className="flex w-full items-start gap-4 max-md:flex-col max-md:items-stretch max-md:gap-3">
             {/* Format Selection Dropdown */}
-            <div className="min-w-50 flex-[0_0_240px]">
+            <div className="min-w-50 flex-[0_0_240px] max-md:min-w-0 max-md:basis-auto">
               <label className={labelClass}>Qualifying Format</label>
               <select
                 value={qualFormat}
@@ -266,14 +267,14 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
 
             {/* Conditional format inline settings on the exact same row */}
             {qualFormat === 'HIGH_SCORE' && (
-              <div className="mt-6 flex h-9.5 min-w-0 flex-1 items-center rounded-sm border border-line-subtle bg-elevated py-0 px-3.5 text-caption text-fg-muted">
+              <div className="mt-6 flex h-9.5 min-w-0 flex-1 items-center rounded-sm border border-line-subtle bg-elevated py-0 px-3.5 text-caption text-fg-muted max-md:mt-0 max-md:h-auto max-md:py-2">
                 <span>Ranked by number of maxouts; kickers act as the tiebreaker.</span>
               </div>
             )}
 
             {qualFormat === 'AVERAGE_OF_X' && (
-              <div className="flex min-w-0 flex-1 items-start gap-3.5">
-                <div className="w-37.5 shrink-0">
+              <div className="flex min-w-0 flex-1 items-start gap-3.5 max-md:flex-col max-md:items-stretch max-md:gap-3">
+                <div className="w-37.5 shrink-0 max-md:w-full">
                   <label className={labelClass}>Attempts (X)</label>
                   <ClearableNumberInput
                     min={1}
@@ -288,14 +289,14 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
                     className={inputClass}
                   />
                 </div>
-                <div className="mt-6 flex h-9.5 min-w-0 flex-1 items-center rounded-sm border border-line-subtle bg-elevated py-0 px-3.5 text-caption text-fg-muted">
+                <div className="mt-6 flex h-9.5 min-w-0 flex-1 items-center rounded-sm border border-line-subtle bg-elevated py-0 px-3.5 text-caption text-fg-muted max-md:mt-0 max-md:h-auto max-md:py-2">
                   <span>Ranked by average of top {qualAverageCount || 'X'} qualifying attempts.</span>
                 </div>
               </div>
             )}
 
             {qualFormat === 'POINTS' && (
-              <div className="mt-6 flex h-9.5 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm border border-line-subtle bg-elevated py-0 px-3.5">
+              <div className="mt-6 flex h-9.5 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm border border-line-subtle bg-elevated py-0 px-3.5 max-md:mt-0 max-md:h-auto max-md:py-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="whitespace-nowrap rounded-full bg-gold/15 py-0.5 px-2 text-xs font-bold text-gold-bright">
                     {pointsConfig.length} {pointsConfig.length === 1 ? 'cutoff' : 'cutoffs'}

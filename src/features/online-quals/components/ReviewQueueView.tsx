@@ -13,7 +13,7 @@ import { ReviewQueueTable } from './ReviewQueueTable';
 import { AdjudicationModal } from './AdjudicationModal';
 import { IdentityResolutionModal } from './IdentityResolutionModal';
 import { ConfirmDialog } from '../../../components/overlay';
-import { cn, useAction, useGlobalBusy } from '../../../components/ui';
+import { cn, useAction, useGlobalBusy, useIsMobile } from '../../../components/ui';
 
 const metricCardClass = 'flex items-center justify-between rounded-md border border-line bg-surface p-4.5';
 const metricLabelClass = 'text-xs font-bold uppercase text-fg-muted';
@@ -278,66 +278,89 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
 
   const isQualsClosed = Boolean(tournament.isLocked);
   const { busy: globalBusy } = useGlobalBusy();
+  const isMobile = useIsMobile();
+
+  const verifyAllButton = (
+    <button
+      type="button"
+      data-testid="verify-all-button"
+      disabled={verifiableCount === 0 || globalBusy}
+      onClick={() => setIsVerifyAllModalOpen(true)}
+      className={cn(
+        'inline-flex items-center gap-2 whitespace-nowrap rounded-md border px-4 py-2 text-caption font-bold transition-all duration-150 max-md:min-h-11 max-md:px-3',
+        verifiableCount > 0
+          ? 'border-warn/45 bg-warn/15 text-gold-bright'
+          : 'border-line bg-white/5 text-fg-muted',
+        verifiableCount > 0 && !globalBusy ? 'cursor-pointer' : 'cursor-not-allowed'
+      )}
+    >
+      <CheckCheck size={16} />
+      Verify All
+    </button>
+  );
 
   return (
-    <div className="flex w-full flex-col gap-6">
-      {/* Top Banner / Metrics */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-        {/* Pending Review Metric */}
-        <div className={metricCardClass}>
+    <div className="flex w-full flex-col gap-6 max-md:gap-3">
+      {/* Top Banner / Metrics: one row on phones, three cards otherwise */}
+      {isMobile ? (
+        <div className="flex items-center gap-4 rounded-md border border-line bg-surface px-3 py-2">
           <div>
-            <div className={metricLabelClass}>
-              Pending Review
-            </div>
-            <div className={cn('mt-1 text-3xl font-black', pendingUnverifiedCount > 0 ? 'text-gold-bright' : 'text-white')}>
+            <div className={metricLabelClass}>Pending</div>
+            <div className={cn('text-xl font-black', pendingUnverifiedCount > 0 ? 'text-gold-bright' : 'text-white')}>
               {pendingUnverifiedCount}
             </div>
           </div>
-          <Clock size={32} color={pendingUnverifiedCount > 0 ? 'var(--color-gold-bright)' : 'var(--color-fg-muted)'} />
-        </div>
-
-        {/* Qualifiers Status Metric */}
-        <div className={metricCardClass}>
           <div>
-            <div className={metricLabelClass}>
-              Qualifiers State
-            </div>
-            <div className={cn('mt-1 text-xl font-extrabold', isQualsClosed ? 'text-red' : 'text-green-400')}>
-              {isQualsClosed ? 'Closed (Brackets Locked)' : 'Open / Receiving'}
+            <div className={metricLabelClass}>Quals</div>
+            <div className={cn('text-xl font-extrabold', isQualsClosed ? 'text-red' : 'text-green-400')}>
+              {isQualsClosed ? 'Closed' : 'Open'}
             </div>
           </div>
+          <div className="ml-auto">{verifyAllButton}</div>
         </div>
-
-        {/* Batch Actions: Verify All */}
-        <div className={cn(metricCardClass, 'gap-4')}>
-          <div>
-            <div className={metricLabelClass}>
-              Batch Verify
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+          {/* Pending Review Metric */}
+          <div className={metricCardClass}>
+            <div>
+              <div className={metricLabelClass}>
+                Pending Review
+              </div>
+              <div className={cn('mt-1 text-3xl font-black', pendingUnverifiedCount > 0 ? 'text-gold-bright' : 'text-white')}>
+                {pendingUnverifiedCount}
+              </div>
             </div>
-            <div className="mt-1 text-sm text-fg-secondary">
-              {pendingUnverifiedCount > 0
-                ? `${pendingUnverifiedCount} run${pendingUnverifiedCount === 1 ? '' : 's'} awaiting review`
-                : 'All runs verified'}
+            <Clock size={32} color={pendingUnverifiedCount > 0 ? 'var(--color-gold-bright)' : 'var(--color-fg-muted)'} />
+          </div>
+
+          {/* Qualifiers Status Metric */}
+          <div className={metricCardClass}>
+            <div>
+              <div className={metricLabelClass}>
+                Qualifiers State
+              </div>
+              <div className={cn('mt-1 text-xl font-extrabold', isQualsClosed ? 'text-red' : 'text-green-400')}>
+                {isQualsClosed ? 'Closed (Brackets Locked)' : 'Open / Receiving'}
+              </div>
             </div>
           </div>
-          <button
-            type="button"
-            data-testid="verify-all-button"
-            disabled={verifiableCount === 0 || globalBusy}
-            onClick={() => setIsVerifyAllModalOpen(true)}
-            className={cn(
-              'inline-flex items-center gap-2 whitespace-nowrap rounded-md border px-4 py-2 text-caption font-bold transition-all duration-150',
-              verifiableCount > 0
-                ? 'border-warn/45 bg-warn/15 text-gold-bright'
-                : 'border-line bg-white/5 text-fg-muted',
-              verifiableCount > 0 && !globalBusy ? 'cursor-pointer' : 'cursor-not-allowed'
-            )}
-          >
-            <CheckCheck size={16} />
-            Verify All
-          </button>
+
+          {/* Batch Actions: Verify All */}
+          <div className={cn(metricCardClass, 'gap-4')}>
+            <div>
+              <div className={metricLabelClass}>
+                Batch Verify
+              </div>
+              <div className="mt-1 text-sm text-fg-secondary">
+                {pendingUnverifiedCount > 0
+                  ? `${pendingUnverifiedCount} run${pendingUnverifiedCount === 1 ? '' : 's'} awaiting review`
+                  : 'All runs verified'}
+              </div>
+            </div>
+            {verifyAllButton}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Status Notice */}
       {statusMessage && (
@@ -444,7 +467,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
           </>
         }
         cancelLabel="Cancel"
-        confirmLabel={`Yes, Verify All (${verifiableCount})`}
+        confirmLabel={`Verify All (${verifiableCount})`}
         confirmLoadingText="Verifying…"
         confirmVariant="primary"
         confirmDisabled={verifiableCount === 0}

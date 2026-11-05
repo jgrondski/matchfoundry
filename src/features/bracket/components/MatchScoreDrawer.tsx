@@ -5,7 +5,7 @@ import { useTournament } from '../../tournament/store';
 import { ApiError } from '../../tournament/apiError';
 import { MATCH_CONFLICT_CODE } from '../matchConflict';
 import { shouldResyncDrawer } from '../drawerSync';
-import { X, Trophy, Check, ShieldAlert, Plus } from 'lucide-react';
+import { X, Trophy, Check, ShieldAlert, Plus, ChevronDown } from 'lucide-react';
 import {
   getDefaultTierColors,
   colorWithAlpha,
@@ -17,6 +17,7 @@ import { ManualSlotOverrideSection } from './drawer/ManualSlotOverrideSection';
 import { GameScoreCard } from './drawer/GameScoreCard';
 import { Overlay } from '../../../components/overlay';
 import { Button, Spinner, cn, useAction, useGlobalBusy } from '../../../components/ui';
+import { useIsMobile } from '../../../components/ui/useMediaQuery';
 import { DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
 type GameDraft = { p1: string; p2: string; winner: string | null };
@@ -78,6 +79,8 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
   const [baseRevision, setBaseRevision] = useState(0);
   const [conflictNotice, setConflictNotice] = useState<string | null>(null);
   const [forfeitingId, setForfeitingId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+  const [forfeitOpen, setForfeitOpen] = useState(false);
   const { busy: globalBusy } = useGlobalBusy();
   const [resyncToken, setResyncToken] = useState(0);
   const lastSyncRef = useRef<{ matchId: string; gamesJson: string } | null>(null);
@@ -287,6 +290,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
       busy={save.busy || forfeit.busy || bestOfAction.busy}
       aria-labelledby={titleId}
       panelTestId="match-score-drawer"
+      panelClassName="max-md:h-dvh max-md:max-h-dvh max-md:rounded-none max-md:pt-[env(safe-area-inset-top)]"
       panelStyle={{
         background: `linear-gradient(180deg, ${getAlternateShade(cardColor, 2)} 0%, ${backgroundColor} 100%)`,
         borderLeft: `1px solid ${colorWithAlpha(primaryColor, 0.45, 'var(--color-line)')}`,
@@ -306,7 +310,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
 
           {/* Glow-up Header matching PlayerDetailDrawer */}
           <div
-            className="py-5 px-6 flex justify-between items-start shadow-[0_4px_20px_rgba(0,0,0,0.35)] gap-4"
+            className="py-5 px-6 flex justify-between items-start shadow-[0_4px_20px_rgba(0,0,0,0.35)] gap-4 max-md:items-center max-md:px-4 max-md:py-2"
             style={{
               borderBottom: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-line)')}`,
               background: gameCardBg,
@@ -314,7 +318,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
           >
             <div className="flex flex-col gap-2 min-w-0 flex-1">
               {/* Tournament Title & Active Tier Badge Row */}
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap max-md:hidden">
                 <div className="flex items-center gap-1.5">
                   <Trophy size={13} color={primaryColor} />
                   <span
@@ -348,14 +352,14 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
               </div>
 
               {/* Match Hero Row */}
-              <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="flex items-center gap-2.5 flex-wrap max-md:flex-nowrap max-md:min-w-0">
                 <h2
                   id={titleId}
-                  className="m-0 text-2xl font-extrabold text-white tracking-tight leading-tight"
+                  className="m-0 text-2xl font-extrabold text-white tracking-tight leading-tight max-md:text-lg"
                 >
                   Match #{match.matchNumber}
                 </h2>
-                <span className="text-base font-semibold leading-tight" style={{ color: textColor }}>
+                <span className="text-base font-semibold leading-tight max-md:text-sm max-md:truncate" style={{ color: textColor }}>
                   • {roundName}
                 </span>
               </div>
@@ -365,7 +369,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
               onClick={requestClose}
               aria-label="Close drawer"
               className={cn(
-                'bg-white/4 border border-(color:--close-border) text-fg-muted cursor-pointer p-2 rounded-md flex items-center justify-center transition-all duration-150 shrink-0',
+                'bg-white/4 border border-(color:--close-border) text-fg-muted cursor-pointer p-2 rounded-md flex items-center justify-center transition-all duration-150 shrink-0 max-md:min-h-11 max-md:min-w-11',
                 'hover:text-white hover:border-(color:--close-accent) hover:bg-(--close-hover-bg) hover:shadow-[0_0_10px_var(--close-hover-glow)]'
               )}
               style={
@@ -415,26 +419,8 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
             />
           )}
 
-          {/* Match Clinched Alert Banner */}
-          {matchDecided && (
-            <div
-              className="mt-3.5 mx-6 mb-0 py-2.5 px-4 rounded-md flex items-center gap-2.5 text-sm font-semibold"
-              style={{
-                background: colorWithAlpha(primaryColor, 0.12),
-                border: `1px solid ${colorWithAlpha(primaryColor, 0.35)}`,
-                color: primaryColor,
-              }}
-            >
-              <Trophy size={18} color={primaryColor} />
-              <span>
-                <strong className="font-extrabold">Match Point Clinched!</strong> Winner:{' '}
-                {p1Wins >= winThreshold ? p1Name : p2Name}
-              </span>
-            </div>
-          )}
-
           {/* Game by Game Breakdown Section */}
-          <div className="flex-1 overflow-y-auto py-4 px-6">
+          <div className="flex-1 overflow-y-auto py-4 px-6 max-md:px-4">
             <div className="flex justify-between items-center mb-3">
               <div className="text-caption font-bold text-fg-secondary uppercase tracking-wider">
                 Games Breakdown (Bo{bestOf}{hasTiebreaker || games.length > bestOf ? ' • Tiebreaker Active' : ''})
@@ -486,7 +472,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
                 }}
               >
                 <Plus size={15} />
-                <span>+ Add Tiebreaker Game</span>
+                <span>+ Add Tiebreaker</span>
               </button>
               {games.some(g => g.winner === 'TIE') && (
                 <span className="text-xs text-fg-muted text-center">
@@ -497,50 +483,58 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
 
             {/* Quick Forfeit Option */}
             <div className="mt-6 py-3.5 px-4 rounded-md bg-red/5 border border-red/20">
-              <div className="flex items-center gap-2 mb-2.5 text-red-300 text-caption font-bold">
+              <button
+                type="button"
+                aria-expanded={!isMobile || forfeitOpen}
+                onClick={() => setForfeitOpen(o => !o)}
+                className="flex items-center gap-2 mb-2.5 text-red-300 text-caption font-bold w-full cursor-pointer text-left"
+              >
                 <ShieldAlert size={15} />
-                <span>Forfeit / Disqualification Overrides</span>
-              </div>
-              <div className="flex gap-2">
-                {p1 && (
-                  <button
-                    type="button"
-                    onClick={() => void handleForfeit(p1.id)}
-                    disabled={forfeit.busy || globalBusy}
-                    className="inline-flex items-center gap-1.5 py-1.5 px-2.5 text-xs rounded-sm border border-red/40 bg-red/8 text-red-300 cursor-pointer transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {forfeitingId === p1.id ? (<><Spinner />Saving…</>) : <>Award Win to {p1Name}</>}
-                  </button>
-                )}
-                {p2 && (
-                  <button
-                    type="button"
-                    onClick={() => void handleForfeit(p2.id)}
-                    disabled={forfeit.busy || globalBusy}
-                    className="inline-flex items-center gap-1.5 py-1.5 px-2.5 text-xs rounded-sm border border-red/40 bg-red/8 text-red-300 cursor-pointer transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {forfeitingId === p2.id ? (<><Spinner />Saving…</>) : <>Award Win to {p2Name}</>}
-                  </button>
-                )}
-              </div>
+                <span>Forfeit Overrides</span>
+                <ChevronDown size={14} className={cn('ml-auto md:hidden', forfeitOpen && 'rotate-180')} />
+              </button>
+              {(!isMobile || forfeitOpen) && (
+                <div className="flex gap-2 max-md:flex-col">
+                  {p1 && (
+                    <button
+                      type="button"
+                      onClick={() => void handleForfeit(p1.id)}
+                      disabled={forfeit.busy || globalBusy}
+                      className="inline-flex items-center gap-1.5 py-1.5 px-2.5 text-xs rounded-sm border border-red/40 bg-red/8 text-red-300 cursor-pointer transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 max-md:min-h-11 max-md:flex-1"
+                    >
+                      {forfeitingId === p1.id ? (<><Spinner />Saving…</>) : <>{p1Name} Wins</>}
+                    </button>
+                  )}
+                  {p2 && (
+                    <button
+                      type="button"
+                      onClick={() => void handleForfeit(p2.id)}
+                      disabled={forfeit.busy || globalBusy}
+                      className="inline-flex items-center gap-1.5 py-1.5 px-2.5 text-xs rounded-sm border border-red/40 bg-red/8 text-red-300 cursor-pointer transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 max-md:min-h-11 max-md:flex-1"
+                    >
+                      {forfeitingId === p2.id ? (<><Spinner />Saving…</>) : <>{p2Name} Wins</>}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
           {conflictNotice && (
-            <div role="alert" data-testid="match-conflict-notice" className="mx-6 mb-3 rounded-sm border border-gold/40 bg-gold-soft px-3 py-2 text-sm text-gold-bright">
+            <div role="alert" data-testid="match-conflict-notice" className="mx-6 mb-3 rounded-sm border border-gold/40 bg-gold-soft px-3 py-2 text-sm text-gold-bright max-md:mx-4">
               {conflictNotice}
             </div>
           )}
 
           {/* Footer Actions */}
           <div
-            className="py-4 px-6 flex gap-3"
+            className="py-4 px-6 flex gap-3 max-md:sticky max-md:bottom-0 max-md:z-10 max-md:flex-col-reverse max-md:px-4"
             style={{
               borderTop: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'var(--color-line)')}`,
               background: gameCardBg,
             }}
           >
-            <Button variant="secondary" onClick={requestClose} className="flex-1 py-2.5 px-4 rounded-sm">
+            <Button variant="secondary" onClick={requestClose} className="flex-1 py-2.5 px-4 rounded-sm max-md:w-full max-md:flex-none">
               Cancel
             </Button>
             <button
@@ -549,7 +543,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
               disabled={save.busy || globalBusy}
               aria-busy={save.busy || undefined}
               className={cn(
-                'flex-2 inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-sm border-0 font-bold text-sm transition-all duration-150',
+                'flex-2 inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-sm border-0 font-bold text-sm transition-all duration-150 max-md:w-full max-md:flex-none',
                 save.busy || globalBusy ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100'
               )}
               style={{
@@ -559,7 +553,7 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
               }}
             >
               {save.busy ? <Spinner size={16} /> : <Check size={18} />}
-              <span>{save.busy ? 'Saving…' : matchDecided ? 'Save & Advance Winner' : 'Save Match Progress'}</span>
+              <span>{save.busy ? 'Saving…' : matchDecided ? 'Advance Winner' : 'Save Progress'}</span>
             </button>
           </div>
         </>

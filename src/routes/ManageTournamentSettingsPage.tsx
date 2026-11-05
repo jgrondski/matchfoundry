@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTournament } from '../features/tournament/store';
 import { Tournament } from '../features/tournament/types';
@@ -30,7 +30,7 @@ export const ManageTournamentSettingsPage: React.FC = () => {
       <div className="p-12 text-center text-fg-secondary">
         <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
-          Back to Tournaments
+          All Tournaments
         </Button>
       </div>
     );
@@ -52,12 +52,15 @@ const TournamentSettingsView: React.FC<TournamentSettingsViewProps> = ({ tournam
   const navigate = useNavigate();
   const [isDirty, setIsDirty] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  // Runs when the user chooses to discard (for example, Log Out finishing after the prompt).
+  const pendingLeaveRef = useRef<(() => void) | null>(null);
 
-  const handleNavigateAttempt = (url: string) => {
+  const handleNavigateAttempt = (url: string, onLeave?: () => void) => {
     if (url.includes(`/${tournament.slug}/manage/settings`)) {
       return true;
     }
     if (isDirty) {
+      pendingLeaveRef.current = onLeave ?? null;
       setPendingNavigation(url);
       return false;
     }
@@ -65,6 +68,7 @@ const TournamentSettingsView: React.FC<TournamentSettingsViewProps> = ({ tournam
   };
 
   const handleStay = () => {
+    pendingLeaveRef.current = null;
     setPendingNavigation(null);
   };
 
@@ -72,6 +76,8 @@ const TournamentSettingsView: React.FC<TournamentSettingsViewProps> = ({ tournam
     const dest = pendingNavigation;
     setPendingNavigation(null);
     setIsDirty(false);
+    pendingLeaveRef.current?.();
+    pendingLeaveRef.current = null;
     if (dest) {
       navigate(dest);
     }
@@ -83,14 +89,14 @@ const TournamentSettingsView: React.FC<TournamentSettingsViewProps> = ({ tournam
       activeView="settings"
       onNavigate={handleNavigateAttempt}
     >
-      <main className="mx-auto flex w-full max-w-275 flex-1 flex-col gap-6 px-6 py-8">
+      <main className="mx-auto flex w-full max-w-275 flex-1 flex-col gap-6 px-6 py-8 max-md:px-4 max-md:py-4">
         <div>
           <div className="mb-1 flex items-center gap-2">
             <span className="text-caption font-bold tracking-widest text-gold-bright uppercase">
               Tournament Administration &amp; Configuration
             </span>
           </div>
-          <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white">
+          <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white max-md:text-2xl">
             <Settings color="var(--color-gold-bright)" size={28} />
             {tournament.name}
           </h1>

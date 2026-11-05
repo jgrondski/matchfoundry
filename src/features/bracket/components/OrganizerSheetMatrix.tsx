@@ -268,6 +268,8 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
     return Math.max(760, computed);
   }, [maxGameColumns, competitorColWidth, sizeTokens]);
 
+  const headerRowBg = getAlternateShade(cardColor, 7);
+
   const thClass = cn(
     sizeTokens.thPadding,
     'font-bold uppercase tracking-wide whitespace-nowrap border-r border-white/5'
@@ -302,7 +304,7 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
 
       {/* Continuous Master Sheet Matrix Table */}
       <div
-        className="rounded-md overflow-x-auto w-full"
+        className="rounded-md overflow-x-auto overscroll-x-contain w-full"
         style={{
           background: cardColor,
           border: `1px solid ${colorWithAlpha(secondaryColor, 0.35, 'var(--color-line)')}`,
@@ -320,13 +322,14 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
             <thead>
               <tr
                 style={{
-                  background: getAlternateShade(cardColor, 7),
+                  background: headerRowBg,
                   borderBottom: `2px solid ${colorWithAlpha(secondaryColor, 0.6, 'var(--color-line)')}`,
                 }}
               >
                 <th
-                  className={cn(thClass, 'text-center px-1')}
+                  className={cn(thClass, 'text-center px-1 sticky left-0 z-10')}
                   style={{
+                    background: headerRowBg,
                     fontSize: sizeTokens.fontSizeTh,
                     width: `${sizeTokens.colMatch}px`,
                     minWidth: `${sizeTokens.colMatch}px`,
@@ -337,8 +340,10 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
                   Match #
                 </th>
                 <th
-                  className={cn(thClass, 'text-left relative', isResizingCol ? 'select-none' : 'select-auto')}
+                  className={cn(thClass, 'text-left relative sticky z-10', isResizingCol ? 'select-none' : 'select-auto')}
                   style={{
+                    background: headerRowBg,
+                    left: `${sizeTokens.colMatch}px`,
                     fontSize: sizeTokens.fontSizeTh,
                     width: `${competitorColWidth}px`,
                     minWidth: `${competitorColWidth}px`,
@@ -354,7 +359,7 @@ export const OrganizerSheetMatrix: React.FC<OrganizerSheetMatrixProps> = ({ tour
                     onMouseDown={handleResizeMouseDown}
                     onTouchStart={handleResizeTouchStart}
                     onDoubleClick={handleResetColWidth}
-                    title="Drag to adjust column width (double-click to reset)"
+                    title="Resize Column"
                     className="absolute right-0 top-0 bottom-0 w-2.5 cursor-col-resize z-10 flex items-center justify-center touch-none select-none"
                   >
                     <div

@@ -164,7 +164,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                 onClick={requestClose}
                 className="bg-white/5 border border-line text-fg-muted cursor-pointer p-1.5 rounded-md flex items-center justify-center transition-all duration-150 shrink-0"
                 title="Close (Esc)"
-                aria-label="Close match telemetry modal"
+                aria-label="Close"
               >
                 <X size={18} />
               </button>
@@ -251,7 +251,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                     type="button"
                     onClick={() => onSelectPlayer(p1.id, p1.name, p1.country)}
                     className={cn(linkBtnClass, 'mt-2')}
-                    title={`View ${p1.name} profile`}
+                    title="View Competitor"
                   >
                     <Eye size={12} />
                     <span>View Profile</span>
@@ -352,7 +352,7 @@ export const MatchTelemetryModal: React.FC<MatchTelemetryModalProps> = ({
                     type="button"
                     onClick={() => onSelectPlayer(p2.id, p2.name, p2.country)}
                     className={cn(linkBtnClass, 'mt-2')}
-                    title={`View ${p2.name} profile`}
+                    title="View Competitor"
                   >
                     <Eye size={12} />
                     <span>View Profile</span>

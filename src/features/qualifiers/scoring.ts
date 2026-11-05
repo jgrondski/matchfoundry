@@ -149,8 +149,8 @@ export function calculateMaxoutAndKicker(submissions: QualifierSubmission[]): Ma
 }
 
 /**
- * Calculates Average of X.
- * If in-progress, calculates arithmetic mean of attempts so far.
+ * Calculates Average of X: only the highest X attempts count.
+ * If in-progress, calculates arithmetic mean of those attempts so far.
  * If closed or player completed, missing attempts up to targetX count as 0.
  */
 export function calculateAverageOfX(
@@ -162,14 +162,13 @@ export function calculateAverageOfX(
     return { average: 0, count: 0, rawAverage: 0 };
   }
 
-  const scores = submissions.map(s => s.score);
+  const scores = submissions.map(s => s.score).sort((a, b) => b - a).slice(0, targetX);
   const sum = scores.reduce((a, b) => a + b, 0);
 
   if (isClosedOrComplete) {
     // Missing attempts up to targetX are 0
-    const divisor = Math.max(scores.length, targetX);
-    const average = Math.round(sum / divisor);
-    return { average, count: scores.length, rawAverage: sum / divisor };
+    const average = Math.round(sum / targetX);
+    return { average, count: scores.length, rawAverage: sum / targetX };
   } else {
     // Running count & mean
     const average = Math.round(sum / scores.length);

@@ -5,7 +5,8 @@ import { CreatablePlayerSelect } from './CreatablePlayerSelect';
 import { Trophy, Plus, Trash2, X, Check, User } from 'lucide-react';
 import { getPlayerQualifierStatus } from '../scoring';
 import { Overlay } from '../../../components/overlay';
-import { Button, IconButton, Spinner, useAction, useGlobalBusy } from '../../../components/ui';
+import { FULL_PAGE_PANEL_CLASS } from '../../../components/fullPagePanel';
+import { Button, IconButton, Spinner, cn, useAction, useGlobalBusy } from '../../../components/ui';
 
 const labelClass = 'block text-caption font-semibold text-fg-secondary mb-1.5 uppercase tracking-wide';
 
@@ -112,7 +113,11 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
       busy={submit.busy || remove.busy}
       aria-labelledby={titleId}
       panelTestId="qualifier-entry-modal"
-      panelClassName="flex max-h-[85vh] min-h-130 max-w-140 flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-xl"
+      mobile="center"
+      panelClassName={cn(
+        'flex max-h-[85vh] min-h-130 max-w-140 flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-xl',
+        FULL_PAGE_PANEL_CLASS
+      )}
     >
       {({ requestClose }) => (
         <>
@@ -205,10 +210,11 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                         type="text"
                         value={scoreInput ? parseInt(scoreInput, 10).toLocaleString() : ''}
                         onChange={e => handleScoreChange(e.target.value)}
+                        inputMode="numeric"
                         placeholder="Enter score (e.g. 1,120,500)..."
                         autoFocus
                         data-autofocus
-                        className="w-full py-2 px-3.5 rounded-sm border border-line bg-canvas text-fg text-lg font-bold"
+                        className="w-full py-2 px-3.5 rounded-sm border border-line bg-canvas text-fg text-lg font-bold max-md:text-base"
                       />
                       <Button
                         type="submit"
@@ -281,8 +287,8 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="py-4 px-6 bg-elevated border-t border-line flex justify-end">
-            <Button variant="secondary" onClick={requestClose} className="py-2 px-4">
+          <div className="py-4 px-6 bg-elevated border-t border-line flex justify-end max-md:sticky max-md:bottom-0 max-md:z-10 max-md:flex-col max-md:border-t max-md:border-line max-md:bg-surface max-md:px-4 max-md:py-3">
+            <Button variant="secondary" onClick={requestClose} className="py-2 px-4 max-md:w-full">
               Done
             </Button>
           </div>

@@ -3,11 +3,10 @@ import {
   BracketMatch,
   BracketRound,
   BracketStructure,
-  isMatchPlayable,
 } from '../../types';
-import { Tournament, TournamentTier, PlayerProfile, GameScoreEntry } from '../../../tournament/types';
+import { Tournament, TournamentTier, PlayerProfile } from '../../../tournament/types';
 import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
-import { getEffectivePlayerName } from '../../../players/playerNameUtils';
+import { getMatchCardModel, isDoubleElimBracket, isLosersBracketMatch } from '../../matchCardModel';
 import {
   colorWithAlpha,
   getAlternateShade,
@@ -107,85 +106,23 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
     isPhase2View &&
     (round.roundIdentifier === 'CHAMP_R1' || match.roundIdentifier === 'CHAMP_R1');
 
-  const p1SourceNum = match.player1.sourceMatchId
-    ? match.player1.sourceMatchId.match(/-m(\d+)$/)?.[1]
-    : undefined;
-  const accelOriginLabel = `Accel #${p1SourceNum || mIdx + 1}`;
-
-  const p2SourceNum = match.player2.sourceMatchId
-    ? match.player2.sourceMatchId.match(/-m(\d+)$/)?.[1]
-    : undefined;
-  const playOffOriginLabel = `Play-off #${p2SourceNum || mIdx + 1}`;
-
   const isAdvanceRound =
     match.subTrack === 'ACCELERATED' ||
     match.roundIdentifier === 'AR' ||
     match.roundIdentifier === 'PO';
 
-  const getSlotPlaceholder = (slot: typeof match.player1, fallbackNumber: number) => {
-    if (isPhase2OpeningRound) {
-      return fallbackNumber === 1
-        ? `Winner of ${accelOriginLabel}`
-        : `Winner of ${playOffOriginLabel}`;
-    }
-    if (match.roundIdentifier === '2C') {
-      return fallbackNumber === 1
-        ? `Winner of Lower Bracket R2 M#${mIdx + 1}`
-        : `Loser of Accelerated Round M#${p2SourceNum || mIdx + 1}`;
-    }
-    if (match.roundIdentifier === 'PO') {
-      return fallbackNumber === 1
-        ? `Winner of Upper Bracket R2 M#${mIdx + 1}`
-        : `Winner of Lower Bracket R3 M#${mIdx + 1}`;
-    }
-    if (match.roundIdentifier === 'PRE_L1') {
-      return `Loser of Upper Bracket R1`;
-    }
-    if (match.roundIdentifier === 'PRE_L2') {
-      return fallbackNumber === 1
-        ? `Winner of Lower Bracket R1 M#${mIdx + 1}`
-        : `Loser of Upper Bracket R1`;
-    }
-    if (!slot.sourceMatchId) return 'TBD';
-    const src = bracket.matchesById[slot.sourceMatchId];
-    if (!src) return 'TBD';
-    const isLoserDrop = match.stage === 'LOSERS' && src.stage === 'WINNERS';
-    return `${isLoserDrop ? 'Loser' : 'Winner'} of M#${src.matchNumber || fallbackNumber}`;
-  };
-
-  const p1Name = getEffectivePlayerName(p1) || getSlotPlaceholder(match.player1, 1);
-  const p2Name = getEffectivePlayerName(p2) || getSlotPlaceholder(match.player2, 2);
-
-  const p1Wins = record?.player1Wins || 0;
-  const p2Wins = record?.player2Wins || 0;
+  const model = getMatchCardModel({ match, mIdx, bracket, tier, record, isPhase2OpeningRound });
+  const p1Name = model.p1.name;
+  const p2Name = model.p2.name;
   const matchBestOf = record?.bestOf || match.bestOf || tier.bestOf || 5;
-  const hasTieGame = Boolean(
-    record?.games?.some(
-      (g: GameScoreEntry) =>
-        g.winnerPlayerId === 'TIE' ||
-        (g.player1Points !== null && g.player1Points === g.player2Points && g.player1Points > 0)
-    )
-  );
-  const hasTiebreaker = Boolean(
-    record?.hasTiebreaker || hasTieGame || (record?.games && record.games.length > matchBestOf)
-  );
-  const p1ScoreDisplay = hasTiebreaker ? `${p1Wins} (t)` : `${p1Wins}`;
-  const p2ScoreDisplay = hasTiebreaker ? `${p2Wins} (t)` : `${p2Wins}`;
+  const p1ScoreDisplay = model.p1.winsDisplay;
+  const p2ScoreDisplay = model.p2.winsDisplay;
 
-  const isPlayable = isMatchPlayable(match);
-  const isComplete = Boolean(
-    (p1?.id && match.winnerId === p1.id) ||
-      (p2?.id && match.winnerId === p2.id) ||
-      record?.isComplete
-  );
-  const inProgress = !isComplete && (p1Wins > 0 || p2Wins > 0);
-  const p1Won = Boolean(p1?.id && (match.winnerId === p1.id || record?.winnerPlayerId === p1.id));
-  const p2Won = Boolean(p2?.id && (match.winnerId === p2.id || record?.winnerPlayerId === p2.id));
+  const { isPlayable, isComplete, inProgress } = model;
+  const p1Won = model.p1.won;
+  const p2Won = model.p2.won;
   const finalsCutoff = bracket.finalsCutoff || 16;
-  const isDoubleElim =
-    tier.eliminationType === 'DOUBLE' ||
-    bracket?.eliminationType === 'DOUBLE' ||
-    Boolean(bracket?.rounds?.some((r: BracketRound) => r.stage === 'LOSERS' || r.name?.toLowerCase().includes('loser')));
+  const isDoubleElim = isDoubleElimBracket(bracket, tier);
   const p1InboundChip = isAcceleratedHybrid || isDoubleElim
     ? getInboundChip(1, match, bracket, mIdx, isPhase2OpeningRound, primaryColor, lowerBracketColor)
     : null;
@@ -200,25 +137,15 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
     : null;
   const isMatchHovered = hoveredMatchId === match.id;
   const isFocusedMatch = focusedMatchId === match.id;
-  const isLoserMatch =
-    match.stage === 'LOSERS' ||
-    round.stage === 'LOSERS' ||
-    match.roundIdentifier?.startsWith('L') ||
-    round.roundIdentifier?.startsWith('L') ||
-    match.id?.toLowerCase().includes('-l') ||
-    match.id?.toLowerCase().includes('loser') ||
-    round.name?.toLowerCase().includes('loser') ||
-    round.name?.toLowerCase().includes('lower') ||
-    round.name?.startsWith('LR') ||
-    round.name?.includes('(L)');
+  const isLoserMatch = isLosersBracketMatch(match, round);
   const branchAccentColor = isAcceleratedHybrid
     ? getMatchBranchColor(match, lowerBracketColor)
     : isDoubleElim && isLoserMatch
     ? lowerBracketColor
     : null;
   const isOriginHovered = hoveredOriginMatchId === match.id;
-  const p1Leading = inProgress && p1Wins > p2Wins;
-  const p2Leading = inProgress && p2Wins > p1Wins;
+  const p1Leading = model.p1.leading;
+  const p2Leading = model.p2.leading;
   const p1ZebraBg = getAlternateShade(effectiveCardBg, 7);
 
   const isCardInAncestry = hoveredAncestry?.matchIds.has(match.id);
@@ -425,7 +352,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                 'flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden px-1 rounded-sm',
                 p1Profile ? 'cursor-pointer' : 'cursor-[inherit]'
               )}
-              title={p1Profile ? 'View competitor tournament profile' : undefined}
+              title={p1Profile ? 'View Competitor' : undefined}
             >
               {p1?.seed && (
                 <span
@@ -564,7 +491,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                 'flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden px-1 rounded-sm',
                 p2Profile ? 'cursor-pointer' : 'cursor-[inherit]'
               )}
-              title={p2Profile ? 'View competitor tournament profile' : undefined}
+              title={p2Profile ? 'View Competitor' : undefined}
             >
               {p2?.seed && (
                 <span

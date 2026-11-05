@@ -8,7 +8,7 @@ import { IconButton, cn } from '../../../components/ui';
 
 const checkItemClass = (checked: boolean) =>
   cn(
-    'flex cursor-pointer items-start gap-3 rounded-md border p-3.5',
+    'flex min-h-11 cursor-pointer items-center gap-3 rounded-md border p-3.5',
     checked ? 'border-green-500/40 bg-green-500/8' : 'border-line bg-white/3'
   );
 
@@ -188,12 +188,12 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated px-6 py-5">
+          <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated px-6 py-5 max-md:sticky max-md:bottom-0 max-md:z-10 max-md:flex-col max-md:items-stretch max-md:border-t max-md:border-line max-md:bg-surface max-md:py-3">
             <button
               onClick={requestClose}
               disabled={isStarting}
               className={cn(
-                'rounded-md border border-line bg-transparent px-5 py-2.5 font-semibold text-fg-secondary',
+                'rounded-md border border-line bg-transparent px-5 py-2.5 font-semibold text-fg-secondary max-md:w-full',
                 isStarting ? 'cursor-not-allowed' : 'cursor-pointer'
               )}
             >
@@ -203,7 +203,7 @@ export const PreFlightModal: React.FC<PreFlightModalProps> = ({
               onClick={onConfirm}
               disabled={!allChecked || isStarting}
               className={cn(
-                'flex items-center gap-2 rounded-md border-0 px-6 py-2.5 font-extrabold',
+                'flex items-center gap-2 rounded-md border-0 px-6 py-2.5 font-extrabold max-md:w-full max-md:justify-center',
                 allChecked ? 'bg-gold-bright text-black' : 'bg-slate-700 text-fg-secondary',
                 allChecked && !isStarting ? 'cursor-pointer' : 'cursor-not-allowed'
               )}

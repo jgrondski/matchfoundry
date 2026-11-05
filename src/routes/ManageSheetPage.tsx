@@ -32,7 +32,7 @@ export const ManageSheetPage: React.FC = () => {
       <div className="p-12 text-center text-fg-secondary">
         <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
-          Back to Tournaments
+          All Tournaments
         </Button>
       </div>
     );
@@ -62,7 +62,7 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
   if (!tier) {
     return (
       <TournamentLayout tournament={tournament} activeView="sheet">
-        <main className="mx-auto flex max-w-150 flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+        <main className="mx-auto flex max-w-150 flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center max-md:px-4 max-md:py-4">
           <h2 className="text-2xl font-bold text-fg">No Bracket Tiers Configured</h2>
           <p className="text-sm leading-normal text-fg-secondary">
             This tournament does not have any bracket tiers yet. Qualifiers can be entered and ranked on the leaderboard, or you can create bracket tiers in Settings.
@@ -72,7 +72,7 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
               🏆 View Qualifiers
             </Button>
             <Button variant="primary" onClick={() => navigate(`/${tournament.slug}/manage/settings`)}>
-              ⚙️ Configure Tiers in Settings
+              ⚙️ Configure Tiers
             </Button>
           </div>
         </main>
@@ -92,7 +92,7 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
       activeView="sheet"
     >
       {/* In-Page Tier Selector Bar */}
-      <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-5 py-2.5 select-none">
+      <div className="sticky top-0 z-40 max-md:top-12 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-5 py-2.5 select-none">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-bold tracking-wider text-fg-muted uppercase">
             Tier:
@@ -122,7 +122,7 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
           })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 max-md:hidden">
           <Link
             to={`/${tournament.slug}/manage/bracket/${tier.slug}`}
             className={buttonClasses({
@@ -130,7 +130,7 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
               size: 'sm',
               className: 'text-fg-secondary hover:border-fg-secondary hover:bg-highlight',
             })}
-            title="Open Visual Bracket for this Tier"
+            title="Visual Bracket"
           >
             <GitBranch size={13} />
             <span>View Bracket</span>
@@ -138,7 +138,7 @@ const ManageSheetView: React.FC<ManageSheetViewProps> = ({ tournament }) => {
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-full flex-1 overflow-x-auto px-8 py-5">
+      <main className="mx-auto w-full max-w-full flex-1 overflow-x-auto px-8 py-5 max-md:px-4 max-md:py-4">
         <OrganizerSheetMatrix
           key={tier.id}
           tournament={tournament}

@@ -49,7 +49,7 @@ async function openDirtyScoreDrawer(page: Page) {
   const input = drawer.locator('input').first();
   await input.fill('123456');
   await expect(input).toHaveValue(TYPED_SCORE);
-  // "Save Match Progress" / "Save & Advance Winner", and "Saving…" while busy.
+  // "Save Progress" / "Advance Winner", and "Saving…" while busy.
   const save = drawer.getByRole('button', { name: /^Sav/ });
   const cancel = drawer.getByRole('button', { name: 'Cancel', exact: true });
   return { drawer, input, save, cancel };

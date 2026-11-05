@@ -107,7 +107,7 @@ describe('Regression & Feature Tests: Qualifying Options, Pacing Timer & Adjudic
       expect(html).toContain('Game 1:');
       expect(html).toContain('Game 2:');
       expect(html).toContain('Game 3:');
-      expect(html).not.toContain('Add Another Attempt');
+      expect(html).not.toContain('Add Attempt');
       expect(html).not.toContain('title="Remove attempt"');
     });
 
@@ -125,7 +125,7 @@ describe('Regression & Feature Tests: Qualifying Options, Pacing Timer & Adjudic
         />
       );
 
-      expect(html).toContain('Add Another Attempt');
+      expect(html).toContain('Add Attempt');
     });
   });
 

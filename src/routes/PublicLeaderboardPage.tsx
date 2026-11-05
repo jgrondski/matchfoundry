@@ -42,7 +42,7 @@ export const PublicLeaderboardPage: React.FC = () => {
       <div className="p-12 text-center text-fg-secondary">
         <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
-          Back to Tournaments
+          All Tournaments
         </Button>
       </div>
     );

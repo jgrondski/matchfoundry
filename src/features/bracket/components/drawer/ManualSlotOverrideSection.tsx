@@ -75,7 +75,7 @@ export const ManualSlotOverrideSection: React.FC<ManualSlotOverrideSectionProps>
       >
         <div className="flex items-center gap-2">
           <ArrowLeftRight size={14} className={showOverridePanel ? 'text-orange-600' : undefined} />
-          <span>Override / Swap Round Placement</span>
+          <span>Override Placement</span>
         </div>
         <span className="text-2xs text-fg-muted">
           {showOverridePanel ? 'Hide Controls' : 'Adjust Slot'}
@@ -99,7 +99,7 @@ export const ManualSlotOverrideSection: React.FC<ManualSlotOverrideSectionProps>
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-2 mb-2.5">
+          <div className="grid grid-cols-2 gap-2 mb-2.5 max-md:grid-cols-1">
             <div>
               <label className="block text-2xs font-semibold text-fg-muted mb-1">
                 From (Match #{match.matchNumber})
@@ -156,7 +156,7 @@ export const ManualSlotOverrideSection: React.FC<ManualSlotOverrideSectionProps>
             className="w-full p-2 rounded-sm bg-orange-600 text-white border-0 font-bold text-caption cursor-pointer flex items-center justify-center gap-1.5"
           >
             <ArrowLeftRight size={14} />
-            <span>Apply Placement Override</span>
+            <span>Apply Override</span>
           </button>
         </div>
       )}

@@ -22,7 +22,8 @@ import {
 import { LoadingScreen } from '../components/LoadingScreen';
 import { isPlaceholderSubmissionStatus } from '../features/online-quals/onlineQualsStatus';
 import { ConfirmDialog } from '../components/overlay';
-import { Button, cn } from '../components/ui';
+import { Button, cn, useIsMobile } from '../components/ui';
+import { RosterCardList, formatPersonalBest } from '../features/tournament/components/RosterCardList';
 
 export const ManageTournamentPlayersPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -46,6 +47,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
   const [selectedPlayerForDrawer, setSelectedPlayerForDrawer] = useState<PlayerProfile | null>(null);
   const [isPlayerDrawerOpen, setIsPlayerDrawerOpen] = useState(false);
   const [playerToRemove, setPlayerToRemove] = useState<PlayerProfile | null>(null);
+  const isMobile = useIsMobile();
 
   const tournament = slug ? getTournamentBySlug(slug) : undefined;
   const playersPool = tournament?.playersPool;
@@ -125,7 +127,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
       <div className="p-12 text-center text-fg-secondary">
         <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
-          Back to Tournaments
+          All Tournaments
         </Button>
       </div>
     );
@@ -148,6 +150,16 @@ export const ManageTournamentPlayersPage: React.FC = () => {
     }
   };
 
+  const openPlayer = (player: PlayerProfile) => {
+    setSelectedPlayerForDrawer(player);
+    setIsPlayerDrawerOpen(true);
+  };
+
+  const editPlayer = (player: PlayerProfile) => {
+    setEditingPlayer(player);
+    setIsEditModalOpen(true);
+  };
+
   const handleConfirmRemove = async () => {
     if (!playerToRemove || isRemovalBlocked) return;
     await removePlayerFromTournament(tournament.id, playerToRemove.id);
@@ -156,7 +168,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
 
   return (
     <TournamentLayout tournament={tournament} activeView="players">
-      <main className="mx-auto flex w-full max-w-275 flex-1 flex-col gap-6 px-6 py-8">
+      <main className="mx-auto flex w-full max-w-275 flex-1 flex-col gap-6 px-6 py-8 max-md:px-4 max-md:py-4">
         {/* Header Section */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -165,101 +177,77 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                 Competitor Roster
               </span>
             </div>
-            <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white">
+            <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white max-md:text-2xl">
               <Users color="var(--color-gold-bright)" size={28} />
               {tournament.name}
             </h1>
-            <p className="mt-1.5 text-sm text-fg-muted">
+            <p className="mt-1.5 text-sm text-fg-muted max-md:hidden">
               Manage registered competitors and seeding for this tournament.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-3 max-md:w-full max-md:gap-2">
             <Button
               variant="secondary"
               onClick={() => setIsImportModalOpen(true)}
-              className="gap-2 px-4 py-2 text-sm"
+              className="gap-2 px-4 py-2 text-sm max-md:flex-1 max-md:px-2"
             >
               <Download size={15} color="var(--color-gold-bright)" />
-              Import from Global Pool
+              Import
             </Button>
             {availableGlobalPlayers.length > 0 && (
               <Button
                 variant="secondary"
                 onClick={handleImportAllGlobal}
-                className="gap-2 px-4 py-2 text-sm"
-                title={`Import all ${availableGlobalPlayers.length} available players from global catalog`}
+                className="gap-2 px-4 py-2 text-sm max-md:flex-1 max-md:px-2"
+                title="Import All"
               >
                 <DownloadCloud size={15} className="text-sky-400" />
-                Import All Available ({availableGlobalPlayers.length})
+                Import All
               </Button>
             )}
             {tournament.seedingMethod === 'MANUAL' && (
               <Button
                 variant="secondary"
                 onClick={() => navigate(`/${tournament.slug}/manage/seeding`)}
-                className="gap-2 px-4 py-2 text-sm"
-                title="Open Seeding Manager to arrange seeds and tier cutoffs"
+                className="gap-2 px-4 py-2 text-sm max-md:order-last max-md:w-full max-md:px-2"
+                title="Arrange Seeds"
               >
                 <Layers size={15} color="var(--color-brand)" />
-                Arrange Seeds & Brackets
+                Arrange Seeds
               </Button>
             )}
             <Button
               variant="primary"
               onClick={() => setIsRegisterModalOpen(true)}
-              className="gap-2 px-4.5 py-2 text-sm"
+              className="gap-2 px-4.5 py-2 text-sm max-md:flex-1 max-md:px-2"
             >
               <UserPlus size={15} />
-              Register Competitor
+              Register
             </Button>
           </div>
         </div>
 
         {/* Capacity & Roster Metrics */}
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-          <div className="rounded-md border border-line bg-surface px-5 py-4">
-            <div className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
-              Registered Competitors
+        <div className="grid grid-cols-2 gap-4 max-md:gap-2">
+          <div className="rounded-md border border-line bg-surface px-5 py-4 max-md:flex max-md:flex-col max-md:justify-between max-md:px-2.5 max-md:py-2">
+            <div className="text-xs font-semibold tracking-wide text-fg-muted uppercase max-md:text-2xs max-md:tracking-normal">
+              Total Players
             </div>
-            <div className={cn('mt-1 text-3xl font-extrabold', currentPlayers.length > 0 ? 'text-gold-bright' : 'text-fg-secondary')}>
+            <div className={cn('mt-1 text-3xl font-extrabold max-md:mt-0 max-md:text-xl', currentPlayers.length > 0 ? 'text-gold-bright' : 'text-fg-secondary')}>
               {currentPlayers.length}
             </div>
           </div>
 
-          <div className="rounded-md border border-line bg-surface px-5 py-4">
-            <div className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
-              Total Bracket Capacity
+          <div className="rounded-md border border-line bg-surface px-5 py-4 max-md:flex max-md:flex-col max-md:justify-between max-md:px-2.5 max-md:py-2">
+            <div className="text-xs font-semibold tracking-wide text-fg-muted uppercase max-md:text-2xs max-md:tracking-normal">
+              Tournament Capacity
             </div>
-            <div className="mt-1 text-3xl font-extrabold text-fg">
+            <div className="mt-1 text-3xl font-extrabold text-fg max-md:mt-0 max-md:text-xl">
               {totalCapacity > 0 ? totalCapacity : '—'}
             </div>
           </div>
 
-          <div className="rounded-md border border-line bg-surface px-5 py-4">
-            <div className="text-xs font-semibold tracking-wide text-fg-muted uppercase">
-              Roster Status
-            </div>
-            <div className="mt-2 text-base font-bold">
-              {totalCapacity === 0 ? (
-                <span className="text-fg-muted">
-                  No tiers configured ({currentPlayers.length} in qualifiers)
-                </span>
-              ) : currentPlayers.length < totalCapacity ? (
-                <span className="text-gold-bright">
-                  Underfilled ({currentPlayers.length}/{totalCapacity})
-                </span>
-              ) : currentPlayers.length === totalCapacity ? (
-                <span className="text-green-400">
-                  Full Capacity ({totalCapacity}/{totalCapacity})
-                </span>
-              ) : (
-                <span className="text-blue-400">
-                  Ready ({totalCapacity} in brackets + {currentPlayers.length - totalCapacity} DNQ)
-                </span>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Competitor Table Container */}
@@ -294,14 +282,14 @@ export const ManageTournamentPlayersPage: React.FC = () => {
               <p className="m-0 max-w-105 text-caption text-fg-muted">
                 Register competitors directly or import them from the global player pool to begin recording qualifier scores.
               </p>
-              <div className="mt-2 flex flex-wrap justify-center gap-3">
+              <div className="mt-2 flex flex-wrap justify-center gap-3 max-md:flex-col max-md:items-stretch">
                 <Button
                   variant="secondary"
                   onClick={() => setIsImportModalOpen(true)}
                   className="flex items-center gap-1.5 text-sm"
                 >
                   <Download size={14} color="var(--color-gold-bright)" />
-                  Import from Global Pool
+                  Import
                 </Button>
                 {availableGlobalPlayers.length > 0 && (
                   <Button
@@ -310,7 +298,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                     className="flex items-center gap-1.5 text-sm"
                   >
                     <DownloadCloud size={14} className="text-sky-400" />
-                    Import All Available ({availableGlobalPlayers.length})
+                    Import All
                   </Button>
                 )}
                 <Button
@@ -319,10 +307,21 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                   className="flex items-center gap-1.5 text-sm"
                 >
                   <UserPlus size={14} />
-                  Register Competitor
+                  Register
                 </Button>
               </div>
             </div>
+          ) : isMobile ? (
+            filteredPlayers.length === 0 ? (
+              <p className="m-0 p-8 text-center text-fg-muted">No competitors matching "{searchTerm}".</p>
+            ) : (
+              <RosterCardList
+                players={filteredPlayers}
+                onOpenPlayer={openPlayer}
+                onEditPlayer={editPlayer}
+                onRemovePlayer={setPlayerToRemove}
+              />
+            )
           ) : (
             <div className="overflow-x-auto rounded-md border border-line">
               <table className="w-full border-collapse text-left text-sm">
@@ -357,12 +356,9 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                             <PlayerAvatar player={player} />
                             <button
                               type="button"
-                              onClick={() => {
-                                setSelectedPlayerForDrawer(player);
-                                setIsPlayerDrawerOpen(true);
-                              }}
+                              onClick={() => openPlayer(player)}
                               className="cursor-pointer border-0 bg-transparent p-0 text-left text-[length:inherit] font-semibold text-fg transition-colors duration-150 hover:text-gold-bright hover:underline"
-                              title="Click to view detailed competitor profile, audit log, and match stats"
+                              title="View Competitor"
                             >
                               {getEffectivePlayerName(player)}
                             </button>
@@ -380,18 +376,15 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                           <PlaystyleChip style={player.playstyle} />
                         </td>
                         <td className="px-4 py-3 font-mono font-semibold tabular-nums tracking-tight">
-                          {player.personalBest ? player.personalBest.toLocaleString() : '—'}
+                          {formatPersonalBest(player.personalBest)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <Button
                               variant="secondary"
-                              onClick={() => {
-                                setEditingPlayer(player);
-                                setIsEditModalOpen(true);
-                              }}
+                              onClick={() => editPlayer(player)}
                               className="inline-flex items-center gap-1 px-2.5 py-1 text-xs"
-                              title="Edit competitor profile"
+                              title="Edit Competitor"
                             >
                               <Edit2 size={13} /> Edit
                             </Button>
@@ -399,7 +392,7 @@ export const ManageTournamentPlayersPage: React.FC = () => {
                               variant="secondary"
                               onClick={() => setPlayerToRemove(player)}
                               className="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-red"
-                              title="Remove competitor from tournament roster"
+                              title="Remove Competitor"
                             >
                               <UserX size={14} /> Remove
                             </Button>

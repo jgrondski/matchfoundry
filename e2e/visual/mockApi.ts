@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, type Page } from '@playwright/test';
+import { generateDoubleEliminationBracket } from '../../src/features/bracket/math';
 
 const FIXTURE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
 
@@ -36,6 +37,18 @@ export interface MockOptions {
   /** Transforms the full tournament fixture before it is served (GET /api/tournaments/:slugOrId). */
   tournament?: (t: any) => any;
 }
+
+/** Serves the first tier as an unplayed 16-player double-elimination bracket, without adding a tier. */
+export const DOUBLE_ELIM: MockOptions = {
+  tournament: t => {
+    const tier = t.tiers.find((x: any) => x.slug === FIXTURE_TIER_SLUG);
+    const players = t.playersPool.slice(0, 16).map((p: any, i: number) => ({ id: p.id, name: p.name, seed: i + 1 }));
+    tier.bracket = generateDoubleEliminationBracket(players, { tierId: tier.id });
+    tier.eliminationType = 'DOUBLE';
+    tier.bracketRouting = 'TRADITIONAL_TREE';
+    return { ...t, matchScores: {} };
+  },
+};
 
 /** Serves the fixture tournament with manual seeding, so the seeding manager renders. */
 export const MANUAL_SEEDING: MockOptions = {

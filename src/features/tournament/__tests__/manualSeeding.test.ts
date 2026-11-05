@@ -1123,10 +1123,10 @@ describe('Phase 6: Manual Seeding & Roster Seeding Engine', () => {
       expect(html).not.toContain('Add Seeds');
       expect(html).not.toContain('Select All');
       expect(html).not.toContain('Deselect All');
-      expect(html).not.toContain('Move to top');
+      expect(html).not.toContain('Move Top');
       expect(html).not.toContain('Move Up');
       expect(html).not.toContain('Move Down');
-      expect(html).not.toContain('Move to bottom');
+      expect(html).not.toContain('Move Bottom');
     });
 
     it('enforces Public row column order: Overall seed > Flag > Player name > Playstyle > PB > bracket seed chip', () => {
@@ -1199,11 +1199,11 @@ describe('Phase 6: Manual Seeding & Roster Seeding Engine', () => {
       expect(html).toContain('Gold 1');
 
       // Row controls present
-      expect(html).toContain('Move to top (#1 Seed)');
+      expect(html).toContain('Move Top');
       expect(html).toContain('Move Up (↑)');
       expect(html).toContain('Move Down (↓)');
-      expect(html).toContain('Move to bottom');
-      expect(html).toContain('Remove from seeds');
+      expect(html).toContain('Move Bottom');
+      expect(html).toContain('Remove Seed');
     });
 
     it('validates colored bracket seed chips across Single, Double Traditional, Flat, and Hybrid variants', () => {

@@ -24,12 +24,12 @@ export const AuthwordHudCard: React.FC<AuthwordHudCardProps> = ({ authWord }) =>
 
       {/* Authword Presentation Block */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border-2 border-gold-bright bg-canvas p-5">
-        <div>
+        <div className="min-w-0">
           <div className="mb-1 text-caption uppercase tracking-wider text-fg-secondary">
             NES Verification Code
           </div>
           <div
-            className="font-mono text-4xl font-black tracking-widest text-gold-bright [text-shadow:0_0_16px_rgba(245,158,11,0.4)]"
+            className="font-mono text-4xl font-black tracking-widest break-all text-gold-bright [text-shadow:0_0_16px_rgba(245,158,11,0.4)]"
             data-testid="assigned-authword"
           >
             {authWord}

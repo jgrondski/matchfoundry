@@ -119,7 +119,7 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
           <Link
             to="/"
             className="inline-flex shrink-0 items-center gap-1.5 rounded-sm border border-line-subtle bg-white/5 px-2 py-1 text-xs font-semibold text-fg-secondary no-underline transition-all duration-150"
-            title="Return to All Tournaments Directory"
+            title="All Tournaments"
             aria-label="All tournaments"
           >
             <ArrowLeft size={13} />
@@ -129,7 +129,7 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
           <Link
             to={`/${tournament.slug}`}
             className="flex min-w-0 flex-1 shrink-0 items-center gap-2 text-gold-bright no-underline"
-            title="Tournament Public Home"
+            title="Tournament Home"
           >
             <div className="flex size-7.5 items-center justify-center rounded-sm bg-gold shadow-gold">
               <Layers size={16} className="text-canvas" />
@@ -151,7 +151,7 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
         {/* Center: Spectator Navigation Tabs */}
         <nav
           className="inline-flex items-center gap-1 rounded-full border border-line-subtle bg-white/3 p-1 max-md:hidden"
-          aria-label="Public tournament views"
+          aria-label="Tournament Views"
         >
           {navItems.map(item => {
             const isActive = activeView === item.id;
@@ -178,7 +178,7 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
               variant="primary"
               size="sm"
               onClick={onOpenShare}
-              title="Share live bracket with QR code & links"
+              title="Share Bracket"
             >
               <Share2 size={13} />
               <span className="max-md:sr-only">Share</span>
@@ -193,7 +193,7 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
                 size: 'sm',
                 className: 'border-tier-gold/35 bg-tier-gold/8 px-2.5 text-gold-bright',
               })}
-              title="Open Tournament Director Management Portal"
+              title="Manage Tournament"
               aria-label="Manage tournament"
             >
               <Settings size={12} />
@@ -207,7 +207,7 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
                 size: 'sm',
                 className: 'px-2.5 text-fg-muted hover:border-fg-secondary hover:bg-highlight',
               })}
-              title="Staff & Director PIN Login"
+              title="Staff Login"
               aria-label="Staff login"
             >
               <KeyRound size={12} />

@@ -262,7 +262,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
       );
 
       expect(html).toContain('Reassign Competitor');
-      expect(html).toContain('Add Global Player');
+      expect(html).toContain('Add Competitor');
       expect(html).toContain('Search registered competitors...');
     });
 
@@ -299,7 +299,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
       );
 
       expect(html).toContain('Reassign Competitor');
-      expect(html).toContain('Add Global Player');
+      expect(html).toContain('Add Competitor');
     });
   });
 
@@ -503,7 +503,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
   });
 
   describe('Assertion 3.8: Unconditional Identity Controls in ReviewQueueTable & AdjudicationModal', () => {
-    it('renders Identity button on VERIFIED_MATCH rows and Reconcile / Change Player button in AdjudicationModal', () => {
+    it('renders Identity button on VERIFIED_MATCH rows and Change Competitor button in AdjudicationModal', () => {
       const mockSession = {
         tournamentId: tourney.id,
         playerId: p1Id,
@@ -555,7 +555,7 @@ describe('Journey 3: Identity Binding & Overrides (ATDD)', () => {
           onOpenIdentity={() => {}}
         />
       );
-      expect(openModalHtml).toContain('Reconcile / Change Player');
+      expect(openModalHtml).toContain('Change Competitor');
     });
   });
 });

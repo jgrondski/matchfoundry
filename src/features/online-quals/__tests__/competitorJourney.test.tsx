@@ -90,7 +90,7 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       );
 
       expect(html).toContain('Tournament Not Found');
-      expect(html).toContain('Back to Tournaments');
+      expect(html).toContain('All Tournaments');
     });
 
     it('renders CompetitorPortalView cleanly when hydrated', () => {
@@ -128,7 +128,7 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       expect(html).toContain('placeholder="e.g. Sharky"');
       expect(html).toContain('Twitch Channel / Handle *');
       expect(html).toContain('placeholder="e.g. ITZsharky1"');
-      expect(html).toContain('Review Rules &amp; Checklist');
+      expect(html).toContain('Review Rules');
     });
   });
 
@@ -159,8 +159,8 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       expect(html).toContain('Competitor Identity Resolution');
       expect(html).toContain('Connected as:');
       expect(html).toContain('UnlinkedCompetitor');
-      expect(html).toContain('Claim Existing Roster (1)');
-      expect(html).toContain('Register as New Competitor');
+      expect(html).toContain('Claim Existing (1)');
+      expect(html).toContain('New Competitor');
       expect(html).toContain('UnlinkedRosterPlayer [CA] (DAS)');
       expect(html).toContain('Claim Profile &amp; Proceed');
     });
@@ -282,7 +282,7 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       expect(html).toContain('ROCKET');
       expect(html).toContain('684,200, 721,450');
       expect(html).toContain('https://twitch.tv/videos/2481093821?t=00h14m20s');
-      expect(html).toContain('View Live Leaderboard');
+      expect(html).toContain('View Leaderboard');
     });
 
     it('falls back to session.playerName or generic title if playerName prop is omitted', () => {
@@ -486,7 +486,7 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
       expect(fakeStorage.getItem('tm_qual_portal_omen-das-tourney')).toBeNull();
     });
 
-    it('renders Done / Qualify Another Player button in AwaitingVerificationCard when onDone is provided', () => {
+    it('renders Qualify Another button in AwaitingVerificationCard when onDone is provided', () => {
       const mockSession = {
         tournamentId: 'omen-das-tourney',
         playerId: 'p-1',
@@ -518,9 +518,9 @@ describe('Journey 1: Online Competitor Qualification Flow (ATDD)', () => {
         </MemoryRouter>
       );
 
-      expect(html).toContain('Done / Qualify Another Player');
+      expect(html).toContain('Qualify Another');
       expect(html).toContain('data-testid="qual-done-button"');
-      expect(html).toContain('View Live Leaderboard');
+      expect(html).toContain('View Leaderboard');
     });
   });
 });

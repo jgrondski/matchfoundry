@@ -28,7 +28,7 @@ export const ManageReviewPage: React.FC = () => {
       <div className="p-12 text-center text-fg-secondary">
         <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
-          Back to Tournaments
+          All Tournaments
         </Button>
       </div>
     );
@@ -36,18 +36,18 @@ export const ManageReviewPage: React.FC = () => {
 
   return (
     <TournamentLayout tournament={tournament} activeView="review">
-      <main className="mx-auto flex w-full max-w-300 flex-1 flex-col gap-6 px-6 py-8">
+      <main className="mx-auto flex w-full max-w-300 flex-1 flex-col gap-6 px-6 py-8 max-md:px-4 max-md:py-4">
         <div>
           <div className="mb-1 flex items-center gap-2">
             <span className="text-caption font-bold tracking-widest text-gold-bright uppercase">
               Qual Review
             </span>
           </div>
-          <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white">
+          <h1 className="m-0 flex items-center gap-2.5 text-3xl font-extrabold tracking-tight text-white max-md:text-2xl">
             <CheckCircle2 color="var(--color-gold-bright)" size={28} />
             Qual Review
           </h1>
-          <p className="mt-1.5 mb-0 text-sm text-fg-muted">
+          <p className="mt-1.5 mb-0 text-sm text-fg-muted max-md:hidden">
             Verify authwords and scores; reconcile users.
           </p>
         </div>

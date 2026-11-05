@@ -44,7 +44,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
 }) => {
   return (
     <div
-      className="flex items-center py-5 px-6 gap-4"
+      className="flex items-center py-5 px-6 gap-4 max-md:gap-2 max-md:px-3 max-md:py-2"
       style={{
         background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.10)} 0%, rgba(0, 0, 0, 0.35) 100%)`,
         borderBottom: `1px solid ${colorWithAlpha(primaryColor, 0.25, 'var(--color-line)')}`,
@@ -52,7 +52,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
     >
       {/* Player 1 Section */}
       <div
-        className="flex-1 text-center min-w-0 py-3 px-2 rounded-md transition-all duration-150"
+        className="flex-1 text-center min-w-0 py-3 px-2 rounded-md transition-all duration-150 max-md:py-1.5"
         style={{
           background: p1Wins >= winThreshold
             ? colorWithAlpha(primaryColor, 0.12)
@@ -67,7 +67,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
       >
         {/* Competitor Glowing Avatar Ring */}
         <div
-          className="size-10.5 rounded-full flex items-center justify-center mt-0 mx-auto mb-2 text-base transition-all duration-200"
+          className="size-10.5 rounded-full flex items-center justify-center mt-0 mx-auto mb-2 text-base transition-all duration-200 max-md:hidden"
           style={{
             background: `linear-gradient(135deg, ${colorWithAlpha(primaryColor, 0.25)} 0%, rgba(0, 0, 0, 0.5) 100%)`,
             border: `2px solid ${p1Wins >= winThreshold ? primaryColor : colorWithAlpha(primaryColor, 0.4)}`,
@@ -83,7 +83,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
           )}
         </div>
 
-        <div className="flex items-center justify-center gap-1.5 mb-1.5">
+        <div className="flex items-center justify-center gap-1.5 mb-1.5 max-md:mb-0.5">
           {p1Seed !== undefined && (
             <span className="text-2xs font-mono font-bold py-0.5 px-1.5 rounded-sm bg-white/6 text-fg-muted border border-line">
               #{p1Seed}
@@ -92,11 +92,11 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
         </div>
 
         <div
-          className="text-lg font-bold text-white truncate flex items-center justify-center gap-1.5"
+          className="text-lg font-bold text-white truncate flex items-center justify-center gap-1.5 max-md:text-sm"
           style={{ color: p1Wins >= winThreshold ? primaryColor : undefined }}
           title={p1Name}
         >
-          <span>{p1Name}</span>
+          <span className="min-w-0 truncate">{p1Name}</span>
           {isP1Override && (
             <span className="text-3xs py-0.5 px-1.5 bg-orange-600/20 text-orange-600 border border-orange-600/40 rounded-xs font-bold">
               OVERRIDE
@@ -106,7 +106,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
 
         <div
           className={cn(
-            'font-mono tabular-nums tracking-tight text-hero font-black leading-tight mt-1',
+            'font-mono tabular-nums tracking-tight text-hero font-black leading-tight mt-1 max-md:text-3xl max-md:mt-0',
             p1Wins > 0 ? 'text-white' : 'text-fg-muted'
           )}
           style={{
@@ -120,7 +120,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
 
       {/* Center VS & Format Column */}
       <div className="flex flex-col items-center px-2 shrink-0">
-        <span className="text-xs font-extrabold tracking-widest text-fg-muted mb-1.5">
+        <span className="text-xs font-extrabold tracking-widest text-fg-muted mb-1.5 max-md:mb-1">
           VS
         </span>
         <BestOfSelect
@@ -137,7 +137,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
 
       {/* Player 2 Section */}
       <div
-        className="flex-1 text-center min-w-0 py-3 px-2 rounded-md transition-all duration-150"
+        className="flex-1 text-center min-w-0 py-3 px-2 rounded-md transition-all duration-150 max-md:py-1.5"
         style={{
           background: p2Wins >= winThreshold
             ? colorWithAlpha(primaryColor, 0.12)
@@ -152,7 +152,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
       >
         {/* Competitor Glowing Avatar Ring */}
         <div
-          className="size-10.5 rounded-full flex items-center justify-center mt-0 mx-auto mb-2 text-base transition-all duration-200"
+          className="size-10.5 rounded-full flex items-center justify-center mt-0 mx-auto mb-2 text-base transition-all duration-200 max-md:hidden"
           style={{
             background: `linear-gradient(135deg, ${colorWithAlpha(primaryColor, 0.25)} 0%, rgba(0, 0, 0, 0.5) 100%)`,
             border: `2px solid ${p2Wins >= winThreshold ? primaryColor : colorWithAlpha(primaryColor, 0.4)}`,
@@ -168,7 +168,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
           )}
         </div>
 
-        <div className="flex items-center justify-center gap-1.5 mb-1.5">
+        <div className="flex items-center justify-center gap-1.5 mb-1.5 max-md:mb-0.5">
           {p2Seed !== undefined && (
             <span className="text-2xs font-mono font-bold py-0.5 px-1.5 rounded-sm bg-white/6 text-fg-muted border border-line">
               #{p2Seed}
@@ -177,11 +177,11 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
         </div>
 
         <div
-          className="text-lg font-bold text-white truncate flex items-center justify-center gap-1.5"
+          className="text-lg font-bold text-white truncate flex items-center justify-center gap-1.5 max-md:text-sm"
           style={{ color: p2Wins >= winThreshold ? primaryColor : undefined }}
           title={p2Name}
         >
-          <span>{p2Name}</span>
+          <span className="min-w-0 truncate">{p2Name}</span>
           {isP2Override && (
             <span className="text-3xs py-0.5 px-1.5 bg-orange-600/20 text-orange-600 border border-orange-600/40 rounded-xs font-bold">
               OVERRIDE
@@ -191,7 +191,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
 
         <div
           className={cn(
-            'font-mono tabular-nums tracking-tight text-hero font-black leading-tight mt-1',
+            'font-mono tabular-nums tracking-tight text-hero font-black leading-tight mt-1 max-md:text-3xl max-md:mt-0',
             p2Wins > 0 ? 'text-white' : 'text-fg-muted'
           )}
           style={{

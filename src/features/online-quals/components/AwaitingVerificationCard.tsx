@@ -32,7 +32,7 @@ export const AwaitingVerificationCard: React.FC<AwaitingVerificationCardProps> =
         <div className="flex size-11.5 shrink-0 items-center justify-center rounded-full border border-green-500/40 bg-green-500/15 text-green-400">
           <CheckCircle2 size={26} />
         </div>
-        <div>
+        <div className="min-w-0">
           <h3 className="m-0 text-xl font-black text-white">
             {headerTitle}
           </h3>
@@ -75,7 +75,7 @@ export const AwaitingVerificationCard: React.FC<AwaitingVerificationCardProps> =
         </div>
 
         {session.twitchVodUrl && (
-          <div className="col-span-2">
+          <div className="col-span-2 max-md:col-span-1">
             <div className="text-caption uppercase text-fg-secondary">
               Broadcast VOD Link
             </div>
@@ -99,19 +99,19 @@ export const AwaitingVerificationCard: React.FC<AwaitingVerificationCardProps> =
             type="button"
             onClick={onDone}
             variant="secondary"
-            className="gap-2 rounded-md px-5 py-3 text-base font-bold"
+            className="gap-2 rounded-md px-5 py-3 text-base font-bold max-md:w-full"
             data-testid="qual-done-button"
           >
-            Done / Qualify Another Player
+            Qualify Another
           </Button>
         )}
         <Link
           to={`/${tournamentSlug}/leaderboard`}
-          className="inline-flex items-center gap-2 rounded-md bg-gold-bright px-6 py-3 text-base font-extrabold text-black no-underline"
+          className="inline-flex items-center gap-2 rounded-md bg-gold-bright px-6 py-3 text-base font-extrabold text-black no-underline max-md:w-full max-md:justify-center"
           data-testid="view-leaderboard-link"
         >
           <BarChart3 size={18} />
-          View Live Leaderboard
+          View Leaderboard
         </Link>
       </div>
     </div>

@@ -42,7 +42,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
 
   return (
     <div
-      className="py-3.5 px-4 rounded-md shadow-[0_2px_6px_rgba(0,0,0,0.25)]"
+      className="py-3.5 px-4 rounded-md shadow-[0_2px_6px_rgba(0,0,0,0.25)] max-md:px-3"
       style={{
         background: gameCardBg,
         border: isTiebreakerGame
@@ -88,7 +88,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
             <button
               type="button"
               onClick={() => onDeleteTiebreakerGame(idx)}
-              title="Delete tiebreaker game"
+              title="Delete Tiebreaker"
               className="inline-flex items-center gap-1 py-0.5 px-2 rounded-sm bg-red/12 border border-red/30 text-red-300 text-2xs font-semibold cursor-pointer"
             >
               <Trash2 size={11} />
@@ -107,7 +107,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
               type="button"
               onClick={() => p1 && onManualWinnerToggle(idx, p1.id)}
               title="Set winner"
-              className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0"
+              className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0 max-md:relative max-md:after:absolute max-md:after:-inset-3"
               style={{
                 border: game.winner === p1?.id ? `2px solid ${primaryColor}` : '1px solid var(--color-line)',
                 background: game.winner === p1?.id ? primaryColor : 'transparent',
@@ -142,9 +142,9 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
           <button
             type="button"
             onClick={() => onManualWinnerToggle(idx, 'TIE')}
-            title={game.winner === 'TIE' ? 'Clear tie' : 'Declare Game as Tie (no win awarded)'}
+            title={game.winner === 'TIE' ? 'Clear tie' : 'Declare Tie'}
             className={cn(
-              'py-1 px-2.5 text-2xs font-bold tracking-wider rounded-sm border cursor-pointer transition-all duration-150',
+              'py-1 px-2.5 text-2xs font-bold tracking-wider rounded-sm border cursor-pointer transition-all duration-150 max-md:min-h-11 max-md:px-3',
               game.winner === 'TIE' ? 'border-cyan bg-cyan-soft text-cyan' : 'border-line bg-white/3 text-fg-muted'
             )}
           >
@@ -165,7 +165,7 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
               type="button"
               onClick={() => p2 && onManualWinnerToggle(idx, p2.id)}
               title="Set winner"
-              className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0"
+              className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0 max-md:relative max-md:after:absolute max-md:after:-inset-3"
               style={{
                 border: game.winner === p2?.id ? `2px solid ${primaryColor}` : '1px solid var(--color-line)',
                 background: game.winner === p2?.id ? primaryColor : 'transparent',

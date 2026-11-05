@@ -32,7 +32,7 @@ export const ManageJudgePage: React.FC = () => {
       <div className="p-12 text-center text-fg-secondary">
         <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
-          Back to Tournaments
+          All Tournaments
         </Button>
       </div>
     );
@@ -72,7 +72,7 @@ const ManageJudgeView: React.FC<ManageJudgeViewProps> = ({ tournament }) => {
               🏆 View Qualifiers
             </Button>
             <Button variant="primary" onClick={() => navigate(`/${tournament.slug}/manage/settings`)}>
-              ⚙️ Configure Tiers in Settings
+              ⚙️ Configure Tiers
             </Button>
           </div>
         </main>
@@ -92,9 +92,9 @@ const ManageJudgeView: React.FC<ManageJudgeViewProps> = ({ tournament }) => {
       activeView="judge"
     >
       {/* In-Page Tier Selector Bar */}
-      <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-5 py-2.5 select-none">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold tracking-wider text-fg-muted uppercase">
+      <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-5 py-2.5 select-none max-md:top-12 max-md:px-3">
+        <div className="flex flex-wrap items-center gap-2 max-md:-mx-3 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3 max-md:[scrollbar-width:none]">
+          <span className="text-xs font-bold tracking-wider text-fg-muted uppercase max-md:hidden">
             Tier:
           </span>
           {sortedTiers.map(t => {
@@ -108,6 +108,7 @@ const ManageJudgeView: React.FC<ManageJudgeViewProps> = ({ tournament }) => {
                 active={isActive}
                 accent={{ color: tierColor, textColor: contrastColor }}
                 onClick={() => handleSelectTier(t.slug)}
+                className="shrink-0"
               >
                 <span
                   className="inline-block size-1.75 rounded-full"
@@ -130,7 +131,7 @@ const ManageJudgeView: React.FC<ManageJudgeViewProps> = ({ tournament }) => {
               size: 'sm',
               className: 'text-fg-secondary hover:border-fg-secondary hover:bg-highlight',
             })}
-            title="Open Visual Bracket for this Tier"
+            title="Visual Bracket"
           >
             <GitBranch size={13} />
             <span>View Bracket</span>

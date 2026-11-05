@@ -65,7 +65,7 @@ export const OrgSettingsTab: React.FC<OrgSettingsTabProps> = ({
           <select
             value={bestOf}
             onChange={e => onBestOfChange(parseInt(e.target.value, 10) || 5)}
-            className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
+            className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white max-md:text-base"
           >
             <option value={3}>Best of 3</option>
             <option value={5}>Best of 5</option>
@@ -90,13 +90,14 @@ export const OrgSettingsTab: React.FC<OrgSettingsTabProps> = ({
           </div>
         </div>
 
-        <div className="flex gap-2.5">
+        <div className="flex gap-2.5 max-md:flex-col max-md:items-stretch">
           <input
             type="text"
+            inputMode="url"
             placeholder="https://discord.com/api/webhooks/..."
             value={discordWebhookUrl}
             onChange={e => onDiscordWebhookUrlChange(e.target.value)}
-            className="flex-1 rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
+            className="flex-1 rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white max-md:w-full max-md:text-base"
           />
           <Button
             type="button"
@@ -120,9 +121,9 @@ export const OrgSettingsTab: React.FC<OrgSettingsTabProps> = ({
         <Button
           type="submit"
           variant="primary"
-          className="px-7 py-2.5 text-base"
+          className="px-7 py-2.5 text-base max-md:w-full"
         >
-          Save Default Rules &amp; Webhook
+          Save Defaults
         </Button>
       </div>
     </form>

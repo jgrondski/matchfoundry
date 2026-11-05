@@ -217,7 +217,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
                 variant: 'secondary',
                 className: cn(publicLinkClass, 'ml-auto border-tier-gold/40 bg-tier-gold/8 text-gold-bright'),
               })}
-              title="Open Tournament Director Management Portal"
+              title="Manage Tournament"
             >
               <Settings size={14} /> Manage
             </Link>
@@ -268,7 +268,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           <Link
             to={hasTiers && defaultTier ? `/${tournament.slug}/${defaultTier.slug}` : `/${tournament.slug}/brackets`}
             className={buttonClasses({ variant: 'secondary', className: cn(adminLinkClass, 'ml-auto text-fg-muted', SECONDARY_LINK_HOVER) })}
-            title="Open public spectator view"
+            title="Public View"
           >
             <ExternalLink size={13} /> Public View
           </Link>
