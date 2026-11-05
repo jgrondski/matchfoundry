@@ -19,8 +19,8 @@ export const PublicQualifyPage: React.FC = () => {
   if (!tournament && !isDbConnected) {
     // Loading failed (often a phone waking up offline). Any run in progress is still saved.
     return (
-      <div className="p-12 text-center text-fg-secondary" data-testid="qualify-connection-error">
-        <h2 className="text-2xl font-bold">Can't reach the server</h2>
+      <div className="p-12 text-center text-fg-secondary max-md:px-4 max-md:py-4" data-testid="qualify-connection-error">
+        <h2 className="text-2xl font-bold max-md:text-xl">Can't reach the server</h2>
         <p>Check your connection and try again. Your run is still saved.</p>
         <Button
           variant="primary"
@@ -35,14 +35,14 @@ export const PublicQualifyPage: React.FC = () => {
 
   if (!tournament) {
     return (
-      <div className="p-12 text-center text-fg-secondary">
-        <h2 className="text-2xl font-bold">Tournament Not Found</h2>
+      <div className="p-12 text-center text-fg-secondary max-md:px-4 max-md:py-4">
+        <h2 className="text-2xl font-bold max-md:text-xl">Tournament Not Found</h2>
         <Button
           variant="primary"
           onClick={() => navigate('/')}
           className="mt-4 rounded-md border-0 bg-gold-bright bg-none px-5 py-2.5 font-bold text-black"
         >
-          Back to Tournaments
+          All Tournaments
         </Button>
       </div>
     );

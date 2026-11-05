@@ -116,13 +116,59 @@ export function getTournamentTargetUrl(
   }
 }
 
+/**
+ * Logs out from the sidebar. On manage pages the unsaved-changes guard runs first: if it blocks,
+ * nothing happens yet, and the guard calls onLeave only if the user chooses to discard.
+ */
+export function attemptLogout({
+  pathname,
+  slug,
+  logout,
+  navigate,
+  onNavigate,
+}: {
+  pathname: string;
+  slug?: string;
+  logout: () => void;
+  navigate: (url: string) => void;
+  onNavigate?: (url: string, onLeave?: () => void) => boolean | void;
+}): void {
+  if (!pathname.includes('/manage')) {
+    logout();
+    return;
+  }
+  const url = slug ? `/${slug}/brackets` : '/';
+  if (onNavigate?.(url, logout) === false) return;
+  logout();
+  navigate(url);
+}
+
+export function getPublicViewUrl(slug: string | undefined, currentTierSlug: string | undefined): string {
+  return slug ? (currentTierSlug ? `/${slug}/${currentTierSlug}` : `/${slug}/brackets`) : '/';
+}
+
+export function resolveCurrentTierSlug(
+  tournament: Tournament | undefined,
+  activeTier: TournamentTier | undefined
+): string | undefined {
+  const slug = tournament?.slug;
+  const storedTierSlug = slug ? getStoredTierSlug(slug) : null;
+  return (
+    activeTier?.slug ||
+    (storedTierSlug && tournament?.tiers.some(t => t.slug === storedTierSlug)
+      ? storedTierSlug
+      : tournament?.tiers[0]?.slug)
+  );
+}
+
 interface TournamentSidebarProps {
   tournament?: Tournament;
   activeTier?: TournamentTier;
   activeView?: SidebarNavView;
-  onNavigate?: (url: string) => boolean | void;
+  onNavigate?: (url: string, onLeave?: () => void) => boolean | void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  variant?: 'rail' | 'sheet';
 }
 
 export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
@@ -132,7 +178,9 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
   onNavigate,
   isCollapsed: controlledIsCollapsed,
   onToggleCollapse,
+  variant = 'rail',
 }) => {
+  const isSheet = variant === 'sheet';
   const { tournaments, tournamentSummaries, unlockBrackets, setActiveTournamentId, isDbConnected, retryConnection } = useTournament();
   const { getOrganizationById } = useOrganization();
   const navigate = useNavigate();
@@ -145,7 +193,11 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
     return false;
   });
 
-  const isCollapsed = controlledIsCollapsed !== undefined ? controlledIsCollapsed : internalCollapsed;
+  const isCollapsed = isSheet
+    ? false
+    : controlledIsCollapsed !== undefined
+    ? controlledIsCollapsed
+    : internalCollapsed;
 
   const handleToggle = () => {
     if (onToggleCollapse) {
@@ -166,12 +218,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
 
   const activeTourney = tournament || tournaments[0];
   const slug = activeTourney?.slug;
-  const storedTierSlug = slug ? getStoredTierSlug(slug) : null;
-  const currentTierSlug =
-    activeTier?.slug ||
-    (storedTierSlug && activeTourney?.tiers.some(t => t.slug === storedTierSlug)
-      ? storedTierSlug
-      : activeTourney?.tiers[0]?.slug);
+  const currentTierSlug = resolveCurrentTierSlug(activeTourney, activeTier);
   const currentOrg = activeTourney?.organizationId ? getOrganizationById(activeTourney.organizationId) : undefined;
 
   const { isSystemAdmin, canManage, logout } = usePinAuth();
@@ -340,6 +387,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
   const sideLinkClass = (isActive: boolean) =>
     cn(
       'flex items-center gap-2.5 rounded-sm border-l-3 py-2 text-caption no-underline transition-colors duration-100',
+      isSheet && 'min-h-11',
       isCollapsed ? 'justify-center px-0' : 'justify-start px-3',
       isActive
         ? 'border-l-gold-bright bg-gold-soft font-bold text-gold-bright'
@@ -347,6 +395,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
     );
   const sideButtonClass = cn(
     'flex w-full cursor-pointer items-center gap-2.5 rounded-sm border-0 bg-white/3 py-2 text-left text-caption font-semibold',
+    isSheet && 'min-h-11',
     isCollapsed ? 'justify-center px-0' : 'justify-start px-3'
   );
   const statusPillClass = cn(
@@ -360,10 +409,14 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
   return (
     <>
       <aside
-        className={cn(
-          'sticky top-0 z-90 flex h-screen flex-col overflow-x-hidden overflow-y-auto border-r border-line bg-surface transition-[width,min-width] duration-200 select-none',
-          isCollapsed ? 'w-15 min-w-15' : 'w-55 min-w-55'
-        )}
+        className={
+          isSheet
+            ? 'flex w-full min-w-0 flex-col overflow-x-hidden bg-surface select-none'
+            : cn(
+                'sticky top-0 z-90 flex h-screen flex-col overflow-x-hidden overflow-y-auto border-r border-line bg-surface transition-[width,min-width] duration-200 select-none',
+                isCollapsed ? 'w-15 min-w-15' : 'w-55 min-w-55'
+              )
+        }
       >
         {/* Brand Header */}
         <div
@@ -398,7 +451,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
               'flex cursor-pointer items-center gap-1.5 border-b border-red/40 bg-red/18 py-1.5 text-2xs font-bold text-red-bright',
               isCollapsed ? 'justify-center px-1' : 'justify-start px-3'
             )}
-            title="PostgreSQL Offline! Click to retry connection."
+            title="Retry Connection"
           >
             <span className="size-1.5 shrink-0 rounded-full bg-red" />
             {!isCollapsed && <span>DB OFFLINE (RETRY)</span>}
@@ -418,7 +471,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                   to={`/org/${currentOrg.slug}`}
                   onClick={e => handleLinkClick(e, `/org/${currentOrg.slug}`)}
                   className="inline-flex min-w-0 items-center gap-1.5 text-gold-bright no-underline"
-                  title={`View Organization: ${currentOrg.name}`}
+                  title="View Organization"
                 >
                   <Building2 size={11} color="var(--color-gold-bright, #ffc905)" />
                   <span className="truncate text-2xs font-bold tracking-wide text-gold-bright uppercase">
@@ -429,7 +482,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                   to={`/org/${currentOrg.slug}`}
                   onClick={e => handleLinkClick(e, `/org/${currentOrg.slug}`)}
                   className="text-3xs font-semibold text-fg-muted no-underline"
-                  title={`View ${currentOrg.name} Dashboard`}
+                  title="View Dashboard"
                 >
                   Org Hub ↗
                 </Link>
@@ -479,7 +532,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                         handleLinkClick(e, `/org/${currentOrg.slug}`);
                       }}
                       className="shrink-0 text-2xs font-semibold text-gold-bright no-underline"
-                      title="Open Organization Dashboard"
+                      title="Organization Dashboard"
                     >
                       Org Hub →
                     </Link>
@@ -585,7 +638,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                       className={quickHopLinkClass}
                     >
                       <Users size={13} />
-                      <span>Global Player Directory</span>
+                      <span>Player Directory</span>
                     </Link>
                   )}
                 </div>
@@ -603,7 +656,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                     'cursor-pointer border-gold/35 bg-gold/15 text-gold-bright',
                     isCollapsed ? 'justify-center' : 'justify-start'
                   )}
-                  title="Qualifiers running (Draft preview). Click to lock brackets and start match play."
+                  title="Lock Brackets"
                 >
                   <AlertTriangle size={11} color="var(--color-gold-bright)" className="shrink-0" />
                   {!isCollapsed && (
@@ -623,7 +676,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                     isCollapsed ? 'justify-center' : 'justify-start',
                     isUnlocking ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100'
                   )}
-                  title="Match play in progress (Locked). Click to unlock back to Qualifiers."
+                  title="Unlock Brackets"
                 >
                   {isUnlocking ? (
                     <div className="size-2.5 shrink-0 animate-spin rounded-full border-[1.5px] border-sky-400/30 border-t-sky-400" />
@@ -640,7 +693,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
             {/* Public Spectator View Shortcut for Directors */}
             <div className="mt-1.5">
               <Link
-                to={slug ? (currentTierSlug ? `/${slug}/${currentTierSlug}` : `/${slug}/brackets`) : '/'}
+                to={getPublicViewUrl(slug, currentTierSlug)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
@@ -648,7 +701,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                   'border-line-subtle bg-white/4 font-semibold text-fg-secondary no-underline',
                   isCollapsed ? 'justify-center' : 'justify-between'
                 )}
-                title="Open live public spectator view in new tab"
+                title="Public View"
               >
                 <div className="flex items-center gap-1.5">
                   <ExternalLink size={11} color="var(--color-gold-bright)" className="shrink-0" />
@@ -729,13 +782,13 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
             </Link>
           )}
 
-          {/* Global Player Pool (System Admin or Authorized Tournament Admin) */}
+          {/* Player Pool (System Admin or Authorized Tournament Admin) */}
           {(isSystemAdmin || isAuthorized) && (
             <Link
               to="/players"
               onClick={e => handleLinkClick(e, '/players')}
               className={sideLinkClass(activeView === 'globalPlayers')}
-              title="Global Player Pool"
+              title="Player Pool"
             >
               <Globe2 size={16} className="shrink-0" />
               {!isCollapsed && <span className="flex-1 truncate">Global Players</span>}
@@ -747,14 +800,11 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
             {isAuthorized ? (
               <button
                 type="button"
-                onClick={() => {
-                  logout();
-                  if (window.location.pathname.includes('/manage')) {
-                    navigate(slug ? `/${slug}/brackets` : '/');
-                  }
-                }}
+                onClick={() =>
+                  attemptLogout({ pathname: window.location.pathname, slug, logout, navigate, onNavigate })
+                }
                 className={cn(sideButtonClass, isSystemAdmin ? 'text-sky-400' : 'text-gold-bright')}
-                title={`Logged in as ${isSystemAdmin ? 'System Admin' : 'Tournament Admin'}. Click to Log Out.`}
+                title="Log Out"
               >
                 <LogOut size={16} className="shrink-0" />
                 {!isCollapsed && (
@@ -766,7 +816,7 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
                 type="button"
                 onClick={() => setIsAdminModalOpen(true)}
                 className={cn(sideButtonClass, 'text-fg-secondary')}
-                title="Unlock administration with PIN"
+                title="Admin Login"
               >
                 <KeyRound size={16} color="var(--color-gold-bright)" className="shrink-0" />
                 {!isCollapsed && <span className="flex-1 truncate">Admin Access</span>}
@@ -775,18 +825,20 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
           </div>
 
           {/* Collapse / Expand Toggle Button */}
-          <button
-            type="button"
-            onClick={handleToggle}
-            className={cn(
-              'mt-1.5 flex w-full cursor-pointer items-center gap-2 rounded-sm border-0 bg-transparent py-2 text-xs font-semibold text-fg-muted transition-colors duration-100',
-              isCollapsed ? 'justify-center px-0' : 'justify-start px-3'
-            )}
-            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-            {!isCollapsed && <span>Collapse Sidebar</span>}
-          </button>
+          {!isSheet && (
+            <button
+              type="button"
+              onClick={handleToggle}
+              className={cn(
+                'mt-1.5 flex w-full cursor-pointer items-center gap-2 rounded-sm border-0 bg-transparent py-2 text-xs font-semibold text-fg-muted transition-colors duration-100',
+                isCollapsed ? 'justify-center px-0' : 'justify-start px-3'
+              )}
+              title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+              {!isCollapsed && <span>Collapse Sidebar</span>}
+            </button>
+          )}
         </div>
       </aside>
 
@@ -797,7 +849,10 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
         tournamentSlugOrId={slug}
         tournamentName={activeTourney?.name}
         onSuccess={() => {
-          if (slug) navigate(`/${slug}/manage/qualifiers`);
+          if (!slug) return;
+          const url = `/${slug}/manage/qualifiers`;
+          if (onNavigate?.(url) === false) return;
+          navigate(url);
         }}
       />
 

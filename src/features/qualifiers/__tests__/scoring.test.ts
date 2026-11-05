@@ -70,6 +70,13 @@ describe('Qualifiers Scoring Engine', () => {
       expect(res.count).toBe(2);
     });
 
+    it('averages only the highest X attempts when more than X are submitted', () => {
+      const scores = [500000, 1000000, 800000, 900000];
+      const subs = scores.map((score, i) => ({ ...dummySubs[0], id: `top-${i}`, score }));
+      expect(calculateAverageOfX(subs, 2, false).average).toBe(950000);
+      expect(calculateAverageOfX(subs, 2, true).average).toBe(950000);
+    });
+
     it('handles empty attempts gracefully', () => {
       const res = calculateAverageOfX([], 3, true);
       expect(res.average).toBe(0);

@@ -23,6 +23,7 @@
 <h2>A. New screenshots (visual.spec.ts)</h2>
 <ol class="steps">
   <li>Add <code>{ name: 'bracket-compact', path: `/${FIXTURE_SLUG}/${FIXTURE_TIER_SLUG}?view=compact`, admin: false }</code> to <code>PAGES</code> (both projects).</li>
+  <li>Add <code>{ name: 'bracket-compact-double', path: `/${FIXTURE_SLUG}/${FIXTURE_TIER_SLUG}?view=compact`, admin: false, options: DOUBLE_ELIM }</code> to <code>PAGES</code> (both projects), so a double-elimination compact bracket has a screenshot.</li>
   <li>Add <code>seeding</code>: <code>/${FIXTURE_SLUG}/manage/seeding</code>, admin, served with <code>MANUAL_SEEDING</code> (extend the <code>PAGES</code> entry type with an optional <code>options?: MockOptions</code> passed to <code>prepare</code>).</li>
   <li>Add a mobile-only test <code>overlay: score sheet (mobile)</code>, the mirror of the existing desktop drawer test with <code>test.skip(testInfo.project.name !== 'visual-mobile', 'Mobile only')</code>, screenshot <code>overlay-score-sheet-mobile.png</code>.</li>
   <li>Add a mobile-only test <code>overlay: admin menu (mobile)</code>: open <code>/${FIXTURE_SLUG}/manage/judge</code> as admin, click the bottom bar's “Menu” button, screenshot <code>overlay-admin-menu-mobile.png</code>.</li>

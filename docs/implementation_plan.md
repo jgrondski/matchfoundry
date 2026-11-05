@@ -360,10 +360,10 @@ flowchart TD
   7. **ER.7** Loading foundation: spinner, `useAction`, global busy lock, 10 s timeout, shared error banner.
   8. **ER.8** Loading flows: judge, qualifier, review-queue and admin actions converted.
   9. **ER.9** Tournament summaries: `GET /api/tournaments` returns small summaries in a fixed 5 queries instead of every tournament in full (about 8 queries and 85 KB per tournament, on every page load for every visitor). Each page loads only its own tournament; the organization dashboard gets its own endpoint for metrics.
-  10. **ER.10** Hide image uploads: remove the player avatar upload, organization logo and banner fields, and tournament logo and banner fields. Images are stored as base64 in the database and the feature is unused; saved images keep displaying. The proper fix is backlog item 15.
+  10. **ER.10** Hide image uploads: remove the player avatar upload, organization logo and banner fields, and tournament logo and banner fields. Images are stored as base64 in the database and the feature is unused; saved images keep displaying. The proper fix is backlog item 16.
   11. **ER.11** Event dates: the free-text event date (stored values include `Upcoming` and `Yah`) becomes a validated `startDate` and optional `endDate`, stored in two new `date` columns, entered with date pickers and shown as "Nov 14–16, 2026". Old free-text dates were not converted; real dates are set in Settings.
   12. **ER.12** Keep-warm schedule: the worker's keep-warm cron fetches event-day windows from `GET /api/keep-warm-schedule` once a day and stores them in a Durable Object, replacing the hand-edited `KEEP_WARM_FROM`/`KEEP_WARM_UNTIL`.
-* **Shipped:** PRs #20–#26. The realtime worker is deployed at `matchfoundry-realtime.matchfoundry.workers.dev` (one worker for all environments, deployed by hand with `npm run realtime:deploy`; deploying it from CI is backlog item 16).
+* **Shipped:** PRs #20–#26. The realtime worker is deployed at `matchfoundry-realtime.matchfoundry.workers.dev` (one worker for all environments, deployed by hand with `npm run realtime:deploy`; deploying it from CI is backlog item 17).
 * **Decisions:** live updates use push (Cloudflare Durable Objects), not polling; messages carry only a revision and clients re-fetch through the API. Loading is inline on the clicked button, every other button is disabled, and a 10 s timeout shows an error banner.
 * **Write performance (measured 2026-11-02 on Vercel previews):** read from the `Server-Timing` header added in ER.1. Same test tournament at every stage: 32 players, Gold (16, traditional, 15 matches) and Silver (16, flat, 8 matches), locked. Warm = 3 consecutive runs; cold = first request after 10 idle minutes. Each cell is server time / query count.
   * **Before ER.2:** commit `2304566`, `neon-http` driver, functions in `iad1`.
@@ -454,10 +454,17 @@ Items 4 and 6 edit `TournamentSwitcherPage.tsx` (Phase 12 step 12.1c), `DataSimu
 
 #### Priority 3: Verification and data integrity
 9. **`hasTiebreaker` is lost on read (confirmed 2026-11-04):** the score save writes `hasTiebreaker` into `metadata.matchScores`, but the tournament load (`src/api/tournaments.ts`, around line 433) spreads the relational records over it, and they never carry the flag. Brackets still show “(t)” when a game is tied or more games than the best-of were played, because the card infers it; an explicitly flagged tiebreaker is lost. Fix: carry `hasTiebreaker` from `meta.matchScores[m.id]` into the relational record, with a regression test. Touches no Phase 12 file, so it can run alongside any wave.
-10. **Org silent re-attach bug** (from item 11, confirmed still present 2026-11-04): `TournamentAdminForm.tsx` initializes `organizationId` to `tournament.organizationId || organizations[0]?.id`, so an org-less tournament's settings save attaches it to the first org. Because the initial value differs from the saved one, the form also counts as dirty as soon as it opens, so leaving Settings always shows the Discard prompt (on phones too, through the 12.1b menu). Fixable on its own before the policy decisions in item 11. It edits the same file as Phase 12 step 12.5a, so run it before or after 12.5a, not alongside.
+10. **Org silent re-attach bug** (from item 12, confirmed still present 2026-11-04): `TournamentAdminForm.tsx` initializes `organizationId` to `tournament.organizationId || organizations[0]?.id`, so an org-less tournament's settings save attaches it to the first org. Because the initial value differs from the saved one, the form also counts as dirty as soon as it opens, so leaving Settings always shows the Discard prompt (on phones too, through the 12.1b menu). Fixable on its own before the policy decisions in item 12. It edits the same file as Phase 12 step 12.5a, so run it before or after 12.5a, not alongside.
+11. **Discord webhook silently wiped on settings save (hit production 2026-11-04):** two live tournaments lost their Discord alerts and the URLs had to be re-entered by hand. Cause, in `TournamentAdminForm.tsx`:
+   * The form initializes its `discordWebhookUrl` state from `tournament.discordWebhookUrl || ''` (around line 76). When the form mounts with a tournament the API redacted (the caller was not yet a manager, so the URL was omitted), the state starts as `''`.
+   * The store then reloads the tournament with the URL (the session-change reload in `store.tsx`, around line 513, or any later reload). The re-sync effect (around line 290) only copies fresh values when the form is clean, but `isDirty` (around line 195) compares the form's `''` with the now-present URL, so the form counts as dirty and never re-syncs. The Discard prompt appearing before any edit is the visible symptom.
+   * On Save, the "only send the webhook when edited" check (around line 537) compares against `tournament.discordWebhookUrl`, sees `''` differ from the URL, and sends `discordWebhookUrl: ''`. `saveFullTournament` (`src/api/tournaments.ts`, around line 664) treats `''` as an explicit clear, so saving any unrelated setting wipes the webhook.
+   * **Fix:** track whether the webhook field was actually edited (a flag set only by its change handler, reset on save and discard) and send `discordWebhookUrl` only when that flag is set. While the field is not edited, re-sync it from `tournament` on every change, independent of the rest of the form's dirty state, and leave it out of `isDirty`.
+   * **Regression test:** mount the form with a tournament that has no `discordWebhookUrl`, re-render it with the same tournament now carrying a URL, change an unrelated field and save; the update must not include `discordWebhookUrl`, the field must show the URL, and the form must not be dirty before the unrelated edit. Keep a case where clearing the field on purpose still sends `''`.
+   * Touches the same file as item 10 and Phase 12 step 12.5a; run it with item 10 (same pattern), before or after 12.5a, not alongside.
 
 #### Priority 4: Needs decisions before scheduling
-11. **Tournament ↔ Organization Association**
+12. **Tournament ↔ Organization Association**
    * **Known bugs:**
      * No "None (Independent)" option in the Settings dropdown or `CreateTournamentModal` once any org exists.
      * For an org-less tournament, `TournamentAdminForm` initializes `organizationId` to the *first* org, so saving any unrelated setting silently attaches the tournament to that org.
@@ -465,20 +472,20 @@ Items 4 and 6 edit `TournamentSwitcherPage.tsx` (Phase 12 step 12.1c), `DataSimu
    * **Decisions pending:** who may change a tournament's org (recommendation: System Admin only, read-only for Tournament Admins); whether "Independent" is selectable at creation and for detaching; a pre-save notice summarizing side effects (Discord webhook fallback to the org's webhook, org theme inheritance).
    * **Note:** the silent re-attach is a data-integrity bug and could be fixed on its own before the policy decisions.
 
-12. **Double-Elimination Flat Staged: 2-Wide & Uneven Fields**
+13. **Double-Elimination Flat Staged: 2-Wide & Uneven Fields**
    * **Current behavior:** `FLAT_STAGED` supports 4 or 8 wide; fields must be a multiple of W (fields ≤ 2W silently fall back to a traditional tree). Invalid setups are blocked in Settings via `getDoubleEliminationConfigError()`.
    * **To revisit:**
      * True 2-wide flat staged for even fields (10, 12, 14…). Needs a new endgame, because the "Top 6 cross-drop" finish assumes W ≥ 4.
      * Whether to warn when a flat staged tier will actually render as a traditional tree (e.g. 9 players at 8 wide).
      * Odd / uneven fields: traditional tree remains the answer unless a ragged-wave design is specified (byes are never playable matches).
 
-13. **Organization-Level Roles (RBAC)**
+14. **Organization-Level Roles (RBAC)**
    * **Current state:** access is PIN-based with two tiers, System Admin and Tournament Admin. Organizations have no members or roles.
    * **Originally specified:** an `org_memberships` table (`organization_id`, `user_id`, `role`) with roles Org Owner (org settings, webhooks, assigning admins), Org Admin (create/manage the org's tournaments, edit org defaults, manage the player pool), and Org Judge / Tournament Admin (scoped score entry, qualifier verification, lock/unlock). Requires real user accounts, which don't exist yet.
-   * **Related:** the "who may change a tournament's org" decision in item 11.
+   * **Related:** the "who may change a tournament's org" decision in item 12.
 
 #### Scheduled: after Phase 12, before Phase 13
-14. **Match data model consolidation**
+15. **Match data model consolidation**
    * **Why:** every match result is stored three times: the `matches` and `games` tables, a JSON copy of the tier's whole bracket (`bracket_tiers.metadata.bracket`), and a JSON map of every result on the tournament (`tournaments.metadata.matchScores`). A score save therefore loads the whole tournament, rewrites the tier's bracket JSON, upserts every match in the tier, rewrites `matchScores`, and reloads the whole tournament (26 queries; a clean design needs about 4–6). ER.3's lock keeps the three copies consistent per write, but they remain a drift risk, and Phase 13's export wants one relational source.
    * **Not urgent for speed:** after ER.4 and the region fix, a warm score save is about 100 ms on the server (see the ER baseline). This is a correctness and maintainability cleanup.
    * **Scope:**
@@ -491,11 +498,11 @@ Items 4 and 6 edit `TournamentSwitcherPage.tsx` (Phase 12 step 12.1c), `DataSimu
    * **Constraints:** schema changes stay additive (keep the JSON columns readable during the transition, drop nothing); cover all four bracket formats (Single Elimination, Traditional Double, Flat Staged Double, Accelerated Hybrid) and the visualizer; migrate live data with a verified backfill.
 
 #### Unscheduled
-15. **Player avatars and organization and tournament images, done properly**
+16. **Player avatars and organization and tournament images, done properly**
    * **Background:** ER.10 removed every image control before the event because images were stored as base64 data URLs in the database. Player avatars (256 px WebP plus a 32 px thumbnail) were sent in `/api/players` on every page load and embedded in every tournament's player list; org logos and banners were stored unresized (`readAsDataURL`), so one row could be megabytes.
    * **Fix:** object storage (for example Vercel Blob) with only URLs in the database, cacheable by the browser and CDN; resize every upload; tournament payloads carry thumbnail URLs only. Then restore the avatar upload, the org logo and banner fields, and the tournament logo and banner fields.
    * **Existing data:** migrate any base64 images already saved into storage, then clear the data URLs.
-16. **Deploy the realtime worker from CI**
+17. **Deploy the realtime worker from CI**
    * **Background:** the Cloudflare worker (`realtime/`) is deployed by hand with `npm run realtime:deploy`; one worker serves local, preview and production.
    * **Fix:** a CI job runs `wrangler deploy` on merge to `main` when `realtime/` changed, using a Cloudflare API token stored as a GitHub secret. Decide then whether previews need their own worker.
 

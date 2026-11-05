@@ -27,6 +27,7 @@ import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../players/components/PlaystyleChip';
 import { PlayerEditModal } from '../../players/components/PlayerEditModal';
 import { Overlay } from '../../../components/overlay';
+import { FULL_PAGE_PANEL_CLASS } from '../../../components/fullPagePanel';
 import { Spinner, cn, useAction, useGlobalBusy } from '../../../components/ui';
 import { DEFAULT_TIER_THEME, STATUS_COLORS, THEME_FALLBACK } from '../../../theme/palette';
 
@@ -334,7 +335,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
   const renderQualSubmissionsSection = () => (
     <div
-      className="border rounded-md p-4.5 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
+      className="border rounded-md p-4.5 max-md:px-4 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
       style={{
         background: getAlternateShade(cardColor, 2),
         borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-line)'),
@@ -366,7 +367,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
       </div>
 
       {playerSubmissions.length === 0 ? (
-        <div className="p-6 text-center text-fg-muted text-sm">
+        <div className="p-6 max-md:px-4 text-center text-fg-muted text-sm">
           No qual submissions logged yet.
         </div>
       ) : (
@@ -485,9 +486,10 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
         open
         onClose={onClose}
         variant="drawer"
+        mobile="center"
         dirty={scoreInput.trim() !== ''}
         aria-labelledby={titleId}
-        panelClassName="max-w-135"
+        panelClassName={cn('max-w-135', FULL_PAGE_PANEL_CLASS)}
         panelStyle={{
           background: `linear-gradient(180deg, ${getAlternateShade(cardColor, 2)} 0%, ${backgroundColor} 100%)`,
           borderLeft: `1px solid ${colorWithAlpha(primaryColor, 0.45, 'var(--color-line)')}`,
@@ -507,7 +509,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
             {/* Glow-up Header */}
             <div
-              className="py-5 px-6 border-b flex justify-between items-start shadow-[0_4px_20px_rgba(0,0,0,0.35)] gap-4"
+              className="py-5 px-6 max-md:px-4 border-b flex justify-between items-start shadow-[0_4px_20px_rgba(0,0,0,0.35)] gap-4"
               style={{
                 borderBottomColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
                 background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.14)} 0%, ${getAlternateShade(cardColor, 4)} 100%)`,
@@ -525,27 +527,6 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                       {tournament.name}
                     </span>
                   </div>
-
-                  {resolvedTier?.name && (
-                    <span
-                      className="inline-flex items-center gap-1.5 py-0.5 px-2.5 rounded-full border text-xs font-extrabold tracking-wide uppercase"
-                      style={{
-                        background: colorWithAlpha(primaryColor, 0.2),
-                        color: primaryColor,
-                        borderColor: colorWithAlpha(primaryColor, 0.45),
-                        boxShadow: `0 0 8px ${colorWithAlpha(primaryColor, 0.2)}`,
-                      }}
-                    >
-                      <span
-                        className="size-1.5 rounded-full"
-                        style={{
-                          background: primaryColor,
-                          boxShadow: `0 0 6px ${primaryColor}`,
-                        }}
-                      />
-                      {resolvedTier.name} Tier
-                    </span>
-                  )}
 
                   {isDQ && (
                     <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full bg-red/25 text-red-300 border border-red/50 text-xs font-extrabold tracking-wide uppercase">
@@ -588,7 +569,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                       )}
                       {isVerified && (
                         <span
-                          title="Verified Qualifier Competitor"
+                          title="Verified"
                           className="inline-flex items-center justify-center size-4.5 rounded-full bg-green-500/25 border border-green-500/50 text-green-400 shrink-0"
                         >
                           <Check size={11} strokeWidth={3} />
@@ -608,7 +589,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-purple-400 font-semibold no-underline inline-flex items-center gap-1 bg-purple-500/15 border border-purple-500/35 rounded-sm py-0.5 px-2 transition-all duration-150"
-                          title={`Visit ${player.name}'s Twitch Channel`}
+                          title="Twitch Channel"
                         >
                           <span>twitch.tv/{player.twitchUsername}</span>
                         </a>
@@ -670,7 +651,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsEditModalOpen(true)}
-                    aria-label="Edit competitor profile"
+                    aria-label="Edit Competitor"
                     className="bg-white/5 border border-(--btn-border) cursor-pointer py-2 px-3 rounded-md flex items-center gap-1.5 text-caption font-bold transition-all duration-150 hover:bg-(--btn-hover-bg) hover:border-(--btn-hover-border)"
                     style={{
                       '--btn-border': colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
@@ -703,7 +684,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
             {/* Scrollable Body Content */}
             <div
-              className="flex-1 overflow-y-auto py-5 px-6 flex flex-col gap-6 [scrollbar-width:thin]"
+              className="flex-1 overflow-y-auto py-5 px-6 max-md:px-4 flex flex-col gap-6 [scrollbar-width:thin]"
               style={{ scrollbarColor: `${colorWithAlpha(primaryColor, 0.35)} transparent` }}
             >
               {/* Section 0: Quick Qual Submission & Judge Verification (Either/Or) */}
@@ -711,7 +692,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 <>
                   {canManageTournament && isRegisteredCompetitor && (
                     <div
-                      className="border rounded-md p-4.5 flex flex-col gap-3.5"
+                      className="border rounded-md p-4.5 max-md:px-4 flex flex-col gap-3.5"
                       style={{
                         background: `linear-gradient(180deg, ${colorWithAlpha(primaryColor, 0.12)} 0%, ${getAlternateShade(cardColor, 3)} 100%)`,
                         borderColor: colorWithAlpha(primaryColor, 0.4),
@@ -779,8 +760,9 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                           type="text"
                           value={scoreInput ? parseInt(scoreInput.replace(/\D/g, ''), 10).toLocaleString() : ''}
                           onChange={(e) => setScoreInput(e.target.value.replace(/\D/g, ''))}
+                          inputMode="numeric"
                           placeholder="Enter score (e.g. 1,050,000)..."
-                          className="flex-1 py-2 px-3 rounded-sm border text-white text-sm font-bold"
+                          className="flex-1 py-2 px-3 rounded-sm border text-white text-sm font-bold max-md:min-w-0 max-md:text-base"
                           style={{
                             borderColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
                             background: backgroundColor,
@@ -815,7 +797,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
               {/* Section 1: Player Profile Details */}
               <div
-                className="border rounded-md p-4.5 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
+                className="border rounded-md p-4.5 max-md:px-4 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
                 style={{
                   background: getAlternateShade(cardColor, 2),
                   borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-line)'),
@@ -826,7 +808,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                   <h3 className={sectionTitleClass}>Competitor Profile</h3>
                 </div>
 
-                <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3 max-md:grid-cols-2">
                   <div
                     className={statBoxClass}
                     style={{
@@ -935,7 +917,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
               {/* Section 2: Tournament Match Play History */}
               <div
-                className="border rounded-md p-4.5 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
+                className="border rounded-md p-4.5 max-md:px-4 shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
                 style={{
                   background: getAlternateShade(cardColor, 2),
                   borderColor: colorWithAlpha(secondaryColor, 0.35, 'var(--color-line)'),
@@ -984,11 +966,11 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                 </div>
 
                 {!tournament.isLocked && playerMatches.length === 0 ? (
-                  <div className="p-6 text-center text-fg-muted text-sm leading-normal">
+                  <div className="p-6 max-md:px-4 text-center text-fg-muted text-sm leading-normal">
                     Tournament is currently in <strong>Qualifiers Mode</strong>. Bracket matches and game logs will appear here once brackets are locked into Match Play Mode.
                   </div>
                 ) : playerMatches.length === 0 ? (
-                  <div className="p-6 text-center text-fg-muted text-sm">
+                  <div className="p-6 max-md:px-4 text-center text-fg-muted text-sm">
                     {tournament.tiers.length === 0
                       ? 'No bracket tiers configured for this tournament yet.'
                       : 'No bracket matches scheduled or recorded for this competitor yet.'}
@@ -1129,7 +1111,7 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
 
             {/* Footer with Themed Border & Button */}
             <div
-              className="py-4 px-6 border-t flex gap-3"
+              className="py-4 px-6 max-md:px-4 max-md:pb-[calc(1rem+env(safe-area-inset-bottom))] border-t flex gap-3"
               style={{
                 borderTopColor: colorWithAlpha(primaryColor, 0.25, 'var(--color-line)'),
                 background: getAlternateShade(cardColor, 3),

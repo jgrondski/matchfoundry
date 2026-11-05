@@ -19,6 +19,8 @@ import {
   calculateAcceleratedHybridPhase2Layout,
   BracketViewMode,
   BracketLayoutMetadata,
+  supportsCompactView,
+  COMPACT_LAYOUT_CONFIG,
 } from '../bracketLayout';
 import { PlayerDetailDrawer } from '../../qualifiers/components/PlayerDetailDrawer';
 import { findPlayerJourney, findAncestors } from '../journeyHighlight';
@@ -39,6 +41,8 @@ interface BracketVisualizerProps {
   isObsMode?: boolean;
   canManage?: boolean;
   obsView?: BracketViewMode;
+  /** Render compact cards in whichever view mode is active. */
+  compact?: boolean;
   chroma?: string | null;
   highlightedPlayerId?: string | null;
 }
@@ -49,6 +53,7 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
   isObsMode = false,
   canManage = true,
   obsView,
+  compact = false,
   chroma,
   highlightedPlayerId,
 }) => {
@@ -215,6 +220,9 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
   const scoreH = Math.max(18, Math.round(20 * textScale));
 
   const isAcceleratedHybrid = bracket?.bracketRouting === 'ACCELERATED_HYBRID';
+  // Compact cards: seed, name and match wins only. Unsupported brackets never render compact.
+  const isCompact = (compact || effectiveObsView === 'compact') && Boolean(bracket) && supportsCompactView(bracket);
+  const standardLayoutViewMode: BracketViewMode = effectiveObsView === 'compact' ? 'standard' : effectiveObsView;
 
   // Partition rounds into constituent stages for Accelerated Hybrid:
   // 1. Pod Top-Left: Accelerated Round (seeds 1 to finalsCutoff)
@@ -353,8 +361,8 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
   // Compute Layouts
   const standardLayout = useMemo(() => {
     if (isAcceleratedHybrid) return null;
-    return calculateBracketLayout(bracket, undefined, effectiveObsView);
-  }, [bracket, effectiveObsView, isAcceleratedHybrid]);
+    return calculateBracketLayout(bracket, isCompact ? COMPACT_LAYOUT_CONFIG : undefined, standardLayoutViewMode);
+  }, [bracket, standardLayoutViewMode, isAcceleratedHybrid, isCompact]);
 
   const layoutAccel = useMemo(() => {
     if (!isAcceleratedHybrid) return null;
@@ -647,7 +655,7 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
         setHoveredMatchId={setHoveredMatchId}
         hoveredOriginMatchId={hoveredOriginMatchId}
         setHoveredOriginMatchId={setHoveredOriginMatchId}
-        hoveredAncestry={hoveredAncestry}
+        hoveredAncestry={isCompact ? null : hoveredAncestry}
         focusedMatchId={focusedMatchId}
         isObsMode={isObsMode}
         onSlotHover={handleSlotHover}
@@ -655,6 +663,7 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
         onPlayerClick={handlePlayerClick}
         onChipClick={handleChipClick}
         onSelectMatch={(match, roundName) => setSelectedMatch({ match, roundName })}
+        compact={isCompact}
       />
     );
   };
@@ -902,6 +911,21 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
             ) : (
               renderQualifierPodGrid()
             )
+          ) : isCompact ? (
+            /* Compact view: scrolls sideways inside its own container and snaps to round columns */
+            <div className="w-full overflow-x-auto overscroll-x-contain snap-x snap-proximity">
+              <div className="relative w-max">
+                {layout.roundHeaders.map((header, hIdx) => (
+                  <div
+                    key={`snap-${header.roundNumber}-${hIdx}`}
+                    aria-hidden="true"
+                    className="absolute top-0 h-px w-0 snap-start"
+                    style={{ left: header.x - 12 }}
+                  />
+                ))}
+                {renderCanvas(layout, rounds, false, false, championPlayer)}
+              </div>
+            </div>
           ) : (
             renderCanvas(layout, rounds, false, false, championPlayer)
           )}

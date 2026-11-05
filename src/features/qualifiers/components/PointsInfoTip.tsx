@@ -43,7 +43,7 @@ export const PointsInfoTip: React.FC<PointsInfoTipProps> = ({ pointsConfig, size
           e.stopPropagation();
           setIsPinned(prev => !prev);
         }}
-        aria-label="View points breakdown"
+        aria-label="Points Breakdown"
         aria-expanded={isPinned || isHovered}
         className="bg-transparent border-0 p-0 cursor-pointer inline-flex items-center text-gold-bright"
         data-testid="points-info-icon"

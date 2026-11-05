@@ -124,6 +124,7 @@ export const ClearableNumberInput: React.FC<ClearableNumberInputProps> = ({
         ref={inputRef}
         id={id}
         type="number"
+        inputMode="numeric"
         min={min}
         max={max}
         step={step}

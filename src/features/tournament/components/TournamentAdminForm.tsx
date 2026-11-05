@@ -705,7 +705,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
               loading={unlock.busy}
               loadingText="Unlocking…"
               className="py-1.5 px-3 text-caption"
-              title="Revert tournament to Qualifiers Mode"
+              title="Revert Tournament"
             >
               <Unlock size={14} />
               Unlock Brackets
@@ -717,7 +717,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
               className="py-1.5 px-3 text-caption"
             >
               <Lock size={14} />
-              Lock Brackets and Begin Match Play
+              Lock Brackets
             </Button>
           )}
         </div>
@@ -869,10 +869,10 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       )}
 
       {/* Save Button Bar */}
-      <div className="sticky bottom-4 z-10 flex items-center justify-end gap-4 rounded-md border border-line bg-elevated py-3 px-5 shadow-lg">
+      <div className="sticky bottom-4 z-10 flex items-center justify-end gap-4 rounded-md border border-line bg-elevated py-3 px-5 shadow-lg max-md:bottom-[calc(3.5rem+env(safe-area-inset-bottom))] max-md:-mx-4 max-md:grid max-md:grid-cols-2 max-md:gap-x-2 max-md:gap-y-1.5 max-md:rounded-none max-md:px-4 max-md:py-2">
         <span
           className={cn(
-            'mr-auto flex items-center gap-1.5 text-sm font-semibold',
+            'mr-auto flex items-center gap-1.5 text-sm font-semibold max-md:col-span-2 max-md:text-xs',
             isDirty ? 'text-gold-bright' : 'text-fg-muted'
           )}
         >
@@ -890,14 +890,14 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         <Button
           onClick={handleDiscardChanges}
           disabled={!isDirty}
-          className="py-2.5 px-5 text-sm"
-          title={!isDirty ? 'No changes to discard' : 'Revert unsaved changes'}
+          className="py-2.5 px-5 text-sm max-md:w-full max-md:px-2"
+          title={!isDirty ? 'No Changes' : 'Revert Changes'}
         >
           Discard Changes
         </Button>
 
         {tierConfigError && (
-          <span className="text-caption font-semibold text-red">
+          <span className="text-caption font-semibold text-red max-md:col-span-2 max-md:row-start-2">
             {tierConfigError}
           </span>
         )}
@@ -909,7 +909,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
           loadingText="Saving…"
           title={tierConfigError || undefined}
           className={cn(
-            'py-2.5 px-7 text-base',
+            'py-2.5 px-7 text-base max-md:w-full max-md:px-2 max-md:text-sm',
             isDirty ? 'shadow-gold enabled:hover:shadow-gold' : 'shadow-none'
           )}
         >

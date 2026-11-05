@@ -72,7 +72,7 @@ export const TournamentSwitcherPage: React.FC = () => {
           <h1 className="mb-3 text-hero font-extrabold tracking-tight text-white max-md:text-4xl">
             Tournaments
           </h1>
-          <p className="mx-auto mt-0 mb-6 max-w-162.5 text-lg text-fg-secondary">
+          <p className="mx-auto mt-0 mb-6 max-w-162.5 text-lg text-fg-secondary max-md:hidden">
             Manage and view tournaments.
           </p>
 
@@ -84,7 +84,7 @@ export const TournamentSwitcherPage: React.FC = () => {
                 className="px-6 py-2.5 text-base shadow-gold enabled:hover:shadow-gold max-md:w-full"
               >
                 <Plus size={18} />
-                Create New Tournament
+                New Tournament
               </Button>
               {SIMULATION_ENABLED && (
                 <Button
@@ -156,7 +156,7 @@ export const TournamentSwitcherPage: React.FC = () => {
                 className="px-7 py-3 text-base shadow-gold enabled:hover:shadow-gold max-md:w-full"
               >
                 <Plus size={18} />
-                Create New Tournament
+                New Tournament
               </Button>
               {SIMULATION_ENABLED && (
                 <Button
@@ -252,7 +252,7 @@ export const TournamentSwitcherPage: React.FC = () => {
                     data-testid="show-test-tournaments-toggle"
                   >
                     <FlaskConical size={13} />
-                    <span>Show test tournaments</span>
+                    <span>Test Tournaments</span>
                   </Chip>
                 )}
               </div>
@@ -299,7 +299,7 @@ export const TournamentSwitcherPage: React.FC = () => {
           </>
         }
         cancelLabel="Cancel"
-        confirmLabel="Yes, Delete Tournament"
+        confirmLabel="Delete Tournament"
         confirmLoadingText="Deleting…"
         onCancel={() => setTournamentToDelete(null)}
         onConfirm={confirmDeleteTournament}

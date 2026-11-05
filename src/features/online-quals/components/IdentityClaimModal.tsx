@@ -154,7 +154,7 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
               data-testid="tab-claim-roster"
             >
               <UserCheck size={18} />
-              Claim Existing Roster ({unclaimedPlayers.length})
+              Claim Existing ({unclaimedPlayers.length})
             </button>
             <button
               type="button"
@@ -163,7 +163,7 @@ export const IdentityClaimModal: React.FC<IdentityClaimModalProps> = ({
               data-testid="tab-register-new"
             >
               <UserPlus size={18} />
-              Register as New Competitor
+              New Competitor
             </button>
           </div>
 

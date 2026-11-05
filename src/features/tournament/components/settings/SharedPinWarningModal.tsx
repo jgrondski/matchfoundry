@@ -59,7 +59,7 @@ export const SharedPinWarningModal: React.FC<SharedPinWarningModalProps> = ({
               onClick={requestClose}
               disabled={isSubmitting}
               className="flex rounded-xs"
-              title="Cancel and close"
+              title="Cancel"
             >
               <X size={18} />
             </IconButton>
@@ -113,11 +113,11 @@ export const SharedPinWarningModal: React.FC<SharedPinWarningModalProps> = ({
           </div>
 
           {/* Modal Actions */}
-          <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated py-4 px-6">
+          <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated py-4 px-6 max-md:sticky max-md:bottom-0 max-md:z-10 max-md:border-t max-md:border-line max-md:bg-surface max-md:py-3 max-md:px-6 max-md:flex-col max-md:items-stretch">
             <Button
               onClick={requestClose}
               disabled={isSubmitting}
-              className="py-2 px-4 text-caption"
+              className="py-2 px-4 text-caption max-md:w-full"
               data-testid="shared-pin-cancel-btn"
             >
               Cancel
@@ -126,7 +126,7 @@ export const SharedPinWarningModal: React.FC<SharedPinWarningModalProps> = ({
               variant="primary"
               onClick={onConfirm}
               disabled={isSubmitting}
-              className="gap-2 py-2 px-5 text-caption"
+              className="gap-2 py-2 px-5 text-caption max-md:w-full"
               data-testid="shared-pin-continue-btn"
             >
               <span>{isSubmitting ? 'Saving...' : 'Continue (Share PIN)'}</span>

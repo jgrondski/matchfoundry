@@ -97,6 +97,9 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
   const matchBaseBg = matchIdx % 2 === 0 ? baseCard : altCard;
   const matchHoverBg = colorWithAlpha(primaryColor, 0.10, 'rgba(255, 255, 255, 0.07)');
   const blockBg = isHovered ? matchHoverBg : matchBaseBg;
+  // Opaque version of what the row shows, for the sticky identity cells: the
+  // translucent hover tint layered over the matrix's card color underneath the row.
+  const stickyCellBg = isHovered ? `linear-gradient(${matchHoverBg}, ${matchHoverBg}), ${cardColor}` : matchBaseBg;
 
   // Block borders & hover highlight
   const hoverBorderColor = colorWithAlpha(primaryColor, 0.75, 'var(--color-gold, #f59e0b)');
@@ -146,8 +149,9 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
         {/* Match # (RowSpan 2) */}
         <td
           rowSpan={2}
-          className={cn(tdMergedClass, 'text-center font-bold border-l border-l-transparent')}
+          className={cn(tdMergedClass, 'text-center font-bold border-l border-l-transparent sticky left-0 z-10')}
           style={{
+            background: stickyCellBg,
             borderTop: topBorder,
             borderBottom: botBorder,
             boxShadow: matchNumShadow,
@@ -170,7 +174,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
         </td>
 
         {/* Player 1 Seed & Competitor Info */}
-        <td className={cn(tdClass, 'text-left')} style={{ borderTop: topBorder, borderBottom: midBorder, boxShadow: row1Shadow, width: `${competitorColWidth}px`, minWidth: `${competitorColWidth}px`, maxWidth: `${competitorColWidth}px` }}>
+        <td className={cn(tdClass, 'text-left sticky z-10')} style={{ background: stickyCellBg, left: `${sizeTokens.colMatch}px`, borderTop: topBorder, borderBottom: midBorder, boxShadow: row1Shadow, width: `${competitorColWidth}px`, minWidth: `${competitorColWidth}px`, maxWidth: `${competitorColWidth}px` }}>
           <div
             onClick={(e) => {
               if (p1?.id) {
@@ -188,7 +192,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
               background: hoveredPlayerKey === `p1-${match.id}` ? colorWithAlpha(primaryColor, 0.15, 'rgba(255, 255, 255, 0.08)') : 'transparent',
               boxShadow: hoveredPlayerKey === `p1-${match.id}` ? `0 0 0 1px ${primaryColor}` : 'none',
             }}
-            title={p1?.id ? "View competitor tournament profile" : undefined}
+            title={p1?.id ? "View Competitor" : undefined}
           >
             <span className="inline-flex items-center gap-1.5 shrink-0" style={{ width: `${sizeTokens.countrySeedWidth}px` }}>
               {(p1?.country || (p1 as any)?.avatarUrl) && <PlayerAvatar player={p1 as any} country={p1?.country} className="leading-none" style={{ fontSize: sizeTokens.flagSize }} />}
@@ -226,7 +230,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
             {match.player1.isManualOverride && (
               <span
                 className="text-3xs font-bold tracking-wide py-0 px-1 rounded-sm bg-gold/18 text-gold-bright border border-gold/40 uppercase leading-tight"
-                title="Position manually placed by tournament organizer"
+                title="Manually Placed"
               >
                 OVERRIDE
               </span>
@@ -390,7 +394,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
         style={{ background: blockBg }}
       >
         {/* Player 2 Seed & Competitor Info */}
-        <td className={cn(tdClass, 'text-left')} style={{ borderBottom: botBorder, boxShadow: row2Shadow, width: `${competitorColWidth}px`, minWidth: `${competitorColWidth}px`, maxWidth: `${competitorColWidth}px` }}>
+        <td className={cn(tdClass, 'text-left sticky z-10')} style={{ background: stickyCellBg, left: `${sizeTokens.colMatch}px`, borderBottom: botBorder, boxShadow: row2Shadow, width: `${competitorColWidth}px`, minWidth: `${competitorColWidth}px`, maxWidth: `${competitorColWidth}px` }}>
           <div
             onClick={(e) => {
               if (p2?.id) {
@@ -408,7 +412,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
               background: hoveredPlayerKey === `p2-${match.id}` ? colorWithAlpha(primaryColor, 0.15, 'rgba(255, 255, 255, 0.08)') : 'transparent',
               boxShadow: hoveredPlayerKey === `p2-${match.id}` ? `0 0 0 1px ${primaryColor}` : 'none',
             }}
-            title={p2?.id ? "View competitor tournament profile" : undefined}
+            title={p2?.id ? "View Competitor" : undefined}
           >
             <span className="inline-flex items-center gap-1.5 shrink-0" style={{ width: `${sizeTokens.countrySeedWidth}px` }}>
               {(p2?.country || (p2 as any)?.avatarUrl) && <PlayerAvatar player={p2 as any} country={p2?.country} className="leading-none" style={{ fontSize: sizeTokens.flagSize }} />}
@@ -446,7 +450,7 @@ export const SheetMatchRow: React.FC<SheetMatchRowProps> = ({
             {match.player2.isManualOverride && (
               <span
                 className="text-3xs font-bold tracking-wide py-0 px-1 rounded-sm bg-gold/18 text-gold-bright border border-gold/40 uppercase leading-tight"
-                title="Position manually placed by tournament organizer"
+                title="Manually Placed"
               >
                 OVERRIDE
               </span>

@@ -34,7 +34,7 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
     <div className="overflow-hidden rounded-lg border border-line bg-surface shadow-[0_6px_24px_rgba(0,0,0,0.3)]">
       {/* Unimpeded Top Banner */}
       <div
-        className="relative h-37.5 border-b-2"
+        className="relative h-37.5 border-b-2 max-md:h-32"
         style={{
           background: org.bannerUrl || org.branding?.bannerUrl
             ? `url(${org.bannerUrl || org.branding?.bannerUrl}) center/cover no-repeat`
@@ -45,7 +45,7 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
         <div className="absolute top-4 left-4">
           <Link
             to="/organizations"
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-xs font-semibold text-white no-underline backdrop-blur-xs"
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-xs font-semibold text-white no-underline backdrop-blur-xs max-md:min-h-11"
           >
             <ArrowLeft size={13} />
             <span>All Organizations</span>
@@ -57,9 +57,9 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
       <div className="flex flex-col gap-5 p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           {/* Left: Avatar + Title + Slug */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-5 max-md:min-w-0">
             <div
-              className="flex size-17 shrink-0 items-center justify-center overflow-hidden rounded-md border-2 shadow-[0_4px_14px_rgba(0,0,0,0.5)]"
+              className="flex size-17 shrink-0 items-center justify-center overflow-hidden rounded-md border-2 shadow-[0_4px_14px_rgba(0,0,0,0.5)] max-md:size-16"
               style={{
                 background: cardColor,
                 borderColor: primaryColor,
@@ -72,9 +72,9 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
               )}
             </div>
 
-            <div>
+            <div className="max-md:min-w-0">
               <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="m-0 text-3xl font-extrabold tracking-tight text-white">
+                <h1 className="m-0 text-3xl font-extrabold tracking-tight text-white max-md:min-w-0 max-md:max-w-full max-md:truncate max-md:text-2xl">
                   {org.name}
                 </h1>
                 <span
@@ -89,7 +89,7 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
                   href={org.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1.5 text-caption text-fg-secondary no-underline"
+                  className="mt-1 inline-flex items-center gap-1.5 text-caption text-fg-secondary no-underline max-md:mt-0 max-md:min-h-11"
                 >
                   <span>{org.website.replace(/^https?:\/\//, '')}</span>
                   <ExternalLink size={12} />
@@ -118,7 +118,7 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
         )}
 
         {/* 4 Stat Overview Cards */}
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 pt-2">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 pt-2 max-md:grid-cols-2">
           {[
             { label: 'Tournaments Hosted', value: metrics.totalTournaments, icon: Trophy },
             { label: 'Total Competitors', value: metrics.totalCompetitors, icon: Users },
@@ -129,7 +129,7 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
             return (
               <div
                 key={stat.label}
-                className="flex items-center gap-3 rounded-md border border-white/5 bg-black/30 px-4 py-3"
+                className="flex items-center gap-3 rounded-md border border-white/5 bg-black/30 px-4 py-3 max-md:min-w-0 max-md:flex-col max-md:items-start max-md:gap-2 max-md:px-3"
               >
                 <div
                   className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-white/6"
@@ -137,7 +137,7 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
                 >
                   <Icon size={18} />
                 </div>
-                <div>
+                <div className="max-md:w-full max-md:min-w-0 max-md:wrap-break-word">
                   <div className="text-xl font-extrabold text-white">
                     {stat.value}
                   </div>
@@ -152,7 +152,7 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-t border-line bg-elevated">
+      <div className="flex border-t border-line bg-elevated max-md:-mx-3 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3 max-md:[scrollbar-width:none]">
         {[
           { id: 'tournaments', label: `Tournaments (${orgTournamentsCount})`, icon: Trophy },
           { id: 'branding', label: 'Branding & Palettes', icon: Palette },
@@ -166,7 +166,7 @@ export const OrgHeaderBanner: React.FC<OrgHeaderBannerProps> = ({
               type="button"
               onClick={() => onSelectTab(tab.id as 'tournaments' | 'branding' | 'settings')}
               className={cn(
-                'flex flex-1 cursor-pointer items-center justify-center gap-2 border-0 border-b-[3px] px-4 py-3.5 text-sm transition-all duration-150',
+                'flex flex-1 shrink-0 cursor-pointer items-center justify-center gap-2 border-0 border-b-[3px] px-4 py-3.5 text-sm transition-all duration-150 max-md:whitespace-nowrap',
                 isActive ? 'bg-surface font-bold text-white' : 'border-b-transparent bg-transparent font-medium text-fg-secondary'
               )}
               style={isActive ? { borderBottomColor: primaryColor } : undefined}

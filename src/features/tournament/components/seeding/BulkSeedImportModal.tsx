@@ -353,7 +353,7 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                 value={rawText}
                 onChange={e => setRawText(e.target.value)}
                 placeholder={`Example:\n1. Jonas Neubauer\n2. Harry Hong\n#3 Joseph Saelee\nDogPlayingTetris\nPixelAndy`}
-                className="w-full resize-y rounded-md border border-line bg-elevated p-3 font-mono text-sm leading-snug text-fg"
+                className="w-full resize-y rounded-md border border-line bg-elevated p-3 font-mono text-sm leading-snug text-fg max-md:min-h-[40dvh] max-md:text-base"
               />
               <span className="text-xs text-fg-muted">
                 Supports plain lists, numbered/bulleted ranks, or direct copy-paste from player tables, Google Sheets, and Excel. Table ranks, scores, country codes, and action buttons are automatically cleaned.
@@ -375,7 +375,7 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 max-md:flex max-md:flex-col max-md:items-stretch">
                   {/* Append to Bottom */}
                   <button
                     type="button"
@@ -387,7 +387,7 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                   >
                     <div className={cn('flex items-center gap-1.5 text-caption font-bold', importDestination === 'BOTTOM' ? 'text-brand' : 'text-fg')}>
                       <ArrowDown size={14} />
-                      Add to Bottom
+                      Add Bottom
                     </div>
                     <span className="text-2xs text-fg-muted">
                       Seeds #{existingSeedsCount + 1}+
@@ -405,7 +405,7 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
                   >
                     <div className={cn('flex items-center gap-1.5 text-caption font-bold', importDestination === 'TOP' ? 'text-brand' : 'text-fg')}>
                       <ArrowUp size={14} />
-                      Add to Top
+                      Add Top
                     </div>
                     <span className="text-2xs text-fg-muted">
                       Seeds #1..N (shift existing)
@@ -534,22 +534,22 @@ export const BulkSeedImportModal: React.FC<BulkSeedImportModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated px-6 py-4">
-            <Button variant="secondary" onClick={requestClose}>
+          <div className="flex items-center justify-end gap-3 border-t border-line bg-elevated px-6 py-4 max-md:sticky max-md:bottom-0 max-md:z-10 max-md:flex-col max-md:items-stretch max-md:gap-2 max-md:border-t max-md:border-line max-md:bg-surface max-md:px-4 max-md:py-3">
+            <Button variant="secondary" onClick={requestClose} className="max-md:w-full">
               Cancel
             </Button>
             <Button
               variant="primary"
               disabled={parsedNames.length === 0}
               onClick={handleApply}
-              className="gap-1.5 px-5"
+              className="gap-1.5 px-5 max-md:w-full"
             >
               <Upload size={16} />
               {existingSeedsCount === 0 || importDestination === 'REPLACE'
-                ? `Apply ${parsedNames.length > 0 ? `${parsedNames.length} ` : ''}Seeds`
+                ? `Apply Seeds${parsedNames.length > 0 ? ` (${parsedNames.length})` : ''}`
                 : importDestination === 'TOP'
-                ? `Insert ${resolutionAnalysis.netNewSeedsCount} Seeds at Top`
-                : `Append ${resolutionAnalysis.netNewSeedsCount} Seeds to Bottom`}
+                ? `Add Top (${resolutionAnalysis.netNewSeedsCount})`
+                : `Add Bottom (${resolutionAnalysis.netNewSeedsCount})`}
             </Button>
           </div>
         </>

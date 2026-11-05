@@ -145,7 +145,7 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
               onClick={requestClose}
               className="bg-white/5 border border-line text-fg-muted cursor-pointer p-1.5 rounded-md flex items-center justify-center transition-all duration-150 shrink-0"
               title="Close (Esc)"
-              aria-label="Close share bracket modal"
+              aria-label="Close"
             >
               <X size={18} />
             </button>
@@ -217,7 +217,7 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
                   <div className="flex items-center gap-2">
                     <MessageSquare size={14} className="text-purple-500" />
                     <span className="text-caption font-bold text-fg">
-                      Twitch Chat Command
+                      Twitch Command
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-fg-muted">
@@ -235,7 +235,7 @@ export const ShareBracketModal: React.FC<ShareBracketModalProps> = ({
                   <div className="flex items-center gap-2">
                     <Sparkles size={14} className="text-sky-400" />
                     <span className="text-caption font-bold text-fg">
-                      Discord Markdown Link
+                      Discord Link
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-fg-muted">

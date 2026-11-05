@@ -48,7 +48,7 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
             userCanManage && !readOnly ? 'cursor-pointer' : 'cursor-default'
           )}
           onClick={userCanManage && !readOnly ? toggleRunning : undefined}
-          title={`Qual Timer: ${formattedTime} (${isExpired ? 'Expired' : isRunning ? 'Running - Click to Pause' : 'Paused - Click to Start'})`}
+          title={isExpired ? 'Timer Expired' : isRunning ? 'Pause Timer' : 'Start Timer'}
         >
           <Clock
             size={14}
@@ -104,7 +104,7 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
             <button
               type="button"
               onClick={toggleRunning}
-              title={isRunning ? 'Pause Qual Timer' : 'Start Qual Timer'}
+              title={isRunning ? 'Pause Timer' : 'Start Timer'}
               className={cn(
                 'flex-1 inline-flex items-center justify-center gap-1 py-1 px-1.5 rounded-sm text-2xs font-bold cursor-pointer border',
                 isRunning
@@ -127,7 +127,7 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
             <button
               type="button"
               onClick={resetTimer}
-              title="Reset timer to default starting duration"
+              title="Reset Timer"
               className="inline-flex items-center justify-center py-1 px-1.5 rounded-sm text-2xs cursor-pointer border border-line-subtle bg-white/4 text-fg-secondary"
             >
               <RotateCcw size={10} />
@@ -178,16 +178,16 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
       data-testid="tournament-qual-timer-hud"
       className={cn(
         'inline-flex items-center bg-elevated border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3)]',
-        compact ? 'gap-2 py-1 px-2.5' : 'gap-3 py-1.5 px-3.5',
+        compact ? 'flex-wrap gap-2 py-1 px-2.5' : 'gap-3 py-1.5 px-3.5',
         isExpired ? 'border-red/50' : isRunning ? 'border-green-500/35' : 'border-line'
       )}
     >
-      <div className="flex items-center gap-2">
+      <div className={cn('flex items-center gap-2', compact && 'min-w-0')}>
         <Clock
           size={compact ? 14 : 16}
           className={cn(isExpired ? 'text-red' : isRunning ? 'text-green-500' : 'text-gold-bright')}
         />
-        <div className="flex flex-col">
+        <div className={cn('flex flex-col', compact && 'min-w-0')}>
           <span
             className={cn(
               'text-3xs font-extrabold uppercase tracking-wider leading-none',
@@ -213,7 +213,7 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
           <Button
             variant="secondary"
             onClick={toggleRunning}
-            title={isRunning ? 'Pause Qual Timer' : 'Start Qual Timer'}
+            title={isRunning ? 'Pause Timer' : 'Start Timer'}
             className={cn(
               'text-xs inline-flex items-center gap-1 font-bold',
               compact ? 'py-1 px-2' : 'py-1 px-2.5',
@@ -237,7 +237,7 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
           <Button
             variant="secondary"
             onClick={resetTimer}
-            title="Reset timer to default starting duration"
+            title="Reset Timer"
             className="py-1 px-2 text-xs text-fg-secondary"
           >
             <RotateCcw size={12} />

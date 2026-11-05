@@ -1,10 +1,11 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { Button, cn } from '../../../components/ui';
+import { Button, cn, useIsMobile } from '../../../components/ui';
 import { PlayerProfile, Organization } from '../../tournament/types';
 import { PlayerAvatar } from './PlayerAvatar';
 import { PlaystyleChip } from './PlaystyleChip';
 import { CountryFlag } from '../flagUtils';
 import { SIMULATION_ENABLED } from '../../../utils/simulationEnv';
+import { PlayerDirectoryCardList } from './PlayerDirectoryCardList';
 import {
   Users,
   Plus,
@@ -21,9 +22,21 @@ import {
 const statCardClass = 'flex flex-col gap-1.5 rounded-md border border-line bg-surface px-5 py-4.5';
 const statLabelClass = 'text-xs font-semibold uppercase text-fg-muted';
 const statSubtextClass = 'text-xs text-fg-muted';
-const filterSelectClass = 'rounded-sm border border-line bg-canvas px-3 py-2 text-caption text-fg';
+const filterSelectClass = 'rounded-sm border border-line bg-canvas px-3 py-2 text-caption text-fg max-md:min-h-11 max-md:w-full max-md:min-w-0 max-md:text-base';
 const thClass = 'px-4 py-3';
 const tdClass = 'px-4 py-3';
+
+/** Personal best as the directory shows it, in both the table and the cards. */
+export function formatPersonalBest(personalBest: number | undefined | null): string {
+  return personalBest ? personalBest.toLocaleString() : '—';
+}
+
+/** Status badge shown for every directory player, in both the table and the cards. */
+export const PlayerStatusBadge: React.FC = () => (
+  <span className="inline-block rounded-sm bg-green-500/10 px-2 py-1 text-2xs font-semibold text-green-400">
+    Active
+  </span>
+);
 
 /* -------------------------------------------------------------------------- */
 /*                            1. Stats Summary Cards                          */
@@ -70,20 +83,17 @@ export const PlayerDirectoryStats: React.FC<PlayerDirectoryStatsProps> = React.m
   }, [globalPlayers]);
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-      <div className={statCardClass}>
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 max-md:gap-1">
+      <div className={cn(statCardClass, 'max-md:flex-row max-md:items-center max-md:justify-between max-md:border-0 max-md:bg-transparent max-md:p-0')}>
         <div className={statLabelClass}>
           Total Global Competitors
         </div>
-        <div className="text-3xl font-extrabold text-fg">
+        <div className="text-3xl font-extrabold text-fg max-md:text-lg">
           {stats.total}
-        </div>
-        <div className={statSubtextClass}>
-          Ready for tournament roster import
         </div>
       </div>
 
-      <div className={statCardClass}>
+      <div className={cn(statCardClass, 'max-md:hidden')}>
         <div className={statLabelClass}>
           Playstyle Breakdown
         </div>
@@ -103,7 +113,7 @@ export const PlayerDirectoryStats: React.FC<PlayerDirectoryStatsProps> = React.m
         </div>
       </div>
 
-      <div className={statCardClass}>
+      <div className={cn(statCardClass, 'max-md:hidden')}>
         <div className={statLabelClass}>
           Highest Personal Best
         </div>
@@ -115,14 +125,14 @@ export const PlayerDirectoryStats: React.FC<PlayerDirectoryStatsProps> = React.m
         </div>
       </div>
 
-      <div className={statCardClass}>
+      <div className={cn(statCardClass, 'max-md:flex-row max-md:items-center max-md:justify-between max-md:border-0 max-md:bg-transparent max-md:p-0')}>
         <div className={statLabelClass}>
           Average Personal Best
         </div>
-        <div className="font-mono text-3xl font-extrabold text-fg">
+        <div className="font-mono text-3xl font-extrabold text-fg max-md:text-lg">
           {stats.avgPb > 0 ? stats.avgPb.toLocaleString() : '—'}
         </div>
-        <div className={statSubtextClass}>
+        <div className={cn(statSubtextClass, 'max-md:hidden')}>
           Across {stats.total} registered competitors
         </div>
       </div>
@@ -178,15 +188,15 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-surface px-5 py-4">
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-md border border-line bg-surface px-5 py-4 max-md:flex-col max-md:items-stretch max-md:px-4">
       {/* Search Input */}
-      <div className="relative max-w-100 flex-[1_1_280px]">
+      <div className="relative max-w-100 flex-[1_1_280px] max-md:max-w-none max-md:flex-none">
         <input
           type="text"
           value={searchInput}
           onChange={handleInputChange}
           placeholder="Search competitor name, country, notes..."
-          className="w-full rounded-sm border border-line bg-canvas py-2 pr-3.5 pl-9 text-sm text-fg"
+          className="w-full rounded-sm border border-line bg-canvas py-2 pr-3.5 pl-9 text-sm text-fg max-md:min-h-11 max-md:pr-11 max-md:text-base"
         />
         <Search
           size={16}
@@ -197,7 +207,7 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
           <button
             type="button"
             onClick={handleClear}
-            className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer border-0 bg-transparent p-0.5 text-fg-muted"
+            className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer border-0 bg-transparent p-0.5 text-fg-muted max-md:right-0 max-md:flex max-md:min-h-11 max-md:min-w-11 max-md:items-center max-md:justify-center"
           >
             <X size={14} />
           </button>
@@ -220,7 +230,7 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
             type="button"
             onClick={() => onPlaystyleChange(f.key)}
             className={cn(
-              'cursor-pointer rounded-sm border px-3 py-1.5 text-caption transition-all duration-150',
+              'cursor-pointer rounded-sm border px-3 py-1.5 text-caption transition-all duration-150 max-md:min-h-11',
               playstyleFilter === f.key
                 ? 'border-gold bg-gold-soft font-bold text-gold-bright'
                 : 'border-line-subtle bg-transparent font-medium text-fg-secondary'
@@ -232,7 +242,7 @@ export const PlayerDirectoryFilterBar: React.FC<PlayerDirectoryFilterBarProps> =
       </div>
 
       {/* Filters Group: Org & Sort */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 max-md:flex-col max-md:items-stretch">
         {/* Organization Circuit Selector */}
         <div className="flex items-center gap-1.5">
           <Building2 size={14} color="var(--color-fg-muted)" />
@@ -353,15 +363,13 @@ export const PlayerDirectoryRow: React.FC<PlayerDirectoryRowProps> = React.memo(
       {/* Personal Best */}
       <td className={tdClass}>
         <span className="font-mono text-sm font-bold text-fg">
-          {player.personalBest ? player.personalBest.toLocaleString() : '—'}
+          {formatPersonalBest(player.personalBest)}
         </span>
       </td>
 
       {/* Status */}
       <td className={tdClass}>
-        <span className="inline-block rounded-sm bg-green-500/10 px-2 py-1 text-2xs font-semibold text-green-400">
-          Active
-        </span>
+        <PlayerStatusBadge />
       </td>
 
       {/* Notes */}
@@ -378,7 +386,7 @@ export const PlayerDirectoryRow: React.FC<PlayerDirectoryRowProps> = React.memo(
             variant="secondary"
             onClick={() => onEdit(player)}
             className="px-2.5 py-1.5 text-xs"
-            title="Edit competitor profile"
+            title="Edit Competitor"
           >
             <Edit2 size={13} />
           </Button>
@@ -386,7 +394,7 @@ export const PlayerDirectoryRow: React.FC<PlayerDirectoryRowProps> = React.memo(
             variant="secondary"
             onClick={() => onDelete(player)}
             className="px-2.5 py-1.5 text-xs text-red"
-            title="Delete competitor from catalog"
+            title="Delete Competitor"
           >
             <Trash2 size={13} />
           </Button>
@@ -417,6 +425,18 @@ export const PlayerDirectoryTable: React.FC<PlayerDirectoryTableProps> = React.m
   onOpenGenerateModal,
   onOpenAddModal,
 }) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile && filteredPlayers.length > 0) {
+    return (
+      <PlayerDirectoryCardList
+        players={filteredPlayers}
+        onEditPlayer={onEditPlayer}
+        onDeletePlayer={onDeletePlayer}
+      />
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-lg border border-line bg-surface">
       {filteredPlayers.length === 0 ? (
@@ -431,7 +451,7 @@ export const PlayerDirectoryTable: React.FC<PlayerDirectoryTableProps> = React.m
             <p className="m-0 max-w-105 text-sm text-fg-muted">
               {totalPlayersCount === 0
                 ? SIMULATION_ENABLED
-                  ? 'Add competitors manually or click "Generate Fake Players" to simulate authentic competitors for tournaments.'
+                  ? 'Add competitors manually or click "Generate Players" to simulate authentic competitors for tournaments.'
                   : 'Add competitors manually to build your player directory.'
                 : 'Try adjusting your search query or playstyle filter.'}
             </p>
@@ -441,7 +461,7 @@ export const PlayerDirectoryTable: React.FC<PlayerDirectoryTableProps> = React.m
               {SIMULATION_ENABLED && (
                 <Button variant="secondary" onClick={onOpenGenerateModal}>
                   <Sparkles size={16} color="var(--color-gold-bright)" />
-                  Generate Fake Players
+                  Generate Players
                 </Button>
               )}
               <Button variant="primary" onClick={onOpenAddModal}>

@@ -18,14 +18,218 @@ import {
   Flame,
 } from 'lucide-react';
 import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
-import { Button, cn } from '../../../components/ui';
+import { Button, cn, useIsMobile } from '../../../components/ui';
 import { STATUS_COLORS, THEME_FALLBACK } from '../../../theme/palette';
+import { FinalStandingsCardList } from './FinalStandingsCardList';
 
 const TABULAR = 'font-mono tabular-nums tracking-tight';
 const thClass = 'py-2 px-3 text-caption font-semibold uppercase tracking-wide text-fg-secondary';
 const tdClass = 'py-2 px-3';
-const pillClass = 'flex cursor-pointer items-center gap-1.5 rounded-full border py-1.5 px-3.5 text-caption transition-all duration-150';
+const pillClass = 'flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border py-1.5 px-3.5 text-caption transition-all duration-150 max-md:min-h-11';
 const pillInactiveClass = 'border-line bg-surface font-medium text-fg-secondary';
+
+/** Accent and champion flags for one standings row; `sectionColor` is the table section's color fallback. */
+export function getStandingRowAccent(row: GlobalStandingRow, sectionColor?: string) {
+  const isOverallChamp = row.finalRank === 1;
+  const isTierChamp = !isOverallChamp && row.eliminationRound === 'Champion';
+  const tierColor = row.tier?.primaryColor || sectionColor || THEME_FALLBACK.primaryColor;
+  return { isOverallChamp, isTierChamp, tierColor };
+}
+
+interface StandingCellProps {
+  row: GlobalStandingRow;
+  tierColor: string;
+}
+
+/** "Qual & Delta" cell: qual seed, rank delta badge and qual score. */
+export const StandingQualDelta: React.FC<StandingCellProps & { showQualScore?: boolean }> = ({
+  row,
+  tierColor,
+  showQualScore = true,
+}) => {
+  const delta = row.rankDelta;
+  const isPositiveDelta = typeof delta === 'number' && delta > 0;
+  const isNegativeDelta = typeof delta === 'number' && delta < 0;
+  return (
+    <div className="inline-flex flex-col items-center gap-1">
+      <div className="flex items-center gap-1.5">
+        <span className={cn(TABULAR, 'text-caption font-semibold text-fg-secondary')}>
+          {row.qualRank ? `Seed #${row.qualRank}` : '—'}
+        </span>
+
+        {/* Delta Badge */}
+        {typeof delta === 'number' && !row.isDNQ && !row.isDisqualified && (
+          <span
+            title={`Qual Rank #${row.qualRank} → Final #${row.finalRank}`}
+            className={cn(
+              TABULAR,
+              'inline-flex items-center gap-0.5 rounded-sm py-0.5 px-1.5 text-xs font-bold',
+              isPositiveDelta
+                ? 'bg-green/18 text-green-bright'
+                : isNegativeDelta
+                ? 'bg-rose-500/18 text-rose-400'
+                : 'bg-white/8 text-fg-muted'
+            )}
+          >
+            {isPositiveDelta ? (
+              <>
+                <TrendingUp size={11} />
+                <span>+{delta}</span>
+              </>
+            ) : isNegativeDelta ? (
+              <>
+                <TrendingDown size={11} />
+                <span>{delta}</span>
+              </>
+            ) : (
+              <>
+                <Minus size={11} />
+                <span>0</span>
+              </>
+            )}
+          </span>
+        )}
+      </div>
+
+      {showQualScore && row.qualScore !== undefined && (
+        <span
+          className={cn(TABULAR, 'text-xs', !row.tier && 'text-fg-muted')}
+          style={{ color: row.tier ? tierColor : undefined }}
+        >
+          {row.qualScore.toLocaleString()} pts
+        </span>
+      )}
+    </div>
+  );
+};
+
+/** "Stage Reached" label. */
+export const StandingStageReached: React.FC<StandingCellProps> = ({ row, tierColor }) => (
+  <span
+    className={cn(
+      'inline-block rounded-sm border py-1 px-2 text-xs font-bold',
+      !row.tier &&
+        (row.isDisqualified
+          ? 'border-transparent bg-red/15 text-red-300'
+          : 'border-transparent bg-white/6 text-fg-secondary')
+    )}
+    style={
+      row.tier
+        ? {
+            background: colorWithAlpha(tierColor, 0.16, 'rgba(255, 255, 255, 0.06)'),
+            color: tierColor,
+            borderColor: colorWithAlpha(tierColor, 0.32, 'rgba(255, 255, 255, 0.1)'),
+          }
+        : undefined
+    }
+  >
+    {row.eliminationRound || 'Participant'}
+  </span>
+);
+
+/** "Exit Match / Loss Avg" cell. `wrap` lets the score line wrap (phone cards). */
+export const StandingExitMatch: React.FC<StandingCellProps & { isOverallChamp: boolean; isTierChamp: boolean; wrap?: boolean }> = ({
+  row,
+  tierColor,
+  isOverallChamp,
+  isTierChamp,
+  wrap = false,
+}) =>
+  row.exitDetails ? (
+    <div className="flex flex-col gap-0.5">
+      <div className={cn('flex items-center gap-1.5', wrap && 'flex-wrap')}>
+        {isOverallChamp || isTierChamp ? (
+          <span className="inline-flex items-center gap-1 text-caption font-bold" style={{ color: tierColor }}>
+            <Trophy size={12} />
+            {row.exitDetails.scoreDisplay}
+          </span>
+        ) : (
+          <span
+            className={cn(TABULAR, 'font-bold', !row.tier && 'text-fg')}
+            style={{ color: row.tier ? tierColor : undefined }}
+          >
+            {row.exitDetails.scoreDisplay}
+          </span>
+        )}
+        <span className="text-caption text-fg-secondary">
+          vs {row.exitDetails.opponentName || 'Opponent'}
+        </span>
+        {row.exitDetails.isForfeit && (
+          <span className="rounded-sm bg-red/20 py-0 px-1.5 text-2xs font-semibold text-red-bright">
+            Forfeit
+          </span>
+        )}
+      </div>
+      <div className={cn(TABULAR, 'text-xs text-fg-muted')}>
+        Loss Avg:{' '}
+        <strong
+          className={cn(!row.tier && 'text-fg-secondary')}
+          style={{ color: row.tier ? tierColor : undefined }}
+        >
+          {row.exitDetails.avgLossScore > 0 ? row.exitDetails.avgLossScore.toLocaleString() : '—'}
+        </strong>
+      </div>
+    </div>
+  ) : isOverallChamp ? (
+    <div className="inline-flex items-center gap-1 text-caption font-semibold" style={{ color: tierColor }}>
+      <Trophy size={13} /> Undefeated Champion
+    </div>
+  ) : isTierChamp ? (
+    <div className="inline-flex items-center gap-1 text-caption font-semibold" style={{ color: tierColor }}>
+      <Trophy size={13} /> Bracket Champion
+    </div>
+  ) : row.isDNQ ? (
+    <span className="text-caption text-fg-muted">
+      Did Not Qualify
+    </span>
+  ) : row.isDisqualified ? (
+    <span className="text-caption text-red-bright">
+      Disqualified
+    </span>
+  ) : (
+    <span className="text-caption text-fg-muted">
+      —
+    </span>
+  );
+
+/** "Match Rec" cell. */
+export const StandingMatchRecord: React.FC<{ row: GlobalStandingRow }> = ({ row }) => (
+  <span
+    className={cn(
+      TABULAR,
+      'font-semibold',
+      row.stats.matchesPlayed > 0 ? 'text-fg' : 'text-fg-muted'
+    )}
+  >
+    {row.stats.matchRecordDisplay}
+  </span>
+);
+
+/** "Game Rec" cell. */
+export const StandingGameRecord: React.FC<{ row: GlobalStandingRow }> = ({ row }) => (
+  <span
+    className={cn(
+      TABULAR,
+      'font-semibold',
+      row.stats.gamesWon + row.stats.gamesLost > 0 ? 'text-fg' : 'text-fg-muted'
+    )}
+  >
+    {row.stats.gameRecordDisplay}
+  </span>
+);
+
+/** "Game Score Avg" cell. */
+export const StandingGameScoreAvg: React.FC<StandingCellProps> = ({ row, tierColor }) =>
+  row.stats.overallGameAvg > 0 ? (
+    <span
+      className={cn(TABULAR, 'text-base font-bold', !row.tier && 'text-gold-bright')}
+      style={{ color: row.tier ? tierColor : undefined }}
+    >
+      {row.stats.overallGameAvg.toLocaleString()}
+    </span>
+  ) : (
+    <span className="text-fg-muted">—</span>
+  );
 
 interface FinalStandingsTableProps {
   tournament: Tournament;
@@ -43,6 +247,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
   const [selectedFilter, setSelectedFilter] = useState<string>(initialTierId || 'ALL');
   const [selectedPlayerForDrawer, setSelectedPlayerForDrawer] = useState<PlayerProfile | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const handlePlayerClick = (pId: string, pName: string, country?: string, playstyle?: Playstyle) => {
     const profile = (tournament.playersPool || []).find(p => p.id === pId) || {
@@ -200,12 +405,12 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
         <p className="text-sm leading-normal text-fg-secondary">
           This tournament does not have any bracket tiers yet. Qualifiers can be entered and ranked on the leaderboard, or you can create bracket tiers in Settings.
         </p>
-        <div className="mt-2 flex flex-wrap justify-center gap-3">
+        <div className="mt-2 flex flex-wrap justify-center gap-3 max-md:flex-col max-md:items-stretch">
           <Button onClick={() => navigate(`/${tournament.slug}/leaderboard`)}>
             🏆 View Qualifiers
           </Button>
           <Button variant="primary" onClick={() => navigate(`/${tournament.slug}/manage/settings`)}>
-            ⚙️ Configure Tiers in Settings
+            ⚙️ Configure Tiers
           </Button>
         </div>
       </div>
@@ -226,7 +431,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
         <p className="text-sm leading-normal text-fg-secondary">
           Qualifiers are currently running and tournament brackets have not been locked into match play. Final standings will become available once qualifiers conclude and brackets are finalized.
         </p>
-        <div className="mt-2 flex flex-wrap justify-center gap-3">
+        <div className="mt-2 flex flex-wrap justify-center gap-3 max-md:flex-col max-md:items-stretch">
           <Button
             onClick={() => navigate(isManage ? `/${tournament.slug}/manage/qualifiers` : `/${tournament.slug}/leaderboard`)}
           >
@@ -240,7 +445,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
             </Button>
           )}
           <Button variant="primary" onClick={() => navigate(`/${tournament.slug}/manage/settings`)}>
-            ⚙️ Finalize in Settings
+            ⚙️ Open Settings
           </Button>
         </div>
       </div>
@@ -265,7 +470,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
       />
 
       {/* Section Filter Pills */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-md:-mx-3 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3 max-md:[scrollbar-width:none]">
         <button
           onClick={() => setSelectedFilter('ALL')}
           className={cn(
@@ -351,6 +556,12 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
               : 'Standings will automatically calculate and update here as bracket matches are played and concluded.'}
           </p>
         </div>
+      ) : isMobile ? (
+        <FinalStandingsCardList
+          rows={sections.flatMap(section => section.rows)}
+          isObsMode={isObsMode}
+          onSelectPlayer={handlePlayerClick}
+        />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-line bg-surface shadow-md">
           <table className="w-full min-w-237.5 border-collapse text-sm">
@@ -413,14 +624,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
 
                   {/* Competitor Rows */}
                   {section.rows.map((row, idx) => {
-                    const isOverallChamp = row.finalRank === 1;
-                    const isTierChamp = !isOverallChamp && row.eliminationRound === 'Champion';
-                    const tierColor = row.tier?.primaryColor || section.color || THEME_FALLBACK.primaryColor;
-
-                    // Rank Delta formatting
-                    const delta = row.rankDelta;
-                    const isPositiveDelta = typeof delta === 'number' && delta > 0;
-                    const isNegativeDelta = typeof delta === 'number' && delta < 0;
+                    const { isOverallChamp, isTierChamp, tierColor } = getStandingRowAccent(row, section.color);
 
                     // Row background with tier cardColor and zebra striping
                     const baseCard = row.tier?.cardColor || 'var(--color-surface)';
@@ -490,7 +694,7 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
                               onClick={() => handlePlayerClick(row.player.id, getEffectivePlayerName(row.player), row.player.country, row.player.playstyle)}
                               className="inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-left text-base font-bold text-white no-underline transition-colors duration-150 hover:text-(--name-hover) hover:underline"
                               style={{ '--name-hover': tierColor } as React.CSSProperties}
-                              title="View player tournament profile"
+                              title="View Competitor"
                             >
                               {getEffectivePlayerName(row.player)}
                             </button>
@@ -515,179 +719,32 @@ export const FinalStandingsTable: React.FC<FinalStandingsTableProps> = ({
 
                         {/* 3. Qual Seed & Rank Delta */}
                         <td className={cn(tdClass, 'text-center')}>
-                          <div className="inline-flex flex-col items-center gap-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className={cn(TABULAR, 'text-caption font-semibold text-fg-secondary')}>
-                                {row.qualRank ? `Seed #${row.qualRank}` : '—'}
-                              </span>
-
-                              {/* Delta Badge */}
-                              {typeof delta === 'number' && !row.isDNQ && !row.isDisqualified && (
-                                <span
-                                  title={`Qual Rank #${row.qualRank} → Final #${row.finalRank}`}
-                                  className={cn(
-                                    TABULAR,
-                                    'inline-flex items-center gap-0.5 rounded-sm py-0.5 px-1.5 text-xs font-bold',
-                                    isPositiveDelta
-                                      ? 'bg-green/18 text-green-bright'
-                                      : isNegativeDelta
-                                      ? 'bg-rose-500/18 text-rose-400'
-                                      : 'bg-white/8 text-fg-muted'
-                                  )}
-                                >
-                                  {isPositiveDelta ? (
-                                    <>
-                                      <TrendingUp size={11} />
-                                      <span>+{delta}</span>
-                                    </>
-                                  ) : isNegativeDelta ? (
-                                    <>
-                                      <TrendingDown size={11} />
-                                      <span>{delta}</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Minus size={11} />
-                                      <span>0</span>
-                                    </>
-                                  )}
-                                </span>
-                              )}
-                            </div>
-
-                            {row.qualScore !== undefined && (
-                              <span
-                                className={cn(TABULAR, 'text-xs', !row.tier && 'text-fg-muted')}
-                                style={{ color: row.tier ? tierColor : undefined }}
-                              >
-                                {row.qualScore.toLocaleString()} pts
-                              </span>
-                            )}
-                          </div>
+                          <StandingQualDelta row={row} tierColor={tierColor} />
                         </td>
 
                         {/* 4. Stage Reached */}
                         <td className={cn(tdClass, 'text-center')}>
-                          <span
-                            className={cn(
-                              'inline-block rounded-sm border py-1 px-2 text-xs font-bold',
-                              !row.tier &&
-                                (row.isDisqualified
-                                  ? 'border-transparent bg-red/15 text-red-300'
-                                  : 'border-transparent bg-white/6 text-fg-secondary')
-                            )}
-                            style={
-                              row.tier
-                                ? {
-                                    background: colorWithAlpha(tierColor, 0.16, 'rgba(255, 255, 255, 0.06)'),
-                                    color: tierColor,
-                                    borderColor: colorWithAlpha(tierColor, 0.32, 'rgba(255, 255, 255, 0.1)'),
-                                  }
-                                : undefined
-                            }
-                          >
-                            {row.eliminationRound || 'Participant'}
-                          </span>
+                          <StandingStageReached row={row} tierColor={tierColor} />
                         </td>
 
                         {/* 5. Exit Match Details / Tiebreaker Loss Avg */}
                         <td className={tdClass}>
-                          {row.exitDetails ? (
-                            <div className="flex flex-col gap-0.5">
-                              <div className="flex items-center gap-1.5">
-                                {isOverallChamp || isTierChamp ? (
-                                  <span className="inline-flex items-center gap-1 text-caption font-bold" style={{ color: tierColor }}>
-                                    <Trophy size={12} />
-                                    {row.exitDetails.scoreDisplay}
-                                  </span>
-                                ) : (
-                                  <span
-                                    className={cn(TABULAR, 'font-bold', !row.tier && 'text-fg')}
-                                    style={{ color: row.tier ? tierColor : undefined }}
-                                  >
-                                    {row.exitDetails.scoreDisplay}
-                                  </span>
-                                )}
-                                <span className="text-caption text-fg-secondary">
-                                  vs {row.exitDetails.opponentName || 'Opponent'}
-                                </span>
-                                {row.exitDetails.isForfeit && (
-                                  <span className="rounded-sm bg-red/20 py-0 px-1.5 text-2xs font-semibold text-red-bright">
-                                    Forfeit
-                                  </span>
-                                )}
-                              </div>
-                              <div className={cn(TABULAR, 'text-xs text-fg-muted')}>
-                                Loss Avg:{' '}
-                                <strong
-                                  className={cn(!row.tier && 'text-fg-secondary')}
-                                  style={{ color: row.tier ? tierColor : undefined }}
-                                >
-                                  {row.exitDetails.avgLossScore > 0 ? row.exitDetails.avgLossScore.toLocaleString() : '—'}
-                                </strong>
-                              </div>
-                            </div>
-                          ) : isOverallChamp ? (
-                            <div className="inline-flex items-center gap-1 text-caption font-semibold" style={{ color: tierColor }}>
-                              <Trophy size={13} /> Undefeated Champion
-                            </div>
-                          ) : isTierChamp ? (
-                            <div className="inline-flex items-center gap-1 text-caption font-semibold" style={{ color: tierColor }}>
-                              <Trophy size={13} /> Bracket Champion
-                            </div>
-                          ) : row.isDNQ ? (
-                            <span className="text-caption text-fg-muted">
-                              Did Not Qualify
-                            </span>
-                          ) : row.isDisqualified ? (
-                            <span className="text-caption text-red-bright">
-                              Disqualified
-                            </span>
-                          ) : (
-                            <span className="text-caption text-fg-muted">
-                              —
-                            </span>
-                          )}
+                          <StandingExitMatch row={row} tierColor={tierColor} isOverallChamp={isOverallChamp} isTierChamp={isTierChamp} />
                         </td>
 
                         {/* 6. Match Record */}
                         <td className={cn(tdClass, 'text-center')}>
-                          <span
-                            className={cn(
-                              TABULAR,
-                              'font-semibold',
-                              row.stats.matchesPlayed > 0 ? 'text-fg' : 'text-fg-muted'
-                            )}
-                          >
-                            {row.stats.matchRecordDisplay}
-                          </span>
+                          <StandingMatchRecord row={row} />
                         </td>
 
                         {/* 7. Game Record */}
                         <td className={cn(tdClass, 'text-center')}>
-                          <span
-                            className={cn(
-                              TABULAR,
-                              'font-semibold',
-                              row.stats.gamesWon + row.stats.gamesLost > 0 ? 'text-fg' : 'text-fg-muted'
-                            )}
-                          >
-                            {row.stats.gameRecordDisplay}
-                          </span>
+                          <StandingGameRecord row={row} />
                         </td>
 
                         {/* 8. Overall Game Average */}
                         <td className={cn(tdClass, 'pr-5 text-right')}>
-                          {row.stats.overallGameAvg > 0 ? (
-                            <span
-                              className={cn(TABULAR, 'text-base font-bold', !row.tier && 'text-gold-bright')}
-                              style={{ color: row.tier ? tierColor : undefined }}
-                            >
-                              {row.stats.overallGameAvg.toLocaleString()}
-                            </span>
-                          ) : (
-                            <span className="text-fg-muted">—</span>
-                          )}
+                          <StandingGameScoreAvg row={row} tierColor={tierColor} />
                         </td>
                       </tr>
                     );

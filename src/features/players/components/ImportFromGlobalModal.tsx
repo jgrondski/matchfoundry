@@ -162,7 +162,7 @@ export const ImportFromGlobalModal: React.FC<ImportFromGlobalModalProps> = ({
                     className: 'mt-2 gap-1.5 px-3.5 py-2 text-caption hover:border-fg-secondary hover:bg-highlight',
                   })}
                 >
-                  <Plus size={14} /> Open Global Player Pool
+                  <Plus size={14} /> Open Pool
                 </Link>
               </div>
             ) : filteredAvailable.length === 0 ? (

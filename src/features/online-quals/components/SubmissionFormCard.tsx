@@ -144,12 +144,13 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
                     }
                   }}
                   type="text"
+                  inputMode="numeric"
                   value={scoreVal === 0 ? '' : scoreVal.toLocaleString()}
                   onChange={e => handleScoreChange(idx, e.target.value)}
                   onBlur={() => setSummaryScores(currentScores)}
                   placeholder="0"
                   disabled={disabled}
-                  className="flex-1 rounded-md border border-line bg-canvas px-3.5 py-2.5 font-mono text-base font-bold text-white"
+                  className="min-w-0 flex-1 rounded-md border border-line bg-canvas px-3.5 py-2.5 font-mono text-base font-bold text-white max-md:text-base"
                   data-testid={`score-input-${idx}`}
                 />
                 {!isAverage && currentScores.length > 1 && (
@@ -157,7 +158,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
                     type="button"
                     onClick={() => handleRemoveAttempt(idx)}
                     disabled={disabled}
-                    className="cursor-pointer border-0 bg-transparent p-1.5 text-red-bright"
+                    className="cursor-pointer border-0 bg-transparent p-1.5 text-red-bright max-md:flex max-md:min-h-11 max-md:min-w-11 max-md:items-center max-md:justify-center"
                     title="Remove attempt"
                   >
                     <Trash2 size={16} />
@@ -172,9 +173,9 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
               type="button"
               onClick={handleAddAttempt}
               disabled={disabled}
-              className="mt-2.5 inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-line bg-white/5 px-3.5 py-1.5 text-caption font-semibold text-fg-secondary"
+              className="mt-2.5 inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-line bg-white/5 px-3.5 py-1.5 text-caption font-semibold text-fg-secondary max-md:min-h-11"
             >
-              <Plus size={14} /> Add Another Attempt
+              <Plus size={14} /> Add Attempt
             </button>
           )}
         </div>
@@ -192,12 +193,13 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
             </div>
             <input
               type="url"
+              inputMode="url"
               value={twitchVodUrl}
               onChange={e => onTwitchVodUrlChange(e.target.value)}
               placeholder="https://twitch.tv/videos/2481093821?t=00h14m20s"
               disabled={disabled}
               required
-              className="w-full rounded-md border border-line bg-canvas py-3 pr-3.5 pl-10 text-base text-white"
+              className="w-full rounded-md border border-line bg-canvas py-3 pr-3.5 pl-10 text-base text-white max-md:text-base"
               data-testid="twitch-vod-input"
             />
           </div>
@@ -232,7 +234,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
             type="submit"
             disabled={!canSubmit}
             className={cn(
-              'flex items-center gap-2 rounded-md border-0 px-7 py-3 text-base font-extrabold',
+              'flex items-center gap-2 rounded-md border-0 px-7 py-3 text-base font-extrabold max-md:w-full max-md:justify-center',
               canSubmit
                 ? 'cursor-pointer bg-gold-bright text-black shadow-[0_4px_14px_rgba(245,158,11,0.35)]'
                 : 'cursor-not-allowed bg-slate-700 text-fg-secondary shadow-none'

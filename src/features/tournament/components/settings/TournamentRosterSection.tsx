@@ -38,7 +38,7 @@ export const TournamentRosterSection: React.FC<TournamentRosterSectionProps> = (
             'gap-1.5 py-1.5 px-3.5 text-caption no-underline hover:brightness-110 hover:shadow-gold-hover hover:-translate-y-px',
         })}
       >
-        <Users size={14} /> Go to Players
+        <Users size={14} /> Open Players
       </Link>
     </section>
   );

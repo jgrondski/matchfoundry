@@ -24,7 +24,7 @@ describe('Image upload controls are removed', () => {
   });
 
   // The modal copies initialPlayer into state in a useEffect, which static rendering never runs, so
-  // "Reset to Flag" (shown only for avatarType 'custom') cannot appear here. That button is unchanged by ER.10.
+  // "Use Flag" (shown only for avatarType 'custom') cannot appear here. That button is unchanged by ER.10.
   it('PlayerEditModal for a player with a custom avatar has no Change Photo button', () => {
     const html = renderToStaticMarkup(
       <PlayerEditModal

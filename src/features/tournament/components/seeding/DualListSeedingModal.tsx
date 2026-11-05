@@ -18,7 +18,7 @@ import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
 import { PlaystyleChip } from '../../../players/components/PlaystyleChip';
 import { getEffectivePlayerName } from '../../../players/playerNameUtils';
 import { Overlay } from '../../../../components/overlay';
-import { Badge, Button, IconButton, cn } from '../../../../components/ui';
+import { Badge, Button, Chip, IconButton, cn, useIsMobile } from '../../../../components/ui';
 
 interface DualListSeedingModalProps {
   isOpen: boolean;
@@ -51,6 +51,9 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
   const [availableSearch, setAvailableSearch] = useState('');
   const [seededSearch, setSeededSearch] = useState('');
   const [availableSourceTab, setAvailableSourceTab] = useState<'roster' | 'global'>('roster');
+  // Phones show one list at a time.
+  const isMobile = useIsMobile();
+  const [mobileList, setMobileList] = useState<'available' | 'seeded'>('available');
 
   // Track last clicked index for Shift-Click range selection
   const [lastClickedAvailableIdx, setLastClickedAvailableIdx] = useState<number | null>(null);
@@ -65,6 +68,7 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
       setSelectedSeededIds(new Set());
       setAvailableSearch('');
       setSeededSearch('');
+      setMobileList('available');
     }
   }, [isOpen, tournament.manualSeeds]);
 
@@ -298,6 +302,286 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
     onClose();
   };
 
+  // Left Panel: Available Players
+  const availablePanel = (
+    <div className="flex min-h-0 flex-col border-r border-line bg-surface max-md:border-r-0">
+      {/* Source Tabs & Search */}
+      <div className="flex flex-col gap-2.5 border-b border-line-subtle bg-elevated px-4 py-3.5">
+        {/* Tabs */}
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              setAvailableSourceTab('roster');
+              setLastClickedAvailableIdx(null);
+            }}
+            className={cn(
+              'flex-1 cursor-pointer rounded-sm border px-2.5 py-1.5 text-caption',
+              availableSourceTab === 'roster'
+                ? 'border-brand bg-seed-indigo/15 font-bold text-brand'
+                : 'border-line bg-surface font-medium text-fg-secondary'
+            )}
+          >
+            Tournament Roster ({availableCandidates.roster.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAvailableSourceTab('global');
+              setLastClickedAvailableIdx(null);
+            }}
+            className={cn(
+              'flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-sm border px-2.5 py-1.5 text-caption',
+              availableSourceTab === 'global'
+                ? 'border-gold-bright bg-gold/15 font-bold text-gold-bright'
+                : 'border-line bg-surface font-medium text-fg-secondary'
+            )}
+          >
+            <Globe size={13} />
+            Global Pool ({availableCandidates.global.length})
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search
+            size={14}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted"
+          />
+          <input
+            type="text"
+            placeholder="Filter available competitors..."
+            value={availableSearch}
+            onChange={e => setAvailableSearch(e.target.value)}
+            className="w-full rounded-sm border border-line bg-surface py-1.5 pl-8 pr-2.5 text-caption text-fg max-md:text-base"
+          />
+        </div>
+
+        {/* Selection Summary & Quick Actions */}
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-fg-muted">
+            Selected: <strong className="text-brand">{selectedAvailableIds.length}</strong> of {filteredAvailable.length}
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleSelectAllAvailable}
+              className="cursor-pointer border-0 bg-transparent p-0 text-xs text-brand"
+            >
+              Select All
+            </button>
+            <span className="text-line">•</span>
+            <button
+              type="button"
+              onClick={handleClearAvailableSelection}
+              className="cursor-pointer border-0 bg-transparent p-0 text-xs text-fg-muted"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Available Player List */}
+      <div className="flex-1 overflow-y-auto p-2">
+        {filteredAvailable.length === 0 ? (
+          <div className="px-4 py-8 text-center text-caption text-fg-muted">
+            No available competitors found.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {filteredAvailable.map((player, idx) => {
+              const isSelected = selectedAvailableIds.includes(player.id);
+              const orderNumber = availableSelectionOrder.get(player.id);
+
+              return (
+                <div
+                  key={player.id}
+                  onClick={e => handleToggleAvailable(player.id, idx, e.shiftKey)}
+                  className={cn(
+                    'flex cursor-pointer select-none items-center justify-between rounded-sm border px-2.5 py-2 transition-colors duration-100',
+                    isSelected ? 'border-brand bg-seed-indigo/12' : 'border-line-subtle bg-elevated'
+                  )}
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    {/* Order Badge or Checkbox */}
+                    {isSelected ? (
+                      <div
+                        className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-extrabold text-white"
+                        title={`Transfer Order: ${orderNumber}`}
+                      >
+                        {orderNumber}
+                      </div>
+                    ) : (
+                      <Square size={16} color="var(--color-fg-muted)" className="shrink-0" />
+                    )}
+
+                    <span className="truncate text-sm font-semibold text-fg">
+                      {getEffectivePlayerName(player)}
+                    </span>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <PlayerAvatar player={player} />
+                    {player.playstyle && <PlaystyleChip style={player.playstyle} />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Right Panel: Staged Seeded List
+  const seededPanel = (
+    <div className="flex min-h-0 flex-col bg-surface">
+      {/* Header & Search */}
+      <div className="flex flex-col gap-2.5 border-b border-line-subtle bg-elevated px-4 py-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Layers size={16} color="var(--color-gold-bright)" />
+            <span className="text-sm font-bold text-fg">
+              Seeded Roster ({stagedSeeds.length} competitors)
+            </span>
+          </div>
+          {stagedSeeds.length >= totalCapacity && totalCapacity > 0 ? (
+            <Badge variant="green" className="px-1.5 py-0.5 text-2xs">
+              <ShieldCheck size={11} /> All Tiers Filled
+            </Badge>
+          ) : (
+            <Badge variant="gold" className="px-1.5 py-0.5 text-2xs">
+              {totalCapacity - stagedSeeds.length} slots remain
+            </Badge>
+          )}
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <Search
+            size={14}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted"
+          />
+          <input
+            type="text"
+            placeholder="Filter seeded competitors..."
+            value={seededSearch}
+            onChange={e => setSeededSearch(e.target.value)}
+            className="w-full rounded-sm border border-line bg-surface py-1.5 pl-8 pr-2.5 text-caption text-fg max-md:text-base"
+          />
+        </div>
+
+        {/* Selection Summary & Quick Actions */}
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-fg-muted">
+            Selected for removal: <strong className="text-red">{selectedSeededIds.size}</strong>
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleSelectAllSeeded}
+              className="cursor-pointer border-0 bg-transparent p-0 text-xs text-brand"
+            >
+              Select All
+            </button>
+            <span className="text-line">•</span>
+            <button
+              type="button"
+              onClick={handleClearSeededSelection}
+              className="cursor-pointer border-0 bg-transparent p-0 text-xs text-fg-muted"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Seeded Player List with Tier Cutoff Banners */}
+      <div className="flex-1 overflow-y-auto p-2">
+        {filteredSeeded.length === 0 ? (
+          <div className="px-4 py-8 text-center text-caption text-fg-muted">
+            {stagedSeeds.length === 0
+              ? 'No competitors seeded yet. Select players from the left and click Add.'
+              : 'No seeds match your search query.'}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {filteredSeeded.map((item, idx) => {
+              const isSelected = selectedSeededIds.has(item.id);
+              const cutoff = tierCutoffs.find(c => c.start === item.seedNumber);
+              const isReserves = item.seedNumber === totalCapacity + 1;
+
+              return (
+                <React.Fragment key={item.id}>
+                  {/* Tier Divider Banner */}
+                  {cutoff && (
+                    <div
+                      className="mb-0.5 mt-1 flex items-center justify-between rounded-sm border-l-4 px-2.5 py-1.5"
+                      style={{
+                        backgroundColor: cutoff.tier.cardColor || 'rgba(245, 158, 11, 0.08)',
+                        borderLeftColor: cutoff.tier.primaryColor || 'var(--color-gold-bright)',
+                      }}
+                    >
+                      <span
+                        className="text-xs font-extrabold uppercase"
+                        style={{ color: cutoff.tier.primaryColor || 'var(--color-gold-bright)' }}
+                      >
+                        {cutoff.tier.name} (Seeds {cutoff.start}–{cutoff.end})
+                      </span>
+                      <span className="text-2xs text-fg-muted">
+                        Tier {cutoff.tier.priority}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Reserves Divider */}
+                  {isReserves && (
+                    <div className="mb-0.5 mt-1 rounded-sm border-l-4 border-fg-muted bg-fg-muted/8 px-2.5 py-1.5">
+                      <span className="text-xs font-bold uppercase text-fg-secondary">
+                        Alternates / DNQ Pool (Seeds {totalCapacity + 1}+)
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Seeded Row */}
+                  <div
+                    onClick={e => handleToggleSeeded(item.id, idx, e.shiftKey)}
+                    className={cn(
+                      'flex cursor-pointer select-none items-center justify-between rounded-sm border px-2.5 py-2',
+                      isSelected ? 'border-red bg-red/12' : 'border-line-subtle bg-elevated'
+                    )}
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      {isSelected ? (
+                        <CheckSquare size={16} color="var(--color-red)" className="shrink-0" />
+                      ) : (
+                        <Square size={16} color="var(--color-fg-muted)" className="shrink-0" />
+                      )}
+
+                      <span className="min-w-8 text-caption font-extrabold text-gold-bright">
+                        #{item.seedNumber}
+                      </span>
+
+                      <span className="truncate text-sm font-semibold text-fg">
+                        {item.name}
+                      </span>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <PlayerAvatar player={item} />
+                      {item.playstyle && <PlaystyleChip style={item.playstyle} />}
+                    </div>
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <Overlay
       open
@@ -328,369 +612,135 @@ export const DualListSeedingModal: React.FC<DualListSeedingModalProps> = ({
               aria-label="Close"
               onClick={requestClose}
               className="p-1.5"
-              title="Close without saving"
+              title="Close"
             >
               <X size={20} />
             </IconButton>
           </div>
 
           {/* Dual List Body */}
-          <div className="grid min-h-0 flex-1 grid-cols-[1fr_140px_1fr] overflow-hidden">
-            {/* Left Panel: Available Players */}
-            <div className="flex min-h-0 flex-col border-r border-line bg-surface">
-              {/* Source Tabs & Search */}
-              <div className="flex flex-col gap-2.5 border-b border-line-subtle bg-elevated px-4 py-3.5">
-                {/* Tabs */}
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAvailableSourceTab('roster');
-                      setLastClickedAvailableIdx(null);
-                    }}
-                    className={cn(
-                      'flex-1 cursor-pointer rounded-sm border px-2.5 py-1.5 text-caption',
-                      availableSourceTab === 'roster'
-                        ? 'border-brand bg-seed-indigo/15 font-bold text-brand'
-                        : 'border-line bg-surface font-medium text-fg-secondary'
-                    )}
-                  >
-                    Tournament Roster ({availableCandidates.roster.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAvailableSourceTab('global');
-                      setLastClickedAvailableIdx(null);
-                    }}
-                    className={cn(
-                      'flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-sm border px-2.5 py-1.5 text-caption',
-                      availableSourceTab === 'global'
-                        ? 'border-gold-bright bg-gold/15 font-bold text-gold-bright'
-                        : 'border-line bg-surface font-medium text-fg-secondary'
-                    )}
-                  >
-                    <Globe size={13} />
-                    Global Pool ({availableCandidates.global.length})
-                  </button>
-                </div>
-
-                {/* Search Bar */}
-                <div className="relative">
-                  <Search
-                    size={14}
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Filter available competitors..."
-                    value={availableSearch}
-                    onChange={e => setAvailableSearch(e.target.value)}
-                    className="w-full rounded-sm border border-line bg-surface py-1.5 pl-8 pr-2.5 text-caption text-fg"
-                  />
-                </div>
-
-                {/* Selection Summary & Quick Actions */}
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-fg-muted">
-                    Selected: <strong className="text-brand">{selectedAvailableIds.length}</strong> of {filteredAvailable.length}
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSelectAllAvailable}
-                      className="cursor-pointer border-0 bg-transparent p-0 text-xs text-brand"
-                    >
-                      Select All
-                    </button>
-                    <span className="text-line">•</span>
-                    <button
-                      type="button"
-                      onClick={handleClearAvailableSelection}
-                      className="cursor-pointer border-0 bg-transparent p-0 text-xs text-fg-muted"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
+          {isMobile ? (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex gap-2 border-b border-line bg-elevated px-4 py-2.5">
+                <Chip active={mobileList === 'available'} onClick={() => setMobileList('available')}>
+                  Available
+                </Chip>
+                <Chip active={mobileList === 'seeded'} onClick={() => setMobileList('seeded')}>
+                  Seeded ({stagedSeeds.length})
+                </Chip>
               </div>
-
-              {/* Available Player List */}
-              <div className="flex-1 overflow-y-auto p-2">
-                {filteredAvailable.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-caption text-fg-muted">
-                    No available competitors found.
-                  </div>
+              {mobileList === 'available' ? availablePanel : seededPanel}
+              <div className="border-t border-line bg-elevated px-4 py-3">
+                {mobileList === 'available' ? (
+                  <Button
+                    variant="primary"
+                    disabled={selectedAvailableIds.length === 0}
+                    onClick={handleTransferToBottom}
+                    className="w-full"
+                  >
+                    Add Seeds
+                  </Button>
                 ) : (
-                  <div className="flex flex-col gap-1">
-                    {filteredAvailable.map((player, idx) => {
-                      const isSelected = selectedAvailableIds.includes(player.id);
-                      const orderNumber = availableSelectionOrder.get(player.id);
-
-                      return (
-                        <div
-                          key={player.id}
-                          onClick={e => handleToggleAvailable(player.id, idx, e.shiftKey)}
-                          className={cn(
-                            'flex cursor-pointer select-none items-center justify-between rounded-sm border px-2.5 py-2 transition-colors duration-100',
-                            isSelected ? 'border-brand bg-seed-indigo/12' : 'border-line-subtle bg-elevated'
-                          )}
-                        >
-                          <div className="flex min-w-0 items-center gap-2">
-                            {/* Order Badge or Checkbox */}
-                            {isSelected ? (
-                              <div
-                                className="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-extrabold text-white"
-                                title={`Transfer Order: ${orderNumber}`}
-                              >
-                                {orderNumber}
-                              </div>
-                            ) : (
-                              <Square size={16} color="var(--color-fg-muted)" className="shrink-0" />
-                            )}
-
-                            <span className="truncate text-sm font-semibold text-fg">
-                              {getEffectivePlayerName(player)}
-                            </span>
-                          </div>
-
-                          <div className="flex shrink-0 items-center gap-1.5">
-                            <PlayerAvatar player={player} />
-                            {player.playstyle && <PlaystyleChip style={player.playstyle} />}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <Button
+                    variant="secondary"
+                    disabled={selectedSeededIds.size === 0}
+                    onClick={handleRemoveSelectedSeeded}
+                    className={cn(
+                      'w-full',
+                      selectedSeededIds.size > 0 ? 'border-red text-red enabled:hover:border-red' : 'border-line text-fg-muted'
+                    )}
+                  >
+                    Remove
+                  </Button>
                 )}
               </div>
             </div>
+          ) : (
+            <div className="grid min-h-0 flex-1 grid-cols-[1fr_140px_1fr] overflow-hidden">
+              {availablePanel}
 
-            {/* Center Shuttle Controls */}
-            <div className="flex flex-col items-center justify-center gap-3 border-r border-line bg-elevated px-2 py-4">
-              {/* Add to Bottom */}
-              <Button
-                variant="primary"
-                disabled={selectedAvailableIds.length === 0}
-                onClick={handleTransferToBottom}
-                className="flex w-full flex-col items-center gap-1 px-1.5 py-2 text-xs"
-                title="Add selected competitors to the bottom of the seed list in the order selected"
-              >
-                <div className="flex items-center gap-1">
-                  <span>Add Bottom</span>
-                  <ArrowRight size={13} />
-                </div>
-                {selectedAvailableIds.length > 0 && (
-                  <span className="text-2xs opacity-85">
-                    ({selectedAvailableIds.length} players)
-                  </span>
-                )}
-              </Button>
-
-              {/* Add to Top */}
-              <Button
-                variant="secondary"
-                disabled={selectedAvailableIds.length === 0}
-                onClick={handleTransferToTop}
-                className="flex w-full flex-col items-center gap-1 px-1.5 py-2 text-xs"
-                title="Insert selected competitors at the top (Seed #1..N) in the order selected"
-              >
-                <div className="flex items-center gap-1">
-                  <ArrowUp size={13} />
-                  <span>Add Top</span>
-                </div>
-                {selectedAvailableIds.length > 0 && (
-                  <span className="text-2xs text-fg-muted">
-                    ({selectedAvailableIds.length} players)
-                  </span>
-                )}
-              </Button>
-
-              <div className="my-1 h-px w-4/5 bg-line" />
-
-              {/* Remove Selected from Seeded */}
-              <Button
-                variant="secondary"
-                disabled={selectedSeededIds.size === 0}
-                onClick={handleRemoveSelectedSeeded}
-                className={cn(
-                  'flex w-full flex-col items-center gap-1 px-1.5 py-2 text-xs',
-                  selectedSeededIds.size > 0 ? 'border-red text-red enabled:hover:border-red' : 'border-line text-fg-muted'
-                )}
-                title="Remove selected competitors from seeded list back to available pool"
-              >
-                <div className="flex items-center gap-1">
-                  <ArrowLeft size={13} />
-                  <span>Remove</span>
-                </div>
-                {selectedSeededIds.size > 0 && (
-                  <span className="text-2xs opacity-85">
-                    ({selectedSeededIds.size} selected)
-                  </span>
-                )}
-              </Button>
-            </div>
-
-            {/* Right Panel: Staged Seeded List */}
-            <div className="flex min-h-0 flex-col bg-surface">
-              {/* Header & Search */}
-              <div className="flex flex-col gap-2.5 border-b border-line-subtle bg-elevated px-4 py-3.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Layers size={16} color="var(--color-gold-bright)" />
-                    <span className="text-sm font-bold text-fg">
-                      Seeded Roster ({stagedSeeds.length} competitors)
+              {/* Center Shuttle Controls */}
+              <div className="flex flex-col items-center justify-center gap-3 border-r border-line bg-elevated px-2 py-4">
+                {/* Add to Bottom */}
+                <Button
+                  variant="primary"
+                  disabled={selectedAvailableIds.length === 0}
+                  onClick={handleTransferToBottom}
+                  className="flex w-full flex-col items-center gap-1 px-1.5 py-2 text-xs"
+                  title="Add Bottom"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Add Bottom</span>
+                    <ArrowRight size={13} />
+                  </div>
+                  {selectedAvailableIds.length > 0 && (
+                    <span className="text-2xs opacity-85">
+                      ({selectedAvailableIds.length} players)
                     </span>
-                  </div>
-                  {stagedSeeds.length >= totalCapacity && totalCapacity > 0 ? (
-                    <Badge variant="green" className="px-1.5 py-0.5 text-2xs">
-                      <ShieldCheck size={11} /> All Tiers Filled
-                    </Badge>
-                  ) : (
-                    <Badge variant="gold" className="px-1.5 py-0.5 text-2xs">
-                      {totalCapacity - stagedSeeds.length} slots remain
-                    </Badge>
                   )}
-                </div>
+                </Button>
 
-                {/* Search Bar */}
-                <div className="relative">
-                  <Search
-                    size={14}
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Filter seeded competitors..."
-                    value={seededSearch}
-                    onChange={e => setSeededSearch(e.target.value)}
-                    className="w-full rounded-sm border border-line bg-surface py-1.5 pl-8 pr-2.5 text-caption text-fg"
-                  />
-                </div>
-
-                {/* Selection Summary & Quick Actions */}
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-fg-muted">
-                    Selected for removal: <strong className="text-red">{selectedSeededIds.size}</strong>
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSelectAllSeeded}
-                      className="cursor-pointer border-0 bg-transparent p-0 text-xs text-brand"
-                    >
-                      Select All
-                    </button>
-                    <span className="text-line">•</span>
-                    <button
-                      type="button"
-                      onClick={handleClearSeededSelection}
-                      className="cursor-pointer border-0 bg-transparent p-0 text-xs text-fg-muted"
-                    >
-                      Clear
-                    </button>
+                {/* Add to Top */}
+                <Button
+                  variant="secondary"
+                  disabled={selectedAvailableIds.length === 0}
+                  onClick={handleTransferToTop}
+                  className="flex w-full flex-col items-center gap-1 px-1.5 py-2 text-xs"
+                  title="Add Top"
+                >
+                  <div className="flex items-center gap-1">
+                    <ArrowUp size={13} />
+                    <span>Add Top</span>
                   </div>
-                </div>
+                  {selectedAvailableIds.length > 0 && (
+                    <span className="text-2xs text-fg-muted">
+                      ({selectedAvailableIds.length} players)
+                    </span>
+                  )}
+                </Button>
+
+                <div className="my-1 h-px w-4/5 bg-line" />
+
+                {/* Remove Selected from Seeded */}
+                <Button
+                  variant="secondary"
+                  disabled={selectedSeededIds.size === 0}
+                  onClick={handleRemoveSelectedSeeded}
+                  className={cn(
+                    'flex w-full flex-col items-center gap-1 px-1.5 py-2 text-xs',
+                    selectedSeededIds.size > 0 ? 'border-red text-red enabled:hover:border-red' : 'border-line text-fg-muted'
+                  )}
+                  title="Remove Selected"
+                >
+                  <div className="flex items-center gap-1">
+                    <ArrowLeft size={13} />
+                    <span>Remove</span>
+                  </div>
+                  {selectedSeededIds.size > 0 && (
+                    <span className="text-2xs opacity-85">
+                      ({selectedSeededIds.size} selected)
+                    </span>
+                  )}
+                </Button>
               </div>
 
-              {/* Seeded Player List with Tier Cutoff Banners */}
-              <div className="flex-1 overflow-y-auto p-2">
-                {filteredSeeded.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-caption text-fg-muted">
-                    {stagedSeeds.length === 0
-                      ? 'No competitors seeded yet. Select players from the left and click Add.'
-                      : 'No seeds match your search query.'}
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-1">
-                    {filteredSeeded.map((item, idx) => {
-                      const isSelected = selectedSeededIds.has(item.id);
-                      const cutoff = tierCutoffs.find(c => c.start === item.seedNumber);
-                      const isReserves = item.seedNumber === totalCapacity + 1;
-
-                      return (
-                        <React.Fragment key={item.id}>
-                          {/* Tier Divider Banner */}
-                          {cutoff && (
-                            <div
-                              className="mb-0.5 mt-1 flex items-center justify-between rounded-sm border-l-4 px-2.5 py-1.5"
-                              style={{
-                                backgroundColor: cutoff.tier.cardColor || 'rgba(245, 158, 11, 0.08)',
-                                borderLeftColor: cutoff.tier.primaryColor || 'var(--color-gold-bright)',
-                              }}
-                            >
-                              <span
-                                className="text-xs font-extrabold uppercase"
-                                style={{ color: cutoff.tier.primaryColor || 'var(--color-gold-bright)' }}
-                              >
-                                {cutoff.tier.name} (Seeds {cutoff.start}–{cutoff.end})
-                              </span>
-                              <span className="text-2xs text-fg-muted">
-                                Tier {cutoff.tier.priority}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Reserves Divider */}
-                          {isReserves && (
-                            <div className="mb-0.5 mt-1 rounded-sm border-l-4 border-fg-muted bg-fg-muted/8 px-2.5 py-1.5">
-                              <span className="text-xs font-bold uppercase text-fg-secondary">
-                                Alternates / DNQ Pool (Seeds {totalCapacity + 1}+)
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Seeded Row */}
-                          <div
-                            onClick={e => handleToggleSeeded(item.id, idx, e.shiftKey)}
-                            className={cn(
-                              'flex cursor-pointer select-none items-center justify-between rounded-sm border px-2.5 py-2',
-                              isSelected ? 'border-red bg-red/12' : 'border-line-subtle bg-elevated'
-                            )}
-                          >
-                            <div className="flex min-w-0 items-center gap-2">
-                              {isSelected ? (
-                                <CheckSquare size={16} color="var(--color-red)" className="shrink-0" />
-                              ) : (
-                                <Square size={16} color="var(--color-fg-muted)" className="shrink-0" />
-                              )}
-
-                              <span className="min-w-8 text-caption font-extrabold text-gold-bright">
-                                #{item.seedNumber}
-                              </span>
-
-                              <span className="truncate text-sm font-semibold text-fg">
-                                {item.name}
-                              </span>
-                            </div>
-
-                            <div className="flex shrink-0 items-center gap-1.5">
-                              <PlayerAvatar player={item} />
-                              {item.playstyle && <PlaystyleChip style={item.playstyle} />}
-                            </div>
-                          </div>
-                        </React.Fragment>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              {seededPanel}
             </div>
-          </div>
+          )}
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t border-line bg-elevated px-6 py-4">
+          <div className="flex items-center justify-between border-t border-line bg-elevated px-6 py-4 max-md:sticky max-md:bottom-0 max-md:z-10 max-md:flex-col max-md:items-stretch max-md:gap-2 max-md:bg-surface max-md:px-4 max-md:py-3">
             <div className="text-caption text-fg-muted">
               <strong>{stagedSeeds.length}</strong> total seeded competitors staging
             </div>
 
-            <div className="flex items-center gap-3">
-              <Button variant="secondary" onClick={requestClose}>
+            <div className="flex items-center gap-3 max-md:flex-col max-md:items-stretch max-md:gap-2">
+              <Button variant="secondary" onClick={requestClose} className="max-md:w-full">
                 Cancel
               </Button>
-              <Button variant="primary" onClick={handleApply} className="gap-1.5 px-5">
+              <Button variant="primary" onClick={handleApply} className="gap-1.5 px-5 max-md:w-full">
                 <ShieldCheck size={16} />
-                Apply & Save Seeds ({stagedSeeds.length})
+                Save Seeds ({stagedSeeds.length})
               </Button>
             </div>
           </div>

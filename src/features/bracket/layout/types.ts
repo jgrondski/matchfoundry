@@ -26,7 +26,21 @@ export const DEFAULT_LAYOUT_CONFIG: LayoutConfig = {
   championHeight: 76,
 };
 
-export type BracketViewMode = 'standard' | 'fit' | 'split' | 'feed';
+export const COMPACT_LAYOUT_CONFIG: LayoutConfig = {
+  matchWidth: 136,
+  matchHeight: 44,
+  baseRowHeight: 56,
+  roundGap: 20,
+  headerHeight: 36,
+  paddingTop: 8,
+  paddingLeft: 12,
+  paddingRight: 16,
+  paddingBottom: 16,
+  championWidth: 140,
+  championHeight: 44,
+};
+
+export type BracketViewMode = 'standard' | 'fit' | 'split' | 'feed' | 'compact';
 
 export interface MatchPosition {
   matchId: string;

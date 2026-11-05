@@ -41,7 +41,7 @@ export const FinalStandingsPage: React.FC = () => {
       <div className="p-12 text-center text-fg-secondary">
         <h2 className="text-2xl font-bold">Tournament Not Found</h2>
         <Button variant="primary" onClick={() => navigate('/')} className="mt-4">
-          Back to Tournaments
+          All Tournaments
         </Button>
       </div>
     );
@@ -62,7 +62,7 @@ export const FinalStandingsPage: React.FC = () => {
   const mainContent = (
     <main
       className={cn(
-        'mx-auto flex-1 px-6',
+        'mx-auto flex-1 px-6 max-md:px-4 max-md:py-4',
         isStandingsGated
           ? 'flex max-w-150 flex-col items-center justify-center gap-4 py-12 text-center'
           : 'w-full max-w-300 py-8'

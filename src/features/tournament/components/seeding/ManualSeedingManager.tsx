@@ -27,7 +27,7 @@ const headerRowClass =
   'flex items-center gap-3 border-b border-line bg-elevated px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-fg-muted';
 const batchButtonClass = 'gap-1 px-2.5 py-1.5 text-caption';
 const rowControlClass =
-  'flex p-1 text-fg-secondary disabled:cursor-default disabled:text-fg-muted disabled:opacity-30';
+  'flex p-1 text-fg-secondary disabled:cursor-default disabled:text-fg-muted disabled:opacity-30 max-md:size-11 max-md:items-center max-md:justify-center';
 const seedInputClass =
   'w-full rounded-sm border border-line bg-elevated px-3 py-2 text-base font-bold text-gold-bright';
 
@@ -296,7 +296,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                   variant: 'secondary',
                   className: 'gap-1.5 px-3.5 py-2 text-caption hover:bg-highlight hover:border-fg-secondary',
                 })}
-                title="Open seeding in new page view"
+                title="Open Seeding"
               >
                 <span>New Page View</span>
                 <ExternalLink size={13} />
@@ -314,7 +314,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                   disabled={isLocked || manualSeeds.length < 2}
                   onClick={() => setIsShuffleConfirmOpen(true)}
                   className="min-w-20 text-center"
-                  title={isLocked ? 'Seeding is locked' : 'Randomize the seed sequence (Fisher-Yates shuffle)'}
+                  title={isLocked ? 'Seeding Locked' : 'Shuffle Seeds'}
                 >
                   Shuffle
                 </Button>
@@ -324,7 +324,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                   disabled={isLocked || manualSeeds.length < 2}
                   onClick={() => setIsReverseConfirmOpen(true)}
                   className="min-w-20 text-center"
-                  title={isLocked ? 'Seeding is locked' : 'Invert order of all seeds'}
+                  title={isLocked ? 'Seeding Locked' : 'Reverse Seeds'}
                 >
                   Reverse
                 </Button>
@@ -337,7 +337,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                   disabled={isLocked}
                   onClick={() => setIsBulkImportOpen(true)}
                   className="min-w-25 text-center"
-                  title={isLocked ? 'Seeding is locked during match play' : 'Paste an ordered list of names from Sheets or text'}
+                  title={isLocked ? 'Seeding Locked' : 'Paste Seeds'}
                 >
                   Bulk Import
                 </Button>
@@ -347,7 +347,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                   disabled={isLocked}
                   onClick={() => setIsDualListOpen(true)}
                   className="min-w-25 px-4.5 text-center"
-                  title={isLocked ? 'Seeding is locked' : 'Multi-select shuttle: select available players and stage seeds'}
+                  title={isLocked ? 'Seeding Locked' : 'Select Seeds'}
                 >
                   Add Seeds
                 </Button>
@@ -383,7 +383,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                   variant="secondary"
                   onClick={selectedPlayerIds.size === filteredList.length ? handleClearSelection : handleSelectAll}
                   className="gap-1.5 px-2.5 py-1.5 text-caption"
-                  title={selectedPlayerIds.size === filteredList.length ? 'Deselect all competitors' : 'Select all competitors in view'}
+                  title={selectedPlayerIds.size === filteredList.length ? 'Deselect All' : 'Select All'}
                 >
                   {selectedPlayerIds.size === filteredList.length ? (
                     <>
@@ -419,7 +419,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
 
       {/* Batch Action Toolbar (Sticky) */}
       {canManage && selectedPlayerIds.size > 0 && !isLocked && (
-        <div className="sticky top-4 z-40 flex flex-wrap items-center justify-between gap-3 rounded-md border border-brand bg-surface/96 px-4 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-md">
+        <div className="sticky top-4 z-40 flex flex-wrap items-center justify-between gap-3 rounded-md border border-brand bg-surface/96 px-4 py-2.5 max-md:top-14 max-md:px-3 shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-md">
           <div className="flex items-center gap-2.5">
             <CheckSquare size={18} color="var(--color-brand)" />
             <span className="text-sm font-bold text-fg">
@@ -436,7 +436,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
               variant="secondary"
               onClick={handleBatchMoveUp}
               className={batchButtonClass}
-              title="Shift each selected competitor up 1 position independently"
+              title="Shift Up"
             >
               <ChevronUp size={14} />
               Up 1
@@ -447,13 +447,13 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
               variant="secondary"
               onClick={handleBatchMoveDown}
               className={batchButtonClass}
-              title="Shift each selected competitor down 1 position independently"
+              title="Shift Down"
             >
               <ChevronDown size={14} />
               Down 1
             </Button>
 
-            {/* Jump to Seed */}
+            {/* Set Seed */}
             <Button
               variant="secondary"
               onClick={() => {
@@ -461,9 +461,9 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                 setIsBatchJumpOpen(true);
               }}
               className={batchButtonClass}
-              title="Bunch selected competitors contiguously starting at target seed"
+              title="Set Seed"
             >
-              Jump to Seed...
+              Set Seed...
             </Button>
 
             {/* Move to Top */}
@@ -471,7 +471,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
               variant="secondary"
               onClick={handleBatchMoveToTop}
               className={batchButtonClass}
-              title="Bunch selected competitors at Seed #1"
+              title="Send Top"
             >
               <ChevronsUp size={14} />
               Top
@@ -482,7 +482,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
               variant="secondary"
               onClick={handleBatchMoveToBottom}
               className={batchButtonClass}
-              title="Bunch selected competitors at the bottom"
+              title="Send Bottom"
             >
               <ChevronsDown size={14} />
               Bottom
@@ -495,7 +495,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
               variant="secondary"
               onClick={() => setIsBatchDeleteConfirmOpen(true)}
               className={cn(batchButtonClass, 'border-red/40 text-red enabled:hover:border-red/40')}
-              title="Remove selected competitors from seeding list"
+              title="Remove Selected"
             >
               <X size={14} />
               Remove ({selectedPlayerIds.size})
@@ -638,7 +638,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                       onDragOver={handleDragOver}
                       onDrop={() => handleDrop(item.seedNumber - 1)}
                       className={cn(
-                        'flex items-center gap-3 border-b border-line-subtle px-5 py-2.5 transition-colors duration-150',
+                        'flex items-center gap-3 border-b border-line-subtle px-5 py-2.5 transition-colors duration-150 max-md:flex-wrap max-md:px-3',
                         selectedPlayerIds.has(item.id)
                           ? 'bg-seed-indigo/12'
                           : draggedIndex === item.seedNumber - 1
@@ -649,13 +649,13 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                       {/* Drag Handle */}
                       {!isLocked ? (
                         <div
-                          className="flex w-4 shrink-0 cursor-grab items-center p-1 text-fg-muted"
-                          title="Drag to reorder seed"
+                          className="flex w-4 shrink-0 cursor-grab items-center p-1 text-fg-muted max-md:hidden"
+                          title="Drag Seed"
                         >
                           <GripVertical size={16} />
                         </div>
                       ) : (
-                        <div className="w-4 shrink-0" />
+                        <div className="w-4 shrink-0 max-md:hidden" />
                       )}
 
                       {/* Selection Checkbox */}
@@ -666,7 +666,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                             handleToggleSelect(item.id, idx, e.shiftKey);
                           }}
                           className="flex w-5 shrink-0 cursor-pointer items-center p-1"
-                          title="Select for batch actions (Hold Shift for range select)"
+                          title="Select Competitor"
                         >
                           {selectedPlayerIds.has(item.id) ? (
                             <CheckSquare size={16} color="var(--color-brand)" />
@@ -727,7 +727,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                               color: item.tier.primaryColor || 'var(--color-gold-bright)',
                               borderColor: item.tier.primaryColor ? `${item.tier.primaryColor}55` : 'rgba(245, 158, 11, 0.3)',
                             }}
-                            title={`Assigned to ${item.tier.name} bracket as Seed #${item.tierSeed}`}
+                            title={`${item.tier.name} #${item.tierSeed}`}
                           >
                             {`${item.tier.name} ${item.tierSeed}`}
                           </span>
@@ -742,13 +742,13 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
 
                       {/* Row Controls */}
                       {!isLocked && (
-                        <div className="flex w-37.5 shrink-0 items-center justify-end gap-1">
+                        <div className="flex w-37.5 shrink-0 items-center justify-end gap-1 max-md:w-full max-md:justify-end">
                           <IconButton
-                            aria-label="Move to top"
+                            aria-label="Move Top"
                             disabled={item.seedNumber === 1}
                             onClick={() => reorderManualSeed(tournament.id, item.seedNumber - 1, 0)}
                             className={rowControlClass}
-                            title="Move to top (#1 Seed)"
+                            title="Move Top"
                           >
                             <ChevronsUp size={15} />
                           </IconButton>
@@ -774,11 +774,11 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                           </IconButton>
 
                           <IconButton
-                            aria-label="Move to bottom"
+                            aria-label="Move Bottom"
                             disabled={item.seedNumber === manualSeeds.length}
                             onClick={() => reorderManualSeed(tournament.id, item.seedNumber - 1, manualSeeds.length - 1)}
                             className={rowControlClass}
-                            title="Move to bottom"
+                            title="Move Bottom"
                           >
                             <ChevronsDown size={15} />
                           </IconButton>
@@ -786,10 +786,10 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                           <div className="mx-1 h-3.5 w-px bg-line" />
 
                           <IconButton
-                            aria-label="Remove from seeds"
+                            aria-label="Remove Seed"
                             onClick={() => removeManualSeed(tournament.id, item.id)}
                             className="flex p-1 text-red-bright opacity-75"
-                            title="Remove from seeds"
+                            title="Remove Seed"
                           >
                             <X size={15} />
                           </IconButton>
@@ -848,7 +848,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                               color: item.tier.primaryColor || 'var(--color-gold-bright)',
                               borderColor: item.tier.primaryColor ? `${item.tier.primaryColor}55` : 'rgba(245, 158, 11, 0.3)',
                             }}
-                            title={`Assigned to ${item.tier.name} bracket as Seed #${item.tierSeed}`}
+                            title={`${item.tier.name} #${item.tierSeed}`}
                           >
                             {`${item.tier.name} ${item.tierSeed}`}
                           </span>
@@ -869,7 +869,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
         )}
       </div>
 
-      {/* Jump to Seed Modal */}
+      {/* Set Seed Modal */}
       <Overlay
         open={jumpSeedTarget !== null}
         onClose={() => setJumpSeedTarget(null)}
@@ -903,7 +903,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleExecuteJump} className="px-4 py-1.5 text-caption">
-                Jump to Seed
+                Set Seed
               </Button>
             </div>
           </>
@@ -922,7 +922,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
           </p>
         }
         cancelLabel="Cancel"
-        confirmLabel="Yes, Shuffle Seeds"
+        confirmLabel="Shuffle Seeds"
         confirmVariant="primary"
         onCancel={() => setIsShuffleConfirmOpen(false)}
         onConfirm={() => {
@@ -942,13 +942,13 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
           </p>
         }
         cancelLabel="Cancel"
-        confirmLabel="Yes, Reverse Seeds"
+        confirmLabel="Reverse Seeds"
         confirmVariant="primary"
         onCancel={() => setIsReverseConfirmOpen(false)}
         onConfirm={handleExecuteReverse}
       />
 
-      {/* Batch Jump to Seed Modal */}
+      {/* Batch Set Seed Modal */}
       <Overlay
         open={isBatchJumpOpen}
         onClose={() => {
@@ -990,7 +990,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleExecuteBatchJump} className="px-4 py-1.5 text-caption">
-                Jump to Seed #{batchJumpInput || '1'}
+                Set Seed #{batchJumpInput || '1'}
               </Button>
             </div>
           </>
@@ -1008,7 +1008,7 @@ export const ManualSeedingManager: React.FC<ManualSeedingManagerProps> = ({
           </p>
         }
         cancelLabel="Cancel"
-        confirmLabel="Yes, Remove Seeds"
+        confirmLabel="Remove Seeds"
         onCancel={() => setIsBatchDeleteConfirmOpen(false)}
         onConfirm={handleExecuteBatchRemove}
       />

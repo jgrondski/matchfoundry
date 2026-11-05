@@ -71,7 +71,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
       {({ requestClose }) => (
         <>
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-line-subtle bg-black/20 px-6 py-5">
+          <div className="flex items-center justify-between border-b border-line-subtle bg-black/20 px-6 py-5 max-md:px-4">
             <div className="flex items-center gap-2.5">
               <div className="flex size-8 items-center justify-center rounded-md bg-linear-135 from-gold-bright to-gold text-black">
                 <KeyRound size={18} />
@@ -91,7 +91,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
           </div>
 
           {/* Body */}
-          <form onSubmit={handleSubmit} className="p-6">
+          <form onSubmit={handleSubmit} className="p-6 max-md:px-4">
             {error && (
               <div className="mb-4 flex items-center gap-2 rounded-sm border border-red/40 bg-red/15 px-3.5 py-2.5 text-caption text-red-bright">
                 <ShieldAlert size={16} className="shrink-0" />
@@ -118,7 +118,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   autoFocus
                   data-autofocus
                   placeholder="Enter 4-8 digit PIN"
-                  className="w-full rounded-sm border border-line bg-canvas py-2.5 pl-3 pr-10 text-base tracking-widest text-white"
+                  className="w-full rounded-sm border border-line bg-canvas py-2.5 pl-3 pr-10 text-base tracking-widest text-white max-md:text-base"
                 />
                 <IconButton
                   aria-label={showPin ? 'Hide PIN' : 'Show PIN'}
@@ -134,11 +134,11 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
               </p>
             </div>
 
-            <div className="flex justify-end gap-2.5">
-              <Button variant="secondary" onClick={requestClose} disabled={isSubmitting}>
+            <div className="flex justify-end gap-2.5 max-md:flex-col max-md:items-stretch">
+              <Button variant="secondary" onClick={requestClose} disabled={isSubmitting} className="max-md:w-full">
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" disabled={isSubmitting || !pin.trim()}>
+              <Button type="submit" variant="primary" disabled={isSubmitting || !pin.trim()} className="max-md:w-full">
                 {isSubmitting ? 'Verifying...' : 'Unlock'}
               </Button>
             </div>

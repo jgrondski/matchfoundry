@@ -43,7 +43,7 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
           {icon || <Trophy color="var(--color-gold-bright)" size={isObsMode ? 24 : 28} />}
           {title}
         </h1>
-        {subtitle && <div className="mt-1.5">{subtitle}</div>}
+        {subtitle && <div className="mt-1.5 max-md:hidden">{subtitle}</div>}
       </div>
 
       {/* Action Controls & Search Group */}
@@ -61,7 +61,7 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
                 className:
                   'gap-1.5 px-3.5 py-2 text-caption whitespace-nowrap hover:border-fg-secondary hover:bg-highlight',
               })}
-              title="Open OBS broadcast overlay in new tab (stripped chrome, transparent background)"
+              title="OBS Overlay"
             >
               <Video size={15} color="var(--color-gold-bright)" />
               <span>OBS Overlay</span>
@@ -89,8 +89,8 @@ export const TournamentPageHeader: React.FC<TournamentPageHeaderProps> = ({
               {searchTerm && (
                 <IconButton
                   onClick={() => onSearchChange('')}
-                  title="Clear search"
-                  aria-label="Clear search"
+                  title="Clear Search"
+                  aria-label="Clear Search"
                   className="absolute top-1/2 right-2 -translate-y-1/2 p-0.5"
                 >
                   <X size={14} />

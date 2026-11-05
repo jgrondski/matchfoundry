@@ -86,15 +86,15 @@ export const AdminLoginPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-canvas p-6 font-sans">
-      <div className="flex w-full max-w-107.5 flex-col gap-5 rounded-md border border-line bg-surface p-8 shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-canvas p-6 font-sans max-md:px-4">
+      <div className="flex w-full max-w-107.5 flex-col gap-5 rounded-md border border-line bg-surface p-8 shadow-[0_20px_40px_rgba(0,0,0,0.5)] max-md:px-4">
         {/* Back Link */}
         <Link
           to="/"
           className="inline-flex items-center gap-1.5 self-start text-caption text-fg-muted no-underline transition-colors duration-150"
         >
           <ArrowLeft size={14} />
-          <span>Back to All Tournaments</span>
+          <span>All Tournaments</span>
         </Link>
 
         {/* Top Header */}
@@ -106,7 +106,7 @@ export const AdminLoginPage: React.FC = () => {
             <h1 className="m-0 text-xl font-extrabold text-white">
               Staff & Admin Login
             </h1>
-            <p className="mx-0 mt-0.5 mb-0 text-caption text-fg-muted">
+            <p className="mx-0 mt-0.5 mb-0 text-caption text-fg-muted max-md:hidden">
               MatchFoundry™ Access Control
             </p>
           </div>
@@ -155,7 +155,7 @@ export const AdminLoginPage: React.FC = () => {
                     className: 'px-3 py-1.5 text-xs hover:-translate-y-px hover:shadow-gold-hover hover:brightness-110',
                   })}
                 >
-                  Go to {session.tournamentSlug} Workspace →
+                  Open Workspace →
                 </Link>
               </div>
             )}
@@ -216,7 +216,7 @@ export const AdminLoginPage: React.FC = () => {
                 onChange={e => setPin(e.target.value)}
                 autoFocus
                 placeholder="Enter PIN or Key"
-                className="w-full rounded-md border border-line bg-canvas py-2.5 pr-10 pl-3 text-base tracking-widest text-white outline-none"
+                className="w-full rounded-md border border-line bg-canvas py-2.5 pr-10 pl-3 text-base tracking-widest text-white outline-none max-md:text-base"
               />
               <button
                 type="button"
@@ -234,7 +234,7 @@ export const AdminLoginPage: React.FC = () => {
             type="submit"
             disabled={isSubmitting || !pin.trim()}
             className={cn(
-              'rounded-md border-0 bg-gold-bright p-3 text-base font-bold text-black transition-opacity duration-150',
+              'rounded-md border-0 bg-gold-bright p-3 text-base font-bold text-black transition-opacity duration-150 max-md:w-full',
               isSubmitting || !pin.trim() ? 'cursor-not-allowed opacity-60' : 'cursor-pointer opacity-100'
             )}
           >
@@ -249,7 +249,7 @@ export const AdminLoginPage: React.FC = () => {
             className="inline-flex items-center gap-1.5 text-caption text-fg-muted no-underline"
           >
             <ArrowLeft size={14} />
-            <span>Return to Public Tournament View</span>
+            <span>Public View</span>
           </Link>
         </div>
       </div>

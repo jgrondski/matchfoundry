@@ -54,7 +54,7 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
         )}
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-5 max-md:grid-cols-1">
         {/* Left Column: Organization Selection & Palette */}
         <div className="flex flex-col gap-4">
           <div>
@@ -97,7 +97,7 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
                 <Button
                   onClick={onApplyOrgColorsToTiers}
                   className="shrink-0 gap-1.5 py-1 px-2.5 text-xs"
-                  title="Copy these 5 colors to all tiers in this tournament"
+                  title="Copy Colors"
                 >
                   <Palette size={13} color="var(--color-gold-bright)" />
                   Apply
@@ -150,9 +150,10 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
               </label>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 max-md:flex-col max-md:items-stretch">
               <input
                 type="text"
+                inputMode="url"
                 value={discordWebhookUrl}
                 onChange={e => onDiscordWebhookUrlChange(e.target.value)}
                 placeholder={selectedOrg?.discordWebhookUrl || selectedOrg?.hasDiscordWebhook ? `Fallback: ${selectedOrg.shortName} Webhook` : 'https://discord.com/api/webhooks/...'}
@@ -161,7 +162,7 @@ export const OrgBrandPaletteSection: React.FC<OrgBrandPaletteSectionProps> = ({
               <Button
                 onClick={onTestDiscordWebhook}
                 className="gap-1.5 whitespace-nowrap py-1.5 px-3 text-caption"
-                title="Send a test message to this webhook (or the organization's fallback)"
+                title="Test Webhook"
               >
                 <Send size={13} />
                 Test

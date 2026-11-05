@@ -70,7 +70,7 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
       )}
 
       {/* Sandbox Simulation & Maintenance Controls Grid */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3.5 max-md:grid-cols-1">
         {/* Sandbox Simulation (never on Production) */}
         {SIMULATION_ENABLED && (
           <div className="flex flex-col gap-2 rounded-md border border-line-subtle bg-elevated py-3 px-4">
@@ -83,11 +83,11 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 max-md:flex-col max-md:items-stretch">
               <Button
                 onClick={onSeedQualifiers}
                 disabled={hasSeeds || hasRecordedMatches}
-                className="gap-1.5 py-1.5 px-3.5 text-caption"
+                className="gap-1.5 py-1.5 px-3.5 text-caption max-md:w-full"
                 title={
                   hasRecordedMatches
                     ? 'Match play has begun. Clear match scores or all tournament data to re-seed.'
@@ -103,7 +103,7 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
               <Button
                 onClick={onSimulate}
                 disabled={!hasTiers || hasRecordedMatches}
-                className="gap-1.5 py-1.5 px-3.5 text-caption"
+                className="gap-1.5 py-1.5 px-3.5 text-caption max-md:w-full"
                 title={
                   !hasTiers
                     ? 'Add at least one bracket tier first before simulating tournament matches'
@@ -132,12 +132,12 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 max-md:flex-col max-md:items-stretch">
             <Button
               onClick={() => onRequestDataAction('MATCHES')}
               disabled={recordedMatchCount === 0}
-              className="py-1.5 px-3 text-caption"
-              title={recordedMatchCount === 0 ? 'No recorded match scores to clear' : 'Clear all recorded match scores'}
+              className="py-1.5 px-3 text-caption max-md:w-full"
+              title={recordedMatchCount === 0 ? 'No Scores' : 'Clear Scores'}
             >
               Clear Matches ({recordedMatchCount})
             </Button>
@@ -145,7 +145,7 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
             <Button
               onClick={() => onRequestDataAction('QUALS')}
               disabled={seedCount === 0 || hasRecordedMatches}
-              className="py-1.5 px-3 text-caption"
+              className="py-1.5 px-3 text-caption max-md:w-full"
               title={
                 hasRecordedMatches
                   ? 'Cannot clear qualifier data while match scores exist. Execute "Clear Matches" first.'
@@ -161,8 +161,8 @@ export const DataSimulationSection: React.FC<DataSimulationSectionProps> = ({
               variant="danger"
               onClick={() => onRequestDataAction('ALL')}
               disabled={seedCount === 0 && recordedMatchCount === 0}
-              className="py-1.5 px-3 text-caption"
-              title={seedCount === 0 && recordedMatchCount === 0 ? 'No data to clear' : 'Clear all tournament data'}
+              className="py-1.5 px-3 text-caption max-md:w-full"
+              title={seedCount === 0 && recordedMatchCount === 0 ? 'No Data' : 'Clear Data'}
             >
               <Trash2 size={13} /> Clear All
             </Button>

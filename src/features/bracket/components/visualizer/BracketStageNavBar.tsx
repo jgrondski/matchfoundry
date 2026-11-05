@@ -44,7 +44,7 @@ export const BracketStageNavBar: React.FC<BracketStageNavBarProps> = ({
         top: effectiveObsView === 'fit' ? undefined : (topOffset || 'var(--bracket-tier-bar-height, 48px)'),
       }}
     >
-      <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-2.5 max-md:max-w-full max-md:flex-nowrap max-md:overflow-x-auto">
         <span className="text-xs font-extrabold uppercase tracking-widest text-fg-muted">
           Stage:
         </span>

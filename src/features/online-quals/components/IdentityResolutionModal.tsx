@@ -10,7 +10,7 @@ import { PLAYSTYLE_OPTIONS } from '../../players/playstyleOptions';
 
 const tabClass = (active: boolean) =>
   cn(
-    'flex-1 cursor-pointer border-0 border-b-2 p-3 text-sm font-bold',
+    'flex-1 shrink-0 cursor-pointer border-0 border-b-2 p-3 text-sm font-bold max-md:flex-none max-md:whitespace-nowrap',
     active ? 'border-gold-bright bg-surface text-white' : 'border-transparent bg-transparent text-fg-muted'
   );
 
@@ -119,7 +119,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
             </div>
             <IconButton
               onClick={requestClose}
-              aria-label="Close Identity Resolution Dialog"
+              aria-label="Close"
               disabled={isSubmitting}
               className="p-1.5"
             >
@@ -127,8 +127,8 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
             </IconButton>
           </div>
 
-          {/* Tab Controls: Tab 1 = Reassign Competitor (Default), Tab 2 = Add Global Player */}
-          <div className="flex border-b border-line bg-black/25">
+          {/* Tab Controls: Tab 1 = Reassign Competitor (Default), Tab 2 = Add Competitor */}
+          <div className="flex border-b border-line bg-black/25 max-md:-mx-3 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3 max-md:[scrollbar-width:none]">
             <button
               type="button"
               data-testid="tab-reassign"
@@ -143,7 +143,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
               onClick={() => setActiveTab('add_global')}
               className={tabClass(activeTab === 'add_global')}
             >
-              Add Global Player
+              Add Competitor
             </button>
             {session.identityStatus === 'CLAIMED_PENDING_REVIEW' && (
               <button
@@ -178,12 +178,12 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                     placeholder="Search registered competitors..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className={cn(fieldClass, 'pl-9')}
+                    className={cn(fieldClass, 'pl-9 max-md:w-full max-md:text-base')}
                   />
                 </div>
 
                 {/* Competitors List */}
-                <div className="flex max-h-55 flex-col overflow-y-auto rounded-md border border-line">
+                <div className="flex max-h-55 w-full flex-col overflow-y-auto rounded-md border border-line">
                   {filteredPlayers.length === 0 ? (
                     <div className="p-6 text-center text-sm text-fg-muted">
                       No matching competitors found.
@@ -202,7 +202,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                             setError(null);
                           }}
                           className={cn(
-                            'flex cursor-pointer items-center justify-between border-b border-line-subtle px-3.5 py-2.5 transition-colors duration-100',
+                            'flex min-h-11 cursor-pointer items-center justify-between border-b border-line-subtle px-3.5 py-2.5 transition-colors duration-100',
                             isSelected ? 'bg-gold/15' : 'bg-transparent',
                             isBlocked && !isSelected && 'opacity-60'
                           )}
@@ -256,7 +256,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
               </div>
             )}
 
-            {/* TAB 2: Add Global Player (Consolidated) */}
+            {/* TAB 2: Add Competitor (Consolidated) */}
             {activeTab === 'add_global' && (
               <div className="flex flex-col gap-3.5">
                 <p className="m-0 text-sm text-fg-secondary">
@@ -427,7 +427,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                 variant="primary"
                 className="inline-flex items-center gap-1.5 text-sm bg-green bg-none border-emerald-600"
               >
-                <UserPlus size={15} /> Add Global Player
+                <UserPlus size={15} /> Add Competitor
               </Button>
             )}
 

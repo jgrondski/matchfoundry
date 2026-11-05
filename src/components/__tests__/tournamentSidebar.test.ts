@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { filterTournamentsByQuery, getTournamentTargetUrl } from '../TournamentSidebar';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { attemptLogout, filterTournamentsByQuery, getTournamentTargetUrl } from '../TournamentSidebar';
 import { Tournament } from '../../features/tournament/types';
 import { setStoredTierSlug } from '../../features/tournament/tierStorage';
 
@@ -207,3 +207,42 @@ describe('TournamentSidebar helpers', () => {
   });
 });
 
+describe('attemptLogout', () => {
+  const setup = (guard?: (url: string, onLeave?: () => void) => boolean | void) => {
+    const logout = vi.fn();
+    const navigate = vi.fn();
+    return { logout, navigate, args: { pathname: '/ctwc/manage/settings', slug: 'ctwc', logout, navigate, onNavigate: guard } };
+  };
+
+  it('stays logged in and on the page while the unsaved-changes guard is blocking', () => {
+    const { logout, navigate, args } = setup(() => false);
+    attemptLogout(args);
+    expect(logout).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('hands the guard the logout, so choosing Discard still logs out', () => {
+    let onLeave: (() => void) | undefined;
+    const { logout, args } = setup((_url, leave) => {
+      onLeave = leave;
+      return false;
+    });
+    attemptLogout(args);
+    onLeave?.();
+    expect(logout).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs out and leaves when nothing blocks', () => {
+    const { logout, navigate, args } = setup(() => true);
+    attemptLogout(args);
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith('/ctwc/brackets');
+  });
+
+  it('logs out without navigating outside manage pages', () => {
+    const { logout, navigate, args } = setup();
+    attemptLogout({ ...args, pathname: '/ctwc/brackets' });
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+});

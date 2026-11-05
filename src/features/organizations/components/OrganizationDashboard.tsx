@@ -51,7 +51,7 @@ export const OrganizationDashboard: React.FC = () => {
             })}
           >
             <ArrowLeft size={16} />
-            <span>Back to Organizations</span>
+            <span>All Organizations</span>
           </Link>
         </div>
       </div>
@@ -269,7 +269,7 @@ const OrganizationDashboardLoaded: React.FC<{ org: Organization }> = ({ org }) =
     <div className="min-h-screen bg-canvas pb-16">
       <TopNavSwitcher />
 
-      <div className="mx-auto flex max-w-295 flex-col gap-8 p-6">
+      <div className="mx-auto flex max-w-295 flex-col gap-8 p-6 max-md:px-4 max-md:py-4">
         {/* Toast Alert */}
         {saveToast && (
           <div className="fixed top-20 right-8 z-2000 flex animate-fade-in items-center gap-2 rounded-md border border-gold-bright bg-elevated px-5 py-3 text-white shadow-[0_8px_24px_rgba(0,0,0,0.5)]">

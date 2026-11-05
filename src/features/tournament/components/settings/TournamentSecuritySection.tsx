@@ -111,7 +111,7 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
 
   return (
     <section className="flex flex-col gap-4 rounded-lg border border-line bg-surface py-4 px-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between max-md:flex-wrap max-md:gap-2">
         <div className="flex items-center gap-2">
           <KeyRound size={18} color="var(--color-gold-bright)" />
           <h2 className="m-0 text-base font-bold text-fg">
@@ -162,10 +162,11 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
       {/* Update PIN Controls (Div container to prevent nested form interference) */}
       <div className="flex flex-col gap-2.5">
         <label className={labelClass}>Set New Tournament PIN</label>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="relative min-w-45 flex-1">
+        <div className="flex flex-wrap items-center gap-2.5 max-md:flex-col max-md:items-stretch">
+          <div className="relative min-w-45 flex-1 max-md:min-w-0">
             <input
               type={showNewPin ? 'text' : 'password'}
+              inputMode="numeric"
               value={newPin}
               onChange={e => setNewPin(e.target.value)}
               onKeyDown={e => {
@@ -191,7 +192,7 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
             variant="primary"
             onClick={e => handleUpdatePin(e)}
             disabled={isUpdating || !newPin.trim()}
-            className="py-2 px-4 text-caption"
+            className="py-2 px-4 text-caption max-md:w-full"
           >
             {isUpdating ? 'Saving...' : 'Update PIN'}
           </Button>

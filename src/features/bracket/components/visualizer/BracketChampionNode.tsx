@@ -17,6 +17,7 @@ interface BracketChampionNodeProps {
   hoveredAncestry?: { isChampion?: boolean } | null;
   onChampHover: (champPlayerId?: string | null) => void;
   onPlayerClick: (pId: string, pName: string, country?: string) => void;
+  compact?: boolean;
 }
 
 export const BracketChampionNode: React.FC<BracketChampionNodeProps> = ({
@@ -30,9 +31,37 @@ export const BracketChampionNode: React.FC<BracketChampionNodeProps> = ({
   hoveredAncestry,
   onChampHover,
   onPlayerClick,
+  compact = false,
 }) => {
   if (!championPosition || championPosition.width <= 0 || targetChampPlayer === undefined) {
     return null;
+  }
+
+  if (compact) {
+    return (
+      <div
+        onClick={() => {
+          if (targetChampPlayer?.id) {
+            onPlayerClick(targetChampPlayer.id, targetChampPlayer.name, champProfile?.country);
+          }
+        }}
+        className={cn(
+          'absolute z-3 flex h-11 items-center gap-1.5 overflow-hidden rounded-sm border-[1.5px] px-2 text-2xs font-bold text-fg',
+          targetChampPlayer?.id ? 'cursor-pointer' : 'cursor-default'
+        )}
+        style={{
+          left: championPosition.x,
+          top: championPosition.y,
+          width: championPosition.width,
+          background: effectiveCardBg,
+          borderColor: primaryColor,
+        }}
+        title={targetChampPlayer?.id ? 'View Champion' : undefined}
+      >
+        <Trophy size={14} color={primaryColor} className="shrink-0" />
+        <span className="min-w-0 flex-1 truncate">{targetChampPlayer ? targetChampPlayer.name : 'TBD'}</span>
+      </div>
+    );
   }
 
   return (
@@ -86,7 +115,7 @@ export const BracketChampionNode: React.FC<BracketChampionNodeProps> = ({
             'flex flex-1 items-center justify-center gap-2 px-3.5 text-xl font-black tracking-wide text-white truncate bg-transparent',
             targetChampPlayer?.id ? 'cursor-pointer' : 'cursor-default'
           )}
-          title={targetChampPlayer?.id ? 'View champion profile' : undefined}
+          title={targetChampPlayer?.id ? 'View Champion' : undefined}
         >
           {(champProfile?.country || champProfile?.avatarUrl) && (
             <PlayerAvatar player={champProfile} country={champProfile?.country} className="text-xl" />

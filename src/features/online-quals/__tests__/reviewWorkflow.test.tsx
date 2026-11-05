@@ -364,12 +364,12 @@ describe('Qual review workflow: markup', () => {
   it('AdjudicationModal shows an empty-games notice and disables Verify', () => {
     const html = modal(session({ scores: [], submissionIds: [] }));
     expect(html).toContain('No games recorded.');
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*title="Add at least one score before verifying."/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*title="Score Required"/);
   });
 
   it('AdjudicationModal enables Verify Qual for a pending qual with scores', () => {
     const html = modal(session());
-    expect(html).not.toContain('Add at least one score before verifying.');
+    expect(html).not.toContain('Score Required');
     expect(html).not.toContain('Save &amp; Verify');
   });
 

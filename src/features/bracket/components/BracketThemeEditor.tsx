@@ -65,7 +65,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
               variant="secondary"
               onClick={onReset}
               className="gap-1.5 py-1 px-2.5 text-xs"
-              title="Reset to default colors"
+              title="Reset Colors"
             >
               <RefreshCw size={11} />
               Reset Defaults
@@ -75,10 +75,10 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
       )}
 
       {/* 1. Color Picker Controls (Full Row) */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3 max-md:grid-cols-2 max-md:gap-2">
         {/* Primary Accent */}
         <div>
-          <label className={colorLabelCls} title="Primary Accent (Lines, Rings & Winner Glory)">
+          <label className={colorLabelCls} title="Primary Accent">
             Primary Accent
           </label>
           <div className="flex items-center gap-1.5">
@@ -100,7 +100,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
         {/* Secondary Accent */}
         <div>
-          <label className={colorLabelCls} title="Secondary Accent (Dividers & Winner Bg)">
+          <label className={colorLabelCls} title="Secondary Accent">
             Secondary Accent
           </label>
           <div className="flex items-center gap-1.5">
@@ -122,7 +122,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
         {/* Match Card Background */}
         <div>
-          <label className={colorLabelCls} title="Match Card Background (Base)">
+          <label className={colorLabelCls} title="Card Background">
             Match Card Bg
           </label>
           <div className="flex items-center gap-1.5">
@@ -144,7 +144,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
         {/* Text Color */}
         <div>
-          <label className={colorLabelCls} title="Text & Score Color">
+          <label className={colorLabelCls} title="Text Color">
             Text Color
           </label>
           <div className="flex items-center gap-1.5">
@@ -166,7 +166,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
         {/* Canvas Background Color */}
         <div>
-          <label className={colorLabelCls} title="Overall Bracket Canvas Background">
+          <label className={colorLabelCls} title="Canvas Background">
             Canvas Bg
           </label>
           <div className="flex items-center gap-1.5">
@@ -188,7 +188,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
 
         {/* Lower Bracket Accent Color */}
         <div>
-          <label className={colorLabelCls} title="Lower Bracket Accent (Border highlights in Double Elimination)">
+          <label className={colorLabelCls} title="Lower Accent">
             Lower Bracket
           </label>
           <div className="flex items-center gap-1.5">
@@ -228,7 +228,7 @@ export const BracketThemeEditor: React.FC<BracketThemeEditorProps> = ({
                   type="button"
                   onClick={() => onTextSizeChange(opt)}
                   className={cn(
-                    'cursor-pointer rounded-xs border py-1 px-3 text-xs capitalize transition-all duration-100',
+                    'cursor-pointer rounded-xs border py-1 px-3 text-xs capitalize transition-all duration-100 max-md:min-h-11',
                     isSelected ? 'font-bold' : 'font-medium bg-white/5 text-fg-secondary border-line'
                   )}
                   style={isSelected ? { background: priColor, color: cardBg, borderColor: priColor } : undefined}
@@ -360,7 +360,7 @@ const colorLabelCls = 'mb-1 block truncate text-xs font-semibold text-fg-seconda
 const colorInputCls = 'size-8.5 shrink-0 cursor-pointer rounded-xs border-0 bg-transparent';
 
 const hexTextInputCls =
-  'w-full min-w-0 flex-1 rounded-sm border border-line bg-canvas py-1.5 px-2 font-mono text-caption text-fg';
+  'w-full min-w-0 flex-1 rounded-sm border border-line bg-canvas py-1.5 px-2 font-mono text-caption text-fg max-md:text-base';
 
 const previewCardCls = 'flex h-20 w-65 flex-col overflow-hidden rounded-sm';
 const previewHeaderCls =

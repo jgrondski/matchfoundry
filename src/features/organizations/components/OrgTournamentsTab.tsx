@@ -38,7 +38,7 @@ export const OrgTournamentsTab: React.FC<OrgTournamentsTabProps> = ({
             placeholder="Filter hosted tournaments..."
             value={tourneySearch}
             onChange={e => onSearchChange(e.target.value)}
-            className="w-full rounded-md border border-line bg-surface py-2 pr-3.5 pl-9.5 text-sm text-white"
+            className="w-full rounded-md border border-line bg-surface py-2 pr-3.5 pl-9.5 text-sm text-white max-md:min-h-11 max-md:text-base"
           />
         </div>
 
@@ -46,7 +46,7 @@ export const OrgTournamentsTab: React.FC<OrgTournamentsTabProps> = ({
           type="button"
           variant="primary"
           onClick={onCreateTourneyOpen}
-          className="px-5 py-2.5 text-sm"
+          className="px-5 py-2.5 text-sm max-md:w-full"
           style={{ boxShadow: `0 2px 10px ${primaryColor}44` }}
         >
           <Plus size={16} />
@@ -78,7 +78,7 @@ export const OrgTournamentsTab: React.FC<OrgTournamentsTabProps> = ({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(480px,1fr))] gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[repeat(auto-fill,minmax(480px,1fr))]">
           {filteredTournaments.map(t => (
             <TournamentCard
               key={t.id}

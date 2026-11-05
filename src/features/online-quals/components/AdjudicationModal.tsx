@@ -3,6 +3,7 @@ import { CheckCircle2, AlertTriangle, ExternalLink, ShieldAlert, StickyNote, X, 
 import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { Overlay } from '../../../components/overlay';
+import { FULL_PAGE_PANEL_CLASS } from '../../../components/fullPagePanel';
 import { Button, IconButton, buttonClasses, cn } from '../../../components/ui';
 import { formatQualTimestamp } from '../formatQualTimestamp';
 
@@ -91,7 +92,11 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
       dirty={isDirty}
       busy={isSubmitting}
       aria-labelledby={titleId}
-      panelClassName="flex max-h-[92vh] max-w-185 flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-[0_24px_48px_rgba(0,0,0,0.6)]"
+      mobile="center"
+      panelClassName={cn(
+        'flex max-h-[92vh] max-w-185 flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-[0_24px_48px_rgba(0,0,0,0.6)]',
+        FULL_PAGE_PANEL_CLASS
+      )}
     >
       {({ requestClose }) => (
         <>
@@ -135,7 +140,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                       className="ml-1.5 inline-flex items-center gap-1 border-gold/40 px-2 py-0.5 text-xs text-gold-bright enabled:hover:border-gold/40"
                     >
                       <UserCheck size={13} />
-                      Reconcile / Change Player
+                      Change Competitor
                     </Button>
                   )}
                 </div>
@@ -157,7 +162,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
             </div>
             <IconButton
               onClick={requestClose}
-              aria-label="Close Adjudication Dialog"
+              aria-label="Close"
               disabled={isSubmitting}
               className="p-1.5"
             >
@@ -235,6 +240,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
             <div
               className={cn(
                 'flex items-center justify-between rounded-md border px-4 py-3.5',
+                session.submissionSource !== 'IN_PERSON' && 'max-md:flex-col max-md:items-stretch max-md:gap-3',
                 session.submissionSource === 'IN_PERSON'
                   ? 'border-blue-500/30 bg-blue-500/8'
                   : 'border-violet-400/30 bg-violet-400/8'
@@ -278,7 +284,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                       className={buttonClasses({
                         variant: 'secondary',
                         size: 'sm',
-                        className: 'border-violet-400/40 text-caption text-violet-400 hover:border-violet-400/40 hover:bg-highlight',
+                        className: 'border-violet-400/40 text-caption text-violet-400 hover:border-violet-400/40 hover:bg-highlight max-md:w-full',
                       })}
                     >
                       Open VOD <ExternalLink size={14} />
@@ -338,11 +344,12 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                           }
                         }}
                         type="text"
+                        inputMode="numeric"
                         value={score > 0 ? score.toLocaleString() : ''}
                         placeholder="e.g. 1,024,500"
                         onChange={e => handleScoreChange(idx, e.target.value)}
                         disabled={isSubmitting || isVerified}
-                        className="rounded-sm border border-line bg-black/40 px-2.5 py-1.5 font-mono text-base font-bold text-white"
+                        className="rounded-sm border border-line bg-black/40 px-2.5 py-1.5 font-mono text-base font-bold text-white max-md:text-base"
                       />
                     </div>
                   ))}
@@ -362,16 +369,16 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 onChange={e => setJudgeNotes(e.target.value)}
                 placeholder="e.g. Verified 10k topout Authword at 12:45 VOD mark. Score edited for Game 2."
                 disabled={isSubmitting || isVerified}
-                className="resize-y rounded-sm border border-line bg-elevated px-3 py-2.5 text-sm text-white"
+                className="w-full resize-y rounded-sm border border-line bg-elevated px-3 py-2.5 text-sm text-white max-md:text-base"
               />
             </div>
           </div>
 
           {/* Footer Actions */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-elevated px-6 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-elevated px-6 py-4 max-md:flex-col max-md:items-stretch max-md:pb-[calc(1rem+env(safe-area-inset-bottom))]">
             {/* Destructive actions (DNQ, DQ) */}
             {!isVerified && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 max-md:grid max-md:grid-cols-2">
                 <Button
                   type="button"
                   onClick={() => act('DNQ', { judgeNotes })}
@@ -379,7 +386,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                   loading={isPending('DNQ')}
                   loadingText="Saving…"
                   variant="secondary"
-                  className="border-gold/40 text-caption text-gold-bright enabled:hover:border-gold/40"
+                  className="border-gold/40 text-caption text-gold-bright enabled:hover:border-gold/40 max-md:w-full"
                 >
                   Mark DNQ
                 </Button>
@@ -389,7 +396,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                     onClick={() => setConfirmDQ(true)}
                     disabled={isSubmitting}
                     variant="secondary"
-                    className="inline-flex items-center gap-1.5 border-red/40 text-caption text-red-bright enabled:hover:border-red/40"
+                    className="inline-flex items-center gap-1.5 border-red/40 text-caption text-red-bright enabled:hover:border-red/40 max-md:w-full"
                   >
                     <ShieldAlert size={14} /> Disqualify (DQ)
                   </Button>
@@ -401,7 +408,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                     loading={isPending('DQ')}
                     loadingText="Saving…"
                     variant="danger"
-                    className="border-transparent bg-red text-caption font-bold text-white"
+                    className="border-transparent bg-red text-caption font-bold text-white max-md:w-full"
                   >
                     Confirm Disqualify
                   </Button>
@@ -410,7 +417,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
             )}
 
             {/* Approval Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 max-md:grid max-md:grid-cols-2 max-md:gap-2">
               <Button
                 type="button"
                 onClick={requestClose}
@@ -423,7 +430,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
               {isVerified ? (
                 <Button
                   variant="secondary"
-                  className="border-gold/40 text-sm text-gold-bright enabled:hover:border-gold/40"
+                  className="border-gold/40 text-sm text-gold-bright enabled:hover:border-gold/40 max-md:w-full"
                   onClick={() => act('UNVERIFY')}
                   disabled={isSubmitting}
                   loading={isPending('UNVERIFY')}
@@ -435,7 +442,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                 <>
                   <Button
                     variant="secondary"
-                    className="inline-flex items-center gap-1.5 text-sm"
+                    className="inline-flex items-center gap-1.5 text-sm max-md:w-full"
                     disabled={isSubmitting || !hasEdits || isInProgress}
                     onClick={() => act('SAVE', { scores, judgeNotes })}
                     loading={isPending('SAVE')}
@@ -453,9 +460,9 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                     disabled={isSubmitting || isInProgress || !hasScoresToVerify}
                     loading={isPending('SAVE_AND_VERIFY', 'VERIFY')}
                     loadingText="Verifying…"
-                    title={!hasScoresToVerify ? 'Add at least one score before verifying.' : undefined}
+                    title={!hasScoresToVerify ? 'Score Required' : undefined}
                     variant="primary"
-                    className="inline-flex items-center gap-1.5 text-sm border-[#15803d] bg-[#16a34a] bg-none"
+                    className="inline-flex items-center gap-1.5 text-sm border-[#15803d] bg-[#16a34a] bg-none max-md:col-span-2 max-md:w-full"
                   >
                     <CheckCircle2 size={15} /> {hasEdits ? 'Save & Verify' : 'Verify Qual'}
                   </Button>

@@ -5,7 +5,7 @@ import { SheetDensitySize } from '../../sheetUtils';
 import { Button, cn } from '../../../../components/ui';
 
 const dropdownItemClass =
-  'flex items-center gap-2 py-1.5 px-2.5 rounded-sm border-0 bg-transparent text-fg text-caption cursor-pointer text-left w-full';
+  'flex items-center gap-2 py-1.5 px-2.5 rounded-sm border-0 bg-transparent text-fg text-caption cursor-pointer text-left w-full max-md:min-h-11';
 const dropdownHeadingClass = 'text-2xs font-bold text-fg-muted uppercase tracking-wider pt-1 px-2.5 pb-0.5';
 
 interface SheetTelemetryBarProps {
@@ -51,7 +51,7 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
       <div className="w-full flex flex-col items-start mb-1.5">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-caption font-bold text-gold-bright uppercase tracking-widest">
-            Master Organizer Sheet
+            Master Sheet
           </span>
           <span className="text-fg-muted text-xs">•</span>
           <span
@@ -61,7 +61,7 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
             {tierName}
           </span>
         </div>
-        <h1 className="text-3xl font-extrabold text-white flex items-center gap-2.5 tracking-tight m-0 leading-tight">
+        <h1 className="text-3xl max-md:text-2xl font-extrabold text-white flex items-center gap-2.5 tracking-tight m-0 leading-tight">
           <Trophy color="var(--color-gold-bright)" size={28} />
           {tournamentName}
         </h1>
@@ -75,20 +75,22 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
           background: cardColor,
         }}
       >
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap max-md:w-full max-md:flex-col max-md:items-stretch">
           {/* Competitor / Match # Quick Search */}
-          <div className="relative w-43.75">
+          <div className="relative w-43.75 max-md:w-full">
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted" />
             <input
               type="text"
               placeholder="Search competitor or #..."
               value={searchTerm}
               onChange={e => onSearchTermChange(e.target.value)}
-              className="w-full py-1.5 pr-2 pl-7 text-caption rounded-sm bg-canvas text-fg"
+              className="w-full py-1.5 pr-2 pl-7 text-caption rounded-sm bg-canvas text-fg max-md:min-h-11 max-md:text-base"
               style={{ border: `1px solid ${colorWithAlpha(secondaryColor, 0.5, 'var(--color-line)')}` }}
             />
           </div>
 
+          {/* Round filter and match count: one row on phones */}
+          <div className="contents max-md:flex max-md:items-center max-md:justify-between max-md:gap-2">
           {/* Multi-Select Round Filter Dropdown */}
           <div className="relative">
             <Button
@@ -137,7 +139,7 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
                   onClick={() => onSelectFilterPreset('IN_PROGRESS')}
                 >
                   <span className="w-4">{selectedRoundFilter === 'IN_PROGRESS' && <Check size={13} color={primaryColor} />}</span>
-                  <span>In Progress Only</span>
+                  <span>In Progress</span>
                 </button>
                 <button
                   className={dropdownItemClass}
@@ -174,8 +176,8 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
           </div>
 
           {/* Telemetry Stats Pills */}
-          <div className="flex items-center gap-2.5 text-caption">
-            <span className="inline-flex items-center gap-1.5 py-1 px-2 rounded-full bg-green-500/10 border border-green-500/25 text-green-400">
+          <div className="flex flex-wrap items-center gap-2.5 text-caption max-md:justify-end">
+            <span className="inline-flex min-w-0 items-center gap-1.5 py-1 px-2 rounded-full bg-green-500/10 border border-green-500/25 text-green-400">
               <CheckCircle2 size={13} />
               <span className="text-fg-secondary">Matches:</span>
               <strong className="font-mono tabular-nums tracking-tight text-white">
@@ -185,7 +187,7 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
 
             {telemetry.inProgress > 0 && (
               <span
-                className="inline-flex items-center gap-1.5 py-1 px-2 rounded-full"
+                className="inline-flex min-w-0 items-center gap-1.5 py-1 px-2 rounded-full"
                 style={{
                   background: colorWithAlpha(primaryColor, 0.14, 'rgba(245, 158, 11, 0.1)'),
                   border: `1px solid ${colorWithAlpha(primaryColor, 0.35, 'rgba(245, 158, 11, 0.3)')}`,
@@ -198,10 +200,11 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
               </span>
             )}
           </div>
+          </div>
         </div>
 
         {/* Size Density Toggle (XS / S / M / L) */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 max-md:hidden">
           <span className="text-xs font-bold text-fg-muted uppercase tracking-wider">
             Size:
           </span>
@@ -218,9 +221,9 @@ export const SheetTelemetryBar: React.FC<SheetTelemetryBarProps> = ({
                   key={s}
                   type="button"
                   onClick={() => onSizeChange(s)}
-                  title={`View size: ${title}`}
+                  title={title}
                   className={cn(
-                    'py-1 px-2 rounded-2xs border-0 text-xs transition-all duration-100',
+                    'py-1 px-2 rounded-2xs border-0 text-xs transition-all duration-100 max-md:min-h-11 max-md:min-w-11',
                     isCurrent ? 'font-extrabold cursor-default' : 'font-semibold cursor-pointer bg-transparent text-fg-secondary'
                   )}
                   style={isCurrent ? { background: primaryColor, color: getContrastingTextColor(primaryColor) } : undefined}

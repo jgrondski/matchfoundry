@@ -170,7 +170,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                   setSelectedRoundKey('ALL');
                 }}
                 className={cn(
-                  'text-xs py-1 px-2.5 rounded-full cursor-pointer whitespace-nowrap transition-all duration-100 shrink-0',
+                  'text-xs py-1 px-2.5 rounded-full cursor-pointer whitespace-nowrap transition-all duration-100 shrink-0 max-md:min-h-11',
                   isSelected ? 'font-extrabold' : 'font-semibold'
                 )}
                 style={{
@@ -192,7 +192,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
           key="ALL_ROUNDS"
           onClick={() => setSelectedRoundKey('ALL')}
           className={cn(
-            'py-1.5 px-3 text-xs rounded-full cursor-pointer whitespace-nowrap transition-all duration-100 shrink-0',
+            'py-1.5 px-3 text-xs rounded-full cursor-pointer whitespace-nowrap transition-all duration-100 shrink-0 max-md:min-h-11',
             activeRoundKey === 'ALL' ? 'font-extrabold' : 'font-semibold'
           )}
           style={{
@@ -215,7 +215,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
               key={rKey}
               onClick={() => setSelectedRoundKey(isSelected ? 'ALL' : rKey)}
               className={cn(
-                'py-1.5 px-3 text-xs rounded-full cursor-pointer whitespace-nowrap transition-all duration-100 shrink-0',
+                'py-1.5 px-3 text-xs rounded-full cursor-pointer whitespace-nowrap transition-all duration-100 shrink-0 max-md:min-h-11',
                 isSelected ? 'font-extrabold' : 'font-semibold'
               )}
               style={{
@@ -241,7 +241,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
             placeholder="Search match # or player..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full py-1.5 pr-2.5 pl-7.5 text-caption rounded-sm text-fg"
+            className="w-full py-1.5 pr-2.5 pl-7.5 text-caption rounded-sm text-fg max-md:min-h-11 max-md:text-base"
             style={{
               border: `1px solid ${colorWithAlpha(secondaryColor, 0.45, 'var(--color-line)')}`,
               background: getAlternateShade(cardColor, 4),
@@ -333,6 +333,8 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
             const p1Won = Boolean(p1?.id && (match.winnerId === p1.id || record?.winnerPlayerId === p1.id));
             const p2Won = Boolean(p2?.id && (match.winnerId === p2.id || record?.winnerPlayerId === p2.id));
             const isMatchCardHovered = hoveredMatchId === match.id;
+            // Judges score from these cards, so a name tap opens the score sheet instead of the profile.
+            const nameOpensScoreSheet = canManage && tournament.isLocked && isPlayable;
 
             const isLoserMatch =
               match.stage === 'LOSERS' ||
@@ -348,6 +350,18 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                     setActiveMatch(match);
                   }
                 }}
+                {...(tournament.isLocked && isPlayable
+                  ? {
+                      role: 'button',
+                      tabIndex: 0,
+                      onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          if (e.key === ' ') e.preventDefault();
+                          setActiveMatch(match);
+                        }
+                      },
+                    }
+                  : {})}
                 onMouseEnter={() => setHoveredMatchId(match.id)}
                 onMouseLeave={() => setHoveredMatchId(null)}
                 className={cn(
@@ -392,7 +406,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                     {!tournament.isLocked ? (
                       <span
                         className="text-2xs font-semibold py-0.5 px-2 rounded-sm bg-white/6 text-fg-muted border border-line inline-flex items-center gap-1"
-                        title="Scores locked during Qualifiers Mode"
+                        title="Scores Locked"
                       >
                         <Lock size={11} /> Qualifiers
                       </span>
@@ -426,7 +440,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                 <div className="flex flex-col gap-1.5">
                   {/* Player 1 Row */}
                   <div
-                    className="flex justify-between items-center py-2 px-2.5 rounded-sm transition-all duration-100"
+                    className="flex justify-between items-center py-2 px-2.5 rounded-sm transition-all duration-100 max-md:min-h-11"
                     style={{
                       background: p1Won
                         ? colorWithAlpha(primaryColor, 0.18, 'rgba(255, 255, 255, 0.08)')
@@ -438,22 +452,22 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                   >
                     <div
                       onClick={(e) => {
-                        if (p1?.id) {
+                        if (p1?.id && !nameOpensScoreSheet) {
                           e.stopPropagation();
                           handlePlayerClick(p1.id, p1.name, p1.country);
                         }
                       }}
-                      onMouseEnter={() => p1?.id && setHoveredPlayerKey(`p1-${match.id}`)}
+                      onMouseEnter={() => p1?.id && !nameOpensScoreSheet && setHoveredPlayerKey(`p1-${match.id}`)}
                       onMouseLeave={() => setHoveredPlayerKey(null)}
                       className={cn(
                         'inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded-sm transition-all duration-100 max-w-[calc(100%-50px)] min-w-0',
-                        p1?.id ? 'cursor-pointer' : '[cursor:inherit]'
+                        p1?.id && !nameOpensScoreSheet ? 'cursor-pointer' : '[cursor:inherit]'
                       )}
                       style={{
                         background: hoveredPlayerKey === `p1-${match.id}` ? colorWithAlpha(primaryColor, 0.15) : 'transparent',
                         boxShadow: hoveredPlayerKey === `p1-${match.id}` ? `0 0 0 1px ${primaryColor}` : 'none',
                       }}
-                      title={p1?.id ? "View competitor tournament profile" : undefined}
+                      title={p1?.id && !nameOpensScoreSheet ? "View Competitor" : undefined}
                     >
                       {(p1?.country || (p1 as any)?.avatarUrl) && (
                         <PlayerAvatar player={p1 as any} country={p1?.country} className={isComplete && p2Won ? 'opacity-45' : 'opacity-100'} />
@@ -480,7 +494,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                       {match.player1.isManualOverride && (
                         <span
                           className="text-3xs font-bold tracking-wide py-0 px-1 rounded-sm bg-gold/18 text-gold-bright border border-gold/40 uppercase leading-tight shrink-0"
-                          title="Position manually placed by tournament organizer"
+                          title="Manually Placed"
                         >
                           OVERRIDE
                         </span>
@@ -525,7 +539,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
 
                   {/* Player 2 Row */}
                   <div
-                    className="flex justify-between items-center py-2 px-2.5 rounded-sm transition-all duration-100"
+                    className="flex justify-between items-center py-2 px-2.5 rounded-sm transition-all duration-100 max-md:min-h-11"
                     style={{
                       background: p2Won
                         ? colorWithAlpha(primaryColor, 0.18, 'rgba(255, 255, 255, 0.08)')
@@ -537,22 +551,22 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                   >
                     <div
                       onClick={(e) => {
-                        if (p2?.id) {
+                        if (p2?.id && !nameOpensScoreSheet) {
                           e.stopPropagation();
                           handlePlayerClick(p2.id, p2.name, p2.country);
                         }
                       }}
-                      onMouseEnter={() => p2?.id && setHoveredPlayerKey(`p2-${match.id}`)}
+                      onMouseEnter={() => p2?.id && !nameOpensScoreSheet && setHoveredPlayerKey(`p2-${match.id}`)}
                       onMouseLeave={() => setHoveredPlayerKey(null)}
                       className={cn(
                         'inline-flex items-center gap-1.5 py-0.5 px-1.5 rounded-sm transition-all duration-100 max-w-[calc(100%-50px)] min-w-0',
-                        p2?.id ? 'cursor-pointer' : '[cursor:inherit]'
+                        p2?.id && !nameOpensScoreSheet ? 'cursor-pointer' : '[cursor:inherit]'
                       )}
                       style={{
                         background: hoveredPlayerKey === `p2-${match.id}` ? colorWithAlpha(primaryColor, 0.15) : 'transparent',
                         boxShadow: hoveredPlayerKey === `p2-${match.id}` ? `0 0 0 1px ${primaryColor}` : 'none',
                       }}
-                      title={p2?.id ? "View competitor tournament profile" : undefined}
+                      title={p2?.id && !nameOpensScoreSheet ? "View Competitor" : undefined}
                     >
                       {(p2?.country || (p2 as any)?.avatarUrl) && (
                         <PlayerAvatar player={p2 as any} country={p2?.country} className={isComplete && p1Won ? 'opacity-45' : 'opacity-100'} />
@@ -579,7 +593,7 @@ export const MatchCardFeed: React.FC<MatchCardFeedProps> = ({
                       {match.player2.isManualOverride && (
                         <span
                           className="text-3xs font-bold tracking-wide py-0 px-1 rounded-sm bg-gold/18 text-gold-bright border border-gold/40 uppercase leading-tight shrink-0"
-                          title="Position manually placed by tournament organizer"
+                          title="Manually Placed"
                         >
                           OVERRIDE
                         </span>

@@ -1,7 +1,8 @@
 import React, { useId } from 'react';
 import { X, Trash2 } from 'lucide-react';
 import { Overlay } from '../../../components/overlay';
-import { Button, IconButton } from '../../../components/ui';
+import { FULL_PAGE_PANEL_CLASS } from '../../../components/fullPagePanel';
+import { Button, IconButton, cn } from '../../../components/ui';
 
 interface OrgMetadataModalProps {
   isOpen: boolean;
@@ -46,7 +47,11 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
       onClose={onClose}
       dirty={isDirty}
       aria-labelledby={titleId}
-      panelClassName="max-h-[90vh] max-w-140 overflow-y-auto rounded-lg border border-line bg-elevated p-7 shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
+      mobile="center"
+      panelClassName={cn(
+        'max-h-[90vh] max-w-140 overflow-y-auto rounded-lg border border-line bg-elevated p-7 shadow-[0_20px_40px_rgba(0,0,0,0.6)] max-md:p-4 max-md:pb-[calc(1rem+env(safe-area-inset-bottom))]',
+        FULL_PAGE_PANEL_CLASS
+      )}
     >
       {({ requestClose }) => (
         <>
@@ -69,7 +74,7 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
                 required
                 value={editName}
                 onChange={e => setEditName(e.target.value)}
-                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
+                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white max-md:text-base"
               />
             </div>
 
@@ -82,7 +87,7 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
                 required
                 value={editSlug}
                 onChange={e => setEditSlug(e.target.value)}
-                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 font-mono text-sm text-white"
+                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 font-mono text-sm text-white max-md:text-base"
               />
             </div>
 
@@ -94,7 +99,7 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
                 value={editDescription}
                 onChange={e => setEditDescription(e.target.value)}
                 rows={2}
-                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
+                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white max-md:text-base"
               />
             </div>
 
@@ -104,10 +109,11 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
               </label>
               <input
                 type="url"
+                inputMode="url"
                 placeholder="https://..."
                 value={editWebsite}
                 onChange={e => setEditWebsite(e.target.value)}
-                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white"
+                className="w-full rounded-sm border border-line bg-canvas px-3.5 py-2.5 text-sm text-white max-md:text-base"
               />
             </div>
 
@@ -117,26 +123,27 @@ export const OrgMetadataModal: React.FC<OrgMetadataModalProps> = ({
               </div>
             )}
 
-            <div className="mt-4 flex items-center justify-between">
+            <div className="mt-4 flex items-center justify-between max-md:sticky max-md:bottom-0 max-md:z-10 max-md:-mx-7 max-md:flex-col max-md:items-stretch max-md:gap-3 max-md:border-t max-md:border-line max-md:bg-surface max-md:px-7 max-md:py-3">
               <Button
                 type="button"
                 variant="danger"
                 onClick={onDeleteOrganization}
-                className="px-3.5 py-2 text-caption"
+                className="px-3.5 py-2 text-caption max-md:w-full"
               >
                 <Trash2 size={14} />
                 <span>Delete Org</span>
               </Button>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 max-md:flex-col">
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={requestClose}
+                  className="max-md:w-full"
                 >
                   Cancel
                 </Button>
-                <Button type="submit" variant="primary">
+                <Button type="submit" variant="primary" className="max-md:w-full">
                   Save Changes
                 </Button>
               </div>

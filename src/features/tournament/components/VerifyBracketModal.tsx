@@ -133,7 +133,7 @@ export const VerifyBracketModal: React.FC<VerifyBracketModalProps> = ({
             </Button>
             {step === 1 ? (
               <Button variant="primary" onClick={() => setStep(2)} className="py-2 px-5">
-                Proceed to Lock
+                Lock Brackets
               </Button>
             ) : (
               <Button

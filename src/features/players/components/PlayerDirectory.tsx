@@ -197,32 +197,32 @@ export const PlayerDirectory: React.FC = () => {
             <div className="flex size-9 items-center justify-center rounded-md bg-gold-soft text-gold-bright">
               <Users size={20} />
             </div>
-            <h1 className="m-0 text-3xl font-extrabold text-fg">
+            <h1 className="m-0 text-3xl font-extrabold text-fg max-md:text-2xl">
               Global Player Pool
             </h1>
           </div>
-          <p className="mt-1.5 text-sm text-fg-muted">
+          <p className="mt-1.5 text-sm text-fg-muted max-md:hidden">
             List of Global Players and their relevant data.
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 max-md:w-full">
           {isSystemAdmin && SIMULATION_ENABLED && (
             <Button
               variant="secondary"
               onClick={handleOpenGenerateModal}
-              className="px-4.5 py-2.5 text-sm"
+              className="px-4.5 py-2.5 text-sm max-md:flex-1"
             >
               <Sparkles size={16} color="var(--color-gold-bright)" />
-              Generate Fake Players
+              Generate Players
             </Button>
           )}
 
           <Button
             variant="primary"
             onClick={handleOpenAddModal}
-            className="px-5 py-2.5 text-sm shadow-gold"
+            className="px-5 py-2.5 text-sm shadow-gold max-md:flex-1"
           >
             <Plus size={16} />
             Add Competitor
@@ -232,8 +232,8 @@ export const PlayerDirectory: React.FC = () => {
             <Button
               variant="secondary"
               onClick={() => setIsClearAllConfirmOpen(true)}
-              className="gap-1.5 border-red/30 px-3.5 py-2.5 text-sm text-red"
-              title="Clear all global players from catalog"
+              className="gap-1.5 border-red/30 px-3.5 py-2.5 text-sm text-red max-md:flex-1"
+              title="Clear Players"
             >
               <Trash2 size={15} />
               Clear All
@@ -267,7 +267,7 @@ export const PlayerDirectory: React.FC = () => {
         onOpenAddModal={handleOpenAddModal}
       />
 
-      {/* Generate Fake Players Modal (conditionally mounted) */}
+      {/* Generate Players Modal (conditionally mounted) */}
       {SIMULATION_ENABLED && isGenerateModalOpen && (
         <GenerateFakePlayersModal
           isOpen={isGenerateModalOpen}
@@ -337,7 +337,7 @@ export const PlayerDirectory: React.FC = () => {
           </>
         }
         cancelLabel="Cancel"
-        confirmLabel="Clear Unattached Competitors"
+        confirmLabel="Clear Unattached"
         confirmDisabled={unattachedCount === 0}
         onCancel={() => setIsClearAllConfirmOpen(false)}
         onConfirm={handleClearAllConfirm}

@@ -100,7 +100,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <RefreshCw size={16} /> Reload Page
               </Button>
               <Button variant="secondary" onClick={this.handleResetStateAndReload} className="px-5 py-2.5">
-                <Home size={16} /> Return to Tournaments
+                <Home size={16} /> All Tournaments
               </Button>
             </div>
           </div>

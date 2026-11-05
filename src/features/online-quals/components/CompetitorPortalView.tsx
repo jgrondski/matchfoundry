@@ -25,7 +25,7 @@ import { cn } from '../../../components/ui';
 
 const speedbumpClass = 'mb-8 flex items-center gap-4 rounded-md border border-gold/35 bg-gold/10 p-6';
 const outlineButtonClass =
-  'inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-line bg-transparent px-3.5 py-1.5 text-caption font-semibold text-fg-secondary';
+  'inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-line bg-transparent px-3.5 py-1.5 text-caption font-semibold text-fg-secondary max-md:min-h-11';
 
 export interface CompetitorPortalViewProps {
   tournament: Tournament;
@@ -531,7 +531,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
   const cleanTwitchUsername = enteredTwitchHandle.trim().replace(/^@/, '').replace(/^https?:\/\/(www\.)?twitch\.tv\//i, '');
 
   return (
-    <div className="mx-auto max-w-215 px-5 py-8" data-testid="competitor-portal">
+    <div className="mx-auto max-w-215 px-5 py-8 max-md:px-4 max-md:py-4" data-testid="competitor-portal">
       {/* Tournament Qual Header */}
       <div className="mb-8">
         <div className="relative mb-2 flex items-center gap-2.5">
@@ -544,7 +544,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
           </span>
         </div>
 
-        <h1 className="mx-0 mt-0 mb-2 text-4xl font-black tracking-tight text-white">
+        <h1 className="mx-0 mt-0 mb-2 text-4xl max-md:text-3xl font-black tracking-tight text-white">
           {tournament.name}
         </h1>
         <p className="m-0 text-base leading-normal text-fg-secondary">
@@ -652,7 +652,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                   placeholder="e.g. Sharky"
                   disabled={isSubmitting || !canStartRun}
                   required
-                  className="w-full rounded-md border border-line bg-canvas py-3 pr-3.5 pl-10.5 text-base text-white"
+                  className="w-full rounded-md border border-line bg-canvas py-3 pr-3.5 pl-10.5 text-base text-white max-md:w-full max-md:text-base"
                   data-testid="player-name-input"
                 />
               </div>
@@ -674,7 +674,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                   placeholder="e.g. ITZsharky1"
                   disabled={isSubmitting || !canStartRun}
                   required
-                  className="w-full rounded-md border border-line bg-canvas py-3 pr-3.5 pl-10.5 text-base text-white"
+                  className="w-full rounded-md border border-line bg-canvas py-3 pr-3.5 pl-10.5 text-base text-white max-md:w-full max-md:text-base"
                   data-testid="twitch-handle-input"
                 />
               </div>
@@ -693,7 +693,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
               data-testid="start-preflight-button"
             >
               <Play size={18} className="fill-black" />
-              Review Rules &amp; Checklist
+              Review Rules
             </button>
             <span className="text-center text-caption text-fg-muted">
               Already started? Enter the same name and Twitch to resume.
@@ -743,7 +743,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                   onClick={handleCopyRunLink}
                   data-testid="copy-run-link-button"
                   className={outlineButtonClass}
-                  title="Bookmark or open this link to get back to your run on any device"
+                  title="Run Link"
                 >
                   <Link2 size={13} /> {linkCopied ? 'Copied!' : 'Copy Run Link'}
                 </button>
@@ -753,7 +753,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
                 onClick={handleRequestSwitchCompetitor}
                 data-testid="switch-competitor-button"
                 className={outlineButtonClass}
-                title="Clear active session from this browser"
+                title="Clear Session"
               >
                 <LogOut size={13} /> Switch Competitor
               </button>
@@ -834,7 +834,7 @@ export const CompetitorPortalView: React.FC<CompetitorPortalViewProps> = ({ tour
             )}
           </>
         }
-        cancelLabel="Stay in Run"
+        cancelLabel="Stay Here"
         confirmLabel="Switch Competitor"
         onCancel={() => setIsSwitchModalOpen(false)}
         onConfirm={handleConfirmSwitchCompetitor}

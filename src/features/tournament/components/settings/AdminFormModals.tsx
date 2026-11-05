@@ -58,7 +58,7 @@ export const AdminFormModals: React.FC<AdminFormModalsProps> = ({
           </>
         }
         cancelLabel="Cancel"
-        confirmLabel="Yes, Delete Bracket"
+        confirmLabel="Delete Bracket"
         onCancel={onCancelDeleteTier}
         onConfirm={() => { if (tierToDelete) onConfirmDeleteTier(tierToDelete.index); }}
       />
@@ -89,7 +89,7 @@ export const AdminFormModals: React.FC<AdminFormModalsProps> = ({
           </>
         }
         cancelLabel="Cancel"
-        confirmLabel={isExecutingAction ? 'Clearing Data...' : 'Yes, Clear Data'}
+        confirmLabel={isExecutingAction ? 'Clearing Data...' : 'Clear Data'}
         busy={isExecutingAction}
         onCancel={onCancelDataAction}
         onConfirm={onConfirmDataAction}
