@@ -117,7 +117,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({
                   onChange={e => setPin(e.target.value)}
                   autoFocus
                   data-autofocus
-                  placeholder="Enter 4-8 digit PIN"
+                  placeholder="Enter PIN"
                   className="w-full rounded-sm border border-line bg-canvas py-2.5 pl-3 pr-10 text-base tracking-widest text-white max-md:text-base"
                 />
                 <IconButton
