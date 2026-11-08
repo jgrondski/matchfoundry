@@ -65,7 +65,7 @@ Before deploying, ensure you have values for the following environment variables
 | Variable | Description | Example / Default | Required In |
 | :--- | :--- | :--- | :--- |
 | `DATABASE_URL` | Neon PostgreSQL pooled or direct connection string with SSL. In Vercel, set it twice: Production → production branch, Preview → `preview` branch | `postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require` | Local & Vercel |
-| `SYSTEM_ADMIN_RECOVERY_PIN` | Permanent emergency recovery PIN for Master/System Admin access | `849201` (choose any secure 6-8 digit code) | Local & Vercel |
+| `SYSTEM_ADMIN_RECOVERY_PIN` | Permanent emergency recovery PIN for Master/System Admin access | `long-random-phrase-2026` (at least 8 characters; longer is better) | Local & Vercel |
 | `PIN_ENCRYPTION_KEY` | 32+ character secret key for AES-256-GCM encryption of tournament PINs at rest | Generated 32-byte hex string (see Step 2) | Local & Vercel |
 | `DISCORD_WEBHOOK_OVERRIDE_URL` | Sends every Discord announcement and webhook test to this test-channel webhook instead of the tournament's or organization's. Set it for **Preview only**; never for Production | `https://discord.com/api/webhooks/<id>/<token>` | Vercel Preview (optional locally) |
 | `REALTIME_URL` | Base URL of the realtime worker (`realtime/`) for live updates. Read at build time by the client, so redeploy after setting or changing it. Do not mark it Sensitive: CI builds outside Vercel, receives only a placeholder for Sensitive values, and the build fails on it. Leave unset to disable live updates | `https://matchfoundry-realtime.<account>.workers.dev` | Vercel Production & Preview (optional) |
@@ -146,7 +146,7 @@ Vercel provides native Git integration: linking your GitHub repository once enab
    Under **Environment Variables**, add the four variables (apply them to **Production**, **Preview**, and **Development**):
 
    * `DATABASE_URL`: Your Neon connection string (copied in Step 1).
-   * `SYSTEM_ADMIN_RECOVERY_PIN`: Your secret emergency PIN (e.g. `948215`).
+   * `SYSTEM_ADMIN_RECOVERY_PIN`: Your secret emergency PIN (at least 8 characters).
    * `PIN_ENCRYPTION_KEY`: A random 32-character encryption key.
      * *Quick generator command:*
        ```bash
@@ -234,9 +234,9 @@ Run this 5-minute verification checklist immediately after your live Vercel depl
 
 ### 4. Tournament Admin PIN Scope Isolation
 - Navigate to a tournament's settings (`/:slug/manage/settings`).
-- Configure a tournament PIN (e.g. `4488`).
+- Configure a tournament PIN of at least 8 characters (e.g. `44880022`).
 - Click **Lock / Log Out**.
-- Attempt to enter `/admin` using `4488`.
+- Attempt to enter `/admin` using that PIN.
 - Verify:
   - The manager left-nav appears *only* for that tournament.
   - Global directories (`/organizations`, `/players`) remain sealed.

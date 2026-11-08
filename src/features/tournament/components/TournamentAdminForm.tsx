@@ -32,6 +32,13 @@ import { OrgBrandPaletteSection } from './settings/OrgBrandPaletteSection';
 import { TierManagementSection } from './settings/TierManagementSection';
 import { DataSimulationSection } from './settings/DataSimulationSection';
 import { TournamentSecuritySection } from './settings/TournamentSecuritySection';
+import {
+  editWebhookField,
+  isWebhookFieldDirty,
+  syncWebhookField,
+  webhookFieldFromSaved,
+  webhookFieldUpdate,
+} from './settings/webhookField';
 import { AdminFormModals } from './settings/AdminFormModals';
 import { usePinAuth } from '../../auth/AuthContext';
 import { Button, cn, useAction } from '../../../components/ui';
@@ -73,9 +80,8 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
   const [useOrgBranding, setUseOrgBranding] = useState<boolean>(
     tournament.useOrgBranding ?? true
   );
-  const [discordWebhookUrl, setDiscordWebhookUrl] = useState<string>(
-    tournament.discordWebhookUrl || ''
-  );
+  const [webhookField, setWebhookField] = useState(() => webhookFieldFromSaved(tournament.discordWebhookUrl));
+  const discordWebhookUrl = webhookField.value;
   const [logoUrl, setLogoUrl] = useState<string>(
     tournament.logoUrl || ''
   );
@@ -192,7 +198,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     if (slug.trim() !== (tournament.slug || '').trim()) return true;
     if ((organizationId || '') !== (tournament.organizationId || '')) return true;
     if (useOrgBranding !== (tournament.useOrgBranding ?? true)) return true;
-    if ((discordWebhookUrl || '').trim() !== (tournament.discordWebhookUrl || '').trim()) return true;
+    if (isWebhookFieldDirty(webhookField, tournament.discordWebhookUrl)) return true;
     if ((logoUrl || '').trim() !== (tournament.logoUrl || '').trim()) return true;
     if ((bannerUrl || '').trim() !== (tournament.bannerUrl || '').trim()) return true;
     if (startDate !== (tournament.startDate || '')) return true;
@@ -263,7 +269,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     tournament,
     organizationId,
     useOrgBranding,
-    discordWebhookUrl,
+    webhookField,
     logoUrl,
     bannerUrl,
     qualMode,
@@ -287,6 +293,11 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
+  // The webhook re-syncs on its own: other unsaved edits must not stop a late-arriving URL from showing.
+  useEffect(() => {
+    setWebhookField(field => syncWebhookField(field, tournament.discordWebhookUrl));
+  }, [tournament.discordWebhookUrl]);
+
   // Re-sync fields when tournament changes if form is clean
   useEffect(() => {
     if (!isDirty) {
@@ -294,7 +305,6 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       setSlug(tournament.slug || '');
       setOrganizationId(tournament.organizationId || '');
       setUseOrgBranding(tournament.useOrgBranding ?? true);
-      setDiscordWebhookUrl(tournament.discordWebhookUrl || '');
       setLogoUrl(tournament.logoUrl || '');
       setBannerUrl(tournament.bannerUrl || '');
       setStartDate(tournament.startDate || '');
@@ -320,7 +330,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     setSlug(tournament.slug || '');
     setOrganizationId(tournament.organizationId || '');
     setUseOrgBranding(tournament.useOrgBranding ?? true);
-    setDiscordWebhookUrl(tournament.discordWebhookUrl || '');
+    setWebhookField(webhookFieldFromSaved(tournament.discordWebhookUrl));
     setLogoUrl(tournament.logoUrl || '');
     setBannerUrl(tournament.bannerUrl || '');
     setStartDate(tournament.startDate || '');
@@ -533,10 +543,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         slug,
         organizationId,
         useOrgBranding,
-        // Only send the webhook when edited, so a tournament loaded without it (redacted) isn't wiped.
-        ...((discordWebhookUrl || '').trim() !== (tournament.discordWebhookUrl || '').trim()
-          ? { discordWebhookUrl }
-          : {}),
+        ...webhookFieldUpdate(webhookField),
         logoUrl,
         bannerUrl,
         startDate,
@@ -557,7 +564,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         setSlug(saved.slug || '');
         setOrganizationId(saved.organizationId || '');
         setUseOrgBranding(saved.useOrgBranding ?? true);
-        setDiscordWebhookUrl(saved.discordWebhookUrl || '');
+        setWebhookField(webhookFieldFromSaved(saved.discordWebhookUrl));
         setLogoUrl(saved.logoUrl || '');
         setBannerUrl(saved.bannerUrl || '');
         setStartDate(saved.startDate || '');
@@ -830,7 +837,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         webhookTestStatus={webhookTestStatus}
         onOrganizationIdChange={setOrganizationId}
         onUseOrgBrandingChange={setUseOrgBranding}
-        onDiscordWebhookUrlChange={setDiscordWebhookUrl}
+        onDiscordWebhookUrlChange={url => setWebhookField(editWebhookField(url))}
         onApplyOrgColorsToTiers={handleApplyOrgColorsToTiers}
         onTestDiscordWebhook={handleTestDiscordWebhook}
       />

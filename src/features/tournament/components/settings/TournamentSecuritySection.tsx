@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KeyRound, Eye, EyeOff, ShieldCheck, Check, AlertCircle } from 'lucide-react';
 import { usePinAuth, getAuthHeaders } from '../../../auth/AuthContext';
+import { MIN_PIN_LENGTH, PIN_TOO_SHORT_MESSAGE, isPinLongEnough } from '../../../auth/pinRules';
 import { SharedPinWarningModal, SharedTournamentInfo } from './SharedPinWarningModal';
 import { labelClass, inputClass } from './types';
 import { Button, IconButton, cn } from '../../../../components/ui';
@@ -37,6 +38,10 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
     const pinToSave = newPin.trim();
     if (!pinToSave) {
       setUpdateFeedback({ type: 'error', message: 'PIN cannot be empty' });
+      return;
+    }
+    if (!isPinLongEnough(pinToSave)) {
+      setUpdateFeedback({ type: 'error', message: PIN_TOO_SHORT_MESSAGE });
       return;
     }
     setIsUpdating(true);
@@ -166,7 +171,6 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
           <div className="relative min-w-45 flex-1 max-md:min-w-0">
             <input
               type={showNewPin ? 'text' : 'password'}
-              inputMode="numeric"
               value={newPin}
               onChange={e => setNewPin(e.target.value)}
               onKeyDown={e => {
@@ -176,7 +180,7 @@ export const TournamentSecuritySection: React.FC<TournamentSecuritySectionProps>
                   handleUpdatePin(e);
                 }
               }}
-              placeholder="Enter new 4-8 digit PIN"
+              placeholder={`New PIN (${MIN_PIN_LENGTH}+ characters)`}
               className={cn(inputClass, 'pr-10 tracking-widest')}
             />
             <IconButton

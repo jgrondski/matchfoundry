@@ -11,7 +11,7 @@ const SYSTEM_ADMIN_PIN = (process.env.SYSTEM_ADMIN_RECOVERY_PIN || '').trim();
 if (!SYSTEM_ADMIN_PIN) {
   throw new Error('SYSTEM_ADMIN_RECOVERY_PIN is not set. Add it to .env before running e2e tests.');
 }
-const generateTestPin = () => String(Math.floor(100000 + Math.random() * 900000));
+const generateTestPin = () => String(Math.floor(10000000 + Math.random() * 90000000));
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 test.describe('Golden User Journeys: Security & Access Control', () => {
@@ -132,7 +132,7 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     await expect(page.getByText('Access Security & PIN Management')).toBeVisible();
 
     // Update Tournament PIN to delegated key
-    const newPinInput = page.getByPlaceholder('Enter new 4-8 digit PIN');
+    const newPinInput = page.getByPlaceholder('New PIN (8+ characters)');
     await expect(newPinInput).toBeVisible();
     await newPinInput.fill(DELEGATED_TOURNAMENT_PIN);
 
@@ -205,14 +205,14 @@ test.describe('Golden User Journeys: Security & Access Control', () => {
     // Configure SHARED_PIN on the primary tournament
     await page.goto(`/${primary.slug}/manage/settings`);
     await expect(page.getByText('Access Security & PIN Management')).toBeVisible();
-    await page.getByPlaceholder('Enter new 4-8 digit PIN').fill(SHARED_PIN);
+    await page.getByPlaceholder('New PIN (8+ characters)').fill(SHARED_PIN);
     await page.getByRole('button', { name: 'Update PIN', exact: true }).click();
     await expect(page.getByText('Tournament PIN successfully updated!')).toBeVisible();
 
     // Configure SHARED_PIN on the secondary tournament (triggers shared PIN warning popup)
     await page.goto(`/${secondary.slug}/manage/settings`);
     await expect(page.getByText('Access Security & PIN Management')).toBeVisible();
-    await page.getByPlaceholder('Enter new 4-8 digit PIN').fill(SHARED_PIN);
+    await page.getByPlaceholder('New PIN (8+ characters)').fill(SHARED_PIN);
     await page.getByRole('button', { name: 'Update PIN', exact: true }).click();
 
     // 1. Shared PIN warning popup appears listing the primary tournament

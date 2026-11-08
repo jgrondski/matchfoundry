@@ -113,7 +113,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       tourney1.id = tourney1Id;
       tourney1.slug = 'tourney-alpha';
       tourney1.organizationId = 'org_ctwc';
-      tourney1.adminPinEncrypted = encryptPin('7777');
+      tourney1.adminPinEncrypted = encryptPin('77770000');
       await saveFullTournament(tourney1);
 
       const tourney2Id = crypto.randomUUID();
@@ -121,7 +121,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       tourney2.id = tourney2Id;
       tourney2.slug = 'tourney-beta';
       tourney2.organizationId = 'org_ctwc';
-      tourney2.adminPinEncrypted = encryptPin('7777'); // Same shared PIN
+      tourney2.adminPinEncrypted = encryptPin('77770000'); // Same shared PIN
       await saveFullTournament(tourney2);
 
       const tourney3Id = crypto.randomUUID();
@@ -136,7 +136,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       const req = createMockReq({
         url: '/api/auth/pin',
         method: 'POST',
-        body: { pin: '7777' },
+        body: { pin: '77770000' },
       });
       const res = createMockRes();
       await middleware(req, res as any, () => {});
@@ -157,7 +157,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       const updateReq1 = createMockReq({
         url: `/api/tournaments/${tourney1Id}/pin`,
         method: 'PUT',
-        body: { pin: '7777' },
+        body: { pin: '77770000' },
         headers: { authorization: `Bearer ${token}` },
       });
       const updateRes1 = createMockRes();
@@ -167,7 +167,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       const updateReq2 = createMockReq({
         url: `/api/tournaments/${tourney2Id}/pin`,
         method: 'PUT',
-        body: { pin: '7777' },
+        body: { pin: '77770000' },
         headers: { authorization: `Bearer ${token}` },
       });
       const updateRes2 = createMockRes();
@@ -181,7 +181,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       const confirmReq2 = createMockReq({
         url: `/api/tournaments/${tourney2Id}/pin`,
         method: 'PUT',
-        body: { pin: '7777', confirmed: true },
+        body: { pin: '77770000', confirmed: true },
         headers: { authorization: `Bearer ${token}` },
       });
       const confirmRes2 = createMockRes();
@@ -199,6 +199,22 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       const updateRes3 = createMockRes();
       await middleware(updateReq3, updateRes3 as any, () => {});
       expect(updateRes3.getStatusCode()).toBe(403);
+    });
+
+    it.each([
+      ['tournament PIN', '/api/tournaments/any-tourney/pin'],
+      ['system PIN', '/api/auth/system-pin'],
+    ])('rejects a new %s shorter than 8 characters, ignoring surrounding spaces', async (_label, url) => {
+      const req = createMockReq({
+        url,
+        method: 'PUT',
+        body: { pin: ' 1234567 ' },
+        headers: { authorization: `Bearer ${createSessionToken({ role: 'SYSTEM_ADMIN' })}` },
+      });
+      const res = createMockRes();
+      await middleware(req, res as any, () => {});
+      expect(res.getStatusCode()).toBe(400);
+      expect(res.getBody().error).toBe('PIN must be at least 8 characters');
     });
 
     it('returns 401 Unauthorized for invalid PIN', async () => {
@@ -476,7 +492,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
         url: '/api/tournaments/omen-open/pin',
         method: 'PUT',
         headers: { authorization: `Bearer ${token}` },
-        body: { pin: '8844' },
+        body: { pin: 'Omen-Pin-2026' },
       });
       const res = createMockRes();
 
@@ -489,7 +505,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       const loginReq = createMockReq({
         url: '/api/auth/pin',
         method: 'POST',
-        body: { pin: '8844', tournamentSlugOrId: 'omen-open' },
+        body: { pin: 'Omen-Pin-2026', tournamentSlugOrId: 'omen-open' },
       });
       const loginRes = createMockRes();
       await middleware(loginReq, loginRes as any, () => {});
@@ -509,7 +525,7 @@ describe('API Authorization & Multi-Tier PIN Security Engine', () => {
       await middleware(revealReq, revealRes as any, () => {});
 
       expect(revealRes.getStatusCode()).toBe(200);
-      expect(revealRes.getBody().pin).toBe('8844');
+      expect(revealRes.getBody().pin).toBe('Omen-Pin-2026');
     });
   });
 

@@ -85,6 +85,7 @@ import type {
 } from '../features/tournament/types';
 import { DEFAULT_TIER_THEME, TIER_THEMES } from '../theme/palette';
 import { isSimulationAllowed, SIMULATION_DISABLED_MESSAGE } from '../utils/simulationEnv';
+import { isPinLongEnough, PIN_TOO_SHORT_MESSAGE } from '../features/auth/pinRules';
 import { runWithRequestMetrics, getRequestMetrics, formatServerTiming } from './requestMetrics';
 import { NOT_HANDLED, UNLOCKED_SUBACTIONS, runLockedTournamentWrite } from './tournamentWriteLock';
 import { saveMatchResult } from '../api/matchWrites';
@@ -467,6 +468,7 @@ export function createApiMiddleware() {
         if (!checkAuth(req, res, 'SYSTEM_ADMIN')) return;
         const newPin = typeof body?.pin === 'string' ? body.pin.trim() : '';
         if (!newPin) return sendError(res, 400, 'New PIN is required');
+        if (!isPinLongEnough(newPin)) return sendError(res, 400, PIN_TOO_SHORT_MESSAGE);
         const db = getDb();
         const encrypted = encryptPin(newPin);
         const existing = await db
@@ -824,6 +826,7 @@ export function createApiMiddleware() {
             const pin = typeof body?.pin === 'string' ? body.pin.trim() : '';
             const confirmed = Boolean(body?.confirmed);
             if (!pin) return sendError(res, 400, 'PIN is required');
+            if (!isPinLongEnough(pin)) return sendError(res, 400, PIN_TOO_SHORT_MESSAGE);
 
             const db = getDb();
             const allTourneys = await db.select().from(tournaments);
