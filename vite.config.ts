@@ -5,9 +5,10 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 import { createApiMiddleware } from './src/server/api';
+import { isRealtimeUrl } from './src/utils/realtimeConfig';
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '');
   // Ensure all .env variables are available to Node server middleware & runtime
   for (const [key, val] of Object.entries(env)) {
@@ -20,6 +21,18 @@ export default defineConfig(({ mode }) => {
   const databaseUrl = env.DATABASE_URL || process.env.DATABASE_URL || defaultDbUrl;
   if (!process.env.DATABASE_URL && databaseUrl) {
     process.env.DATABASE_URL = databaseUrl;
+  }
+
+  if (command === 'build' && process.env.REALTIME_URL && !isRealtimeUrl(process.env.REALTIME_URL)) {
+    throw new Error(
+      'REALTIME_URL is set but is not an http(s) URL. If it is marked Sensitive in Vercel, recreate it without Sensitive: CI builds outside Vercel and only receives a placeholder.'
+    );
+  }
+
+  if (command === 'build' && process.env.NODE_ENV && !['production', 'development', 'test'].includes(process.env.NODE_ENV)) {
+    throw new Error(
+      'NODE_ENV is not production, development or test, which would ship a development build of React. Do not set it in Vercel: it is marked Sensitive there and CI only receives a placeholder.'
+    );
   }
 
   return {

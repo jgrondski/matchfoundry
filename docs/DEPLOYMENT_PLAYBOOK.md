@@ -60,16 +60,15 @@ There are three databases, one per deploy target:
 
 ## 2. Environment Variables Inventory
 
-Before deploying, ensure you have values for the following four environment variables:
+Before deploying, ensure you have values for the following environment variables:
 
 | Variable | Description | Example / Default | Required In |
 | :--- | :--- | :--- | :--- |
 | `DATABASE_URL` | Neon PostgreSQL pooled or direct connection string with SSL. In Vercel, set it twice: Production → production branch, Preview → `preview` branch | `postgresql://user:pass@ep-xyz.neon.tech/neondb?sslmode=require` | Local & Vercel |
 | `SYSTEM_ADMIN_RECOVERY_PIN` | Permanent emergency recovery PIN for Master/System Admin access | `849201` (choose any secure 6-8 digit code) | Local & Vercel |
 | `PIN_ENCRYPTION_KEY` | 32+ character secret key for AES-256-GCM encryption of tournament PINs at rest | Generated 32-byte hex string (see Step 2) | Local & Vercel |
-| `NODE_ENV` | Runtime environment mode | `production` | Vercel |
 | `DISCORD_WEBHOOK_OVERRIDE_URL` | Sends every Discord announcement and webhook test to this test-channel webhook instead of the tournament's or organization's. Set it for **Preview only**; never for Production | `https://discord.com/api/webhooks/<id>/<token>` | Vercel Preview (optional locally) |
-| `REALTIME_URL` | Base URL of the realtime worker (`realtime/`) for live updates. Read at build time by the client, so redeploy after setting or changing it. Leave unset to disable live updates | `https://matchfoundry-realtime.<account>.workers.dev` | Vercel Production & Preview (optional) |
+| `REALTIME_URL` | Base URL of the realtime worker (`realtime/`) for live updates. Read at build time by the client, so redeploy after setting or changing it. Do not mark it Sensitive: CI builds outside Vercel, receives only a placeholder for Sensitive values, and the build fails on it. Leave unset to disable live updates | `https://matchfoundry-realtime.<account>.workers.dev` | Vercel Production & Preview (optional) |
 | `REALTIME_PUBLISH_SECRET` | Bearer secret the API sends when publishing tournament changes to the worker. Must equal the worker's `PUBLISH_SECRET` | Generated random string | Vercel Production & Preview (optional) |
 
 GitHub Actions also needs these repository secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `DATABASE_URL` (production Neon, used on merge to `main`) and `PREVIEW_DATABASE_URL` (the Neon `preview` branch, used on PRs).
@@ -153,7 +152,6 @@ Vercel provides native Git integration: linking your GitHub repository once enab
        ```bash
        node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
        ```
-   * `NODE_ENV`: `production`
 5. **Deploy:**
    - Click **Deploy**.
    - Vercel will clone the repo, install dependencies, compile the Vite production bundle, build the serverless API function, and deploy to a live URL (e.g. `https://tournament-manager-xyz.vercel.app`).
