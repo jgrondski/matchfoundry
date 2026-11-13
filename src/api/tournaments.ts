@@ -181,6 +181,7 @@ import type {
 } from '../features/tournament/types';
 import { collectBracketMatches, buildMatchRow, buildGameRows } from './matchWrites';
 import { validateEventDates } from '../features/tournament/eventDates';
+import { assertValidScores } from '../utils/scores';
 
 /** A tournament save with an invalid event date or range. The API answers 400 with the message. */
 export class EventDateError extends Error {}
@@ -261,7 +262,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
       winnerPlayerId: m.winnerId,
       loserPlayerId: m.loserId,
       isComplete,
-      notes: m.isForfeit ? 'Forfeit win' : undefined,
+      notes: m.isForfeit ? (m.metadata?.forfeitNote || 'Forfeit win') : undefined,
       forfeitWinnerId: m.isForfeit ? (m.winnerId || undefined) : undefined,
       revision: Number(meta.matchScores?.[m.id]?.revision ?? 0),
     };
@@ -965,6 +966,7 @@ export async function saveFullTournament(tourney: Tournament, options: { syncMat
         if (Number((existingSub as any).score) === Number(s.score)) {
           continue;
         }
+        assertValidScores([s.score], 'Qualifier score');
         await db
           .update(qualifierSubmissions)
           .set({ score: s.score })
@@ -984,6 +986,7 @@ export async function saveFullTournament(tourney: Tournament, options: { syncMat
           continue;
         }
 
+        assertValidScores([s.score], 'Qualifier score');
         toInsert.push({
           id: isOurUuid ? s.id : crypto.randomUUID(),
           tournamentId: savedTourneyId,

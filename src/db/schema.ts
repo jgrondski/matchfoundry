@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, boolean, jsonb, timestamp, date, uniqueIndex, index } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, integer, boolean, jsonb, timestamp, date, uniqueIndex, index, check } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import type {
   TierThemeColors,
@@ -167,6 +167,8 @@ export const qualifierSubmissions = pgTable('qualifier_submissions', {
   // A unique index, not a unique constraint: drizzle-kit push prompts (and fails in CI) when adding a
   // unique constraint to a table that already has rows.
   uniqueIndex('qualifier_submissions_resume_token_idx').on(table.resumeToken),
+  // Same range as MAX_SCORE in src/utils/scores.ts: whole numbers 0 to 99,999,999.
+  check('qualifier_submissions_score_range', sql`${table.score} BETWEEN 0 AND 99999999`),
 ]);
 
 export const matches = pgTable(
@@ -204,7 +206,11 @@ export const games = pgTable('games', {
   loserId: uuid('loser_id').references(() => players.id, { onDelete: 'set null' }),
   isIntentionalTopout: boolean('is_intentional_topout').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+}, (table) => [
+  // Same range as MAX_SCORE in src/utils/scores.ts: whole numbers 0 to 99,999,999.
+  check('games_player1_score_range', sql`${table.player1Score} BETWEEN 0 AND 99999999`),
+  check('games_player2_score_range', sql`${table.player2Score} BETWEEN 0 AND 99999999`),
+]);
 
 export const systemSettings = pgTable('system_settings', {
   key: text('key').primaryKey(),

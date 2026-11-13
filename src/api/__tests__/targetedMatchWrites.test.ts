@@ -155,6 +155,9 @@ describe('Targeted match writes', () => {
   const score = (t: Tournament, m: BracketMatch, winners: string[], base?: number, extra?: Record<string, unknown>) =>
     makeHttpRequest(`/api/tournaments/${t.id}/matches/${m.id}/score`, 'PUT', scoreBody(t.tiers[0].id, m, winners, base, extra));
 
+  const reopen = (t: Tournament, m: BracketMatch) =>
+    makeHttpRequest(`/api/tournaments/${t.id}/matches/${m.id}/reopen`, 'POST', { tierId: t.tiers[0].id });
+
   const getTournament = async (t: Tournament): Promise<Tournament> =>
     (await makeHttpRequest(`/api/tournaments/${t.id}`, 'GET')).body as Tournament;
 
@@ -216,6 +219,7 @@ describe('Targeted match writes', () => {
         const m2GamesBefore = await db.select().from(games).where(eq(games.matchId, m2.id));
         expect(m2GamesBefore.length).toBe(2);
 
+        expect((await reopen(t, m1)).status).toBe(200);
         expect((await score(t, m1, [a, a], 600000)).status).toBe(200);
         const m2GamesAfter = await db.select().from(games).where(eq(games.matchId, m2.id));
         expect(m2GamesAfter.map((g: any) => g.id).sort()).toEqual(m2GamesBefore.map((g: any) => g.id).sort());
@@ -225,12 +229,13 @@ describe('Targeted match writes', () => {
         expect(m1Games.every((g: any) => g.player1Score === 650000 || g.player2Score === 650000)).toBe(true);
       });
 
-      it('re-scoring so nobody has won yet clears the winner from the next match slot', async () => {
+      it('reopening and re-scoring so nobody has won yet clears the winner from the next match slot', async () => {
         const t = await buildLockedTournament(format.tier);
         const [m1] = firstTwoPlayableMatches(t);
         const p1 = m1.player1.player!.id;
 
         expect((await score(t, m1, [p1, p1])).status).toBe(200);
+        expect((await reopen(t, m1)).status).toBe(200);
         expect((await score(t, m1, [p1])).status).toBe(200);
 
         const after = await getTournament(t);
@@ -282,6 +287,7 @@ describe('Targeted match writes', () => {
       const forfeit = await makeHttpRequest(`/api/tournaments/${t.id}/matches/${m2.id}/forfeit`, 'POST', {
         tierId,
         winnerPlayerId: m2.player2.player!.id,
+        reason: 'No-show',
       });
       expect(forfeit.status).toBe(200);
       expect(forfeit.body.matchScores[m2.id].revision).toBe(2);

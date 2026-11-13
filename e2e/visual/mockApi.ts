@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, type Page } from '@playwright/test';
-import { generateDoubleEliminationBracket } from '../../src/features/bracket/math';
+import { generateDoubleEliminationBracket, generateTraditionalBracket } from '../../src/features/bracket/math';
 
 const FIXTURE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures');
 
@@ -46,6 +46,23 @@ export const DOUBLE_ELIM: MockOptions = {
     tier.bracket = generateDoubleEliminationBracket(players, { tierId: tier.id });
     tier.eliminationType = 'DOUBLE';
     tier.bracketRouting = 'TRADITIONAL_TREE';
+    return { ...t, matchScores: {} };
+  },
+};
+
+/**
+ * Serves the first tier as an unplayed single-elimination bracket. The simulated fixture is
+ * fully played, and a completed match opens its score drawer read-only, so specs that type
+ * scores need an open match.
+ */
+export const UNPLAYED_BRACKET: MockOptions = {
+  tournament: t => {
+    const tier = t.tiers.find((x: { slug: string }) => x.slug === FIXTURE_TIER_SLUG);
+    const count = tier.playerCount || 16;
+    const players = t.playersPool
+      .slice(0, count)
+      .map((p: { id: string; name: string }, i: number) => ({ id: p.id, name: p.name, seed: i + 1 }));
+    tier.bracket = generateTraditionalBracket(players, { tierId: tier.id, bestOf: tier.bestOf });
     return { ...t, matchScores: {} };
   },
 };

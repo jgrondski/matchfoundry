@@ -552,6 +552,7 @@ describe('Relational Matches & Games PostgreSQL Integrity (Regression)', () => {
         {
           tierId: tier.id,
           winnerPlayerId: forfeitWinner,
+          reason: 'No-show',
         }
       );
 

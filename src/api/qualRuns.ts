@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { getDb } from '../db';
 import { qualifierRuns, qualifierSubmissions } from '../db/schema';
+import { assertValidScores } from '../utils/scores';
 
 /** One competitor's qual in a tournament. Its scores are the qualifier_submissions rows with this runId. */
 export type QualRunRow = typeof qualifierRuns.$inferSelect;
@@ -37,6 +38,7 @@ export async function listRunScores(
 
 export async function insertRunScores(run: QualRunRow, scores: number[], baseTime: Date): Promise<string[]> {
   if (scores.length === 0) return [];
+  assertValidScores(scores, 'Qualifier score');
   const inserted = await getDb()
     .insert(qualifierSubmissions)
     .values(

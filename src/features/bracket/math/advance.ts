@@ -199,23 +199,36 @@ export function retractMatchWinner(
   updatedMatch.winnerId = null;
   updatedMatch.loserId = null;
 
+  // A swap (swapMatchSlots) only moves a competitor within one round and stage, so a relocated
+  // winner or loser can only be in the same round as the match they were fed into. Searching
+  // wider would also match the retracted match itself and the competitor's earlier matches,
+  // and blank their slots there.
+  const isInRoundOf = (candidate: BracketMatch, targetId: string | null | undefined): boolean => {
+    const target = targetId ? updatedMatchesById[targetId] : undefined;
+    if (!target) return false;
+    return (
+      candidate.roundNumber === target.roundNumber &&
+      (candidate.stage || 'WINNERS') === (target.stage || 'WINNERS')
+    );
+  };
+
   // Clear downstream slot and cascade if downstream match had also declared a winner
   const clearDownstream = (m: BracketMatch, winnerIdToClear: string | null, loserIdToClear: string | null) => {
     // 1. Clear winner propagation (both default nextMatchId and any relocated slot)
     const matchesToCheckForWinner = new Set<string>();
     if (m.nextMatchId) matchesToCheckForWinner.add(m.nextMatchId);
 
-    // If winner was swapped/moved, also check all matches with the same target round
-    if (winnerIdToClear) {
-      for (const candidate of Object.values(updatedMatchesById)) {
-        if (
-          candidate.player1.player?.id === winnerIdToClear ||
-          candidate.player2.player?.id === winnerIdToClear ||
-          candidate.player1.sourceMatchId === m.id ||
-          candidate.player2.sourceMatchId === m.id
-        ) {
-          matchesToCheckForWinner.add(candidate.id);
-        }
+    // If winner was swapped/moved, also check the other matches in the target round
+    for (const candidate of Object.values(updatedMatchesById)) {
+      if (candidate.id === m.id) continue;
+      if (
+        candidate.player1.sourceMatchId === m.id ||
+        candidate.player2.sourceMatchId === m.id ||
+        (winnerIdToClear &&
+          isInRoundOf(candidate, m.nextMatchId) &&
+          (candidate.player1.player?.id === winnerIdToClear || candidate.player2.player?.id === winnerIdToClear))
+      ) {
+        matchesToCheckForWinner.add(candidate.id);
       }
     }
 
@@ -258,16 +271,16 @@ export function retractMatchWinner(
     const matchesToCheckForLoser = new Set<string>();
     if (m.loserNextMatchId) matchesToCheckForLoser.add(m.loserNextMatchId);
 
-    if (loserIdToClear) {
-      for (const candidate of Object.values(updatedMatchesById)) {
-        if (
-          candidate.player1.player?.id === loserIdToClear ||
-          candidate.player2.player?.id === loserIdToClear ||
-          candidate.player1.sourceMatchId === m.id ||
-          candidate.player2.sourceMatchId === m.id
-        ) {
-          matchesToCheckForLoser.add(candidate.id);
-        }
+    for (const candidate of Object.values(updatedMatchesById)) {
+      if (candidate.id === m.id) continue;
+      if (
+        candidate.player1.sourceMatchId === m.id ||
+        candidate.player2.sourceMatchId === m.id ||
+        (loserIdToClear &&
+          isInRoundOf(candidate, m.loserNextMatchId) &&
+          (candidate.player1.player?.id === loserIdToClear || candidate.player2.player?.id === loserIdToClear))
+      ) {
+        matchesToCheckForLoser.add(candidate.id);
       }
     }
 
