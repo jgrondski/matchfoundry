@@ -3,9 +3,9 @@ import { BracketMatch } from '../types';
 import { MatchScoreRecord } from '../../tournament/types';
 import { useTournament } from '../../tournament/store';
 import { ApiError } from '../../tournament/apiError';
-import { MATCH_CONFLICT_CODE } from '../matchConflict';
+import { MATCH_COMPLETE_CODE, MATCH_CONFLICT_CODE } from '../matchConflict';
 import { shouldResyncDrawer } from '../drawerSync';
-import { X, Trophy, Check, ShieldAlert, Plus, ChevronDown } from 'lucide-react';
+import { X, Trophy, Check, ShieldAlert, ChevronDown, Hourglass, RotateCcw } from 'lucide-react';
 import {
   getDefaultTierColors,
   colorWithAlpha,
@@ -15,38 +15,36 @@ import {
 import { MatchupBanner } from './drawer/MatchupBanner';
 import { ManualSlotOverrideSection } from './drawer/ManualSlotOverrideSection';
 import { GameScoreCard } from './drawer/GameScoreCard';
-import { Overlay } from '../../../components/overlay';
+import {
+  type GameDraft,
+  draftToInput,
+  draftsFromRecord,
+  draftsToPayload,
+  finishSummary,
+  gamesEqual,
+  hasStartedGames,
+  normalizeDrafts,
+  reopenSummary,
+  waitingOn,
+} from './drawer/drawerModel';
+import {
+  FORFEIT_REASON_MAX_LENGTH,
+  TIE,
+  bestOfChoices,
+  canChangeBestOf,
+  gameOutcome,
+  isGameStarted,
+  matchPhase,
+  reopenBlockers,
+  summarizeSeries,
+  validateMatchGames,
+  winsNeeded,
+} from '../matchRules';
+import { ConfirmDialog, Overlay } from '../../../components/overlay';
 import { Button, Spinner, cn, useAction, useGlobalBusy } from '../../../components/ui';
-import { useIsMobile } from '../../../components/ui/useMediaQuery';
 import { DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
-type GameDraft = { p1: string; p2: string; winner: string | null };
-
-function deriveInitialGames(match: BracketMatch, liveRecord: MatchScoreRecord | undefined): GameDraft[] {
-  const currentBestOf = liveRecord?.bestOf || match.bestOf || 5;
-  const recordedCount = liveRecord?.games?.length || 0;
-  const totalCount = Math.max(currentBestOf, recordedCount);
-  const initialGames = [];
-  for (let i = 1; i <= totalCount; i++) {
-    const recorded = liveRecord?.games?.find(g => g.gameNumber === i);
-    initialGames.push({
-      p1: recorded?.player1Points !== null && recorded?.player1Points !== undefined ? String(recorded.player1Points) : '',
-      p2: recorded?.player2Points !== null && recorded?.player2Points !== undefined ? String(recorded.player2Points) : '',
-      winner: recorded?.winnerPlayerId || null,
-    });
-  }
-  return initialGames;
-}
-
-/** Equal if identical after dropping trailing empty games (Best-of changes pad with empties). */
-export function gamesEqual(a: GameDraft[], b: GameDraft[]): boolean {
-  const trim = (list: GameDraft[]) => {
-    const out = [...list];
-    while (out.length && !out[out.length - 1].p1 && !out[out.length - 1].p2 && !out[out.length - 1].winner) out.pop();
-    return out;
-  };
-  return JSON.stringify(trim(a)) === JSON.stringify(trim(b));
-}
+export { gamesEqual };
 
 interface MatchScoreDrawerProps {
   isOpen: boolean;
@@ -58,6 +56,12 @@ interface MatchScoreDrawerProps {
   roundName?: string;
 }
 
+/**
+ * Score drawer for one bracket match. What it offers follows the match's phase:
+ * waiting on a competitor (read-only), ready or in progress (enter games), or complete
+ * (read-only result with an explicit Reopen). Finishing a match, reopening one, changing
+ * best-of and recording a forfeit each ask for confirmation first.
+ */
 export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
   isOpen,
   onClose,
@@ -67,23 +71,35 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
   matchScoreRecord,
   roundName = 'Round',
 }) => {
-  const { tournaments, saveMatchScores, updateMatchBestOf, forfeitMatch } = useTournament();
+  const { tournaments, saveMatchScores, updateMatchBestOf, forfeitMatch, reopenMatch } = useTournament();
 
-  const liveRecord = matchScoreRecord || (tournamentId && match ? tournaments.find(t => t.id === tournamentId)?.matchScores[match.id] : undefined);
+  const currentTournament = tournaments.find(t => t.id === tournamentId);
+  const currentTier = currentTournament?.tiers.find(t => t.id === tierId) || currentTournament?.tiers[0];
+  const bracket = currentTier?.bracket;
+  // The parent hands over a snapshot; read the live match so results and reopens show at once.
+  const liveMatch = match ? bracket?.matchesById?.[match.id] ?? match : null;
+  const liveRecord = (match && currentTournament?.matchScores[match.id]) || matchScoreRecord;
+  const p1Id = liveMatch?.player1.player?.id;
+  const p2Id = liveMatch?.player2.player?.id;
+  const recordBestOf = liveRecord?.bestOf || liveMatch?.bestOf || 5;
 
-  const [bestOf, setBestOf] = useState<number>(match?.bestOf || 5);
+  const [bestOf, setBestOf] = useState<number>(recordBestOf);
   const [games, setGames] = useState<GameDraft[]>([]);
   const gamesRef = useRef(games);
   gamesRef.current = games;
-  const [hasTiebreaker, setHasTiebreaker] = useState(false);
   const [baseRevision, setBaseRevision] = useState(0);
   const [conflictNotice, setConflictNotice] = useState<string | null>(null);
-  const [forfeitingId, setForfeitingId] = useState<string | null>(null);
-  const isMobile = useIsMobile();
-  const [forfeitOpen, setForfeitOpen] = useState(false);
   const { busy: globalBusy } = useGlobalBusy();
   const [resyncToken, setResyncToken] = useState(0);
   const lastSyncRef = useRef<{ matchId: string; gamesJson: string } | null>(null);
+
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
+  const [pendingBestOf, setPendingBestOf] = useState<number | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [forfeitOpen, setForfeitOpen] = useState(false);
+  const [forfeitWinner, setForfeitWinner] = useState<string | null>(null);
+  const [forfeitReason, setForfeitReason] = useState('');
 
   useEffect(() => {
     if (!match) return;
@@ -94,14 +110,12 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
       currentGamesJson: JSON.stringify(gamesRef.current),
       matchId: match.id,
     })) return;
-    const currentBestOf = liveRecord?.bestOf || match.bestOf || 5;
-    const nextGames = deriveInitialGames(match, liveRecord);
-    setBestOf(currentBestOf);
+    const nextGames = draftsFromRecord(liveRecord, recordBestOf, p1Id, p2Id);
+    setBestOf(recordBestOf);
     setGames(nextGames);
-    setHasTiebreaker(Boolean(liveRecord?.hasTiebreaker || (liveRecord?.games?.length || 0) > currentBestOf));
     setBaseRevision(Number(liveRecord?.revision ?? 0));
     lastSyncRef.current = { matchId: match.id, gamesJson: JSON.stringify(nextGames) };
-  }, [match, liveRecord, resyncToken]);
+  }, [match, liveRecord, recordBestOf, p1Id, p2Id, resyncToken]);
 
   useEffect(() => {
     if (isOpen) return;
@@ -109,69 +123,67 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
     setConflictNotice(null);
   }, [isOpen]);
 
-  const baselineGames = useMemo(() => (match ? deriveInitialGames(match, liveRecord) : []), [match, liveRecord]);
+  const baselineGames = useMemo(
+    () => draftsFromRecord(liveRecord, recordBestOf, p1Id, p2Id),
+    [liveRecord, recordBestOf, p1Id, p2Id]
+  );
   const titleId = useId();
 
-  // Actions are declared before the early return so hook order stays stable.
-  const bestOfAction = useAction(async (newBestOf: number) => {
-    if (!match) return;
-    setBestOf(newBestOf);
-    await updateMatchBestOf(tournamentId, tierId, match.id, newBestOf);
-    const updated = [...games];
-    while (updated.length < newBestOf) {
-      updated.push({ p1: '', p2: '', winner: null });
+  const handleWriteError = (err: unknown) => {
+    if (err instanceof ApiError && (err.code === MATCH_CONFLICT_CODE || err.code === MATCH_COMPLETE_CODE)) {
+      setConflictNotice(err.message);
+      lastSyncRef.current = null; // the next resync loads the latest stored games
+      setResyncToken(n => n + 1);
+      return;
     }
-    setGames(updated);
-  });
+    throw err;
+  };
 
-  const save = useAction(async () => {
+  const performSave = async () => {
     if (!match) return;
     setConflictNotice(null);
-    const formattedGames = games.map((g, idx) => ({
-      gameNumber: idx + 1,
-      player1Points: g.p1.trim() !== '' ? parseInt(g.p1, 10) : null,
-      player2Points: g.p2.trim() !== '' ? parseInt(g.p2, 10) : null,
-      winnerPlayerId: g.winner,
-    }));
-
-    const hasTiedGame = formattedGames.some(
-      g => g.winnerPlayerId === 'TIE' || (g.player1Points !== null && g.player1Points === g.player2Points && g.player1Points > 0)
-    );
-    const hasRemainingTiebreaker = games.length > bestOf;
-    const shouldRecordTiebreaker = Boolean((hasTiebreaker || hasRemainingTiebreaker || hasTiedGame) && (hasTiedGame || hasRemainingTiebreaker));
-
+    const payload = draftsToPayload(games, p1Id, p2Id);
+    const hasTiebreaker = payload.some(g => g.winnerPlayerId === TIE) || payload.length > bestOf;
     try {
-      const saved = await saveMatchScores(
-        tournamentId,
-        tierId,
-        match.id,
-        formattedGames,
-        shouldRecordTiebreaker,
-        { expectedRevision: baseRevision }
-      );
+      const saved = await saveMatchScores(tournamentId, tierId, match.id, payload, hasTiebreaker, {
+        expectedRevision: baseRevision,
+      });
       if (saved) onClose(); // null means the store already reported an error; keep the judge's scores on screen
     } catch (err) {
-      if (err instanceof ApiError && err.code === MATCH_CONFLICT_CODE) {
-        setConflictNotice(err.message);
-        lastSyncRef.current = null; // the next resync loads the latest stored games
-        setResyncToken(n => n + 1);
-        return;
-      }
-      throw err;
+      handleWriteError(err);
     }
-  });
+  };
 
-  const forfeit = useAction(async (winnerPlayerId: string) => {
+  const performBestOf = async (newBestOf: number) => {
     if (!match) return;
-    const result = await forfeitMatch(tournamentId, tierId, match.id, winnerPlayerId);
-    if (result) onClose(); // null means the store already reported an error
-  });
+    const saved = await updateMatchBestOf(tournamentId, tierId, match.id, newBestOf);
+    if (saved) {
+      setBestOf(newBestOf);
+      setGames(prev => normalizeDrafts(prev, newBestOf, p1Id, p2Id));
+    }
+    setPendingBestOf(null);
+  };
 
-  if (!isOpen || !match) return null;
+  const performForfeit = async () => {
+    if (!match || !forfeitWinner || !forfeitReason.trim()) return;
+    const saved = await forfeitMatch(tournamentId, tierId, match.id, forfeitWinner, forfeitReason.trim());
+    if (saved) {
+      setForfeitOpen(false);
+      onClose();
+    }
+  };
 
-  // Resolve tournament & tier theme colors matching PlayerDetailDrawer conventions
-  const currentTournament = tournaments.find(t => t.id === tournamentId);
-  const currentTier = currentTournament?.tiers.find(t => t.id === tierId) || currentTournament?.tiers[0];
+  const performReopen = async () => {
+    if (!match) return;
+    await reopenMatch(tournamentId, tierId, match.id, baseRevision);
+    setReopenOpen(false);
+  };
+
+  // Actions are declared before the early return so hook order stays stable.
+  const save = useAction(performSave);
+
+  if (!isOpen || !match || !liveMatch) return null;
+
   const defaults = getDefaultTierColors(currentTier || {});
   const primaryColor = currentTier?.primaryColor || defaults.primaryColor || THEME_FALLBACK.primaryColor;
   const secondaryColor = currentTier?.secondaryColor || defaults.secondaryColor || DEFAULT_TIER_THEME.secondaryColor;
@@ -179,105 +191,60 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
   const textColor = currentTier?.textColor || defaults.textColor || DEFAULT_TIER_THEME.textColor;
   const backgroundColor = currentTier?.backgroundColor || defaults.backgroundColor || THEME_FALLBACK.backgroundColor;
 
-  const p1 = match.player1.player;
-  const p2 = match.player2.player;
-  const p1Name = p1?.name || (match.player1.sourceMatchId ? 'Feeder Winner' : 'TBD');
-  const p2Name = p2?.name || (match.player2.sourceMatchId ? 'Feeder Winner' : 'TBD');
+  const p1 = liveMatch.player1.player;
+  const p2 = liveMatch.player2.player;
+  const p1Name = p1?.name || (liveMatch.player1.sourceMatchId ? 'Feeder Winner' : 'TBD');
+  const p2Name = p2?.name || (liveMatch.player2.sourceMatchId ? 'Feeder Winner' : 'TBD');
 
-  const handleScoreChange = (gameIndex: number, playerSlot: 1 | 2, value: string) => {
-    // Only allow digits
-    const cleaned = value.replace(/\D/g, '');
-    const updated = [...games];
-    if (playerSlot === 1) {
-      updated[gameIndex].p1 = cleaned;
-    } else {
-      updated[gameIndex].p2 = cleaned;
-    }
+  const phase = matchPhase(liveMatch, liveRecord);
+  const editable = phase === 'READY' || phase === 'IN_PROGRESS';
+  const isComplete = phase === 'COMPLETE';
+  const inputs = games.map(draftToInput);
+  const series = summarizeSeries(inputs, bestOf, p1Id, p2Id);
+  const draftError = editable ? validateMatchGames(inputs, bestOf, p1Id, p2Id) : null;
+  const dirty = editable && !gamesEqual(games, baselineGames);
+  const bestOfOptions =
+    editable && canChangeBestOf(liveRecord) && !hasStartedGames(games)
+      ? bestOfChoices(liveMatch.bestOf || currentTier?.bestOf)
+      : null;
+  const blockers = isComplete && bracket ? reopenBlockers(bracket, currentTournament?.matchScores || {}, liveMatch.id) : [];
+  const forfeitNote = isComplete && liveRecord?.notes?.toLowerCase().startsWith('forfeit') ? liveRecord.notes : null;
+  const winnerName = liveMatch.winnerId === p1Id ? p1Name : liveMatch.winnerId === p2Id ? p2Name : null;
+  const shownGames = isComplete ? games.filter(g => isGameStarted(draftToInput(g))) : games;
+  const hasTiedGame = inputs.some(g => gameOutcome(g, p1Id, p2Id) === TIE);
 
-    const val1 = updated[gameIndex].p1.trim();
-    const val2 = updated[gameIndex].p2.trim();
-
-    // If either score is cleared or empty, unselect winner automatically
-    if (val1 === '' || val2 === '') {
-      updated[gameIndex].winner = null;
-    } else {
-      const num1 = parseInt(val1, 10);
-      const num2 = parseInt(val2, 10);
-
-      if (isNaN(num1) || isNaN(num2)) {
-        updated[gameIndex].winner = null;
-      } else if (num1 === 0 && num2 === 0) {
-        // Empty / 0-0 reset: unselect winner automatically
-        updated[gameIndex].winner = null;
-      } else if (num1 > num2 && p1) {
-        updated[gameIndex].winner = p1.id;
-      } else if (num2 > num1 && p2) {
-        updated[gameIndex].winner = p2.id;
-      } else if (num1 === num2) {
-        updated[gameIndex].winner = 'TIE';
-      }
-    }
-
-    setGames(updated);
-  };
-
-  const handleManualWinnerToggle = (gameIndex: number, winnerId: string | null) => {
-    const updated = [...games];
-    updated[gameIndex].winner = updated[gameIndex].winner === winnerId ? null : winnerId;
-    setGames(updated);
-  };
-
-  const handleBestOfChange = (newBestOf: number) => {
-    void bestOfAction.run(newBestOf);
-  };
-
-  const handleAddTiebreakerGame = () => {
-    setGames(prev => [...prev, { p1: '', p2: '', winner: null }]);
-    setHasTiebreaker(true);
-  };
-
-  const handleDeleteTiebreakerGame = (idx: number) => {
-    setGames(prev => {
-      const updated = prev.filter((_, i) => i !== idx);
-      const hasRemainingTiebreaker = updated.length > bestOf;
-      const hasAnyTiedGame = updated.some(g => g.winner === 'TIE' || (g.p1 !== '' && g.p1 === g.p2 && parseInt(g.p1, 10) > 0));
-      if (!hasRemainingTiebreaker && !hasAnyTiedGame) {
-        setHasTiebreaker(false);
-      }
-      return updated;
-    });
-  };
-
-
-  const handleForfeit = async (winnerPlayerId: string) => {
-    if (window.confirm(`Award forfeit win to ${winnerPlayerId === p1?.id ? p1Name : p2Name}?`)) {
-      setForfeitingId(winnerPlayerId);
-      try {
-        await forfeit.run(winnerPlayerId);
-      } finally {
-        setForfeitingId(null);
-      }
-    }
-  };
-
-  // Calculate series score summary
-  let p1Wins = 0;
-  let p2Wins = 0;
-  games.forEach(g => {
-    if (p1 && g.winner === p1.id) p1Wins++;
-    else if (p2 && g.winner === p2.id) p2Wins++;
-  });
-  const winThreshold = Math.ceil(bestOf / 2);
-  const matchDecided = p1Wins >= winThreshold || p2Wins >= winThreshold;
-
-  const currentRound = currentTier?.bracket?.rounds.find(r => r.matches.some(m => m.id === match.id));
-  const roundMatches = currentRound?.matches.filter(m => m.id !== match.id && !m.isBye) || [];
-
+  const currentRound = bracket?.rounds.find(r => r.matches.some(m => m.id === liveMatch.id));
+  const roundMatches = currentRound?.matches.filter(m => m.id !== liveMatch.id && !m.isBye) || [];
   const hasRecordedScores = Boolean(
-    liveRecord?.isComplete ||
-    (liveRecord?.games && liveRecord.games.length > 0) ||
-    games.some(g => (g.p1 && g.p1 !== '0') || (g.p2 && g.p2 !== '0') || g.winner !== null)
+    liveRecord?.isComplete || (liveRecord?.games || []).some(isGameStarted) || hasStartedGames(games)
   );
+
+  const handleScoreChange = (gameIndex: number, playerSlot: 1 | 2, digits: string) => {
+    const updated = games.map(g => ({ ...g }));
+    if (playerSlot === 1) updated[gameIndex].p1 = digits;
+    else updated[gameIndex].p2 = digits;
+    // With both scores in, the scores decide the winner; drop any hand-picked one.
+    if (updated[gameIndex].p1 !== '' && updated[gameIndex].p2 !== '') updated[gameIndex].winner = null;
+    setGames(normalizeDrafts(updated, bestOf, p1Id, p2Id));
+  };
+
+  const handleManualWinnerToggle = (gameIndex: number, winnerId: string) => {
+    const updated = games.map(g => ({ ...g }));
+    updated[gameIndex].winner = updated[gameIndex].winner === winnerId ? null : winnerId;
+    setGames(normalizeDrafts(updated, bestOf, p1Id, p2Id));
+  };
+
+  const handleSaveClick = () => {
+    if (draftError) return;
+    if (series.winnerId) setFinishOpen(true);
+    else void save.run();
+  };
+
+  const openForfeit = () => {
+    setForfeitWinner(null);
+    setForfeitReason('');
+    setForfeitOpen(true);
+  };
 
   const gameCardBg = getAlternateShade(cardColor, 3);
 
@@ -286,8 +253,8 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
       open
       onClose={onClose}
       variant="drawer"
-      dirty={!gamesEqual(games, baselineGames)}
-      busy={save.busy || forfeit.busy || bestOfAction.busy}
+      dirty={dirty}
+      busy={save.busy}
       aria-labelledby={titleId}
       panelTestId="match-score-drawer"
       panelClassName="max-md:h-dvh max-md:max-h-dvh max-md:rounded-none max-md:pt-[env(safe-area-inset-top)]"
@@ -317,14 +284,10 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
             }}
           >
             <div className="flex flex-col gap-2 min-w-0 flex-1">
-              {/* Tournament Title & Active Tier Badge Row */}
               <div className="flex items-center gap-2 flex-wrap max-md:hidden">
                 <div className="flex items-center gap-1.5">
                   <Trophy size={13} color={primaryColor} />
-                  <span
-                    className="text-xs font-extrabold uppercase tracking-wider"
-                    style={{ color: primaryColor }}
-                  >
+                  <span className="text-xs font-extrabold uppercase tracking-wider" style={{ color: primaryColor }}>
                     {currentTournament?.name || 'Tournament'}
                   </span>
                 </div>
@@ -341,23 +304,16 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
                   >
                     <span
                       className="size-1.5 rounded-full"
-                      style={{
-                        background: primaryColor,
-                        boxShadow: `0 0 6px ${primaryColor}`,
-                      }}
+                      style={{ background: primaryColor, boxShadow: `0 0 6px ${primaryColor}` }}
                     />
                     {currentTier.name} Tier
                   </span>
                 )}
               </div>
 
-              {/* Match Hero Row */}
               <div className="flex items-center gap-2.5 flex-wrap max-md:flex-nowrap max-md:min-w-0">
-                <h2
-                  id={titleId}
-                  className="m-0 text-2xl font-extrabold text-white tracking-tight leading-tight max-md:text-lg"
-                >
-                  Match #{match.matchNumber}
+                <h2 id={titleId} className="m-0 text-2xl font-extrabold text-white tracking-tight leading-tight max-md:text-lg">
+                  Match #{liveMatch.matchNumber}
                 </h2>
                 <span className="text-base font-semibold leading-tight max-md:text-sm max-md:truncate" style={{ color: textColor }}>
                   • {roundName}
@@ -385,7 +341,6 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
             </button>
           </div>
 
-          {/* Player Matchup Scoreboard Banner */}
           <MatchupBanner
             p1={p1}
             p2={p2}
@@ -393,23 +348,23 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
             p2Seed={p2?.seed}
             p1Name={p1Name}
             p2Name={p2Name}
-            p1Wins={p1Wins}
-            p2Wins={p2Wins}
-            winThreshold={winThreshold}
+            p1Wins={series.p1Wins}
+            p2Wins={series.p2Wins}
+            winThreshold={winsNeeded(bestOf)}
             bestOf={bestOf}
-            isP1Override={match.player1.isManualOverride}
-            isP2Override={match.player2.isManualOverride}
+            isP1Override={liveMatch.player1.isManualOverride}
+            isP2Override={liveMatch.player2.isManualOverride}
             primaryColor={primaryColor}
-            onBestOfChange={handleBestOfChange}
-            bestOfDisabled={bestOfAction.busy || globalBusy}
-            bestOfLoading={bestOfAction.busy}
+            bestOfOptions={bestOfOptions}
+            onBestOfChange={n => n !== bestOf && setPendingBestOf(n)}
+            bestOfDisabled={globalBusy}
           />
 
-          {/* Manual Placement Override Bar (available if no scores recorded in this match yet) */}
-          {!hasRecordedScores && roundMatches.length > 0 && (
+          {/* Manual Placement Override Bar (available until a score is recorded in this match) */}
+          {!isComplete && !hasRecordedScores && roundMatches.length > 0 && (
             <ManualSlotOverrideSection
               roundMatches={roundMatches}
-              match={match}
+              match={liveMatch}
               roundName={roundName}
               p1Name={p1Name}
               p2Name={p2Name}
@@ -419,111 +374,104 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
             />
           )}
 
-          {/* Game by Game Breakdown Section */}
           <div className="flex-1 overflow-y-auto py-4 px-6 max-md:px-4">
-            <div className="flex justify-between items-center mb-3">
-              <div className="text-caption font-bold text-fg-secondary uppercase tracking-wider">
-                Games Breakdown (Bo{bestOf}{hasTiebreaker || games.length > bestOf ? ' • Tiebreaker Active' : ''})
+            {phase === 'WAITING' && (
+              <div
+                data-testid="match-waiting"
+                className="flex items-center gap-2.5 rounded-md border border-line bg-white/3 px-4 py-3.5 text-sm text-fg-secondary"
+              >
+                <Hourglass size={16} className="shrink-0 text-fg-muted" />
+                <span>{waitingOn(bracket, liveMatch)}</span>
               </div>
-              {hasTiebreaker && (
-                <span
-                  className="text-2xs font-bold py-0.5 px-2 rounded-full"
-                  style={{
-                    background: colorWithAlpha(primaryColor, 0.15),
-                    color: primaryColor,
-                    border: `1px solid ${colorWithAlpha(primaryColor, 0.35)}`,
-                  }}
-                >
-                  Tiebreaker Game(s) Added
-                </span>
-              )}
-            </div>
+            )}
 
-            <div className="flex flex-col gap-3">
-              {games.map((game, idx) => (
-                <GameScoreCard
-                  key={idx}
-                  game={game}
-                  idx={idx}
-                  bestOf={bestOf}
-                  p1={p1}
-                  p2={p2}
-                  p1Name={p1Name}
-                  p2Name={p2Name}
-                  primaryColor={primaryColor}
-                  gameCardBg={gameCardBg}
-                  onScoreChange={handleScoreChange}
-                  onManualWinnerToggle={handleManualWinnerToggle}
-                  onDeleteTiebreakerGame={handleDeleteTiebreakerGame}
-                />
-              ))}
-            </div>
-
-            {/* Add Tiebreaker Game Button */}
-            <div className="mt-4 flex flex-col items-center gap-2">
-              <button
-                type="button"
-                onClick={handleAddTiebreakerGame}
-                className="inline-flex items-center gap-1.5 text-caption font-semibold py-2 px-4 rounded-sm cursor-pointer transition-all duration-150"
+            {isComplete && (
+              <div
+                data-testid="match-result"
+                className="mb-3 rounded-md px-4 py-3"
                 style={{
-                  color: primaryColor,
-                  background: colorWithAlpha(primaryColor, 0.08),
-                  border: `1px solid ${colorWithAlpha(primaryColor, 0.35)}`,
+                  background: colorWithAlpha(primaryColor, 0.12),
+                  border: `1px solid ${colorWithAlpha(primaryColor, 0.45)}`,
                 }}
               >
-                <Plus size={15} />
-                <span>+ Add Tiebreaker</span>
-              </button>
-              {games.some(g => g.winner === 'TIE') && (
-                <span className="text-xs text-fg-muted text-center">
-                  Tied game detected. Use tiebreaker games or match Best-of override if needed to resolve series.
-                </span>
-              )}
-            </div>
-
-            {/* Quick Forfeit Option */}
-            <div className="mt-6 py-3.5 px-4 rounded-md bg-red/5 border border-red/20">
-              <button
-                type="button"
-                aria-expanded={!isMobile || forfeitOpen}
-                onClick={() => setForfeitOpen(o => !o)}
-                className="flex items-center gap-2 mb-2.5 text-red-300 text-caption font-bold w-full cursor-pointer text-left"
-              >
-                <ShieldAlert size={15} />
-                <span>Forfeit Overrides</span>
-                <ChevronDown size={14} className={cn('ml-auto md:hidden', forfeitOpen && 'rotate-180')} />
-              </button>
-              {(!isMobile || forfeitOpen) && (
-                <div className="flex gap-2 max-md:flex-col">
-                  {p1 && (
-                    <button
-                      type="button"
-                      onClick={() => void handleForfeit(p1.id)}
-                      disabled={forfeit.busy || globalBusy}
-                      className="inline-flex items-center gap-1.5 py-1.5 px-2.5 text-xs rounded-sm border border-red/40 bg-red/8 text-red-300 cursor-pointer transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 max-md:min-h-11 max-md:flex-1"
-                    >
-                      {forfeitingId === p1.id ? (<><Spinner />Saving…</>) : <>{p1Name} Wins</>}
-                    </button>
-                  )}
-                  {p2 && (
-                    <button
-                      type="button"
-                      onClick={() => void handleForfeit(p2.id)}
-                      disabled={forfeit.busy || globalBusy}
-                      className="inline-flex items-center gap-1.5 py-1.5 px-2.5 text-xs rounded-sm border border-red/40 bg-red/8 text-red-300 cursor-pointer transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 max-md:min-h-11 max-md:flex-1"
-                    >
-                      {forfeitingId === p2.id ? (<><Spinner />Saving…</>) : <>{p2Name} Wins</>}
-                    </button>
-                  )}
+                <div className="text-sm font-bold text-white">
+                  {winnerName ? `${winnerName} wins` : 'Match complete'}
+                  {!forfeitNote && winnerName ? ` ${Math.max(series.p1Wins, series.p2Wins)}–${Math.min(series.p1Wins, series.p2Wins)}` : ''}
                 </div>
-              )}
-            </div>
+                {forfeitNote && <div className="mt-0.5 text-xs text-fg-secondary">{forfeitNote}</div>}
+              </div>
+            )}
+
+            {phase !== 'WAITING' && shownGames.length > 0 && (
+              <>
+                <div className="mb-3 text-caption font-bold text-fg-secondary uppercase tracking-wider">
+                  Games (Bo{bestOf})
+                </div>
+                <div className="flex flex-col gap-3">
+                  {shownGames.map((game, idx) => (
+                    <GameScoreCard
+                      key={idx}
+                      game={game}
+                      idx={idx}
+                      bestOf={bestOf}
+                      p1={p1}
+                      p2={p2}
+                      p1Name={p1Name}
+                      p2Name={p2Name}
+                      primaryColor={primaryColor}
+                      gameCardBg={gameCardBg}
+                      readOnly={!editable}
+                      onScoreChange={handleScoreChange}
+                      onManualWinnerToggle={handleManualWinnerToggle}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {editable && hasTiedGame && !draftError && (
+              <p className="mt-3 text-center text-xs text-fg-muted">Tied game: play a tiebreaker game to settle it.</p>
+            )}
+
+            {draftError && dirty && (
+              <div role="alert" data-testid="match-draft-error" className="mt-3 rounded-sm border border-red/40 bg-red/8 px-3 py-2 text-sm text-red-300">
+                {draftError}
+              </div>
+            )}
+
+            {editable && (
+              <div className="mt-6">
+                <button
+                  type="button"
+                  aria-expanded={moreOpen}
+                  onClick={() => setMoreOpen(o => !o)}
+                  className="flex w-full cursor-pointer items-center gap-2 text-left text-caption font-semibold text-fg-muted"
+                >
+                  <span>More Options</span>
+                  <ChevronDown size={14} className={cn('ml-auto transition-transform', moreOpen && 'rotate-180')} />
+                </button>
+                {moreOpen && (
+                  <div className="mt-2.5 rounded-md border border-red/20 bg-red/5 px-4 py-3">
+                    <Button variant="danger" size="sm" onClick={openForfeit} disabled={globalBusy} className="gap-1.5 max-md:min-h-11 max-md:w-full">
+                      <ShieldAlert size={14} />
+                      Record Forfeit
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {conflictNotice && (
             <div role="alert" data-testid="match-conflict-notice" className="mx-6 mb-3 rounded-sm border border-gold/40 bg-gold-soft px-3 py-2 text-sm text-gold-bright max-md:mx-4">
               {conflictNotice}
             </div>
+          )}
+
+          {isComplete && blockers.length > 0 && (
+            <p data-testid="reopen-blocked" className="mx-6 mb-3 text-xs text-fg-muted max-md:mx-4">
+              To reopen, first reopen {blockers.map(b => `Match ${b.matchNumber}`).join(' and ')}. {blockers.length === 1 ? 'It already has' : 'They already have'} scores.
+            </p>
           )}
 
           {/* Footer Actions */}
@@ -535,27 +483,134 @@ export const MatchScoreDrawer: React.FC<MatchScoreDrawerProps> = ({
             }}
           >
             <Button variant="secondary" onClick={requestClose} className="flex-1 py-2.5 px-4 rounded-sm max-md:w-full max-md:flex-none">
-              Cancel
+              {editable ? 'Cancel' : 'Close'}
             </Button>
-            <button
-              type="button"
-              onClick={() => void save.run()}
-              disabled={save.busy || globalBusy}
-              aria-busy={save.busy || undefined}
-              className={cn(
-                'flex-2 inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-sm border-0 font-bold text-sm transition-all duration-150 max-md:w-full max-md:flex-none',
-                save.busy || globalBusy ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100'
-              )}
-              style={{
-                background: primaryColor,
-                color: getContrastingTextColor(primaryColor),
-                boxShadow: `0 2px 14px ${colorWithAlpha(primaryColor, 0.4)}`,
-              }}
-            >
-              {save.busy ? <Spinner size={16} /> : <Check size={18} />}
-              <span>{save.busy ? 'Saving…' : matchDecided ? 'Advance Winner' : 'Save Progress'}</span>
-            </button>
+
+            {isComplete && (
+              <Button
+                variant="danger"
+                onClick={() => setReopenOpen(true)}
+                disabled={blockers.length > 0 || globalBusy}
+                className="flex-1 gap-1.5 py-2.5 px-4 rounded-sm max-md:w-full max-md:flex-none"
+              >
+                <RotateCcw size={15} />
+                Reopen Match
+              </Button>
+            )}
+
+            {editable && (
+              <button
+                type="button"
+                onClick={handleSaveClick}
+                disabled={save.busy || globalBusy || !dirty || Boolean(draftError)}
+                aria-busy={save.busy || undefined}
+                data-testid="match-save"
+                className={cn(
+                  'flex-2 inline-flex items-center justify-center gap-2 py-2.5 px-5 rounded-sm border-0 font-bold text-sm transition-all duration-150 max-md:w-full max-md:flex-none',
+                  'cursor-pointer disabled:cursor-not-allowed disabled:opacity-50'
+                )}
+                style={{
+                  background: primaryColor,
+                  color: getContrastingTextColor(primaryColor),
+                  boxShadow: `0 2px 14px ${colorWithAlpha(primaryColor, 0.4)}`,
+                }}
+              >
+                {save.busy ? <Spinner size={16} /> : <Check size={18} />}
+                <span>{save.busy ? 'Saving…' : series.winnerId ? 'Finish Match' : 'Save Progress'}</span>
+              </button>
+            )}
           </div>
+
+          <ConfirmDialog
+            open={finishOpen}
+            tone="info"
+            title={`Finish Match #${liveMatch.matchNumber}?`}
+            body={finishSummary(bracket, liveMatch, games, bestOf).map(line => <p key={line}>{line}</p>)}
+            confirmLabel="Finish Match"
+            confirmVariant="primary"
+            confirmLoadingText="Saving…"
+            onConfirm={async () => {
+              await performSave();
+              setFinishOpen(false);
+            }}
+            onCancel={() => setFinishOpen(false)}
+          />
+
+          <ConfirmDialog
+            open={reopenOpen}
+            tone="warning"
+            title={`Reopen Match #${liveMatch.matchNumber}?`}
+            body={reopenSummary(bracket, liveMatch).map(line => <p key={line}>{line}</p>)}
+            confirmLabel="Reopen Match"
+            confirmLoadingText="Reopening…"
+            onConfirm={performReopen}
+            onCancel={() => setReopenOpen(false)}
+          />
+
+          <ConfirmDialog
+            open={pendingBestOf !== null}
+            tone="info"
+            title={`Change to Bo${pendingBestOf ?? ''}?`}
+            body={
+              <p>
+                First to {winsNeeded(pendingBestOf ?? bestOf)} wins. Best-of locks once a game is scored.
+              </p>
+            }
+            confirmLabel="Change Best-of"
+            confirmVariant="primary"
+            confirmLoadingText="Saving…"
+            onConfirm={() => performBestOf(pendingBestOf!)}
+            onCancel={() => setPendingBestOf(null)}
+          />
+
+          <ConfirmDialog
+            open={forfeitOpen}
+            title="Record Forfeit"
+            body={
+              <>
+                <div>
+                  <div className="mb-2 text-caption font-semibold text-fg-secondary">Who wins?</div>
+                  <div className="flex gap-2 max-md:flex-col" role="radiogroup" aria-label="Forfeit winner">
+                    {[p1, p2].map(player =>
+                      player ? (
+                        <button
+                          key={player.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={forfeitWinner === player.id}
+                          onClick={() => setForfeitWinner(player.id)}
+                          className={cn(
+                            'flex-1 cursor-pointer truncate rounded-sm border px-3 py-2 text-sm font-semibold max-md:min-h-11',
+                            forfeitWinner === player.id ? 'border-gold bg-gold-soft text-gold-bright' : 'border-line bg-canvas text-fg'
+                          )}
+                        >
+                          {player.name}
+                        </button>
+                      ) : null
+                    )}
+                  </div>
+                </div>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-caption font-semibold text-fg-secondary">Reason</span>
+                  <input
+                    type="text"
+                    value={forfeitReason}
+                    onChange={e => setForfeitReason(e.target.value)}
+                    maxLength={FORFEIT_REASON_MAX_LENGTH}
+                    placeholder="e.g. No-show"
+                    data-testid="forfeit-reason"
+                    className="rounded-sm border border-line bg-canvas px-3 py-2 text-sm text-fg outline-none focus:border-gold"
+                  />
+                </label>
+                <p className="text-xs text-fg-muted">The winner advances. You can undo this with Reopen Match.</p>
+              </>
+            }
+            confirmLabel="Record Forfeit"
+            confirmLoadingText="Saving…"
+            confirmDisabled={!forfeitWinner || !forfeitReason.trim()}
+            onConfirm={performForfeit}
+            onCancel={() => setForfeitOpen(false)}
+          />
         </>
       )}
     </Overlay>

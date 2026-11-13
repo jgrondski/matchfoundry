@@ -4,7 +4,7 @@ import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { Overlay } from '../../../components/overlay';
 import { FULL_PAGE_PANEL_CLASS } from '../../../components/fullPagePanel';
-import { Button, IconButton, buttonClasses, cn } from '../../../components/ui';
+import { Button, IconButton, ScoreInput, buttonClasses, cn } from '../../../components/ui';
 import { formatQualTimestamp } from '../formatQualTimestamp';
 
 type AdjudicateAction = 'SAVE' | 'VERIFY' | 'SAVE_AND_VERIFY' | 'UNVERIFY' | 'DNQ' | 'DQ';
@@ -64,8 +64,8 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
     }
   }, [scores.length]);
 
-  const handleScoreChange = (idx: number, val: string) => {
-    const num = parseInt(val.replace(/[^0-9]/g, ''), 10) || 0;
+  const handleScoreChange = (idx: number, digits: string) => {
+    const num = digits === '' ? 0 : Number(digits);
     const next = [...scores];
     next[idx] = num;
     setScores(next);
@@ -335,7 +335,7 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                           </button>
                         )}
                       </div>
-                      <input
+                      <ScoreInput
                         ref={el => {
                           inputRefs.current[idx] = el;
                           if (newlyAddedIndexRef.current === idx && el) {
@@ -343,13 +343,11 @@ export const AdjudicationModal: React.FC<AdjudicationModalProps> = ({
                             newlyAddedIndexRef.current = null;
                           }
                         }}
-                        type="text"
-                        inputMode="numeric"
-                        value={score > 0 ? score.toLocaleString() : ''}
+                        value={score > 0 ? String(score) : ''}
                         placeholder="e.g. 1,024,500"
-                        onChange={e => handleScoreChange(idx, e.target.value)}
+                        onValueChange={digits => handleScoreChange(idx, digits)}
                         disabled={isSubmitting || isVerified}
-                        className="rounded-sm border border-line bg-black/40 px-2.5 py-1.5 font-mono text-base font-bold text-white max-md:text-base"
+                        className="w-full rounded-sm border border-line bg-black/40 px-2.5 py-1.5 font-mono text-base font-bold text-white max-md:text-base"
                       />
                     </div>
                   ))}

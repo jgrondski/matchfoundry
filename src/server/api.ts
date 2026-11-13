@@ -91,7 +91,23 @@ import { NOT_HANDLED, UNLOCKED_SUBACTIONS, runLockedTournamentWrite } from './to
 import { saveMatchResult } from '../api/matchWrites';
 import { publishTournamentChanged } from './realtime';
 import { getKeepWarmWindows } from '../api/keepWarm';
-import { MATCH_CONFLICT_CODE, MATCH_CONFLICT_MESSAGE } from '../features/bracket/matchConflict';
+import {
+  MATCH_COMPLETE_CODE,
+  MATCH_COMPLETE_MESSAGE,
+  MATCH_CONFLICT_CODE,
+  MATCH_CONFLICT_MESSAGE,
+} from '../features/bracket/matchConflict';
+import {
+  FORFEIT_REASON_MAX_LENGTH,
+  bestOfChoices,
+  canChangeBestOf,
+  gameOutcome,
+  matchPhase,
+  reopenBlockers,
+  summarizeSeries,
+  validateMatchGames,
+} from '../features/bracket/matchRules';
+import { InvalidScoreError, assertValidScores } from '../utils/scores';
 
 /**
  * Loads the global player supply for a qualifier simulation, first creating real player rows if
@@ -915,6 +931,7 @@ export function createApiMiddleware() {
             if (tourneyCheck.isLocked) {
               return sendError(res, 400, 'Cannot modify qualifier scores while brackets are locked. Unlock brackets first.');
             }
+            assertValidScores([body.score], 'Qualifier score');
 
             let targetPlayerId = body.playerId;
             if (body.playerName && (!targetPlayerId || !isUuid(targetPlayerId) || !(await getPlayer(targetPlayerId)))) {
@@ -949,7 +966,10 @@ export function createApiMiddleware() {
             if (tourneyCheck.isLocked) {
               return sendError(res, 400, 'Cannot modify qualifier scores while brackets are locked. Unlock brackets first.');
             }
-            await submitQualifiersBatch(tourneyId, body.submissions || body);
+            const batch = body.submissions || body;
+            if (!Array.isArray(batch)) return sendError(res, 400, 'Expected a list of qualifier scores.');
+            assertValidScores(batch.map((entry: { score?: unknown }) => entry?.score), 'Qualifier score');
+            await submitQualifiersBatch(tourneyId, batch);
             const t = await getFullTournament(tourneyId);
             if (t && !t.isLocked) {
               t.tiers = generateDraftBracketsForTournament(t);
@@ -1540,8 +1560,17 @@ export function createApiMiddleware() {
             if (typeof body.expectedRevision === 'number' && body.expectedRevision !== currentRevision) {
               return sendJson(res, 409, { error: MATCH_CONFLICT_MESSAGE, code: MATCH_CONFLICT_CODE });
             }
+            if (!p1 || !p2) {
+              return sendError(res, 400, 'Both competitors must be set before scores can be entered.');
+            }
+            if (matchPhase(targetMatch, t.matchScores[matchId]) === 'COMPLETE') {
+              return sendJson(res, 409, { error: MATCH_COMPLETE_MESSAGE, code: MATCH_COMPLETE_CODE });
+            }
 
             const scoredGames: GameScoreEntry[] = body.scoredGames || body.games || [];
+            if (!Array.isArray(scoredGames) || scoredGames.length > 50) {
+              return sendError(res, 400, 'Invalid games list.');
+            }
             const cleanedGames: GameScoreEntry[] = scoredGames
               .map(g => {
                 const isZeroZero = g.player1Points === 0 && g.player2Points === 0 && !g.winnerPlayerId;
@@ -1563,31 +1592,27 @@ export function createApiMiddleware() {
               })
               .sort((a, b) => a.gameNumber - b.gameNumber);
 
-            let p1Wins = 0;
-            let p2Wins = 0;
+            // Best-of changes only through the best-of endpoint, which refuses once games are scored.
+            const matchBestOf = currentRecord.bestOf || targetMatch.bestOf || tier.bestOf || 5;
+            const gamesError = validateMatchGames(cleanedGames, matchBestOf, p1.id, p2.id);
+            if (gamesError) return sendError(res, 400, gamesError);
             for (const g of cleanedGames) {
-              if (p1 && g.winnerPlayerId === p1.id) p1Wins++;
-              else if (p2 && g.winnerPlayerId === p2.id) p2Wins++;
+              if (g.player1Points !== null && g.player2Points !== null) {
+                g.winnerPlayerId = gameOutcome(g, p1.id, p2.id);
+              }
             }
 
-            const matchBestOf = body.bestOf || currentRecord.bestOf || targetMatch.bestOf || tier.bestOf || 5;
-            const threshold = Math.ceil(matchBestOf / 2);
-            let matchWinnerId: string | null = null;
-            let matchLoserId: string | null = null;
-            let isComplete = false;
+            const series = summarizeSeries(cleanedGames, matchBestOf, p1.id, p2.id);
+            const p1Wins = series.p1Wins;
+            const p2Wins = series.p2Wins;
+            const matchWinnerId = series.winnerId;
+            const matchLoserId = matchWinnerId ? (matchWinnerId === p1.id ? p2.id : p1.id) : null;
+            const isComplete = Boolean(matchWinnerId);
 
-            if (p1 && p1Wins >= threshold) {
-              matchWinnerId = p1.id;
-              matchLoserId = p2 ? p2.id : null;
-              isComplete = true;
-            } else if (p2 && p2Wins >= threshold) {
-              matchWinnerId = p2.id;
-              matchLoserId = p1 ? p1.id : null;
-              isComplete = true;
-            }
-
+            // A score save on an open match drops any old forfeit note.
+            const { notes: _staleNotes, forfeitWinnerId: _staleForfeit, ...recordBase } = currentRecord;
             const updatedRecord: MatchScoreRecord = {
-              ...currentRecord,
+              ...recordBase,
               bestOf: matchBestOf,
               player1Wins: p1Wins,
               player2Wins: p2Wins,
@@ -1633,8 +1658,22 @@ export function createApiMiddleware() {
 
             const p1 = targetMatch.player1.player;
             const p2 = targetMatch.player2.player;
+            if (!p1 || !p2) {
+              return sendError(res, 400, 'Both competitors must be set before a forfeit can be recorded.');
+            }
             const winnerPlayerId = body.winnerPlayerId;
-            const loserId = p1?.id === winnerPlayerId ? p2?.id ?? null : p1?.id ?? null;
+            if (winnerPlayerId !== p1.id && winnerPlayerId !== p2.id) {
+              return sendError(res, 400, 'The forfeit winner must be one of the two competitors in this match.');
+            }
+            const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+            if (!reason) return sendError(res, 400, 'A forfeit reason is required.');
+            if (reason.length > FORFEIT_REASON_MAX_LENGTH) {
+              return sendError(res, 400, `Keep the forfeit reason under ${FORFEIT_REASON_MAX_LENGTH} characters.`);
+            }
+            if (matchPhase(targetMatch, t.matchScores[matchId]) === 'COMPLETE') {
+              return sendJson(res, 409, { error: MATCH_COMPLETE_MESSAGE, code: MATCH_COMPLETE_CODE });
+            }
+            const loserId = p1.id === winnerPlayerId ? p2.id : p1.id;
 
             const currentRecord = t.matchScores[matchId] || {
               matchId,
@@ -1654,7 +1693,7 @@ export function createApiMiddleware() {
               winnerPlayerId,
               loserPlayerId: loserId,
               isComplete: true,
-              notes: 'Forfeit win',
+              notes: `Forfeit: ${reason}`,
               forfeitWinnerId: winnerPlayerId,
               revision: Number(currentRecord.revision ?? 0) + 1,
             };
@@ -1685,7 +1724,13 @@ export function createApiMiddleware() {
             const targetMatch = tier.bracket.matchesById?.[matchId];
             if (!targetMatch) return sendError(res, 404, 'Match not found in tier bracket');
 
-            const bestOf = body.bestOf || 3;
+            const bestOf = Number(body.bestOf);
+            if (!bestOfChoices(targetMatch.bestOf || tier.bestOf).includes(bestOf)) {
+              return sendError(res, 400, `Best-of ${body.bestOf} is not one of the allowed formats.`);
+            }
+            if (!canChangeBestOf(t.matchScores[matchId]) || matchPhase(targetMatch, t.matchScores[matchId]) === 'COMPLETE') {
+              return sendError(res, 409, 'Best-of cannot change once a game in this match has been scored.');
+            }
             const currentRecord = t.matchScores[matchId] || {
               matchId,
               tierId,
@@ -1742,6 +1787,65 @@ export function createApiMiddleware() {
             const saved = await getFullTournament(t.id);
             return sendJson(res, 200, saved);
           }
+
+          // POST /api/tournaments/:id/matches/:matchId/reopen
+          // Undoes a completed result (scored or forfeit) so it can be corrected. The games stay;
+          // the winner is pulled back out of later matches. Refused while a later match that
+          // depends on this result has scores, so reopening can never wipe another result.
+          const matchReopenSub = subAction.match(/^matches\/([^/]+)\/reopen$/);
+          if (matchReopenSub && method === 'POST') {
+            if (!checkAuth(req, res, 'TOURNAMENT_ADMIN', tourneyId)) return;
+            const matchId = matchReopenSub[1];
+            const t = await getFullTournament(tourneyId);
+            if (!t) return sendError(res, 404, 'Tournament not found');
+
+            const tierId = body.tierId;
+            const tier = t.tiers.find(tr => tr.id === tierId);
+            if (!tier || !tier.bracket) return sendError(res, 404, 'Tier or bracket not found');
+
+            const targetMatch = tier.bracket.matchesById?.[matchId];
+            if (!targetMatch) return sendError(res, 404, 'Match not found in tier bracket');
+
+            const currentRecord = t.matchScores[matchId];
+            const currentRevision = Number(currentRecord?.revision ?? 0);
+            if (typeof body.expectedRevision === 'number' && body.expectedRevision !== currentRevision) {
+              return sendJson(res, 409, { error: MATCH_CONFLICT_MESSAGE, code: MATCH_CONFLICT_CODE });
+            }
+            if (matchPhase(targetMatch, currentRecord) !== 'COMPLETE') {
+              return sendError(res, 409, 'This match is not complete, so there is nothing to reopen.');
+            }
+            const blockers = reopenBlockers(tier.bracket, t.matchScores, matchId);
+            if (blockers.length > 0) {
+              const names = blockers.map(b => `Match ${b.matchNumber}`).join(', ');
+              return sendError(res, 409, `Reopen ${names} first. ${blockers.length === 1 ? 'It depends' : 'They depend'} on this result.`);
+            }
+
+            const updatedBracket = retractMatchWinner(tier.bracket, matchId);
+            const { notes: _notes, forfeitWinnerId: _forfeit, ...recordBase } = currentRecord || {
+              matchId,
+              tierId,
+              organizationId: t.organizationId,
+              bestOf: targetMatch.bestOf || tier.bestOf || 5,
+              player1Wins: 0,
+              player2Wins: 0,
+              games: [],
+              winnerPlayerId: null,
+              loserPlayerId: null,
+              isComplete: false,
+            };
+            const updatedRecord: MatchScoreRecord = {
+              ...recordBase,
+              winnerPlayerId: null,
+              loserPlayerId: null,
+              isComplete: false,
+              revision: currentRevision + 1,
+            };
+
+            t.matchScores[matchId] = updatedRecord;
+            await saveMatchResult({ tournament: t, tierId, matchId, record: updatedRecord, bracket: updatedBracket });
+            const saved = await getFullTournament(t.id);
+            return sendJson(res, 200, saved);
+          }
           return NOT_HANDLED;
         };
 
@@ -1761,7 +1865,7 @@ export function createApiMiddleware() {
       return sendError(res, 404, `Not found: ${method} ${pathname}`);
     } catch (err: unknown) {
       console.error(`[API Error] ${method} ${pathname}:`, err);
-      if (err instanceof EventDateError) return sendError(res, 400, err.message);
+      if (err instanceof EventDateError || err instanceof InvalidScoreError) return sendError(res, 400, err.message);
       if (err instanceof QualLockedError || err instanceof QualConflictError) return sendError(res, 409, err.message);
       const msg = err instanceof Error ? err.message : 'Internal Server Error';
       return sendError(res, 500, msg);

@@ -1,11 +1,14 @@
 import React from 'react';
-import { Check, Trash2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { SeededPlayer } from '../../types';
 import { colorWithAlpha, getContrastingTextColor } from '../../colorUtils';
-import { cn } from '../../../../components/ui';
+import { ScoreInput, cn } from '../../../../components/ui';
+import { formatScore } from '../../../../utils/scores';
+import { TIE, gameOutcome } from '../../matchRules';
+import { draftToInput, type GameDraft } from './drawerModel';
 
 interface GameScoreCardProps {
-  game: { p1: string; p2: string; winner: string | null };
+  game: GameDraft;
   idx: number;
   bestOf: number;
   p1?: SeededPlayer | null;
@@ -14,9 +17,10 @@ interface GameScoreCardProps {
   p2Name: string;
   primaryColor: string;
   gameCardBg: string;
-  onScoreChange: (gameIndex: number, playerSlot: 1 | 2, value: string) => void;
-  onManualWinnerToggle: (gameIndex: number, winnerId: string | null) => void;
-  onDeleteTiebreakerGame: (idx: number) => void;
+  /** Completed matches show their games without inputs. */
+  readOnly?: boolean;
+  onScoreChange: (gameIndex: number, playerSlot: 1 | 2, digits: string) => void;
+  onManualWinnerToggle: (gameIndex: number, winnerId: string) => void;
 }
 
 export const GameScoreCard: React.FC<GameScoreCardProps> = ({
@@ -29,20 +33,96 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
   p2Name,
   primaryColor,
   gameCardBg,
+  readOnly = false,
   onScoreChange,
   onManualWinnerToggle,
-  onDeleteTiebreakerGame,
 }) => {
   const gameNum = idx + 1;
   const isTiebreakerGame = gameNum > bestOf;
-  const num1 = parseInt(game.p1, 10);
-  const num2 = parseInt(game.p2, 10);
-  const hasScores = !isNaN(num1) && !isNaN(num2);
-  const margin = hasScores ? Math.abs(num1 - num2).toLocaleString() : null;
+  const input = draftToInput(game);
+  const bothScored = input.player1Points !== null && input.player2Points !== null;
+  const outcome = gameOutcome(input, p1?.id, p2?.id);
+  const margin = bothScored ? formatScore(Math.abs(input.player1Points! - input.player2Points!)) : null;
+  // With both scores in, the higher score wins. Picking a winner by hand is only for a game
+  // whose scores were not recorded.
+  const canPickWinner = !readOnly && !bothScored;
+
+  const winnerPick = (player: SeededPlayer | null | undefined, name: string, align: 'start' | 'end') => {
+    const isWinner = Boolean(player && outcome === player.id);
+    const label = (
+      <span
+        className={cn('text-xs truncate', isWinner ? 'font-bold' : 'font-medium')}
+        style={{ color: isWinner ? primaryColor : 'var(--color-fg-secondary)' }}
+      >
+        {name}
+      </span>
+    );
+    const marker = canPickWinner ? (
+      <button
+        type="button"
+        onClick={() => player && onManualWinnerToggle(idx, player.id)}
+        title="Set winner"
+        aria-label={`${name} won Game ${gameNum}`}
+        aria-pressed={isWinner}
+        className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0 max-md:relative max-md:after:absolute max-md:after:-inset-3"
+        style={{
+          border: isWinner ? `2px solid ${primaryColor}` : '1px solid var(--color-line)',
+          background: isWinner ? primaryColor : 'transparent',
+          color: getContrastingTextColor(primaryColor),
+        }}
+      >
+        {isWinner && <Check size={13} strokeWidth={3.5} />}
+      </button>
+    ) : isWinner ? (
+      <Check size={14} strokeWidth={3.5} className="shrink-0" color={primaryColor} />
+    ) : null;
+    return (
+      <div className={cn('flex items-center gap-1.5 mb-1 min-h-5', align === 'end' && 'justify-end')}>
+        {align === 'start' ? (
+          <>
+            {marker}
+            {label}
+          </>
+        ) : (
+          <>
+            {label}
+            {marker}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const scoreField = (slot: 1 | 2, value: string, player: SeededPlayer | null | undefined, name: string) => {
+    const isWinner = Boolean(player && outcome === player.id);
+    const fieldClass =
+      'font-mono tabular-nums tracking-tight w-full py-2 px-2.5 bg-black/45 rounded-sm text-white text-base font-bold text-center outline-none';
+    const border = isWinner ? `1px solid ${colorWithAlpha(primaryColor, 0.65)}` : '1px solid var(--color-line)';
+    const boxShadow = isWinner ? `0 0 10px ${colorWithAlpha(primaryColor, 0.2)}` : 'none';
+    if (readOnly) {
+      return (
+        <div className={fieldClass} style={{ border, boxShadow }} data-testid={`game-${gameNum}-p${slot}-score`}>
+          {value === '' ? '—' : formatScore(Number(value))}
+        </div>
+      );
+    }
+    return (
+      <ScoreInput
+        value={value}
+        onValueChange={digits => onScoreChange(idx, slot, digits)}
+        placeholder="0"
+        aria-label={`${name} score, Game ${gameNum}`}
+        data-testid={`game-${gameNum}-p${slot}-score`}
+        className={fieldClass}
+        style={{ border, boxShadow }}
+      />
+    );
+  };
 
   return (
     <div
       className="py-3.5 px-4 rounded-md shadow-[0_2px_6px_rgba(0,0,0,0.25)] max-md:px-3"
+      data-testid={`game-card-${gameNum}`}
       style={{
         background: gameCardBg,
         border: isTiebreakerGame
@@ -50,7 +130,6 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
           : `1px solid ${colorWithAlpha(primaryColor, 0.22, 'var(--color-line)')}`,
       }}
     >
-      {/* Game card top bar */}
       <div className="flex justify-between items-center mb-2.5">
         <div className="flex items-center gap-2">
           <span
@@ -71,122 +150,27 @@ export const GameScoreCard: React.FC<GameScoreCardProps> = ({
               Tiebreaker
             </span>
           )}
-          {game.winner === 'TIE' && (
+          {outcome === TIE && (
             <span className="text-3xs py-0.5 px-2 rounded-sm bg-cyan-soft text-cyan font-bold border border-cyan/30">
               TIE (NO WIN)
             </span>
           )}
         </div>
-
-        <div className="flex items-center gap-2">
-          {margin && (
-            <span className="text-xs text-cyan font-mono font-semibold bg-cyan/10 py-0.5 px-2 rounded-sm border border-cyan/25">
-              Δ {margin} pts
-            </span>
-          )}
-          {isTiebreakerGame && ((!game.p1 || game.p1 === '0' || isNaN(num1) || num1 === 0) && (!game.p2 || game.p2 === '0' || isNaN(num2) || num2 === 0)) && (
-            <button
-              type="button"
-              onClick={() => onDeleteTiebreakerGame(idx)}
-              title="Delete Tiebreaker"
-              className="inline-flex items-center gap-1 py-0.5 px-2 rounded-sm bg-red/12 border border-red/30 text-red-300 text-2xs font-semibold cursor-pointer"
-            >
-              <Trash2 size={11} />
-              <span>Delete</span>
-            </button>
-          )}
-        </div>
+        {margin && (
+          <span className="text-xs text-cyan font-mono font-semibold bg-cyan/10 py-0.5 px-2 rounded-sm border border-cyan/25">
+            Δ {margin} pts
+          </span>
+        )}
       </div>
 
-      {/* Input Grid */}
-      <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
-        {/* Player 1 Input */}
+      <div className="grid grid-cols-2 gap-3 items-start">
         <div>
-          <div className="flex items-center gap-1.5 mb-1">
-            <button
-              type="button"
-              onClick={() => p1 && onManualWinnerToggle(idx, p1.id)}
-              title="Set winner"
-              className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0 max-md:relative max-md:after:absolute max-md:after:-inset-3"
-              style={{
-                border: game.winner === p1?.id ? `2px solid ${primaryColor}` : '1px solid var(--color-line)',
-                background: game.winner === p1?.id ? primaryColor : 'transparent',
-                color: getContrastingTextColor(primaryColor),
-              }}
-            >
-              {game.winner === p1?.id && <Check size={13} strokeWidth={3.5} />}
-            </button>
-            <span
-              className={cn('text-xs truncate', game.winner === p1?.id ? 'font-bold' : 'font-medium')}
-              style={{ color: game.winner === p1?.id ? primaryColor : 'var(--color-fg-secondary)' }}
-            >
-              {p1Name}
-            </span>
-          </div>
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="0"
-            value={game.p1 ? Number(game.p1).toLocaleString() : ''}
-            onChange={e => onScoreChange(idx, 1, e.target.value)}
-            className="font-mono tabular-nums tracking-tight w-full py-2 px-2.5 bg-black/45 rounded-sm text-white text-base font-bold text-center outline-none"
-            style={{
-              border: game.winner === p1?.id ? `1px solid ${colorWithAlpha(primaryColor, 0.65)}` : '1px solid var(--color-line)',
-              boxShadow: game.winner === p1?.id ? `0 0 10px ${colorWithAlpha(primaryColor, 0.2)}` : 'none',
-            }}
-          />
+          {winnerPick(p1, p1Name, 'start')}
+          {scoreField(1, game.p1, p1, p1Name)}
         </div>
-
-        {/* Interactive TIE Button */}
-        <div className="flex flex-col items-center justify-center pt-5">
-          <button
-            type="button"
-            onClick={() => onManualWinnerToggle(idx, 'TIE')}
-            title={game.winner === 'TIE' ? 'Clear tie' : 'Declare Tie'}
-            className={cn(
-              'py-1 px-2.5 text-2xs font-bold tracking-wider rounded-sm border cursor-pointer transition-all duration-150 max-md:min-h-11 max-md:px-3',
-              game.winner === 'TIE' ? 'border-cyan bg-cyan-soft text-cyan' : 'border-line bg-white/3 text-fg-muted'
-            )}
-          >
-            TIE
-          </button>
-        </div>
-
-        {/* Player 2 Input */}
         <div>
-          <div className="flex items-center justify-end gap-1.5 mb-1">
-            <span
-              className={cn('text-xs truncate', game.winner === p2?.id ? 'font-bold' : 'font-medium')}
-              style={{ color: game.winner === p2?.id ? primaryColor : 'var(--color-fg-secondary)' }}
-            >
-              {p2Name}
-            </span>
-            <button
-              type="button"
-              onClick={() => p2 && onManualWinnerToggle(idx, p2.id)}
-              title="Set winner"
-              className="size-5 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-150 shrink-0 max-md:relative max-md:after:absolute max-md:after:-inset-3"
-              style={{
-                border: game.winner === p2?.id ? `2px solid ${primaryColor}` : '1px solid var(--color-line)',
-                background: game.winner === p2?.id ? primaryColor : 'transparent',
-                color: getContrastingTextColor(primaryColor),
-              }}
-            >
-              {game.winner === p2?.id && <Check size={13} strokeWidth={3.5} />}
-            </button>
-          </div>
-          <input
-            type="text"
-            inputMode="numeric"
-            placeholder="0"
-            value={game.p2 ? Number(game.p2).toLocaleString() : ''}
-            onChange={e => onScoreChange(idx, 2, e.target.value)}
-            className="font-mono tabular-nums tracking-tight w-full py-2 px-2.5 bg-black/45 rounded-sm text-white text-base font-bold text-center outline-none"
-            style={{
-              border: game.winner === p2?.id ? `1px solid ${colorWithAlpha(primaryColor, 0.65)}` : '1px solid var(--color-line)',
-              boxShadow: game.winner === p2?.id ? `0 0 10px ${colorWithAlpha(primaryColor, 0.2)}` : 'none',
-            }}
-          />
+          {winnerPick(p2, p2Name, 'end')}
+          {scoreField(2, game.p2, p2, p2Name)}
         </div>
       </div>
     </div>

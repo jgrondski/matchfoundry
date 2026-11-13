@@ -25,7 +25,8 @@ export interface MatchesHook {
     hasTiebreaker?: boolean
   ) => Promise<Tournament | null>;
   updateMatchBestOf: (tournamentId: string, tierId: string, matchId: string, bestOf: number) => Promise<Tournament | null>;
-  forfeitMatch: (tournamentId: string, tierId: string, matchId: string, winnerPlayerId: string) => Promise<Tournament | null>;
+  forfeitMatch: (tournamentId: string, tierId: string, matchId: string, winnerPlayerId: string, reason: string) => Promise<Tournament | null>;
+  reopenMatch: (tournamentId: string, tierId: string, matchId: string, expectedRevision?: number) => Promise<Tournament | null>;
   clearMatchScores: (tournamentId: string) => Promise<Tournament | null>;
   swapMatchSlots: (
     tournamentId: string,
@@ -47,6 +48,7 @@ export function useMatches(): MatchesHook {
     saveMatchScores: store.saveMatchScores,
     updateMatchBestOf: store.updateMatchBestOf,
     forfeitMatch: store.forfeitMatch,
+    reopenMatch: store.reopenMatch,
     clearMatchScores: store.clearMatchScores,
     swapMatchSlots: store.swapMatchSlots,
   };

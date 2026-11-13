@@ -6,7 +6,7 @@ import { Trophy, Plus, Trash2, X, Check, User } from 'lucide-react';
 import { getPlayerQualifierStatus } from '../scoring';
 import { Overlay } from '../../../components/overlay';
 import { FULL_PAGE_PANEL_CLASS } from '../../../components/fullPagePanel';
-import { Button, IconButton, Spinner, cn, useAction, useGlobalBusy } from '../../../components/ui';
+import { Button, IconButton, ScoreInput, Spinner, cn, useAction, useGlobalBusy } from '../../../components/ui';
 
 const labelClass = 'block text-caption font-semibold text-fg-secondary mb-1.5 uppercase tracking-wide';
 
@@ -91,12 +91,6 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
       personalBest: 0,
       playstyle: 'Rolling',
     });
-  };
-
-  const handleScoreChange = (val: string) => {
-    // Only digits
-    const cleaned = val.replace(/\D/g, '');
-    setScoreInput(cleaned);
   };
 
   const handleSubmitScore = (e: React.FormEvent) => {
@@ -206,14 +200,13 @@ export const QualifierEntryModal: React.FC<QualifierEntryModalProps> = ({
                   <form onSubmit={handleSubmitScore} className="flex flex-col gap-3">
                     <label className={labelClass}>New Attempt Score</label>
                     <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={scoreInput ? parseInt(scoreInput, 10).toLocaleString() : ''}
-                        onChange={e => handleScoreChange(e.target.value)}
-                        inputMode="numeric"
+                      <ScoreInput
+                        value={scoreInput}
+                        onValueChange={setScoreInput}
                         placeholder="Enter score (e.g. 1,120,500)..."
                         autoFocus
                         data-autofocus
+                        wrapperClassName="flex-1"
                         className="w-full py-2 px-3.5 rounded-sm border border-line bg-canvas text-fg text-lg font-bold max-md:text-base"
                       />
                       <Button

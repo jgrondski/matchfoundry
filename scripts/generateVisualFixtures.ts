@@ -13,6 +13,7 @@ const OUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'e
 const FIXED_NOW = Date.parse('2026-06-01T12:00:00Z');
 const RANDOM_SEED = 20260601;
 const SECRET_KEY = /pin|token|secret|webhook/i;
+const unseededRandom = Math.random;
 
 /** mulberry32: small, fast, seedable PRNG. */
 function seededRandom(seed: number): () => number {
@@ -101,7 +102,13 @@ async function main(): Promise<void> {
   const { simulateSampleTournament, createApiMiddleware } = await import('../src/server/api');
   const { createSessionToken } = await import('../src/server/pinCrypto');
 
-  setDb(setupTestDb().db);
+  // pg-mem draws Math.random while creating CHECK constraints. Building the schema on the
+  // unseeded source keeps the seeded stream, and so every fixture, independent of the schema.
+  const seededRandom = Math.random;
+  Math.random = unseededRandom;
+  const testDb = setupTestDb();
+  Math.random = seededRandom;
+  setDb(testDb.db);
   const tournament = await simulateSampleTournament();
   if (!tournament.isLocked || !tournament.tiers.some(t => t.bracket)) {
     throw new Error('Simulated tournament must be locked with a generated bracket.');
