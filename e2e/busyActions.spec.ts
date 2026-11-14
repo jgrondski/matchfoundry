@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test, expect, type Page } from '@playwright/test';
-import { installApiMocks, ADMIN_SESSION, FIXTURE_SLUG } from './visual/mockApi';
+import { installApiMocks, ADMIN_SESSION, FIXTURE_SLUG, UNPLAYED_BRACKET } from './visual/mockApi';
 import { MATCH_CONFLICT_MESSAGE } from '../src/features/bracket/matchConflict';
 import { ACTION_TIMEOUT_MESSAGE } from '../src/components/ui/actionConfig';
 
@@ -23,7 +23,8 @@ const FIXTURE_TOURNAMENT = JSON.parse(
 );
 
 async function prepare(page: Page, clock: 'fixed' | 'installed' = 'fixed'): Promise<string[]> {
-  const unmocked = await installApiMocks(page);
+  // Unplayed, so the first match opens its score drawer for editing.
+  const unmocked = await installApiMocks(page, UNPLAYED_BRACKET);
   if (clock === 'installed') {
     await page.clock.install({ time: FIXED_TIME });
   } else {

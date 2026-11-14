@@ -41,6 +41,7 @@ MatchFoundry runs live tournaments, where a broken bracket, a wrong tiebreaker, 
 * **Headless only.** Use `npm run test:e2e` (regenerates the visual fixtures, then `playwright test --project=chromium`); don't use interactive browser agents.
 
 ### Tier 4: Visual Regression (Playwright screenshots)
+* **Not run by default.** Run it only when the user expressly asks. It is kept for possible later use; UI changes are verified with Tier 2 component tests and Tier 3 instead.
 * **What:** 18 screenshots compared against committed baselines in `e2e/visual/__screenshots__/`: 8 pages (landing, bracket, leaderboard, standings, judge, manage qualifiers, review, settings) at desktop 1440×900 and mobile 360×800, plus 2 desktop-only overlays (match score drawer, qualifier entry modal). Specs are in `e2e/visual/visual.spec.ts`.
 * **How:** Every `/api/*` request is mocked from the JSON files in `e2e/visual/fixtures/` (`e2e/visual/mockApi.ts`), and the browser clock is frozen, so a screenshot changes only when the rendering changes. A test also fails if the page requests an endpoint the mock doesn't cover.
 * **Fixtures are generated in code.** `scripts/generateVisualFixtures.ts` runs the real API middleware against an in-memory pg-mem database, builds the sample tournament with `simulateSampleTournament()`, and seeds randomness, UUIDs and the clock, so every run writes identical files. No database, `.env` or seed data is needed. `test:visual`, `test:visual:update` and `test:e2e` regenerate the fixtures before every run. The fixtures are gitignored; only the screenshot baselines are committed.
@@ -77,8 +78,8 @@ Put tests in a `__tests__/` folder next to the code they cover (`src/features/<f
 | `npm test` | Full Vitest suite | Before finishing a milestone |
 | `npm run test:pg` | `*.pg.test.ts` against the local Docker database (transactions, row locks) | Changes to src/db/transaction.ts, write locks or targeted writes (local only) |
 | `npm run test:e2e` | Playwright golden journeys and overlay tests (`--project=chromium`) | Before finishing a milestone (local only) |
-| `npm run test:visual` | Visual regression screenshots against the baselines | Styling or layout changes (local only) |
-| `npm run test:visual:update` | Regenerates the screenshot baselines | Coordinator only, after reviewing the diffs |
+| `npm run test:visual` | Visual regression screenshots against the baselines | Only when the user expressly asks (local only) |
+| `npm run test:visual:update` | Regenerates the screenshot baselines | Only when the user expressly asks, after reviewing the diffs |
 | `npm run visual:fixtures` | Regenerates `e2e/visual/fixtures/` from code | Run automatically by `test:e2e`, `test:visual` and `test:visual:update` |
 | `npm run db:push` | Schema against local PostgreSQL | Any `schema.ts` change |
 

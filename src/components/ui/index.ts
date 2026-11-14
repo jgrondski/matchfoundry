@@ -8,6 +8,8 @@ export { Chip } from './Chip';
 export { Card } from './Card';
 export { useMediaQuery, useIsMobile, MOBILE_QUERY } from './useMediaQuery';
 export { Spinner } from './Spinner';
+export { ScoreInput } from './ScoreInput';
+export type { ScoreInputProps } from './ScoreInput';
 export { BusyProvider, BusyContext, useGlobalBusy } from './busy';
 export { FeedbackProvider, FeedbackBanner, useFeedback } from './feedback';
 export { useAction, raceWithTimeout, executeAction, ActionTimeoutError } from './useAction';

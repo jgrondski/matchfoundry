@@ -1,7 +1,7 @@
 import React from 'react';
 import { SeededPlayer } from '../../types';
 import { PlayerAvatar } from '../../../players/components/PlayerAvatar';
-import { BestOfSelect } from '../BestOfSelect';
+import { Spinner } from '../../../../components/ui';
 import { colorWithAlpha } from '../../colorUtils';
 import { cn } from '../../../../components/ui';
 
@@ -19,6 +19,8 @@ interface MatchupBannerProps {
   isP1Override?: boolean;
   isP2Override?: boolean;
   primaryColor: string;
+  /** Formats the judge may switch to; null once a game is scored, which locks the format. */
+  bestOfOptions: number[] | null;
   onBestOfChange: (newBestOf: number) => void;
   bestOfDisabled?: boolean;
   bestOfLoading?: boolean;
@@ -38,6 +40,7 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
   isP1Override,
   isP2Override,
   primaryColor,
+  bestOfOptions,
   onBestOfChange,
   bestOfDisabled = false,
   bestOfLoading = false,
@@ -123,13 +126,33 @@ export const MatchupBanner: React.FC<MatchupBannerProps> = ({
         <span className="text-xs font-extrabold tracking-widest text-fg-muted mb-1.5 max-md:mb-1">
           VS
         </span>
-        <BestOfSelect
-          value={bestOf}
-          onChange={onBestOfChange}
-          compact={true}
-          disabled={bestOfDisabled}
-          loading={bestOfLoading}
-        />
+        {bestOfOptions ? (
+          <div className="flex items-center gap-1.5">
+            <select
+              aria-label="Best-of"
+              data-testid="best-of-select"
+              value={bestOf}
+              disabled={bestOfDisabled}
+              onChange={e => onBestOfChange(Number(e.target.value))}
+              className="cursor-pointer rounded-sm border border-line bg-elevated py-1.5 px-2 text-caption font-bold text-gold-bright disabled:cursor-not-allowed disabled:opacity-60 max-md:min-h-11"
+            >
+              {bestOfOptions.map(option => (
+                <option key={option} value={option}>
+                  Bo{option}
+                </option>
+              ))}
+            </select>
+            {bestOfLoading && <Spinner size={12} className="text-gold-bright" />}
+          </div>
+        ) : (
+          <span
+            data-testid="best-of-locked"
+            title="Locked once a game is scored"
+            className="rounded-sm border border-line-subtle bg-surface py-1.5 px-2.5 text-caption font-bold text-gold-bright"
+          >
+            Bo{bestOf}
+          </span>
+        )}
         <span className="text-3xs text-fg-muted mt-1.5 font-semibold font-mono">
           First to {winThreshold}
         </span>

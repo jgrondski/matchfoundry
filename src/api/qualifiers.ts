@@ -9,6 +9,7 @@ import {
   organizations,
 } from '../db/schema';
 import { eq, and, or, desc, sql, ne } from 'drizzle-orm';
+import { assertValidScores } from '../utils/scores';
 import { getDb } from '../db';
 import type {
   SubmissionSource,
@@ -279,7 +280,7 @@ export async function submitQualifierScore(
   score: number,
   options?: RecordScoreOptions
 ): Promise<QualifierSubmissionRecord> {
-  if (score < 0) throw new Error('Score must be positive');
+  assertValidScores([score], 'Qualifier score');
 
   const tourney = await resolveTournamentRow(tournamentId);
   if (areQualsClosed(tourney)) throw new Error('Qualifiers are closed for this tournament');
@@ -292,6 +293,7 @@ export async function submitQualifiersBatch(
   submissions: Array<{ playerId: string; score: number } & RecordScoreOptions>
 ): Promise<QualifierSubmissionRecord[]> {
   if (submissions.length === 0) return [];
+  assertValidScores(submissions.map(s => s.score), 'Qualifier score');
   const tourney = await resolveTournamentRow(tournamentId);
   if (areQualsClosed(tourney)) throw new Error('Qualifiers are closed for this tournament');
 

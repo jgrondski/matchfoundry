@@ -3,7 +3,7 @@ import { Send, Plus, Trash2, Video, AlertCircle } from 'lucide-react';
 import type { PointsThreshold, QualFormat } from '../../tournament/types';
 import { PLAYER_NOTES_MAX_LENGTH } from '../discordMessages';
 import { summarizeQualScores, type QualScoreSummary } from '../../qualifiers/qualSummary';
-import { cn } from '../../../components/ui';
+import { ScoreInput, cn } from '../../../components/ui';
 
 const SUMMARY_DEBOUNCE_MS = 400;
 
@@ -72,9 +72,8 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
     }
   }, [currentScores.length]);
 
-  const handleScoreChange = (index: number, valStr: string) => {
-    const rawNumber = parseInt(valStr.replace(/[^0-9]/g, ''), 10);
-    const parsed = Number.isNaN(rawNumber) ? 0 : rawNumber;
+  const handleScoreChange = (index: number, digits: string) => {
+    const parsed = digits === '' ? 0 : Number(digits);
     const next = [...currentScores];
     next[index] = parsed;
     onScoresChange(next);
@@ -135,7 +134,7 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
                 <span className="w-18.75 text-sm font-bold text-fg-secondary">
                   Game {idx + 1}:
                 </span>
-                <input
+                <ScoreInput
                   ref={el => {
                     inputRefs.current[idx] = el;
                     if (newlyAddedIndexRef.current === idx && el) {
@@ -143,14 +142,13 @@ export const SubmissionFormCard: React.FC<SubmissionFormCardProps> = ({
                       newlyAddedIndexRef.current = null;
                     }
                   }}
-                  type="text"
-                  inputMode="numeric"
-                  value={scoreVal === 0 ? '' : scoreVal.toLocaleString()}
-                  onChange={e => handleScoreChange(idx, e.target.value)}
+                  value={scoreVal === 0 ? '' : String(scoreVal)}
+                  onValueChange={digits => handleScoreChange(idx, digits)}
                   onBlur={() => setSummaryScores(currentScores)}
                   placeholder="0"
                   disabled={disabled}
-                  className="min-w-0 flex-1 rounded-md border border-line bg-canvas px-3.5 py-2.5 font-mono text-base font-bold text-white max-md:text-base"
+                  wrapperClassName="flex-1"
+                  className="w-full rounded-md border border-line bg-canvas px-3.5 py-2.5 font-mono text-base font-bold text-white max-md:text-base"
                   data-testid={`score-input-${idx}`}
                 />
                 {!isAverage && currentScores.length > 1 && (

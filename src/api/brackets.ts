@@ -1,6 +1,7 @@
 import { matches, games, tournaments, bracketTiers } from '../db/schema';
 import { eq, inArray, or } from 'drizzle-orm';
 import { getDb } from '../db';
+import { assertValidScores } from '../utils/scores';
 
 export interface MatchRecord {
   id: string;
@@ -64,6 +65,7 @@ export async function recordGameScore(input: {
   isIntentionalTopout?: boolean;
 }): Promise<GameRecord> {
   const db = getDb();
+  assertValidScores([input.player1Score, input.player2Score], 'Game score');
 
   // 1. Verify tournament verification status
   const isIdUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.tournamentId);

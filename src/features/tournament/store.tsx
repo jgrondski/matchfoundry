@@ -18,7 +18,7 @@ import { getAuthHeaders, getAuthToken, usePinAuth } from '../auth/AuthContext';
 import { recordServerTime } from '../../utils/serverClock';
 import { isPlaceholderSubmissionStatus } from '../online-quals/onlineQualsStatus';
 import { ApiError } from './apiError';
-import { MATCH_CONFLICT_CODE } from '../bracket/matchConflict';
+import { MATCH_COMPLETE_CODE, MATCH_CONFLICT_CODE } from '../bracket/matchConflict';
 
 interface TournamentContextType {
   tournaments: Tournament[];
@@ -92,7 +92,8 @@ interface TournamentContextType {
     options?: { expectedRevision?: number }
   ) => Promise<Tournament | null>;
   updateMatchBestOf: (tournamentId: string, tierId: string, matchId: string, bestOf: number) => Promise<Tournament | null>;
-  forfeitMatch: (tournamentId: string, tierId: string, matchId: string, winnerPlayerId: string) => Promise<Tournament | null>;
+  forfeitMatch: (tournamentId: string, tierId: string, matchId: string, winnerPlayerId: string, reason: string) => Promise<Tournament | null>;
+  reopenMatch: (tournamentId: string, tierId: string, matchId: string, expectedRevision?: number) => Promise<Tournament | null>;
   addQualifierScore: (tournamentId: string, entry: Omit<QualifierScore, 'id' | 'totalScore'>) => void;
   verifyQualifierScore: (tournamentId: string, qualifierId: string, verified: boolean) => void;
   clearMatchScores: (tournamentId: string) => Promise<Tournament | null>;
@@ -1152,7 +1153,7 @@ export const TournamentProvider: React.FC<{
       }
       return null;
     } catch (err: any) {
-      if (err instanceof ApiError && err.code === MATCH_CONFLICT_CODE) {
+      if (err instanceof ApiError && (err.code === MATCH_CONFLICT_CODE || err.code === MATCH_COMPLETE_CODE)) {
         await refreshTournament(tournament.id);
         throw err;
       }
@@ -1222,7 +1223,8 @@ export const TournamentProvider: React.FC<{
     tournamentId: string,
     tierId: string,
     matchId: string,
-    winnerPlayerId: string
+    winnerPlayerId: string,
+    reason: string
   ): Promise<Tournament | null> => {
     const tournament = tournaments.find(t => t.id === tournamentId || t.slug === tournamentId);
     if (!tournament) return null;
@@ -1231,7 +1233,7 @@ export const TournamentProvider: React.FC<{
       const saved = await apiCall(`/api/tournaments/${tournament.id}/matches/${matchId}/forfeit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tierId, winnerPlayerId }),
+        body: JSON.stringify({ tierId, winnerPlayerId, reason }),
       });
       if (saved && saved.id) {
         setTournaments(prev => prev.map(t => (t.id === saved.id ? saved : t)));
@@ -1240,6 +1242,33 @@ export const TournamentProvider: React.FC<{
       return null;
     } catch (err: any) {
       setApiError(`Failed to record forfeit: ${err.message}`);
+      return null;
+    }
+  };
+
+  const reopenMatch = async (
+    tournamentId: string,
+    tierId: string,
+    matchId: string,
+    expectedRevision?: number
+  ): Promise<Tournament | null> => {
+    const tournament = tournaments.find(t => t.id === tournamentId || t.slug === tournamentId);
+    if (!tournament) return null;
+
+    try {
+      const saved = await apiCall(`/api/tournaments/${tournament.id}/matches/${matchId}/reopen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tierId, expectedRevision }),
+      });
+      if (saved && saved.id) {
+        setTournaments(prev => prev.map(t => (t.id === saved.id ? saved : t)));
+        return saved;
+      }
+      return null;
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.code === MATCH_CONFLICT_CODE) await refreshTournament(tournament.id);
+      setApiError(`Failed to reopen match: ${err instanceof Error ? err.message : String(err)}`);
       return null;
     }
   };
@@ -1995,6 +2024,7 @@ export const TournamentProvider: React.FC<{
         saveMatchScores,
         updateMatchBestOf,
         forfeitMatch,
+        reopenMatch,
         addQualifierScore,
         verifyQualifierScore,
         clearMatchScores,

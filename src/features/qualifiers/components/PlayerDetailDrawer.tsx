@@ -28,7 +28,7 @@ import { PlaystyleChip } from '../../players/components/PlaystyleChip';
 import { PlayerEditModal } from '../../players/components/PlayerEditModal';
 import { Overlay } from '../../../components/overlay';
 import { FULL_PAGE_PANEL_CLASS } from '../../../components/fullPagePanel';
-import { Spinner, cn, useAction, useGlobalBusy } from '../../../components/ui';
+import { ScoreInput, Spinner, cn, useAction, useGlobalBusy } from '../../../components/ui';
 import { DEFAULT_TIER_THEME, STATUS_COLORS, THEME_FALLBACK } from '../../../theme/palette';
 
 const sectionTitleClass = 'text-sm font-extrabold text-white uppercase tracking-wide m-0';
@@ -756,13 +756,12 @@ export const PlayerDetailDrawer: React.FC<PlayerDetailDrawerProps> = ({
                           borderColor: colorWithAlpha(primaryColor, 0.25, 'var(--color-line-subtle)'),
                         }}
                       >
-                        <input
-                          type="text"
-                          value={scoreInput ? parseInt(scoreInput.replace(/\D/g, ''), 10).toLocaleString() : ''}
-                          onChange={(e) => setScoreInput(e.target.value.replace(/\D/g, ''))}
-                          inputMode="numeric"
+                        <ScoreInput
+                          value={scoreInput}
+                          onValueChange={setScoreInput}
                           placeholder="Enter score (e.g. 1,050,000)..."
-                          className="flex-1 py-2 px-3 rounded-sm border text-white text-sm font-bold max-md:min-w-0 max-md:text-base"
+                          wrapperClassName="flex-1"
+                          className="w-full py-2 px-3 rounded-sm border text-white text-sm font-bold max-md:min-w-0 max-md:text-base"
                           style={{
                             borderColor: colorWithAlpha(primaryColor, 0.35, 'var(--color-line)'),
                             background: backgroundColor,

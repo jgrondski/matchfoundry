@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { installApiMocks, ADMIN_SESSION, FIXTURE_SLUG, FIXTURE_TIER_SLUG } from './visual/mockApi';
+import { installApiMocks, ADMIN_SESSION, FIXTURE_SLUG, FIXTURE_TIER_SLUG, UNPLAYED_BRACKET } from './visual/mockApi';
 
 // Overlay dismissal rules (spec 11.1): read-only and clean overlays close on backdrop/Escape;
 // dirty forms ask "Discard unsaved changes?" first. Runs against the mocked visual fixtures.
@@ -11,7 +11,8 @@ const DRAWER_BACKDROP = { x: 10, y: 360 };
 const TYPED_SCORE = /^123,?456$/;
 
 async function prepare(page: Page, admin: boolean): Promise<string[]> {
-  const unmocked = await installApiMocks(page);
+  // Unplayed, so the first match opens its score drawer for editing.
+  const unmocked = await installApiMocks(page, UNPLAYED_BRACKET);
   await page.clock.setFixedTime(FIXED_TIME);
   if (admin) {
     await page.addInitScript(session => {

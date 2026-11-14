@@ -4,6 +4,7 @@ import { bracketTiers, games, matches, tournaments } from '../db/schema';
 import type { BracketMatch, BracketStructure } from '../features/bracket/types';
 import type { MatchScoreRecord, Tournament } from '../features/tournament/types';
 import { isUuid } from './tournaments';
+import { assertValidScores } from '../utils/scores';
 
 /** Every match of a bracket by id: matchesById entries first, then rounds[].matches[]. */
 export function collectBracketMatches(bracket: BracketStructure): Map<string, BracketMatch> {
@@ -80,12 +81,19 @@ export function buildMatchRow(
       player1SourceMatchId: m.player1?.sourceMatchId,
       player2SourceMatchId: m.player2?.sourceMatchId,
       isBye: m.isBye,
+      forfeitNote: isForfeit && isComplete ? scoreRec?.notes : undefined,
     },
   };
 }
 
 /** The games rows for one bracket match (empty when scoreRec has no games). */
 export function buildGameRows(m: BracketMatch, scoreRec: MatchScoreRecord | undefined) {
+  for (const g of scoreRec?.games || []) {
+    assertValidScores(
+      [g.player1Points, g.player2Points].filter(p => p !== null && p !== undefined),
+      `Match ${m.matchNumber} game ${g.gameNumber} score`
+    );
+  }
   const p1Id = m.player1?.player?.id && isUuid(m.player1.player.id) ? m.player1.player.id : null;
   const p2Id = m.player2?.player?.id && isUuid(m.player2.player.id) ? m.player2.player.id : null;
   const rows: Array<any> = [];
