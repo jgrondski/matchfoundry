@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
+import { resolveChromaColor } from '../chroma';
 import { Tournament, TournamentTier, PlayerProfile } from '../../tournament/types';
 import { BracketMatch } from '../../bracket/types';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { getEffectivePlayerName } from '../../players/playerNameUtils';
 import { Trophy } from 'lucide-react';
-import { colorWithAlpha } from '../../bracket/colorUtils';
+import { blendOver, colorWithAlpha } from '../../bracket/colorUtils';
 import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
-import { CHROMA_KEY_COLORS, DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
+import { DEFAULT_TIER_THEME, THEME_FALLBACK } from '../../../theme/palette';
 
 export interface ObsMatchCardViewProps {
   tournament: Tournament;
@@ -54,17 +55,7 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
   const scoreRecord = targetMatch ? tournament.matchScores[targetMatch.id] : undefined;
   const isDraft = !tournament.isLocked;
 
-  const chromaBg = chroma
-    ? chroma.startsWith('#')
-      ? chroma
-      : chroma.toLowerCase() === 'green'
-      ? CHROMA_KEY_COLORS.green
-      : chroma.toLowerCase() === 'magenta'
-      ? CHROMA_KEY_COLORS.magenta
-      : chroma.toLowerCase() === 'blue'
-      ? CHROMA_KEY_COLORS.blue
-      : `#${chroma}`
-    : 'transparent';
+  const chromaBg = resolveChromaColor(chroma) ?? 'transparent';
 
   const primaryColor = resolvedTier?.primaryColor || DEFAULT_TIER_THEME.primaryColor;
   const cardColor = resolvedTier?.cardColor || THEME_FALLBACK.obsCardColor;
@@ -104,8 +95,8 @@ export const ObsMatchCardView: React.FC<ObsMatchCardViewProps> = ({
         className="w-full max-w-160 rounded-lg overflow-hidden font-sans"
         style={{
           background: `linear-gradient(180deg, ${cardColor} 0%, #0c0d12 100%)`,
-          border: `2px solid ${colorWithAlpha(primaryColor, 0.45)}`,
-          boxShadow: `0 12px 40px rgba(0, 0, 0, 0.8), 0 0 24px ${colorWithAlpha(primaryColor, 0.2)}`,
+          // Solid border and no shadow: both sit over the chroma key, and anything translucent there gets keyed out.
+          border: `2px solid ${blendOver(primaryColor, cardColor, 0.45)}`,
         }}
       >
         {/* Header Bar */}

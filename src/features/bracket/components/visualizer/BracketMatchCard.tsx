@@ -237,7 +237,13 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
             isDimmed && 'opacity-35'
           )}
         >
-          {renderMicroChip(p1InboundChip, setHoveredOriginMatchId, onChipClick)}
+          {isObsMode ? (
+            <span className="inline-flex rounded-xs" style={{ background: effectiveCardBg }}>
+              {renderMicroChip(p1InboundChip, setHoveredOriginMatchId, onChipClick)}
+            </span>
+          ) : (
+            renderMicroChip(p1InboundChip, setHoveredOriginMatchId, onChipClick)
+          )}
         </div>
       )}
 
@@ -248,7 +254,13 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
             isDimmed && 'opacity-35'
           )}
         >
-          {renderMicroChip(p2InboundChip, setHoveredOriginMatchId, onChipClick)}
+          {isObsMode ? (
+            <span className="inline-flex rounded-xs" style={{ background: effectiveCardBg }}>
+              {renderMicroChip(p2InboundChip, setHoveredOriginMatchId, onChipClick)}
+            </span>
+          ) : (
+            renderMicroChip(p2InboundChip, setHoveredOriginMatchId, onChipClick)
+          )}
         </div>
       )}
 
@@ -262,17 +274,21 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
         onMouseEnter={() => setHoveredMatchId(match.id)}
         onMouseLeave={() => setHoveredMatchId(null)}
         className={cn(
-          'flex h-full w-full flex-col justify-start overflow-hidden rounded-sm shadow-[0_2px_6px_rgba(0,0,0,0.45)]',
+          'flex h-full w-full flex-col justify-start overflow-hidden rounded-sm',
+          // OBS: no shadow or fade; translucent pixels take on the chroma key and get keyed out
+          !isObsMode && 'shadow-[0_2px_6px_rgba(0,0,0,0.45)]',
           isCardBorderThick ? 'border-2' : 'border-[1.5px]',
           branchAccentColor && 'border-x-4',
           isFocusedMatch ? 'outline-offset-2 animate-match-zoom-pulse' : 'outline-offset-0',
           !isObsMode && tournament.isLocked && isPlayable ? 'cursor-pointer' : 'cursor-default',
-          hoveredAncestry ? isDimmed && 'opacity-35' : !isPlayable && 'opacity-70'
+          hoveredAncestry ? isDimmed && 'opacity-35' : !isPlayable && !isObsMode && 'opacity-70'
         )}
         style={{
           background: effectiveCardBg,
           borderColor: `${cardBorderColor} ${cardSideBorderColor}`,
-          boxShadow: isFocusedMatch
+          boxShadow: isObsMode
+            ? undefined
+            : isFocusedMatch
             ? `0 0 0 3px ${primaryColor}, 0 0 35px ${primaryColor}dd, 0 0 70px ${primaryColor}66`
             : showOriginHighlight
             ? `0 0 20px ${branchAccentColor || primaryColor}, 0 0 8px rgba(255, 255, 255, 0.6)`
@@ -357,8 +373,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
               {p1?.seed && (
                 <span
                   className={cn(
-                    'inline-flex shrink-0 items-center justify-center rounded-xs border-[1.5px] font-mono font-black',
-                    isComplete && p2Won && !isHighlightActive && 'opacity-45'
+                    'inline-flex shrink-0 items-center justify-center rounded-xs border-[1.5px] font-mono font-black'
                   )}
                   style={{
                     width: `${seedDim}px`,
@@ -381,7 +396,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                 <PlayerAvatar
                   player={p1Profile}
                   country={p1Profile?.country}
-                  className={cn('shrink-0 leading-none', isComplete && p2Won && !isHighlightActive && 'opacity-45')}
+                  className={cn('shrink-0 leading-none')}
                   style={{ fontSize: flagFontSize }}
                 />
               )}
@@ -391,10 +406,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                   'min-w-0 flex-1 truncate leading-tight',
                   (isComplete && p1Won) || p1Leading || (isHighlightActive && isP1Target)
                     ? 'font-black'
-                    : isComplete && p2Won
-                    ? 'font-medium'
-                    : 'font-bold',
-                  isComplete && p2Won && !isHighlightActive && 'opacity-45'
+                    : 'font-bold'
                 )}
                 style={{ fontSize: nameFontSize, color: p1NameColor }}
               >
@@ -417,8 +429,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
               className={cn(
                 'font-mono tabular-nums tracking-tight inline-flex shrink-0 items-center justify-center ml-0 rounded-xs leading-none',
                 (isComplete && p1Won) || p1Leading ? 'font-black' : 'font-semibold',
-                !isComplete && !inProgress && !((isComplete && p1Won) || p1Leading) ? 'border-[1.5px]' : 'border',
-                isComplete && p2Won && !isHighlightActive && 'opacity-45'
+                !isComplete && !inProgress && !((isComplete && p1Won) || p1Leading) ? 'border-[1.5px]' : 'border'
               )}
               style={{
                 fontSize: scoreFontSize,
@@ -496,8 +507,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
               {p2?.seed && (
                 <span
                   className={cn(
-                    'inline-flex shrink-0 items-center justify-center rounded-xs border-[1.5px] font-mono font-black',
-                    isComplete && p1Won && !isHighlightActive && 'opacity-45'
+                    'inline-flex shrink-0 items-center justify-center rounded-xs border-[1.5px] font-mono font-black'
                   )}
                   style={{
                     width: `${seedDim}px`,
@@ -520,7 +530,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                 <PlayerAvatar
                   player={p2Profile}
                   country={p2Profile?.country}
-                  className={cn('shrink-0 leading-none', isComplete && p1Won && !isHighlightActive && 'opacity-45')}
+                  className={cn('shrink-0 leading-none')}
                   style={{ fontSize: flagFontSize }}
                 />
               )}
@@ -530,10 +540,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
                   'min-w-0 flex-1 truncate leading-tight',
                   (isComplete && p2Won) || p2Leading || (isHighlightActive && isP2Target)
                     ? 'font-black'
-                    : isComplete && p1Won
-                    ? 'font-medium'
-                    : 'font-bold',
-                  isComplete && p1Won && !isHighlightActive && 'opacity-45'
+                    : 'font-bold'
                 )}
                 style={{ fontSize: nameFontSize, color: p2NameColor }}
               >
@@ -556,8 +563,7 @@ export const BracketMatchCard: React.FC<BracketMatchCardProps> = ({
               className={cn(
                 'font-mono tabular-nums tracking-tight inline-flex shrink-0 items-center justify-center ml-0 rounded-xs leading-none',
                 (isComplete && p2Won) || p2Leading ? 'font-black' : 'font-semibold',
-                !isComplete && !inProgress && !((isComplete && p2Won) || p2Leading) ? 'border-[1.5px]' : 'border',
-                isComplete && p1Won && !isHighlightActive && 'opacity-45'
+                !isComplete && !inProgress && !((isComplete && p2Won) || p2Leading) ? 'border-[1.5px]' : 'border'
               )}
               style={{
                 fontSize: scoreFontSize,

@@ -9,7 +9,6 @@ import { BracketVisualizer } from '../features/bracket/components/BracketVisuali
 import { BracketTierBar } from '../features/bracket/components/BracketTierBar';
 import { BracketViewMode, supportsCompactView } from '../features/bracket/bracketLayout';
 import { MatchCardFeed } from '../features/bracket/components/MatchCardFeed';
-import { ShareBracketModal } from '../features/bracket/components/ShareBracketModal';
 import { useBracketTier } from '../features/bracket/hooks/useBracketTier';
 import { ObsBracketView } from '../features/obs/components/ObsBracketView';
 import { LoadingScreen } from '../components/LoadingScreen';
@@ -140,7 +139,6 @@ const TierBracketView: React.FC<TierBracketViewProps> = ({
   chroma,
 }) => {
   const canManage = isManageRoute;
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [playerSearchTerm, setPlayerSearchTerm] = useState('');
 
   const supportsCompact = Boolean(tier.bracket) && supportsCompactView(tier.bracket);
@@ -231,7 +229,6 @@ const TierBracketView: React.FC<TierBracketViewProps> = ({
         isCompact={isCompactCards}
         onChangeCompact={setIsCompactCards}
         canManage={canManage}
-        onOpenShare={() => setIsShareModalOpen(true)}
         playerSearchTerm={playerSearchTerm}
         onPlayerSearchTermChange={setPlayerSearchTerm}
         highlightedPlayerName={highlightedPlayer?.name || null}
@@ -282,14 +279,6 @@ const TierBracketView: React.FC<TierBracketViewProps> = ({
           />
         </main>
       )}
-
-      {/* Share Bracket Modal */}
-      <ShareBracketModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        tournament={tournament}
-        tier={tier}
-      />
     </>
   );
 
@@ -317,7 +306,6 @@ const TierBracketView: React.FC<TierBracketViewProps> = ({
       tournament={tournament}
       activeTier={tier}
       activeView="bracket"
-      onOpenShare={() => setIsShareModalOpen(true)}
       contentStyle={{
         background: tierBg,
         minHeight: localViewMode === 'fit' ? 'calc(100vh - 56px)' : '100vh',

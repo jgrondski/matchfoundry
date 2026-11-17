@@ -198,6 +198,7 @@ Models multiple qualification pods funneling into a single-elimination champions
   * Identity badges: "New Player" marks a run that created a new player record (not found in the player list); "Claimed" marks a claimed roster profile awaiting a judge. No badge otherwise.
 * **Closing Quals:** Closing qualifiers with unverified submissions requires confirmation. Once closed, `/:slug/qualify` shows "Qualifying Closed" and draft seeding includes every player with at least one score except DNQ and DQ; unverified scores are seeded provisionally.
 * **Discord Webhooks:** Optional posts on qual start, submit, and verify. A tournament without its own webhook falls back to its org's.
+* **Matcherino Link:** Optional per-tournament link (Settings > Tournament Details). When set, a Matcherino button shows on the front-page tournament card and in the public header.
 
 ### 4.7 Public Spectator Views vs. Management App
 * **Public Spectator (`/:slug/*`, `SpectatorLayout`):** No login, no admin sidebar, `canManage={false}`.
@@ -211,9 +212,10 @@ Models multiple qualification pods funneling into a single-elimination champions
 * **Access Tiers:** System Admin (all orgs, global player directory, PIN reveals, simulation and destructive data controls; emergency `SYSTEM_ADMIN_RECOVERY_PIN`) and Tournament Admin (scoped to their tournament). Tournament PINs are stored AES-256-GCM encrypted.
 * **Bracket View Modes:** Standard (pan/zoom), Fit Screen (1080p zero-scroll), Split Wings (bilateral wings converging on the Finals), Card Feed (`MatchCardFeed`, default below 768px).
 * **Player Journey Highlighting:** Competitor search in `BracketTierBar` highlights a player's full path (matches and connector lines) and dims the rest.
-* **Sharing:** "Share Bracket" (`ShareBracketModal.tsx`): canonical URL copy, QR code, Twitch `!bracket` and Discord snippets, share to X.
 
 ### 4.8 OBS Broadcast Overlays (`/:slug/obs`)
 * Full-bleed canvases with chroma key presets (Green, Magenta, Blue, Transparent), 1080p zero-scroll auto-fit, and split wings.
 * Bracket and match-card overlays (`ObsBracketView.tsx`, `ObsMatchCardView.tsx`) render projected draft brackets before match play is locked.
 * Orthogonal SVG connectors link feeder matches to downstream rounds (`BracketVisualizer.tsx`, `bracketLayout.ts`).
+* **Chroma-safe:** in OBS mode nothing on a chroma background is translucent: no faded TBD or losing slots, no shadows or glows, solid header pills, connectors at least 3px. The leaderboard, seeding and standings overlays sit on one solid panel over the key (`ObsPageFrame.tsx`). The hub flags a chroma preset that is close to a tier color and suggests one that isn't (`features/obs/chroma.ts`).
+* **Gutter views:** `?obs=true&layout=gutter` on `/:slug/leaderboard` and `/:slug/standings` renders a narrow column for beside match play: rank, name and one large number (qual score, or match record for standings). `&count=` sets the row count (default 20).

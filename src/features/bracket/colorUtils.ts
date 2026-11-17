@@ -179,3 +179,62 @@ export function getDefaultTierColors(tier: { id?: string; slug?: string; priorit
     lowerBracketColor: TIER_THEMES.yellow.lowerBracketColor,
   };
 }
+
+function parseHex(color: string | undefined): [number, number, number] | null {
+  if (!color || !color.startsWith('#')) return null;
+  let hex = color.slice(1);
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  if (hex.length === 8) hex = hex.slice(0, 6);
+  if (hex.length !== 6 || !/^[0-9a-f]{6}$/i.test(hex)) return null;
+  return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+}
+
+/**
+ * The solid color you see when `fg` at `alpha` sits on `bg`. OBS overlays use this instead of
+ * an rgba() fill, because anything translucent picks up the chroma-key color behind it and
+ * gets keyed out with it. Falls back to `bg` (or `fg` when bg is unreadable) for non-hex input.
+ */
+export function blendOver(fg: string | undefined, bg: string | undefined, alpha: number): string {
+  const f = parseHex(fg);
+  const b = parseHex(bg);
+  if (!f || !b) return (b ? bg : fg) || THEME_FALLBACK.cardColor;
+  const toHex = (n: number) => Math.round(n).toString(16).padStart(2, '0');
+  const mix = (i: number) => f[i] * alpha + b[i] * (1 - alpha);
+  return `#${toHex(mix(0))}${toHex(mix(1))}${toHex(mix(2))}`;
+}
+
+/** A hex color with any alpha channel dropped (#rrggbbaa -> #rrggbb). Non-hex input is returned as is. */
+export function toOpaqueHex(color: string): string {
+  const rgb = parseHex(color);
+  if (!rgb) return color;
+  return `#${rgb.map(n => n.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function hsv([r, g, b]: [number, number, number]): { h: number; s: number; v: number } {
+  const max = Math.max(r, g, b) / 255;
+  const min = Math.min(r, g, b) / 255;
+  const d = max - min;
+  let h = 0;
+  if (d > 0) {
+    if (max === r / 255) h = 60 * (((g - b) / 255 / d) % 6);
+    else if (max === g / 255) h = 60 * ((b - r) / 255 / d + 2);
+    else h = 60 * ((r - g) / 255 / d + 4);
+  }
+  return { h: (h + 360) % 360, s: max === 0 ? 0 : d / max, v: max };
+}
+
+/**
+ * True when `color` is close enough in hue to the chroma key that a keyer tuned for the key
+ * would also eat it: a saturated, reasonably bright color within 45 degrees of the key's hue.
+ * Greys, darks and pastels never clash.
+ */
+export function clashesWithChroma(color: string | undefined, keyHex: string): boolean {
+  const c = parseHex(color);
+  const k = parseHex(keyHex);
+  if (!c || !k) return false;
+  const a = hsv(c);
+  const b = hsv(k);
+  if (a.s < 0.45 || a.v < 0.35) return false;
+  const diff = Math.abs(a.h - b.h);
+  return Math.min(diff, 360 - diff) <= 45;
+}

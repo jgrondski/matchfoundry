@@ -7,6 +7,7 @@ import { MatchTelemetryModal } from './MatchTelemetryModal';
 import {
   getTierCanvasBackground,
   getTierCardBackground,
+  toOpaqueHex,
   getTextScale,
   getDefaultTierColors,
 } from '../colorUtils';
@@ -29,7 +30,8 @@ import { BracketStageNavBar, HybridStageTab } from './visualizer/BracketStageNav
 import { BracketQualifierPodGrid } from './visualizer/BracketQualifierPodGrid';
 import { BracketCanvas } from './visualizer/BracketCanvas';
 import { cn } from '../../../components/ui';
-import { CHROMA_KEY_COLORS, LOWER_BRACKET_COLOR, THEME_FALLBACK } from '../../../theme/palette';
+import { LOWER_BRACKET_COLOR, THEME_FALLBACK } from '../../../theme/palette';
+import { resolveChromaColor } from '../../obs/chroma';
 
 export * from '../routingChips';
 export * from '../journeyHighlight';
@@ -600,23 +602,13 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
     }
   }, [highlightedPlayerId, bracket, tournament.matchScores, championPlayer?.id]);
 
-  // Resolve chroma color if requested
-  const getChromaColor = (param?: string | null) => {
-    if (!param) return null;
-    const c = param.toLowerCase().trim();
-    if (c === 'green') return CHROMA_KEY_COLORS.green;
-    if (c === 'magenta') return CHROMA_KEY_COLORS.magenta;
-    if (c === 'blue') return CHROMA_KEY_COLORS.blue;
-    if (c.startsWith('#')) return c;
-    return `#${c}`;
-  };
-
-  const chromaHex = getChromaColor(effectiveChroma);
+  const chromaHex = resolveChromaColor(effectiveChroma);
   const cardBg = getTierCardBackground(cardColor, primaryColor);
   const canvasBg = getTierCanvasBackground(backgroundColor, primaryColor);
 
   // Pure user-defined solid colors
-  const effectiveCardBg = chromaHex ? (tier.cardColor || THEME_FALLBACK.cardColor) : cardBg;
+  // Chroma: cards must be fully opaque, so any alpha in a custom card color is dropped.
+  const effectiveCardBg = chromaHex ? toOpaqueHex(tier.cardColor || THEME_FALLBACK.cardColor) : cardBg;
   const effectiveCanvasBg = chromaHex ? chromaHex : isObsMode ? 'transparent' : canvasBg;
 
   // Render a complete geometric canvas for a given layout and round set
@@ -683,6 +675,7 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
         layoutLowerBracket={layoutLowerBracket!}
         lowerBracketRounds={lowerBracketRounds}
         renderCanvas={renderCanvas}
+        isObsMode={isObsMode}
       />
     );
   };
@@ -708,6 +701,7 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
           isObsMode={isObsMode}
           chromaHex={chromaHex}
           primaryColor={primaryColor}
+          cardBg={effectiveCardBg}
           isDraft={!tournament.isLocked}
         />
       )}
@@ -767,11 +761,11 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
 
                 {/* Phase 1 to Phase 2 Divider */}
                 <div className="flex w-full items-center gap-4 py-2">
-                  <div className="h-0.5 flex-1" style={{ background: `linear-gradient(to right, transparent, ${primaryColor}88)` }} />
+                  <div className="h-0.5 flex-1" style={{ background: isObsMode ? primaryColor : `linear-gradient(to right, transparent, ${primaryColor}88)` }} />
                   <span className="text-caption font-black uppercase tracking-widest" style={{ color: primaryColor }}>
                     Top {bracket.finalsCutoff || 16} Finals ↓
                   </span>
-                  <div className="h-0.5 flex-1" style={{ background: `linear-gradient(to left, transparent, ${primaryColor}88)` }} />
+                  <div className="h-0.5 flex-1" style={{ background: isObsMode ? primaryColor : `linear-gradient(to left, transparent, ${primaryColor}88)` }} />
                 </div>
 
                 {/* Stage 2: Top C Finals */}
@@ -867,11 +861,11 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
 
           {/* Phase 1 to Phase 2 Divider */}
           <div className="flex w-full items-center gap-4 py-2">
-            <div className="h-0.5 flex-1" style={{ background: `linear-gradient(to right, transparent, ${primaryColor}88)` }} />
+            <div className="h-0.5 flex-1" style={{ background: isObsMode ? primaryColor : `linear-gradient(to right, transparent, ${primaryColor}88)` }} />
             <span className="text-caption font-black uppercase tracking-widest" style={{ color: primaryColor }}>
               Top {bracket.finalsCutoff || 16} Finals ↓
             </span>
-            <div className="h-0.5 flex-1" style={{ background: `linear-gradient(to left, transparent, ${primaryColor}88)` }} />
+            <div className="h-0.5 flex-1" style={{ background: isObsMode ? primaryColor : `linear-gradient(to left, transparent, ${primaryColor}88)` }} />
           </div>
 
           {/* Stage 2: Top C Finals */}

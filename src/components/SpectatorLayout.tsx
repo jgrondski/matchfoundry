@@ -5,12 +5,13 @@ import { useOrganization } from '../features/organizations/store';
 import { usePinAuth } from '../features/auth/AuthContext';
 import { isOnlineQualsOpen } from '../features/online-quals/onlineQualsStatus';
 import { getTournamentTargetUrl } from './TournamentSidebar';
+import { getMatcherinoHref } from '../features/tournament/matcherino';
 import {
   Trophy,
   BarChart3,
   GitBranch,
   Layers,
-  Share2,
+  HandCoins,
   Building2,
   ArrowLeft,
   Settings,
@@ -20,7 +21,7 @@ import {
 } from 'lucide-react';
 import { ErrorBoundary } from './ErrorBoundary';
 import { SpectatorBottomNav } from './SpectatorBottomNav';
-import { Button, buttonClasses, Chip, cn } from './ui';
+import { buttonClasses, Chip, cn } from './ui';
 
 export type SpectatorNavView = 'leaderboard' | 'standings' | 'bracket' | 'qualify';
 
@@ -74,7 +75,6 @@ interface SpectatorLayoutProps {
   children: React.ReactNode;
   contentStyle?: React.CSSProperties;
   className?: string;
-  onOpenShare?: () => void;
 }
 
 export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
@@ -84,7 +84,6 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
   children,
   contentStyle,
   className,
-  onOpenShare,
 }) => {
   const navigate = useNavigate();
   const { isSystemAdmin, canManage } = usePinAuth();
@@ -102,6 +101,7 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
       : getTournamentTargetUrl(tournament, activeView === 'qualify' ? 'review' : activeView);
 
   const navItems = getSpectatorNavItems(tournament, activeTier?.slug);
+  const matcherinoHref = getMatcherinoHref(tournament.matcherinoUrl);
 
   return (
     <div
@@ -171,18 +171,20 @@ export const SpectatorLayout: React.FC<SpectatorLayoutProps> = ({
           })}
         </nav>
 
-        {/* Right: Actions (Share + Director Login) */}
+        {/* Right: Actions (Matcherino + Director Login) */}
         <div className="flex shrink-0 items-center gap-2.5">
-          {onOpenShare && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onOpenShare}
-              title="Share Bracket"
+          {matcherinoHref && (
+            <a
+              href={matcherinoHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonClasses({ variant: 'primary', size: 'sm' })}
+              title="Matcherino"
+              aria-label="Matcherino"
             >
-              <Share2 size={13} />
-              <span className="max-md:sr-only">Share</span>
-            </Button>
+              <HandCoins size={13} />
+              <span className="max-md:sr-only">Matcherino</span>
+            </a>
           )}
 
           {hasManageAccess ? (

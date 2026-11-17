@@ -1226,6 +1226,40 @@ async function moveRunToPlayer(runId: string, playerId: string): Promise<void> {
   await getDb().update(qualifierSubmissions).set({ playerId }).where(eq(qualifierSubmissions.runId, runId));
 }
 
+/** The competitor form's fields when review adds a player (the same form the Players page uses). */
+export interface IdentityNewPlayerInput {
+  name: string;
+  country?: string;
+  playstyle?: string;
+  displayName?: string;
+  nickname?: string;
+  twitchUsername?: string;
+  personalBest?: number;
+  notes?: string;
+}
+
+/**
+ * Optional profile columns from the competitor form. Only fields the form sent are returned,
+ * so an older client that sends just name/country/playstyle changes nothing else. A Twitch
+ * username typed in the form replaces the one captured at submission.
+ */
+function newPlayerProfileFields(input: IdentityNewPlayerInput): Record<string, unknown> {
+  const fields: Record<string, unknown> = {};
+  const text = (v: unknown) => (typeof v === 'string' ? v.trim() || null : undefined);
+  const displayName = text(input.displayName);
+  const nickname = text(input.nickname);
+  const notes = text(input.notes);
+  const twitch = typeof input.twitchUsername === 'string' ? input.twitchUsername.trim().replace(/^@/, '') : undefined;
+  if (displayName !== undefined) fields.displayName = displayName;
+  if (nickname !== undefined) fields.nickname = nickname;
+  if (notes !== undefined) fields.notes = notes;
+  if (twitch) fields.twitchUsername = twitch;
+  if (typeof input.personalBest === 'number' && Number.isFinite(input.personalBest) && input.personalBest >= 0) {
+    fields.personalBest = Math.floor(input.personalBest);
+  }
+  return fields;
+}
+
 /**
  * Track 10E: Judge Review Queue adjudication & identity resolution mutations.
  */
@@ -1248,11 +1282,7 @@ export async function adjudicateOnlineSubmission(
     judgeNotes?: string;
     verifiedBy?: string;
     targetPlayerId?: string;
-    newPlayer?: {
-      name: string;
-      country?: string;
-      playstyle?: string;
-    };
+    newPlayer?: IdentityNewPlayerInput;
   }
 ) {
   const db = getDb();
@@ -1433,6 +1463,9 @@ export async function adjudicateOnlineSubmission(
     if (input.newPlayer?.playstyle?.trim()) {
       updatePayload.playstyle = input.newPlayer.playstyle.trim();
     }
+    if (input.newPlayer) {
+      Object.assign(updatePayload, newPlayerProfileFields(input.newPlayer));
+    }
     if (Object.keys(updatePayload).length > 0) {
       await db
         .update(players)
@@ -1547,6 +1580,7 @@ export async function adjudicateOnlineSubmission(
         twitchId: existing.submittedTwitchId || null,
         avatarType: 'flag',
         personalBest: 0,
+        ...(input.newPlayer ? newPlayerProfileFields(input.newPlayer) : {}),
       })
       .returning();
 

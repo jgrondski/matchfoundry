@@ -88,6 +88,7 @@ export interface OrganizationDefaultRules {
 
 export interface TournamentMetadata {
   location?: string;
+  matcherinoUrl?: string;
   organizationId?: string;
   useOrgBranding?: boolean;
   logoUrl?: string;
@@ -304,6 +305,7 @@ export interface Tournament {
   /** Last event day, YYYY-MM-DD, on or after startDate. '' or undefined = single-day event. */
   endDate?: string;
   location: string;
+  matcherinoUrl?: string; // Matcherino event page; shown as a button on the front page and public header when set
   seedingMethod?: SeedingMethod; // default 'QUALIFIERS'
   manualSeeds?: string[]; // ordered array of playerIds: index 0 = Seed 1, index 1 = Seed 2, etc.
   qualFormat: QualFormat;
@@ -354,6 +356,7 @@ export interface TournamentSummary {
   startDate: string;
   endDate: string;
   location: string;
+  matcherinoUrl?: string;
   qualFormat: QualFormat;
   qualAverageCount?: number;
   pointsConfig?: PointsThreshold[];

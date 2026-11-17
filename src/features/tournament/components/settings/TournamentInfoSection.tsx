@@ -3,6 +3,7 @@ import { Shield, AlertTriangle, ShieldCheck, Sliders } from 'lucide-react';
 import { QualFormat, QualMode, PointsThreshold, DEFAULT_POINTS_THRESHOLDS, SeedingMethod } from '../../types';
 import { ClearableNumberInput } from '../../../../components/ClearableNumberInput';
 import { labelClass, inputClass } from './types';
+import { getMatcherinoUrlError } from '../../matcherino';
 import { Badge, Button, cn } from '../../../../components/ui';
 
 interface TournamentInfoSectionProps {
@@ -12,6 +13,7 @@ interface TournamentInfoSectionProps {
   endDate: string;
   dateError: string | null;
   location: string;
+  matcherinoUrl: string;
   seedingMethod: SeedingMethod;
   qualFormat: QualFormat;
   qualAverageCount?: number;
@@ -25,6 +27,7 @@ interface TournamentInfoSectionProps {
   onStartDateChange: (date: string) => void;
   onEndDateChange: (date: string) => void;
   onLocationChange: (loc: string) => void;
+  onMatcherinoUrlChange: (url: string) => void;
   onSeedingMethodChange: (method: SeedingMethod) => void;
   onQualFormatChange: (fmt: QualFormat) => void;
   onQualAverageCountChange: (count: number | undefined) => void;
@@ -42,6 +45,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
   endDate,
   dateError,
   location,
+  matcherinoUrl,
   seedingMethod,
   qualFormat,
   qualAverageCount,
@@ -55,6 +59,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
   onStartDateChange,
   onEndDateChange,
   onLocationChange,
+  onMatcherinoUrlChange,
   onSeedingMethodChange,
   onQualFormatChange,
   onQualAverageCountChange,
@@ -64,6 +69,7 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
   onQualWindowMinutesChange,
   onOpenPointsDrawer,
 }) => {
+  const matcherinoError = getMatcherinoUrlError(matcherinoUrl);
   return (
     <section className="flex flex-col gap-3.5 rounded-lg border border-line bg-surface py-4 px-5">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-2">
@@ -145,6 +151,24 @@ export const TournamentInfoSection: React.FC<TournamentInfoSectionProps> = ({
             placeholder="e.g. Kansas City, MO"
             className={inputClass}
           />
+        </div>
+
+        <div>
+          <label htmlFor="matcherino-url" className={labelClass}>Matcherino Link</label>
+          <input
+            id="matcherino-url"
+            type="url"
+            inputMode="url"
+            value={matcherinoUrl}
+            onChange={e => onMatcherinoUrlChange(e.target.value)}
+            placeholder="https://matcherino.com/t/..."
+            className={inputClass}
+          />
+          {matcherinoError ? (
+            <p className="mt-1 text-xs text-red-bright">{matcherinoError}</p>
+          ) : (
+            <span className="text-xs text-fg-muted">Optional. Shows a Matcherino button on public pages.</span>
+          )}
         </div>
       </div>
 

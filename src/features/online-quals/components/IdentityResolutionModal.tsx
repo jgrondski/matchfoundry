@@ -1,20 +1,18 @@
 import React, { useState, useId } from 'react';
 import { UserCheck, UserX, UserPlus, Search, X, AlertTriangle } from 'lucide-react';
-import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
+import type { ReviewQueueSessionSummary, IdentityNewPlayerInput } from '../../../api/qualifiers';
 import type { PlayerProfile } from '../../tournament/types';
+import { PlayerEditModal } from '../../players/components/PlayerEditModal';
 import { PlayerAvatar } from '../../players/components/PlayerAvatar';
 import { Overlay } from '../../../components/overlay';
 import { Button, IconButton, cn } from '../../../components/ui';
 import { getReassignBlockReason, reassignReplacesEmptyQual, type ReassignTargetQual } from '../reassignRules';
-import { PLAYSTYLE_OPTIONS } from '../../players/playstyleOptions';
 
 const tabClass = (active: boolean) =>
   cn(
     'flex-1 shrink-0 cursor-pointer border-0 border-b-2 p-3 text-sm font-bold max-md:flex-none max-md:whitespace-nowrap',
     active ? 'border-gold-bright bg-surface text-white' : 'border-transparent bg-transparent text-fg-muted'
   );
-
-const labelClass = 'mb-1.5 block text-caption font-bold text-fg-muted';
 
 const fieldClass = 'w-full rounded-md border border-line bg-elevated px-3 py-2 text-sm text-white';
 
@@ -29,7 +27,7 @@ export interface IdentityResolutionModalProps {
     action: 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL' | 'CREATE_NEW_PLAYER',
     options?: {
       targetPlayerId?: string;
-      newPlayer?: { name: string; country?: string; playstyle?: string };
+      newPlayer?: IdentityNewPlayerInput;
     }
   ) => Promise<void>;
   isSubmitting?: boolean;
@@ -44,18 +42,53 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
   onResolve,
   isSubmitting = false,
 }) => {
-  // Always default to 'reassign' as the first tab
-  const [activeTab, setActiveTab] = useState<'reassign' | 'add_global' | 'confirm'>('reassign');
+  // Always default to 'reassign' as the first tab. Add Competitor opens the shared competitor form instead of a tab.
+  const [activeTab, setActiveTab] = useState<'reassign' | 'confirm'>('reassign');
+  const [isAddingCompetitor, setIsAddingCompetitor] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
 
-  const [newName, setNewName] = useState(session?.playerName || '');
-  const [newCountry, setNewCountry] = useState(session?.country || '');
-  const [newPlaystyle, setNewPlaystyle] = useState('DAS');
   const [error, setError] = useState<string | null>(null);
   const titleId = useId();
 
   if (!isOpen || !session) return null;
+
+  if (isAddingCompetitor) {
+    // A provisional competitor already has a profile; start from it so nothing they entered is lost.
+    const provisional = playersPool.find(p => p.id === session.playerId);
+    return (
+      <PlayerEditModal
+        isOpen
+        onClose={() => setIsAddingCompetitor(false)}
+        prefill={{
+          name: provisional?.name || session.playerName,
+          country: provisional?.country || session.country || undefined,
+          twitchUsername: session.submittedTwitchUsername || provisional?.twitchUsername || undefined,
+          displayName: provisional?.displayName,
+          nickname: provisional?.nickname,
+          playstyle: provisional?.playstyle,
+          personalBest: provisional?.personalBest,
+          notes: provisional?.notes,
+        }}
+        existingNames={playersPool.filter(p => p.id !== session.playerId).map(p => p.name)}
+        onSave={async player => {
+          await onResolve(session.identityStatus === 'PROVISIONAL_NEW' ? 'PROMOTE_PROVISIONAL' : 'CREATE_NEW_PLAYER', {
+            newPlayer: {
+              name: player.name,
+              country: player.country,
+              playstyle: player.playstyle,
+              displayName: player.displayName ?? '',
+              nickname: player.nickname ?? '',
+              twitchUsername: player.twitchUsername,
+              personalBest: player.personalBest,
+              notes: player.notes ?? '',
+            },
+          });
+          return true;
+        }}
+      />
+    );
+  }
 
   const qualByPlayer = new Map<string, ReassignTargetQual>(
     sessions.map(s => [s.playerId, { status: s.status, scoreCount: s.scores.length }])
@@ -97,7 +130,7 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
     <Overlay
       open
       onClose={onClose}
-      dirty={selectedTargetId !== null || newName !== (session?.playerName || '') || newCountry !== (session?.country || '') || newPlaystyle !== 'DAS'}
+      dirty={selectedTargetId !== null}
       busy={isSubmitting}
       aria-labelledby={titleId}
       panelClassName="flex max-h-[90vh] max-w-155 flex-col overflow-hidden rounded-lg border border-line bg-surface shadow-[0_24px_48px_rgba(0,0,0,0.6)]"
@@ -140,10 +173,10 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
             <button
               type="button"
               data-testid="tab-add-global"
-              onClick={() => setActiveTab('add_global')}
-              className={tabClass(activeTab === 'add_global')}
+              onClick={() => setIsAddingCompetitor(true)}
+              className={cn(tabClass(false), 'inline-flex items-center justify-center gap-1.5')}
             >
-              Add Competitor
+              <UserPlus size={14} /> Add Competitor
             </button>
             {session.identityStatus === 'CLAIMED_PENDING_REVIEW' && (
               <button
@@ -256,82 +289,6 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
               </div>
             )}
 
-            {/* TAB 2: Add Competitor (Consolidated) */}
-            {activeTab === 'add_global' && (
-              <div className="flex flex-col gap-3.5">
-                <p className="m-0 text-sm text-fg-secondary">
-                  Register this competitor as an official player in the global directory with confirmed name, country, and playstyle.
-                </p>
-
-                {/* Profile Card Preview */}
-                <div className="flex items-center gap-3 rounded-md border border-line bg-elevated px-4 py-3.5">
-                  <PlayerAvatar
-                    player={{
-                      name: newName || session.playerName,
-                      country: newCountry || undefined,
-                      avatarUrl: session.avatarUrl,
-                      avatarType: (session.avatarType as any) || 'flag',
-                    }}
-                    size={42}
-                  />
-                  <div>
-                    <div className="font-extrabold text-white">{newName || session.playerName}</div>
-                    <div className="text-caption text-fg-muted">
-                      {session.submittedTwitchUsername ? `@${session.submittedTwitchUsername} • ` : ''}
-                      Country: {newCountry || 'Unassigned'} • Style: {newPlaystyle}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Competitor Name / Alias
-                  </label>
-                  <input
-                    type="text"
-                    data-testid="new-player-name-input"
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    placeholder="e.g. Sharky DAS"
-                    className={fieldClass}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelClass}>
-                      Country Code (ISO 2-letter)
-                    </label>
-                    <input
-                      type="text"
-                      data-testid="new-player-country-input"
-                      maxLength={2}
-                      value={newCountry}
-                      onChange={e => setNewCountry(e.target.value.toUpperCase())}
-                      placeholder="e.g. US"
-                      className={cn(fieldClass, 'uppercase')}
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Playstyle
-                    </label>
-                    <select
-                      data-testid="new-player-playstyle-select"
-                      value={newPlaystyle}
-                      onChange={e => setNewPlaystyle(e.target.value)}
-                      className={fieldClass}
-                    >
-                      {PLAYSTYLE_OPTIONS.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* TAB 3: Confirm Binding (Twitch Claims) */}
             {activeTab === 'confirm' && (
               <div className="flex flex-col gap-3.5">
@@ -400,34 +357,6 @@ export const IdentityResolutionModal: React.FC<IdentityResolutionModalProps> = (
                 className="inline-flex items-center gap-1.5 text-sm bg-blue-500 bg-none border-blue-600"
               >
                 <UserX size={15} /> Reassign Run
-              </Button>
-            )}
-
-            {activeTab === 'add_global' && (
-              <Button
-                type="button"
-                data-testid="submit-add-global-button"
-                onClick={() => {
-                  if (newName.trim()) {
-                    const action = session.identityStatus === 'PROVISIONAL_NEW'
-                      ? 'PROMOTE_PROVISIONAL'
-                      : 'CREATE_NEW_PLAYER';
-                    void resolve(action, {
-                      newPlayer: {
-                        name: newName.trim(),
-                        country: newCountry.trim().toUpperCase() || undefined,
-                        playstyle: newPlaystyle,
-                      },
-                    });
-                  }
-                }}
-                disabled={isSubmitting || !newName.trim()}
-                loading={isSubmitting}
-                loadingText="Saving…"
-                variant="primary"
-                className="inline-flex items-center gap-1.5 text-sm bg-green bg-none border-emerald-600"
-              >
-                <UserPlus size={15} /> Add Competitor
               </Button>
             )}
 

@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useTournament } from '../features/tournament/store';
 import { TournamentLayout } from '../components/TournamentLayout';
 import { SpectatorLayout } from '../components/SpectatorLayout';
 import { FinalStandingsTable } from '../features/tournament/components/FinalStandingsTable';
-import { ShareBracketModal } from '../features/bracket/components/ShareBracketModal';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { ObsGutterList } from '../features/obs/components/ObsGutterList';
+import { ObsPageFrame } from '../features/obs/components/ObsPageFrame';
+import { getStandingsGutterRows, parseGutterCount } from '../features/obs/gutterRows';
 import { Button, cn } from '../components/ui';
 
 export const FinalStandingsPage: React.FC = () => {
@@ -17,19 +19,6 @@ export const FinalStandingsPage: React.FC = () => {
 
   const isManageRoute = location.pathname.includes('/manage/');
   const isObsMode = searchParams.get('obs') === 'true';
-
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (isObsMode) {
-      document.body.classList.add('obs-overlay-mode');
-    } else {
-      document.body.classList.remove('obs-overlay-mode');
-    }
-    return () => {
-      document.body.classList.remove('obs-overlay-mode');
-    };
-  }, [isObsMode]);
 
   if (isLoading || !isHydrated) {
     return <LoadingScreen message="Loading final standings..." />;
@@ -49,13 +38,22 @@ export const FinalStandingsPage: React.FC = () => {
 
   const isStandingsGated = tournament.tiers.length === 0 || !tournament.isLocked;
 
+  if (isObsMode && searchParams.get('layout') === 'gutter') {
+    return (
+      <ObsGutterList
+        title="Standings"
+        rows={getStandingsGutterRows(tournament, parseGutterCount(searchParams.get('count')))}
+        emptyText="Awaiting results"
+        chroma={searchParams.get('chroma')}
+      />
+    );
+  }
+
   if (isObsMode) {
     return (
-      <div className="obs-mode-canvas min-h-screen w-full bg-transparent px-6 py-8">
-        <div className="mx-auto w-full max-w-300">
-          <FinalStandingsTable tournament={tournament} isObsMode={true} />
-        </div>
-      </div>
+      <ObsPageFrame chroma={searchParams.get('chroma')}>
+        <FinalStandingsTable tournament={tournament} isObsMode={true} />
+      </ObsPageFrame>
     );
   }
 
@@ -81,18 +79,8 @@ export const FinalStandingsPage: React.FC = () => {
   }
 
   return (
-    <SpectatorLayout
-      tournament={tournament}
-      activeView="standings"
-      onOpenShare={() => setIsShareModalOpen(true)}
-    >
+    <SpectatorLayout tournament={tournament} activeView="standings">
       {mainContent}
-
-      <ShareBracketModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        tournament={tournament}
-      />
     </SpectatorLayout>
   );
 };

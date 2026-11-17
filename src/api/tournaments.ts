@@ -181,6 +181,7 @@ import type {
 } from '../features/tournament/types';
 import { collectBracketMatches, buildMatchRow, buildGameRows } from './matchWrites';
 import { validateEventDates } from '../features/tournament/eventDates';
+import { getMatcherinoHref } from '../features/tournament/matcherino';
 import { assertValidScores } from '../utils/scores';
 
 /** A tournament save with an invalid event date or range. The API answers 400 with the message. */
@@ -415,6 +416,7 @@ export async function getFullTournament(idOrSlug: string): Promise<Tournament | 
     startDate: t.startDate || '',
     endDate: t.endDate || '',
     location: meta.location || '',
+    matcherinoUrl: meta.matcherinoUrl || undefined,
     seedingMethod: meta.seedingMethod || 'QUALIFIERS',
     manualSeeds: meta.manualSeeds || [],
     qualFormat: t.qualFormat as any,
@@ -481,6 +483,7 @@ export async function listTournamentSummaries(): Promise<TournamentSummary[]> {
     endDate: string | null;
     metaOrganizationId: string | null;
     metaLocation: string | null;
+    metaMatcherinoUrl: string | null;
     metaQualMode: string | null;
     metaSeedingMethod: string | null;
     metaIsLocked: boolean | null;
@@ -515,6 +518,7 @@ export async function listTournamentSummaries(): Promise<TournamentSummary[]> {
       endDate: tournaments.endDate,
       metaOrganizationId: sql<string | null>`${tournaments.metadata} -> 'organizationId'`,
       metaLocation: sql<string | null>`${tournaments.metadata} -> 'location'`,
+      metaMatcherinoUrl: sql<string | null>`${tournaments.metadata} -> 'matcherinoUrl'`,
       metaQualMode: sql<string | null>`${tournaments.metadata} -> 'qualMode'`,
       metaSeedingMethod: sql<string | null>`${tournaments.metadata} -> 'seedingMethod'`,
       metaIsLocked: sql<boolean | null>`${tournaments.metadata} -> 'isLocked'`,
@@ -579,6 +583,7 @@ export async function listTournamentSummaries(): Promise<TournamentSummary[]> {
       startDate: t.startDate || '',
       endDate: t.endDate || '',
       location: t.metaLocation || '',
+      matcherinoUrl: t.metaMatcherinoUrl || undefined,
       qualFormat: t.qualFormat as TournamentSummary['qualFormat'],
       qualAverageCount: t.qualAverageCount || undefined,
       pointsConfig: (t.pointsConfig as TournamentSummary['pointsConfig']) || undefined,
@@ -650,6 +655,12 @@ export async function saveFullTournament(tourney: Tournament, options: { syncMat
   const metadata = {
     organizationId: orgId,
     location: tourney.location || '',
+    // Omitted (undefined) keeps the stored link, so a client that never sent it can't clear it; '' clears.
+    // Saved only when it is a web address (see getMatcherinoHref), stored normalized.
+    matcherinoUrl:
+      tourney.matcherinoUrl !== undefined
+        ? getMatcherinoHref(tourney.matcherinoUrl)
+        : ((existing[0]?.metadata as Record<string, any> | null)?.matcherinoUrl ?? null),
     seedingMethod: tourney.seedingMethod || 'QUALIFIERS',
     manualSeeds: tourney.manualSeeds || [],
     qualMode,

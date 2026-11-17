@@ -17,7 +17,28 @@ interface PlayerEditModalProps {
   onClose: () => void;
   onSave: (player: Omit<PlayerProfile, 'id'>) => void | Promise<unknown>;
   initialPlayer?: PlayerProfile | null;
+  /** Starting values for a new competitor (ignored when editing initialPlayer), e.g. from a qual submission. */
+  prefill?: Partial<Omit<PlayerProfile, 'id'>>;
   existingNames: string[];
+}
+
+/** Form values to start from: the player being edited, else the prefill, else blank defaults. Key order matches the dirty check. */
+function getFormStart(initialPlayer?: PlayerProfile | null, prefill?: Partial<Omit<PlayerProfile, 'id'>>) {
+  const p = initialPlayer || prefill;
+  const isEdit = Boolean(initialPlayer);
+  return {
+    name: p?.name || '',
+    displayName: p?.displayName || '',
+    nickname: p?.nickname || '',
+    twitchUsername: p?.twitchUsername || '',
+    country: p?.country || (isEdit ? '' : 'US'),
+    avatarType: (isEdit ? initialPlayer!.avatarType || 'flag' : 'flag') as AvatarType,
+    avatarUrl: isEdit ? initialPlayer!.avatarUrl : undefined,
+    avatarThumbnailUrl: isEdit ? initialPlayer!.avatarThumbnailUrl : undefined,
+    personalBest: String(p?.personalBest || 1000000),
+    playstyle: (p?.playstyle || 'Rolling') as Playstyle,
+    notes: p?.notes || '',
+  };
 }
 
 export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
@@ -25,78 +46,43 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
   onClose,
   onSave,
   initialPlayer,
+  prefill,
   existingNames,
 }) => {
-  const [name, setName] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [twitchUsername, setTwitchUsername] = useState('');
-  const [country, setCountry] = useState('');
-  const [avatarType, setAvatarType] = useState<AvatarType>('flag');
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
-  const [avatarThumbnailUrl, setAvatarThumbnailUrl] = useState<string | undefined>(undefined);
-  const [personalBest, setPersonalBest] = useState<string>('1000000');
-  const [playstyle, setPlaystyle] = useState<Playstyle>('Rolling');
-  const [notes, setNotes] = useState('');
+  // Initial state comes from the player (or prefill) so the first paint already shows it;
+  // the effect below resets the fields when a different player is opened.
+  const start = getFormStart(initialPlayer, prefill);
+  const [name, setName] = useState(start.name);
+  const [displayName, setDisplayName] = useState(start.displayName);
+  const [nickname, setNickname] = useState(start.nickname);
+  const [twitchUsername, setTwitchUsername] = useState(start.twitchUsername);
+  const [country, setCountry] = useState(start.country);
+  const [avatarType, setAvatarType] = useState<AvatarType>(start.avatarType);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(start.avatarUrl);
+  const [avatarThumbnailUrl, setAvatarThumbnailUrl] = useState<string | undefined>(start.avatarThumbnailUrl);
+  const [personalBest, setPersonalBest] = useState<string>(start.personalBest);
+  const [playstyle, setPlaystyle] = useState<Playstyle>(start.playstyle);
+  const [notes, setNotes] = useState(start.notes);
   const [error, setError] = useState<string | null>(null);
-  const initialRef = useRef<Record<string, unknown>>({});
+  const initialRef = useRef<Record<string, unknown>>(start);
   const titleId = useId();
 
   const resetKey = isOpen ? (initialPlayer?.id ?? 'new') : null;
   useEffect(() => {
-    if (initialPlayer) {
-      setName(initialPlayer.name);
-      setDisplayName(initialPlayer.displayName || '');
-      setNickname(initialPlayer.nickname || '');
-      setTwitchUsername(initialPlayer.twitchUsername || '');
-      setCountry(initialPlayer.country || '');
-      setAvatarType(initialPlayer.avatarType || 'flag');
-      setAvatarUrl(initialPlayer.avatarUrl);
-      setAvatarThumbnailUrl(initialPlayer.avatarThumbnailUrl);
-      setPersonalBest(String(initialPlayer.personalBest || 1000000));
-      setPlaystyle(initialPlayer.playstyle || 'Rolling');
-      setNotes(initialPlayer.notes || '');
-      setError(null);
-      initialRef.current = {
-        name: initialPlayer.name,
-        displayName: initialPlayer.displayName || '',
-        nickname: initialPlayer.nickname || '',
-        twitchUsername: initialPlayer.twitchUsername || '',
-        country: initialPlayer.country || '',
-        avatarType: initialPlayer.avatarType || 'flag',
-        avatarUrl: initialPlayer.avatarUrl,
-        avatarThumbnailUrl: initialPlayer.avatarThumbnailUrl,
-        personalBest: String(initialPlayer.personalBest || 1000000),
-        playstyle: initialPlayer.playstyle || 'Rolling',
-        notes: initialPlayer.notes || '',
-      };
-    } else {
-      setName('');
-      setDisplayName('');
-      setNickname('');
-      setTwitchUsername('');
-      setCountry('US');
-      setAvatarType('flag');
-      setAvatarUrl(undefined);
-      setAvatarThumbnailUrl(undefined);
-      setPersonalBest('1000000');
-      setPlaystyle('Rolling');
-      setNotes('');
-      setError(null);
-      initialRef.current = {
-        name: '',
-        displayName: '',
-        nickname: '',
-        twitchUsername: '',
-        country: 'US',
-        avatarType: 'flag',
-        avatarUrl: undefined,
-        avatarThumbnailUrl: undefined,
-        personalBest: '1000000',
-        playstyle: 'Rolling',
-        notes: '',
-      };
-    }
+    const next = getFormStart(initialPlayer, prefill);
+    setName(next.name);
+    setDisplayName(next.displayName);
+    setNickname(next.nickname);
+    setTwitchUsername(next.twitchUsername);
+    setCountry(next.country);
+    setAvatarType(next.avatarType);
+    setAvatarUrl(next.avatarUrl);
+    setAvatarThumbnailUrl(next.avatarThumbnailUrl);
+    setPersonalBest(next.personalBest);
+    setPlaystyle(next.playstyle);
+    setNotes(next.notes);
+    setError(null);
+    initialRef.current = next;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when a different player is opened; live refreshes must not wipe typing
   }, [resetKey]);
 
@@ -390,7 +376,7 @@ export const PlayerEditModal: React.FC<PlayerEditModalProps> = ({
                 className="px-6 py-2 text-sm shadow-gold"
               >
                 <Check size={16} />
-                {initialPlayer ? 'Save Changes' : 'Add Player'}
+                {initialPlayer ? 'Save Changes' : 'Add Competitor'}
               </Button>
             </div>
           </form>

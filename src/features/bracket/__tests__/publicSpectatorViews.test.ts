@@ -1,28 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { Tournament, TournamentTier, MatchScoreRecord } from '../../tournament/types';
+import { TournamentTier, MatchScoreRecord } from '../../tournament/types';
 import { BracketMatch } from '../types';
 import { BracketViewMode } from '../bracketLayout';
 import { getDefaultTierColors } from '../colorUtils';
 
-describe('Public Spectator Views & Share Bracket Specifications', () => {
-  const mockTournament: Tournament = {
-    id: 't-test',
-    slug: 'kc-2026-open',
-    name: 'KC 2026 Open',
-    location: 'Kansas City, MO',
-    organizationId: 'org-1',
-    qualFormat: 'HIGH_SCORE',
-    isLocked: true,
-    tiers: [],
-    playersPool: [
-      { id: 'p1', name: 'BlueScuti', country: 'US', personalBest: 1200000, playstyle: 'Rolling' },
-      { id: 'p2', name: 'Fractal', country: 'US', personalBest: 1150000, playstyle: 'Rolling' },
-    ],
-    matchScores: {},
-    qualifierSubmissions: [],
-    tournamentPlayers: {},
-  };
-
+describe('Public Spectator Views Specifications', () => {
   const mockTier: TournamentTier = {
     id: 'gold',
     slug: 'gold',
@@ -150,35 +132,6 @@ describe('Public Spectator Views & Share Bracket Specifications', () => {
       const isForfeit = Boolean(forfeitRecord.forfeitWinnerId);
       expect(isForfeit).toBe(true);
       expect(forfeitRecord.forfeitWinnerId).toBe('p1');
-    });
-  });
-
-  describe('Share Bracket & Community Integration Presets', () => {
-    const origin = 'https://tournamentmanager.com';
-    const publicUrl = `${origin}/${mockTournament.slug}/${mockTier.slug}`;
-
-    it('constructs canonical spectator URL for tier', () => {
-      expect(publicUrl).toBe('https://tournamentmanager.com/kc-2026-open/gold');
-    });
-
-    it('generates Twitch chat command snippet correctly', () => {
-      const twitchCommand = `!bracket ${publicUrl}`;
-      expect(twitchCommand).toBe('!bracket https://tournamentmanager.com/kc-2026-open/gold');
-    });
-
-    it('generates Discord markdown link snippet correctly', () => {
-      const discordMarkdown = `[🏆 ${mockTournament.name} • ${mockTier.name} Bracket](${publicUrl})`;
-      expect(discordMarkdown).toBe('[🏆 KC 2026 Open • Gold Tier Bracket](https://tournamentmanager.com/kc-2026-open/gold)');
-    });
-
-    it('formats Twitter / X intent share link with encoded components', () => {
-      const twitterIntent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        `Check out the live bracket for ${mockTournament.name} (${mockTier.name})!`
-      )}&url=${encodeURIComponent(publicUrl)}`;
-
-      expect(twitterIntent).toContain('https://twitter.com/intent/tweet?text=');
-      expect(twitterIntent).toContain(encodeURIComponent('Check out the live bracket for KC 2026 Open (Gold Tier)!'));
-      expect(twitterIntent).toContain(encodeURIComponent('https://tournamentmanager.com/kc-2026-open/gold'));
     });
   });
 

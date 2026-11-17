@@ -18,6 +18,8 @@ interface BracketChampionNodeProps {
   onChampHover: (champPlayerId?: string | null) => void;
   onPlayerClick: (pId: string, pName: string, country?: string) => void;
   compact?: boolean;
+  /** OBS: no glow, which would blend with the chroma key. */
+  isObsMode?: boolean;
 }
 
 export const BracketChampionNode: React.FC<BracketChampionNodeProps> = ({
@@ -32,6 +34,7 @@ export const BracketChampionNode: React.FC<BracketChampionNodeProps> = ({
   onChampHover,
   onPlayerClick,
   compact = false,
+  isObsMode = false,
 }) => {
   if (!championPosition || championPosition.width <= 0 || targetChampPlayer === undefined) {
     return null;
@@ -85,7 +88,9 @@ export const BracketChampionNode: React.FC<BracketChampionNodeProps> = ({
           height: `${championPosition.height}px`,
           background: effectiveCardBg,
           borderColor: primaryColor,
-          boxShadow: targetChampPlayer
+          boxShadow: isObsMode
+            ? undefined
+            : targetChampPlayer
             ? hoveredAncestry?.isChampion
               ? `0 0 34px ${primaryColor}, inset 0 0 16px ${primaryColor}44`
               : `0 0 28px ${primaryColor}88`

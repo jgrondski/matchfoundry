@@ -13,16 +13,18 @@ import {
   ShieldCheck,
   Trash2,
   GitBranch,
-  Sheet,
   BarChart3,
   Trophy,
   Settings,
   ExternalLink,
   FlaskConical,
+  HandCoins,
 } from 'lucide-react';
 import { usePinAuth } from '../../auth/AuthContext';
 import { Badge, Button, buttonClasses, cn } from '../../../components/ui';
 import { DEFAULT_TIER_THEME } from '../../../theme/palette';
+import { getAdminNavItems } from '../../../components/adminNavItems';
+import { getMatcherinoHref } from '../matcherino';
 
 const PRIMARY_LINK_HOVER = 'hover:brightness-110 hover:shadow-gold-hover hover:-translate-y-px';
 const SECONDARY_LINK_HOVER = 'hover:bg-highlight hover:border-fg-secondary';
@@ -52,6 +54,21 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const totalPlayers = (tournament.tiers || []).reduce((acc, t) => acc + t.playerCount, 0);
 
   const isDeleteDisabled = tournament.hasRecordedResults;
+  const matcherinoHref = getMatcherinoHref(tournament.matcherinoUrl);
+  const matcherinoLink = matcherinoHref ? (
+    <a
+      href={matcherinoHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-testid="card-matcherino-link"
+      className={buttonClasses({
+        variant: 'secondary',
+        className: cn(variant === 'admin' ? adminLinkClass : publicLinkClass, SECONDARY_LINK_HOVER),
+      })}
+    >
+      <HandCoins size={14} /> Matcherino
+    </a>
+  ) : null;
 
   return (
     <div
@@ -210,6 +227,8 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             <Trophy size={14} color="var(--color-gold-bright, #ffc905)" /> Standings
           </Link>
 
+          {matcherinoLink}
+
           {hasManageAccess && (
             <Link
               to={`/${tournament.slug}/manage/qualifiers`}
@@ -225,45 +244,28 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2 border-t border-line-subtle pt-4">
-          {hasTiers && defaultTier && (
-            <Link
-              to={`/${tournament.slug}/manage/bracket/${defaultTier.slug}`}
-              className={buttonClasses({ variant: 'primary', className: cn(adminLinkClass, PRIMARY_LINK_HOVER) })}
-            >
-              <GitBranch size={14} /> Brackets
-            </Link>
-          )}
+          {getAdminNavItems({
+            slug: tournament.slug,
+            seedingMethod: tournament.seedingMethod,
+            tierSlug: defaultTier?.slug,
+          }).map(item => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.key}
+                to={item.to}
+                data-testid={`card-admin-link-${item.key}`}
+                className={buttonClasses({
+                  variant: item.key === 'bracket' ? 'primary' : 'secondary',
+                  className: cn(adminLinkClass, item.key === 'bracket' ? PRIMARY_LINK_HOVER : SECONDARY_LINK_HOVER),
+                })}
+              >
+                <Icon size={14} /> {item.label}
+              </Link>
+            );
+          })}
 
-          <Link
-            to={hasTiers && defaultTier ? `/${tournament.slug}/manage/sheet?tier=${defaultTier.slug}` : `/${tournament.slug}/manage/sheet`}
-            className={buttonClasses({ variant: 'secondary', className: cn(adminLinkClass, SECONDARY_LINK_HOVER) })}
-          >
-            <Sheet size={14} /> Sheet
-          </Link>
-
-          <Link
-            to={`/${tournament.slug}/manage/qualifiers`}
-            className={buttonClasses({
-              variant: !hasTiers ? 'primary' : 'secondary',
-              className: cn(adminLinkClass, !hasTiers ? PRIMARY_LINK_HOVER : SECONDARY_LINK_HOVER),
-            })}
-          >
-            <BarChart3 size={14} /> Qualifiers
-          </Link>
-
-          <Link
-            to={`/${tournament.slug}/manage/standings`}
-            className={buttonClasses({ variant: 'secondary', className: cn(adminLinkClass, SECONDARY_LINK_HOVER) })}
-          >
-            <Trophy size={14} color="var(--color-gold-bright, #ffc905)" /> Standings
-          </Link>
-
-          <Link
-            to={`/${tournament.slug}/manage/settings`}
-            className={buttonClasses({ variant: 'secondary', className: cn(adminLinkClass, SECONDARY_LINK_HOVER) })}
-          >
-            <Settings size={14} /> Settings
-          </Link>
+          {matcherinoLink}
 
           <Link
             to={hasTiers && defaultTier ? `/${tournament.slug}/${defaultTier.slug}` : `/${tournament.slug}/brackets`}

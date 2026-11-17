@@ -112,12 +112,6 @@ export const STATUS_COLORS = colors({
   matchLoss: '#f43f5e',
 });
 
-/** QR code module colors in the share modal. */
-export const QR_COLORS = colors({
-  dark: '#090d16',
-  light: '#ffffff',
-});
-
 /** OBS chroma-key backgrounds. */
 export const CHROMA_KEY_COLORS = colors({
   green: '#00ff00',
