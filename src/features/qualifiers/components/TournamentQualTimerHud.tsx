@@ -143,7 +143,8 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
       <div
         data-testid="obs-qual-timer-hud"
         className={cn(
-          'inline-flex items-center gap-2 py-1.5 px-3.5 bg-canvas/88 backdrop-blur-sm rounded-md border shadow-[0_4px_12px_rgba(0,0,0,0.5)] font-sans',
+          // Solid fill, no blur or shadow: it sits on the OBS chroma key, and anything translucent gets keyed out.
+          'inline-flex items-center gap-2 py-1.5 px-3.5 bg-canvas rounded-md border font-sans',
           isExpired ? 'border-red/60' : isRunning ? 'border-green-500/40' : 'border-gold/35'
         )}
       >

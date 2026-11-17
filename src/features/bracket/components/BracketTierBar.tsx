@@ -10,12 +10,11 @@ import {
   Maximize2,
   Split,
   ListFilter,
-  Share2,
   Search,
   X,
 } from 'lucide-react';
 import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
-import { Button, buttonClasses, Chip, cn, IconButton } from '../../../components/ui';
+import { buttonClasses, Chip, cn, IconButton } from '../../../components/ui';
 import { THEME_FALLBACK } from '../../../theme/palette';
 
 interface BracketTierBarProps {
@@ -27,7 +26,6 @@ interface BracketTierBarProps {
   isCompact?: boolean;
   onChangeCompact?: (compact: boolean) => void;
   canManage?: boolean;
-  onOpenShare?: () => void;
   playerSearchTerm?: string;
   onPlayerSearchTermChange?: (term: string) => void;
   highlightedPlayerName?: string | null;
@@ -41,7 +39,6 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
   isCompact = false,
   onChangeCompact,
   canManage = true,
-  onOpenShare,
   playerSearchTerm,
   onPlayerSearchTermChange,
   highlightedPlayerName,
@@ -254,20 +251,6 @@ export const BracketTierBar: React.FC<BracketTierBarProps> = ({
               Compact
             </Chip>
           </div>
-        )}
-
-        {/* Share Bracket Button (Only in Manage Mode - Public View has Share in top SpectatorLayout header) */}
-        {canManage && onOpenShare && (
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={onOpenShare}
-            title="Share Bracket"
-            aria-label="Share Bracket"
-          >
-            <Share2 size={13} />
-            <span className="max-md:sr-only">Share</span>
-          </Button>
         )}
       </div>
     </div>

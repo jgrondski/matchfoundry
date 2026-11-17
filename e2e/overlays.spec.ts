@@ -44,13 +44,14 @@ test('read-only overlay closes on backdrop click and Escape', async ({ page }) =
   await page.goto(`/${FIXTURE_SLUG}/${FIXTURE_TIER_SLUG}`);
   await settle(page);
 
-  const share = page.getByRole('button', { name: 'Share', exact: true });
-  await share.click();
+  // A spectator clicking a match opens its read-only details.
+  const matchHeader = page.locator('[id^="bracket-match-"]').first().getByText(/^Match #/);
+  await matchHeader.click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.mouse.click(MODAL_BACKDROP.x, MODAL_BACKDROP.y);
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
-  await share.click();
+  await matchHeader.click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);

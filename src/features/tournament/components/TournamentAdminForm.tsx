@@ -3,6 +3,7 @@ import { Tournament, TournamentTier, QualFormat, QualMode, PointsThreshold, DEFA
 import { useTournament } from '../store';
 import { createDefaultTier } from '../defaults';
 import { validateEventDates } from '../eventDates';
+import { getMatcherinoUrlError } from '../matcherino';
 import {
   Save,
   CheckCircle2,
@@ -95,6 +96,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
   const [startDate, setStartDate] = useState(tournament.startDate || '');
   const [endDate, setEndDate] = useState(tournament.endDate || '');
   const [location, setLocation] = useState(tournament.location || '');
+  const [matcherinoUrl, setMatcherinoUrl] = useState(tournament.matcherinoUrl || '');
   const [seedingMethod, setSeedingMethod] = useState<SeedingMethod>(tournament.seedingMethod || 'QUALIFIERS');
   const [qualFormat, setQualFormat] = useState<QualFormat>(tournament.qualFormat || 'AVERAGE_OF_X');
   const [qualAverageCount, setQualAverageCount] = useState<number | undefined>(tournament.qualAverageCount || 2);
@@ -204,6 +206,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     if (startDate !== (tournament.startDate || '')) return true;
     if (endDate !== (tournament.endDate || '')) return true;
     if (location.trim() !== (tournament.location || '').trim()) return true;
+    if (matcherinoUrl.trim() !== (tournament.matcherinoUrl || '').trim()) return true;
     if (seedingMethod !== (tournament.seedingMethod || 'QUALIFIERS')) return true;
     if (qualFormat !== tournament.qualFormat) return true;
     if (qualAverageCount !== (tournament.qualAverageCount || 2)) return true;
@@ -261,6 +264,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     startDate,
     endDate,
     location,
+    matcherinoUrl,
     seedingMethod,
     qualFormat,
     qualAverageCount,
@@ -310,6 +314,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
       setStartDate(tournament.startDate || '');
       setEndDate(tournament.endDate || '');
       setLocation(tournament.location || '');
+      setMatcherinoUrl(tournament.matcherinoUrl || '');
       setSeedingMethod(tournament.seedingMethod || 'QUALIFIERS');
       setQualFormat(tournament.qualFormat || 'AVERAGE_OF_X');
       setQualAverageCount(tournament.qualAverageCount || 2);
@@ -336,6 +341,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
     setStartDate(tournament.startDate || '');
     setEndDate(tournament.endDate || '');
     setLocation(tournament.location || '');
+    setMatcherinoUrl(tournament.matcherinoUrl || '');
     setSeedingMethod(tournament.seedingMethod || 'QUALIFIERS');
     setQualFormat(tournament.qualFormat || 'AVERAGE_OF_X');
     setQualAverageCount(tournament.qualAverageCount || 2);
@@ -482,6 +488,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
   const saveCurrentConfig = async (): Promise<boolean> => {
     if (tierConfigError) return false;
     if (validateEventDates(startDate, endDate)) return false;
+    if (getMatcherinoUrlError(matcherinoUrl)) return false;
     let updatedTiers: TournamentTier[];
     if (tournament.isLocked) {
       // In locked match play mode, preserve existing active bracket matches, results, and player progression
@@ -549,6 +556,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         startDate,
         endDate,
         location,
+        matcherinoUrl: matcherinoUrl.trim(),
         seedingMethod,
         qualFormat,
         qualAverageCount: parsedAvg,
@@ -570,6 +578,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         setStartDate(saved.startDate || '');
         setEndDate(saved.endDate || '');
         setLocation(saved.location || '');
+        setMatcherinoUrl(saved.matcherinoUrl || '');
         setSeedingMethod(saved.seedingMethod || 'QUALIFIERS');
         setQualFormat(saved.qualFormat || 'AVERAGE_OF_X');
         setQualAverageCount(saved.qualAverageCount || 2);
@@ -804,6 +813,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         endDate={endDate}
         dateError={validateEventDates(startDate, endDate)}
         location={location}
+        matcherinoUrl={matcherinoUrl}
         seedingMethod={seedingMethod}
         qualFormat={qualFormat}
         qualAverageCount={qualAverageCount}
@@ -817,6 +827,7 @@ export const TournamentAdminForm: React.FC<TournamentAdminFormProps> = ({
         onStartDateChange={setStartDate}
         onEndDateChange={setEndDate}
         onLocationChange={setLocation}
+        onMatcherinoUrlChange={setMatcherinoUrl}
         onSeedingMethodChange={setSeedingMethod}
         onQualFormatChange={setQualFormat}
         onQualAverageCountChange={setQualAverageCount}

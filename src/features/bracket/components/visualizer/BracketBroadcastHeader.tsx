@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trophy } from 'lucide-react';
-import { colorWithAlpha } from '../../colorUtils';
+import { blendOver, colorWithAlpha } from '../../colorUtils';
 import { cn } from '../../../../components/ui';
 
 import { HybridStageTab } from './BracketStageNavBar';
@@ -15,6 +15,8 @@ interface BracketBroadcastHeaderProps {
   isObsMode?: boolean;
   chromaHex?: string | null;
   primaryColor: string;
+  /** Opaque card color; on chroma the pills are drawn as solid blends over it instead of rgba. */
+  cardBg?: string;
   isDraft?: boolean;
 }
 
@@ -28,6 +30,7 @@ export const BracketBroadcastHeader: React.FC<BracketBroadcastHeaderProps> = ({
   isObsMode = false,
   chromaHex = null,
   primaryColor,
+  cardBg,
   isDraft = false,
 }) => {
   const getStageLabel = () => {
@@ -83,22 +86,36 @@ export const BracketBroadcastHeader: React.FC<BracketBroadcastHeaderProps> = ({
         <span
           className="text-caption font-extrabold uppercase tracking-wider py-0.5 px-2.5 rounded-full border"
           style={{
-            background: colorWithAlpha(primaryColor, 0.22),
+            background: isChroma ? blendOver(primaryColor, cardBg, 0.22) : colorWithAlpha(primaryColor, 0.22),
             color: primaryColor,
-            borderColor: colorWithAlpha(primaryColor, 0.5),
+            borderColor: isChroma ? blendOver(primaryColor, cardBg, 0.5) : colorWithAlpha(primaryColor, 0.5),
           }}
         >
           {tierName}
         </span>
 
         {isDraft && (
-          <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider py-0.5 px-2.5 rounded-full bg-gold/22 text-gold-bright border border-gold/55">
-            <span className="size-1.5 rounded-full bg-gold-bright shadow-[0_0_6px_var(--color-gold-bright)]" />
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider py-0.5 px-2.5 rounded-full text-gold-bright border',
+              isChroma ? 'border-gold' : 'bg-gold/22 border-gold/55'
+            )}
+            style={isChroma ? { background: cardBg } : undefined}
+          >
+            <span className={cn('size-1.5 rounded-full bg-gold-bright', !isChroma && 'shadow-[0_0_6px_var(--color-gold-bright)]')} />
             Draft Preview
           </span>
         )}
 
-        <span className="text-caption font-semibold text-fg-muted">{getStageLabel()}</span>
+        <span
+          className={cn(
+            'text-caption font-semibold',
+            isChroma ? 'rounded-full px-2.5 py-0.5 text-fg-secondary' : 'text-fg-muted'
+          )}
+          style={isChroma ? { background: cardBg } : undefined}
+        >
+          {getStageLabel()}
+        </span>
       </div>
     </div>
   );

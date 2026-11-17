@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useTournament } from '../features/tournament/store';
 import { TournamentLayout } from '../components/TournamentLayout';
 import { SpectatorLayout } from '../components/SpectatorLayout';
 import { LeaderboardTable } from '../features/qualifiers/components/LeaderboardTable';
 import { ManualSeedingManager } from '../features/tournament/components/seeding/ManualSeedingManager';
-import { ShareBracketModal } from '../features/bracket/components/ShareBracketModal';
 import { LoadingScreen } from '../components/LoadingScreen';
+import { ObsGutterList } from '../features/obs/components/ObsGutterList';
+import { ObsPageFrame } from '../features/obs/components/ObsPageFrame';
+import { getQualifierGutterRows, parseGutterCount } from '../features/obs/gutterRows';
 import { Button } from '../components/ui';
 
 export const PublicLeaderboardPage: React.FC = () => {
@@ -18,19 +20,6 @@ export const PublicLeaderboardPage: React.FC = () => {
 
   const isManageRoute = location.pathname.includes('/manage/');
   const isObsMode = searchParams.get('obs') === 'true';
-
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (isObsMode) {
-      document.body.classList.add('obs-overlay-mode');
-    } else {
-      document.body.classList.remove('obs-overlay-mode');
-    }
-    return () => {
-      document.body.classList.remove('obs-overlay-mode');
-    };
-  }, [isObsMode]);
 
   if (isLoading || !isHydrated) {
     return <LoadingScreen message="Loading leaderboard..." />;
@@ -48,15 +37,24 @@ export const PublicLeaderboardPage: React.FC = () => {
     );
   }
 
+  if (isObsMode && searchParams.get('layout') === 'gutter') {
+    return (
+      <ObsGutterList
+        title={tournament.seedingMethod === 'MANUAL' ? 'Seeding' : 'Qualifiers'}
+        rows={getQualifierGutterRows(tournament, parseGutterCount(searchParams.get('count')))}
+        emptyText="No scores yet"
+        chroma={searchParams.get('chroma')}
+      />
+    );
+  }
+
   // If manual seeding is active, render the Manual Seeding Manager
   if (tournament.seedingMethod === 'MANUAL') {
     if (isObsMode) {
       return (
-        <div className="obs-mode-canvas min-h-screen w-full bg-transparent px-6 py-8">
-          <div className="mx-auto w-full max-w-300">
-            <ManualSeedingManager tournament={tournament} canManage={false} isObsMode={true} />
-          </div>
-        </div>
+        <ObsPageFrame chroma={searchParams.get('chroma')}>
+          <ManualSeedingManager tournament={tournament} canManage={false} isObsMode={true} />
+        </ObsPageFrame>
       );
     }
 
@@ -71,31 +69,19 @@ export const PublicLeaderboardPage: React.FC = () => {
     }
 
     return (
-      <SpectatorLayout
-        tournament={tournament}
-        activeView="leaderboard"
-        onOpenShare={() => setIsShareModalOpen(true)}
-      >
+      <SpectatorLayout tournament={tournament} activeView="leaderboard">
         <main className="mx-auto w-full max-w-300 flex-1 px-6 py-8">
           <ManualSeedingManager tournament={tournament} canManage={false} />
         </main>
-
-        <ShareBracketModal
-          isOpen={isShareModalOpen}
-          onClose={() => setIsShareModalOpen(false)}
-          tournament={tournament}
-        />
       </SpectatorLayout>
     );
   }
 
   if (isObsMode) {
     return (
-      <div className="obs-mode-canvas min-h-screen w-full bg-transparent px-6 py-8">
-        <div className="mx-auto w-full max-w-300">
-          <LeaderboardTable tournament={tournament} isObsMode={true} />
-        </div>
-      </div>
+      <ObsPageFrame chroma={searchParams.get('chroma')}>
+        <LeaderboardTable tournament={tournament} isObsMode={true} />
+      </ObsPageFrame>
     );
   }
 
@@ -110,20 +96,10 @@ export const PublicLeaderboardPage: React.FC = () => {
   }
 
   return (
-    <SpectatorLayout
-      tournament={tournament}
-      activeView="leaderboard"
-      onOpenShare={() => setIsShareModalOpen(true)}
-    >
+    <SpectatorLayout tournament={tournament} activeView="leaderboard">
       <main className="mx-auto w-full max-w-300 flex-1 px-6 py-8">
         <LeaderboardTable tournament={tournament} canManage={false} />
       </main>
-
-      <ShareBracketModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        tournament={tournament}
-      />
     </SpectatorLayout>
   );
 };

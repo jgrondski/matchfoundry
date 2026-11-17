@@ -19,9 +19,12 @@ import {
   Shield,
   Zap,
   LayoutGrid,
+  PanelLeft,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button, cn } from '../components/ui';
 import { CHROMA_KEY_COLORS, THEME_FALLBACK } from '../theme/palette';
+import { getChromaClashes, recommendChroma } from '../features/obs/chroma';
 
 export const OBSHubPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -48,6 +51,23 @@ export const OBSHubPage: React.FC = () => {
   }
 
   const chromaParam = selectedChroma !== 'none' ? `&chroma=${selectedChroma}` : '';
+
+  // Tier colors close to a chroma key get keyed out with the background; flag those presets.
+  const chromaClashes = getChromaClashes(
+    tournament.tiers.map(tier => {
+      const defaults = getDefaultTierColors(tier);
+      return {
+        name: tier.name,
+        primaryColor: tier.primaryColor || defaults.primaryColor,
+        secondaryColor: tier.secondaryColor || defaults.secondaryColor,
+        cardColor: tier.cardColor || defaults.cardColor,
+        textColor: tier.textColor || defaults.textColor,
+        lowerBracketColor: tier.lowerBracketColor || defaults.lowerBracketColor,
+      };
+    })
+  );
+  const recommendedChroma = recommendChroma(chromaClashes);
+  const selectedClashes = selectedChroma !== 'none' ? chromaClashes[selectedChroma] : [];
 
   const copyUrl = (path: string, key: string) => {
     const fullUrl = `${window.location.origin}${path}`;
@@ -94,10 +114,13 @@ export const OBSHubPage: React.FC = () => {
                 { id: 'blue' as const, label: 'Blue', color: CHROMA_KEY_COLORS.blue },
               ].map(opt => {
                 const isSelected = selectedChroma === opt.id;
+                const clashes = opt.id !== 'none' ? chromaClashes[opt.id] : [];
                 return (
                   <button
                     key={opt.id}
                     type="button"
+                    data-testid={`chroma-option-${opt.id}`}
+                    title={clashes.length > 0 ? `Clashes with ${clashes.join(', ')}` : undefined}
                     onClick={() => setSelectedChroma(opt.id)}
                     className={cn(
                       'flex cursor-pointer items-center gap-1.5 rounded-sm border px-2.5 py-1 text-xs max-md:min-h-11',
@@ -110,10 +133,17 @@ export const OBSHubPage: React.FC = () => {
                       <span className="size-2 rounded-full border border-white/40" style={{ background: opt.color }} />
                     )}
                     <span>{opt.label}</span>
+                    {clashes.length > 0 && <AlertTriangle size={11} className="text-red-bright" aria-label="Color clash" />}
                   </button>
                 );
               })}
             </div>
+            {selectedClashes.length > 0 && (
+              <div data-testid="chroma-clash-warning" className="max-w-75 text-xs font-semibold text-red-bright">
+                {selectedClashes.join(', ')} uses a color close to this key and may disappear.
+                {recommendedChroma && ` Use ${recommendedChroma[0].toUpperCase()}${recommendedChroma.slice(1)}.`}
+              </div>
+            )}
           </div>
         </div>
 
@@ -127,31 +157,70 @@ export const OBSHubPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4.5 min-[681px]:grid-cols-2 min-[1041px]:grid-cols-3">
-            {/* Leaderboard Overlay */}
-            {(() => {
-              const url = `/${tournament.slug}/leaderboard?obs=true${chromaParam}`;
-              const key = 'leaderboard-overlay';
-              const isCopied = copiedKey === key;
+            {[
+              {
+                key: 'leaderboard-overlay',
+                title: 'Qualifying Leaderboard',
+                badge: 'Live Table',
+                icon: Trophy,
+                tone: 'gold' as const,
+                url: `/${tournament.slug}/leaderboard?obs=true${chromaParam}`,
+              },
+              {
+                key: 'standings-overlay',
+                title: 'Tournament Standings',
+                badge: 'Final Results',
+                icon: BarChart3,
+                tone: 'sky' as const,
+                url: `/${tournament.slug}/standings?obs=true${chromaParam}`,
+              },
+              {
+                key: 'leaderboard-gutter',
+                title: 'Qualifiers Gutter',
+                badge: 'Narrow Column',
+                icon: PanelLeft,
+                tone: 'gold' as const,
+                url: `/${tournament.slug}/leaderboard?obs=true&layout=gutter${chromaParam}`,
+              },
+              {
+                key: 'standings-gutter',
+                title: 'Standings Gutter',
+                badge: 'Narrow Column',
+                icon: PanelLeft,
+                tone: 'sky' as const,
+                url: `/${tournament.slug}/standings?obs=true&layout=gutter${chromaParam}`,
+              },
+            ].map(card => {
+              const isCopied = copiedKey === card.key;
+              const Icon = card.icon;
               return (
-                <div className={neutralCardClass}>
+                <div key={card.key} className={neutralCardClass}>
                   {/* Title Row */}
                   <div className="flex items-center gap-2.5">
-                    <Trophy size={18} color="var(--color-gold-bright)" className="shrink-0" />
-                    <h3 className="m-0 text-base leading-snug font-bold text-white">
-                      Qualifying Leaderboard
-                    </h3>
+                    <Icon
+                      size={18}
+                      className={cn('shrink-0', card.tone === 'gold' ? 'text-gold-bright' : 'text-sky-400')}
+                    />
+                    <h3 className="m-0 text-base leading-snug font-bold text-white">{card.title}</h3>
                   </div>
 
                   {/* Bottom Row: Chip on Left, Actions on Right */}
                   <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
-                    <span className="rounded-sm border border-gold/35 bg-gold/15 px-2 py-1 text-2xs font-bold whitespace-nowrap text-gold-bright">
-                      Live Table
+                    <span
+                      className={cn(
+                        'rounded-sm border px-2 py-1 text-2xs font-bold whitespace-nowrap',
+                        card.tone === 'gold'
+                          ? 'border-gold/35 bg-gold/15 text-gold-bright'
+                          : 'border-sky-400/35 bg-sky-400/15 text-sky-400'
+                      )}
+                    >
+                      {card.badge}
                     </span>
 
                     <div className="flex items-center gap-2">
                       <Button
                         variant="primary"
-                        onClick={() => copyUrl(url, key)}
+                        onClick={() => copyUrl(card.url, card.key)}
                         className="gap-1.5 px-3 py-1.5 text-xs max-md:size-11 max-md:justify-center max-md:p-0"
                         aria-label="Copy URL"
                       >
@@ -160,7 +229,7 @@ export const OBSHubPage: React.FC = () => {
                       </Button>
                       <Button
                         variant="primary"
-                        onClick={() => openPopout(url)}
+                        onClick={() => openPopout(card.url)}
                         className="px-2.5 py-1.5 text-xs"
                         title="Open Popout"
                       >
@@ -170,52 +239,7 @@ export const OBSHubPage: React.FC = () => {
                   </div>
                 </div>
               );
-            })()}
-
-            {/* Standings Overlay */}
-            {(() => {
-              const url = `/${tournament.slug}/standings?obs=true${chromaParam}`;
-              const key = 'standings-overlay';
-              const isCopied = copiedKey === key;
-              return (
-                <div className={neutralCardClass}>
-                  {/* Title Row */}
-                  <div className="flex items-center gap-2.5">
-                    <BarChart3 size={18} className="text-sky-400 shrink-0" />
-                    <h3 className="m-0 text-base leading-snug font-bold text-white">
-                      Tournament Standings
-                    </h3>
-                  </div>
-
-                  {/* Bottom Row: Chip on Left, Actions on Right */}
-                  <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
-                    <span className="rounded-sm border border-sky-400/35 bg-sky-400/15 px-2 py-1 text-2xs font-bold whitespace-nowrap text-sky-400">
-                      Final Results
-                    </span>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="primary"
-                        onClick={() => copyUrl(url, key)}
-                        className="gap-1.5 px-3 py-1.5 text-xs max-md:size-11 max-md:justify-center max-md:p-0"
-                        aria-label="Copy URL"
-                      >
-                        {isCopied ? <Check size={13} /> : <Copy size={13} />}
-                        <span className="max-md:sr-only">{isCopied ? 'Copied URL!' : 'Copy URL'}</span>
-                      </Button>
-                      <Button
-                        variant="primary"
-                        onClick={() => openPopout(url)}
-                        className="px-2.5 py-1.5 text-xs"
-                        title="Open Popout"
-                      >
-                        <ExternalLink size={13} />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+            })}
           </div>
         </div>
 

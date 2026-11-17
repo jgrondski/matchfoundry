@@ -26,6 +26,7 @@ export function toTournamentSummary(t: Tournament): TournamentSummary {
     startDate: t.startDate || '',
     endDate: t.endDate || '',
     location: t.location || '',
+    matcherinoUrl: t.matcherinoUrl || undefined,
     qualFormat: t.qualFormat,
     qualAverageCount: t.qualAverageCount,
     pointsConfig: t.pointsConfig,

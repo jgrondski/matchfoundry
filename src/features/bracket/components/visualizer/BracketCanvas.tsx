@@ -120,6 +120,7 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
       targetChampPlayer={targetChampPlayer}
       primaryColor={primaryColor}
       secondaryColor={secondaryColor}
+      isObsMode={isObsMode}
     />
   );
 
@@ -156,7 +157,8 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
           <div
             key={sh.id}
             className={cn(
-              'absolute z-10 inline-flex items-center py-1 px-2.5 text-xs font-black uppercase tracking-widest rounded-sm border-[1.5px] shadow-[0_2px_8px_rgba(0,0,0,0.3)]',
+              'absolute z-10 inline-flex items-center py-1 px-2.5 text-xs font-black uppercase tracking-widest rounded-sm border-[1.5px]',
+              !isObsMode && 'shadow-[0_2px_8px_rgba(0,0,0,0.3)]',
               badgeAccentColor && 'border-x-4'
             )}
             style={{
@@ -201,12 +203,13 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
             key={header.roundNumber}
             className={cn(
               compact
-                ? 'absolute z-10 flex h-8.5 items-center justify-center rounded-sm border-[1.5px] text-2xs font-bold uppercase tracking-wider'
+                ? // Thin header in a 36px slot (COMPACT_LAYOUT_CONFIG.headerHeight), leaving ~12px above the first match
+                  'absolute z-10 flex h-6 items-center justify-center rounded-sm border text-2xs font-bold uppercase tracking-wider'
                 : [
                     'absolute z-10 flex items-center justify-center uppercase tracking-widest rounded-sm',
                     isFinals
                       ? 'h-11 text-base font-black border-2'
-                      : 'h-8.5 text-caption font-extrabold border-[1.5px] shadow-[0_2px_8px_rgba(0,0,0,0.4)]',
+                      : cn('h-8.5 text-caption font-extrabold border-[1.5px]', !isObsMode && 'shadow-[0_2px_8px_rgba(0,0,0,0.4)]'),
                   ],
               roundAccentColor && 'border-x-4'
             )}
@@ -221,7 +224,7 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
                 : isFinals
                 ? primaryColor
                 : secondaryColor,
-              boxShadow: isFinals ? `0 0 16px ${primaryColor}44, 0 4px 12px rgba(0, 0, 0, 0.45)` : undefined,
+              boxShadow: isFinals && !isObsMode ? `0 0 16px ${primaryColor}44, 0 4px 12px rgba(0, 0, 0, 0.45)` : undefined,
             }}
           >
             {header.name}
@@ -319,6 +322,7 @@ export const BracketCanvas: React.FC<BracketCanvasProps> = ({
           onChampHover={onChampHover}
           onPlayerClick={onPlayerClick}
           compact={compact}
+          isObsMode={isObsMode}
         />
       )}
     </div>

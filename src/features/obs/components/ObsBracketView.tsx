@@ -4,7 +4,7 @@ import { BracketVisualizer } from '../../bracket/components/BracketVisualizer';
 import { BracketViewMode } from '../../bracket/bracketLayout';
 import { TournamentQualTimerHud } from '../../qualifiers/components/TournamentQualTimerHud';
 import { cn } from '../../../components/ui';
-import { CHROMA_KEY_COLORS } from '../../../theme/palette';
+import { resolveChromaColor } from '../chroma';
 
 export interface ObsBracketViewProps {
   tournament: Tournament;
@@ -27,17 +27,7 @@ export const ObsBracketView: React.FC<ObsBracketViewProps> = ({
     };
   }, []);
 
-  const chromaBg = chroma
-    ? chroma.startsWith('#')
-      ? chroma
-      : chroma.toLowerCase() === 'green'
-      ? CHROMA_KEY_COLORS.green
-      : chroma.toLowerCase() === 'magenta'
-      ? CHROMA_KEY_COLORS.magenta
-      : chroma.toLowerCase() === 'blue'
-      ? CHROMA_KEY_COLORS.blue
-      : `#${chroma}`
-    : 'transparent';
+  const chromaBg = resolveChromaColor(chroma) ?? 'transparent';
 
   return (
     <div

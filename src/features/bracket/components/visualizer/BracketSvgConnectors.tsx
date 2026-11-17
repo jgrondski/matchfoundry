@@ -20,6 +20,11 @@ interface BracketSvgConnectorsProps {
   targetChampPlayer?: SeededPlayer | null;
   primaryColor: string;
   secondaryColor: string;
+  /**
+   * OBS: thicker lines and no glow. A thin line scaled down for 1080p fit is mostly anti-aliased
+   * edge pixels blended with the chroma key, and a keyer removes them with the background.
+   */
+  isObsMode?: boolean;
 }
 
 export const BracketSvgConnectors: React.FC<BracketSvgConnectorsProps> = ({
@@ -33,6 +38,7 @@ export const BracketSvgConnectors: React.FC<BracketSvgConnectorsProps> = ({
   targetChampPlayer,
   primaryColor,
   secondaryColor,
+  isObsMode = false,
 }) => {
   return (
     <svg
@@ -82,12 +88,14 @@ export const BracketSvgConnectors: React.FC<BracketSvgConnectorsProps> = ({
               d={path.d}
               fill="none"
               stroke={isPathInAncestry ? primaryColor : isTargetComplete ? primaryColor : secondaryColor}
-              strokeWidth={isPathInAncestry ? 4 : isTargetComplete ? 2.5 : 1.5}
+              strokeWidth={isPathInAncestry ? 4 : isObsMode ? (isTargetComplete ? 4 : 3) : isTargetComplete ? 2.5 : 1.5}
               strokeLinecap="round"
               strokeLinejoin="round"
               className={cn(!isPathInAncestry && hoveredAncestry && 'opacity-20')}
               style={{
-                filter: isPathInAncestry
+                filter: isObsMode
+                  ? undefined
+                  : isPathInAncestry
                   ? `drop-shadow(0 0 10px ${primaryColor})`
                   : isTargetComplete
                   ? `drop-shadow(0 0 6px ${primaryColor}77)`
@@ -103,12 +111,14 @@ export const BracketSvgConnectors: React.FC<BracketSvgConnectorsProps> = ({
           d={championPath.d}
           fill="none"
           stroke={primaryColor}
-          strokeWidth={targetChampPlayer ? (hoveredAncestry?.isChampion ? 4 : 3) : 2}
+          strokeWidth={targetChampPlayer ? (hoveredAncestry?.isChampion ? 4 : 3) : isObsMode ? 3 : 2}
           strokeLinecap="round"
           strokeDasharray={targetChampPlayer ? 'none' : '4 4'}
           className={cn(hoveredAncestry && !hoveredAncestry.isChampion && 'opacity-20')}
           style={{
-            filter: targetChampPlayer
+            filter: isObsMode
+              ? undefined
+              : targetChampPlayer
               ? hoveredAncestry?.isChampion
                 ? `drop-shadow(0 0 12px ${primaryColor})`
                 : `drop-shadow(0 0 8px ${primaryColor}99)`

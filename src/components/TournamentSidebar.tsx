@@ -11,20 +11,13 @@ import {
   Layers,
   ChevronDown,
   Trophy,
-  BarChart3,
-  Sheet,
-  GitBranch,
-  Scale,
-  Video,
   Users,
-  Settings,
   Globe2,
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
   AlertTriangle,
   Check,
-  CheckCircle2,
   Building2,
   Search,
   ExternalLink,
@@ -34,6 +27,7 @@ import {
 import { usePinAuth } from '../features/auth/AuthContext';
 import { AdminLoginModal } from '../features/auth/AdminLoginModal';
 import { cn, IconButton } from './ui';
+import { getAdminNavItems, type AdminNavKey } from './adminNavItems';
 
 export type SidebarNavView =
   | 'leaderboard'
@@ -306,79 +300,21 @@ export const TournamentSidebar: React.FC<TournamentSidebarProps> = ({
     [activeTourney]
   );
 
-  const navItems = [
-    {
-      key: 'leaderboard' as const,
-      label: activeTourney?.seedingMethod === 'MANUAL' ? 'Seeding' : 'Qualifiers',
-      icon: BarChart3,
-      to: slug ? (isAuthorized ? `/${slug}/manage/qualifiers` : `/${slug}/leaderboard`) : '/',
-      badge: null,
-    },
-    {
-      key: 'standings' as const,
-      label: 'Standings',
-      icon: Trophy,
-      to: slug ? (isAuthorized ? `/${slug}/manage/standings` : `/${slug}/standings`) : '/',
-      badge: null,
-    },
-    {
-      key: 'sheet' as const,
-      label: 'Master Sheet',
-      icon: Sheet,
-      to: slug ? (currentTierSlug ? `/${slug}/manage/sheet?tier=${currentTierSlug}` : `/${slug}/manage/sheet`) : '/',
-      badge: !isAuthorized ? '🔒' : null,
-    },
-    {
-      key: 'bracket' as const,
-      label: 'Brackets',
-      icon: GitBranch,
-      to: slug
-        ? isAuthorized
-          ? (currentTierSlug ? `/${slug}/manage/bracket/${currentTierSlug}` : `/${slug}/manage/bracket`)
-          : (currentTierSlug ? `/${slug}/${currentTierSlug}` : `/${slug}/brackets`)
-        : '/',
-      badge: activeTourney?.tiers.length ? `${activeTourney.tiers.length} Tiers` : null,
-    },
-    {
-      key: 'judge' as const,
-      label: 'Floor Judge',
-      icon: Scale,
-      to: slug ? (currentTierSlug ? `/${slug}/manage/judge?tier=${currentTierSlug}` : `/${slug}/manage/judge`) : '/',
-      badge: !isAuthorized ? '🔒' : null,
-    },
-    {
-      key: 'review' as const,
-      label: 'Qual Review',
-      icon: CheckCircle2,
-      to: slug ? (isAuthorized ? `/${slug}/manage/review` : `/${slug}/manage/review`) : '/',
-      badge: !isAuthorized
-        ? '🔒'
-        : pendingReviewCount > 0
-        ? String(pendingReviewCount)
-        : null,
-    },
-    {
-      key: 'obs' as const,
-      label: 'OBS Hub',
-      icon: Video,
-      to: slug ? `/${slug}/obs` : '/',
-      badge: null,
-    },
-    {
-      key: 'players' as const,
-      label: 'Players',
-      icon: Users,
-      to: slug ? `/${slug}/manage/players` : '/',
-      badge: !isAuthorized ? '🔒' : (activeTourney?.playersPool?.length ? String(activeTourney.playersPool.length) : null),
-    },
-    {
-      key: 'settings' as const,
-      label: 'Settings',
-      icon: Settings,
-      to: slug ? `/${slug}/manage/settings` : '/',
-      badge: !isAuthorized ? '🔒' : null,
-    },
-  ];
+  const navBadges: Partial<Record<AdminNavKey, string | null>> = {
+    sheet: !isAuthorized ? '🔒' : null,
+    bracket: activeTourney?.tiers.length ? `${activeTourney.tiers.length} Tiers` : null,
+    judge: !isAuthorized ? '🔒' : null,
+    review: !isAuthorized ? '🔒' : pendingReviewCount > 0 ? String(pendingReviewCount) : null,
+    players: !isAuthorized ? '🔒' : (activeTourney?.playersPool?.length ? String(activeTourney.playersPool.length) : null),
+    settings: !isAuthorized ? '🔒' : null,
+  };
+  // With no tournament selected every item points home, as before.
+  const navItems = getAdminNavItems({
+    slug: slug || '',
+    seedingMethod: activeTourney?.seedingMethod,
+    tierSlug: currentTierSlug || undefined,
+    isAuthorized,
+  }).map(item => ({ ...item, to: slug ? item.to : '/', badge: navBadges[item.key] ?? null }));
 
   const manageableTournaments = tournamentSummaries.filter(t => isSystemAdmin || canManage(t.slug) || canManage(t.id));
   const filteredTournaments = filterTournamentsByQuery(manageableTournaments, tournamentSearchQuery);

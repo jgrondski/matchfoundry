@@ -5,7 +5,7 @@ import {
   CheckCheck,
 } from 'lucide-react';
 import type { Tournament, PlayerProfile } from '../../tournament/types';
-import type { ReviewQueueSessionSummary } from '../../../api/qualifiers';
+import type { ReviewQueueSessionSummary, IdentityNewPlayerInput } from '../../../api/qualifiers';
 import { deriveSessionsFromTournament } from '../sessionDerivation';
 import { useTournament } from '../../tournament/store';
 import { getAuthHeaders } from '../../auth/AuthContext';
@@ -219,7 +219,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
     action: 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL' | 'CREATE_NEW_PLAYER',
     options?: {
       targetPlayerId?: string;
-      newPlayer?: { name: string; country?: string; playstyle?: string };
+      newPlayer?: IdentityNewPlayerInput;
     }
   ) => {
     if (!selectedIdentity) return null;
@@ -269,7 +269,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({ tournament }) 
     action: 'CONFIRM_IDENTITY' | 'REASSIGN_PLAYER' | 'PROMOTE_PROVISIONAL' | 'CREATE_NEW_PLAYER',
     options?: {
       targetPlayerId?: string;
-      newPlayer?: { name: string; country?: string; playstyle?: string };
+      newPlayer?: IdentityNewPlayerInput;
     }
   ) => {
     const err = await resolve.run(action, options);

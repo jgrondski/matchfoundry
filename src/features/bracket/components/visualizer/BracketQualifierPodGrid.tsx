@@ -24,6 +24,8 @@ interface BracketQualifierPodGridProps {
     targetChampPlayer?: SeededPlayer | null
   ) => React.ReactNode;
   effectiveObsView?: BracketViewMode;
+  /** OBS: no drop shadow, which would blend with the chroma key. */
+  isObsMode?: boolean;
 }
 
 export const BracketQualifierPodGrid: React.FC<BracketQualifierPodGridProps> = ({
@@ -39,12 +41,15 @@ export const BracketQualifierPodGrid: React.FC<BracketQualifierPodGridProps> = (
   lowerBracketRounds,
   renderCanvas,
   effectiveObsView,
+  isObsMode = false,
 }) => {
   const isSideBySide = effectiveObsView === 'fit' || effectiveObsView === 'split';
   const effectiveLbColor = lowerBracketColor || ACCELERATED_HYBRID_POD_PALETTE.LB.border;
 
-  const podCls =
-    'flex flex-col overflow-hidden rounded-md border-[1.5px] border-x-4 shadow-[0_2px_8px_rgba(0,0,0,0.4)]';
+  const podCls = cn(
+    'flex flex-col overflow-hidden rounded-md border-[1.5px] border-x-4',
+    !isObsMode && 'shadow-[0_2px_8px_rgba(0,0,0,0.4)]'
+  );
   const upperPodMinWidth = `${(layoutPreMergeUpper?.totalWidth || 1168) + 24}px`;
   const lowerPodMinWidth = `${(layoutLowerBracket?.totalWidth || 1172) + 24}px`;
 
