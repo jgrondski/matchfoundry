@@ -44,6 +44,7 @@ export const PublicLeaderboardPage: React.FC = () => {
         rows={getQualifierGutterRows(tournament, parseGutterCount(searchParams.get('count')))}
         emptyText="No scores yet"
         chroma={searchParams.get('chroma')}
+        timerTournament={tournament}
       />
     );
   }

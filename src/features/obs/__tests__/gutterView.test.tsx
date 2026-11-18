@@ -56,11 +56,22 @@ describe('qualifier gutter rows', () => {
 
   it('Points shows total points', () => {
     // Default thresholds: 1,250,000 = 4 pts, 1,000,000 = 2 pts, 1,100,000 = 3 pts.
-    const t = withScores([['Alpha', [1250000, 1000000]], ['Bravo', [1100000]]], 'POINTS');
+    const t = withScores(
+      [
+        ['Alpha', [1250000, 1000000]],
+        ['Bravo', [1100000]],
+        ['LowPeak', [400000, 650000]],
+        ['HighPeak', [987654]],
+      ],
+      'POINTS'
+    );
     t.pointsConfig = DEFAULT_POINTS_THRESHOLDS;
+    // 0-point players stay on the list, ordered by and showing their best single score.
     expect(view(t)).toEqual([
-      [1, 'Alpha', null, '6 pts'],
-      [2, 'Bravo', null, '3 pts'],
+      [1, 'Alpha', null, '6'],
+      [2, 'Bravo', null, '3'],
+      [3, 'HighPeak', null, (987654).toLocaleString()],
+      [4, 'LowPeak', null, (650000).toLocaleString()],
     ]);
   });
 
@@ -74,15 +85,16 @@ describe('qualifier gutter rows', () => {
       'HIGH_SCORE'
     );
     expect(view(t)).toEqual([
-      [1, 'TwoMaxes', '2× MAX', (950000).toLocaleString()],
-      [2, 'AllMaxes', '1× MAX', ''],
+      [1, 'TwoMaxes', '2', (950000).toLocaleString()],
+      [2, 'AllMaxes', '1', ''],
       [3, 'NoMaxes', null, (987654).toLocaleString()],
     ]);
   });
 
   it('caps the list at the requested count', () => {
     const t = withScores(Array.from({ length: 30 }, (_, i) => [`P${i}`, 100000 + i] as [string, number]));
-    expect(getQualifierGutterRows(t)).toHaveLength(DEFAULT_GUTTER_COUNT);
+    // No count: every player with a score, not just the first 20.
+    expect(getQualifierGutterRows(t)).toHaveLength(30);
     expect(getQualifierGutterRows(t, 5)).toHaveLength(5);
   });
 
@@ -119,21 +131,49 @@ describe('parseGutterCount', () => {
     ['8', 8],
     ['0', DEFAULT_GUTTER_COUNT],
     ['abc', DEFAULT_GUTTER_COUNT],
-    ['1000', 128],
+    ['1000', 1000],
   ])('%s -> %s', (input, expected) => {
     expect(parseGutterCount(input)).toBe(expected);
   });
 });
 
 describe('ObsGutterList', () => {
-  const rows = [{ key: 'a', rank: 1, name: 'Bravo', value: '1,200,000', badge: '2× MAX', accentColor: '#ffc905' }];
+  const rows = [{ key: 'a', rank: 1, name: 'Bravo', value: '1,200,000', badge: '2', accentColor: '#ffc905' }];
+
+  it('never lets a name shrink below 6 characters (plus the ellipsis)', () => {
+    const html = renderToStaticMarkup(<ObsGutterList title="Qualifiers" rows={rows} emptyText="None" />);
+    expect(html).toMatch(/data-testid="obs-gutter-name" class="[^"]*min-w-\[7ch\]/);
+    expect(html).not.toMatch(/data-testid="obs-gutter-name" class="[^"]*min-w-0/);
+  });
+
+  it('the maxes chip shows just the count', () => {
+    const html = renderToStaticMarkup(<ObsGutterList title="Qualifiers" rows={rows} emptyText="None" />);
+    expect(html).toMatch(/data-testid="obs-gutter-badge"[^>]*>2<\/span>/);
+    expect(html).not.toContain('MAX<');
+  });
+
+  it('shows the large qualifier countdown while quals are open, and nothing once they close', () => {
+    const open = withScores([['Alpha', 900000]]);
+    const html = renderToStaticMarkup(
+      <ObsGutterList title="Qualifiers" rows={rows} emptyText="None" chroma="green" timerTournament={open} />
+    );
+    expect(html).toContain('data-testid="obs-qual-timer-hud"');
+    // Sized to the gutter's width, with no label above the digits.
+    expect(html).toMatch(/text-\[clamp\([^\]]*cqw/);
+    expect(html).not.toContain('Qual Time Left<');
+
+    const closed = { ...open, qualsClosed: true };
+    const none = renderToStaticMarkup(
+      <ObsGutterList title="Qualifiers" rows={rows} emptyText="None" timerTournament={closed} />
+    );
+    expect(none).not.toContain('obs-qual-timer-hud');
+  });
 
   it('renders rank, name and value on solid rows over the chroma color', () => {
     const html = renderToStaticMarkup(<ObsGutterList title="Qualifiers" rows={rows} emptyText="None" chroma="green" />);
     expect(html).toContain(`background:${CHROMA_KEY_COLORS.green}`);
     expect(html).toContain('Bravo');
     expect(html).toContain('1,200,000');
-    expect(html).toContain('2× MAX');
     expect(html).not.toMatch(/rgba\(|opacity-|shadow-/);
     // Narrow view shows no secondary data (flags, playstyle, attempts).
     expect(html).not.toContain('Verified');

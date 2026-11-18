@@ -13,6 +13,8 @@ export interface TournamentQualTimerHudProps {
   readOnly?: boolean;
   sidebar?: boolean;
   isCollapsed?: boolean;
+  /** OBS gutter column: full width, stacked, with the largest countdown. Needs isObsMode. */
+  gutter?: boolean;
 }
 
 export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
@@ -22,6 +24,7 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
   readOnly = false,
   sidebar = false,
   isCollapsed = false,
+  gutter = false,
 }) => {
   const { canManage } = usePinAuth();
   const { formattedTime, isRunning, isExpired, toggleRunning, resetTimer } =
@@ -139,31 +142,60 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
   }
 
   if (isObsMode) {
+    // Solid fill, no blur or shadow: it sits on the OBS chroma key, and anything translucent gets keyed out.
+    // Borders are solid colors too, for the same reason.
+    const obsBorder = isExpired ? 'border-red' : isRunning ? 'border-green-500' : 'border-gold';
+    const obsIconColor = isExpired ? 'text-red' : isRunning ? 'text-green-500' : 'text-gold-bright';
+    const obsLabel = isExpired ? 'Quals Expired' : isRunning ? 'Qual Time Left' : 'Quals Paused';
+    const obsLabelColor = isExpired ? 'text-red-300' : isRunning ? 'text-green-300' : 'text-gold-bright';
+
+    if (gutter) {
+      // Just the digits, sized to the gutter's width (container query units) so they fill the column at
+      // any OBS source size. No label: the border color shows running (green), paused (gold) or expired (red).
+      return (
+        <div
+          data-testid="obs-qual-timer-hud"
+          title={obsLabel}
+          className={cn('@container w-full rounded-sm border-2 bg-canvas px-1 font-sans', obsBorder)}
+        >
+          <span
+            className={cn(
+              // Monospace digits are ~0.6em wide: "00:00:00" (8 chars) fills the width at 19cqw, "00:00" at 30cqw.
+              'block text-center font-mono tabular-nums font-black leading-none py-[0.08em]',
+              formattedTime.length > 5 ? 'text-[clamp(2rem,19cqw,12rem)]' : 'text-[clamp(2rem,30cqw,16rem)]',
+              isExpired ? 'text-red' : 'text-white'
+            )}
+          >
+            {formattedTime}
+          </span>
+        </div>
+      );
+    }
+
     return (
       <div
         data-testid="obs-qual-timer-hud"
         className={cn(
-          // Solid fill, no blur or shadow: it sits on the OBS chroma key, and anything translucent gets keyed out.
-          'inline-flex items-center gap-2 py-1.5 px-3.5 bg-canvas rounded-md border font-sans',
-          isExpired ? 'border-red/60' : isRunning ? 'border-green-500/40' : 'border-gold/35'
+          'inline-flex items-center bg-canvas rounded-md font-sans',
+          compact ? 'gap-2 py-1.5 px-3.5 border' : 'gap-3 py-2 px-4 border-2',
+          obsBorder
         )}
       >
-        <Clock
-          size={16}
-          className={cn(isExpired ? 'text-red' : isRunning ? 'text-green-500' : 'text-gold-bright')}
-        />
+        <Clock size={compact ? 16 : 30} className={obsIconColor} />
         <div className="flex flex-col">
           <span
             className={cn(
-              'text-3xs font-extrabold uppercase tracking-widest leading-none',
-              isExpired ? 'text-red-300' : isRunning ? 'text-green-300' : 'text-gold-bright'
+              'font-extrabold uppercase tracking-widest leading-none',
+              compact ? 'text-3xs' : 'text-sm',
+              obsLabelColor
             )}
           >
-            {isExpired ? 'Quals Expired' : isRunning ? 'Qual Time Left' : 'Quals Paused'}
+            {obsLabel}
           </span>
           <span
             className={cn(
-              'font-mono tabular-nums text-lg font-black tracking-wide leading-tight',
+              'font-mono tabular-nums font-black tracking-wide leading-tight',
+              compact ? 'text-lg' : 'text-4xl',
               isExpired ? 'text-red' : 'text-white'
             )}
           >
@@ -179,19 +211,20 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
       data-testid="tournament-qual-timer-hud"
       className={cn(
         'inline-flex items-center bg-elevated border rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3)]',
-        compact ? 'flex-wrap gap-2 py-1 px-2.5' : 'gap-3 py-1.5 px-3.5',
+        compact ? 'flex-wrap gap-2.5 py-1 px-3' : 'gap-3 py-2 px-4',
         isExpired ? 'border-red/50' : isRunning ? 'border-green-500/35' : 'border-line'
       )}
     >
-      <div className={cn('flex items-center gap-2', compact && 'min-w-0')}>
+      <div className={cn('flex items-center gap-2.5', compact && 'min-w-0')}>
         <Clock
-          size={compact ? 14 : 16}
+          size={compact ? 20 : 26}
           className={cn(isExpired ? 'text-red' : isRunning ? 'text-green-500' : 'text-gold-bright')}
         />
         <div className={cn('flex flex-col', compact && 'min-w-0')}>
           <span
             className={cn(
-              'text-3xs font-extrabold uppercase tracking-wider leading-none',
+              'font-extrabold uppercase tracking-wider leading-none',
+              compact ? 'text-2xs' : 'text-xs',
               isExpired ? 'text-red-300' : isRunning ? 'text-green-300' : 'text-fg-muted'
             )}
           >
@@ -200,7 +233,7 @@ export const TournamentQualTimerHud: React.FC<TournamentQualTimerHudProps> = ({
           <span
             className={cn(
               'font-mono tabular-nums font-black tracking-wide leading-tight',
-              compact ? 'text-base' : 'text-lg',
+              compact ? 'text-2xl' : 'text-3xl',
               isExpired ? 'text-red' : 'text-white'
             )}
           >

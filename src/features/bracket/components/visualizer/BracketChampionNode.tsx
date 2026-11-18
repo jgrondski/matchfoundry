@@ -130,9 +130,14 @@ export const BracketChampionNode: React.FC<BracketChampionNodeProps> = ({
       </div>
 
       {/* Champion Subtitle */}
+      {/* OBS: on a solid plate, since the trophy's thin strokes keyed out when drawn on the chroma color. */}
       <div
-        className="mt-2.5 flex items-center gap-1.5 text-base font-extrabold tracking-wider capitalize"
-        style={{ color: primaryColor }}
+        data-testid="champion-subtitle"
+        className={cn(
+          'mt-2.5 flex items-center gap-1.5 text-base font-extrabold tracking-wider capitalize',
+          isObsMode && 'rounded-sm py-1 px-3'
+        )}
+        style={{ color: primaryColor, background: isObsMode ? effectiveCardBg : undefined }}
       >
         <Trophy size={18} color={primaryColor} />
         <span>{tierName} Champion</span>
