@@ -82,6 +82,37 @@ describe('OBS bracket is fully opaque over a chroma key', () => {
     expect(header).not.toMatch(/bg-gold\/\d+/);
   });
 
+  it('the header trophy, title, Draft Preview pill and countdown sit on one solid panel, not on the key', () => {
+    const tournament = draftTournament();
+    tournament.qualsClosed = false;
+    const html = renderObs(tournament, 'green');
+    const start = html.indexOf('data-testid="broadcast-header-solid-panel"');
+    expect(start).toBeGreaterThan(-1);
+    const panel = html.slice(start, html.indexOf('Draft Preview', start) + 20);
+    expect(panel).toMatch(/style="background:#[0-9a-f]{6}"/i);
+    expect(panel).toContain('lucide-trophy');
+    // The countdown lives in the header row, not floating over the bracket.
+    const headerAt = html.indexOf('id="bracket-broadcast-header"');
+    const timerAt = html.indexOf('data-testid="obs-qual-timer-hud"');
+    expect(timerAt).toBeGreaterThan(headerAt);
+    expect(timerAt).toBeLessThan(html.indexOf('data-testid="champion-subtitle"'));
+    expect(html).not.toContain('absolute top-4 right-4');
+  });
+
+  it('the champion subtitle (trophy + "Champion") has a solid plate in OBS', () => {
+    const html = renderObs(draftTournament(), 'green');
+    expect(html).toMatch(/data-testid="champion-subtitle"[^>]*style="[^"]*background:#[0-9a-f]{6}/i);
+  });
+
+  it('the 1080p fit view centers the bracket vertically as well as horizontally', () => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <ObsBracketView tournament={draftTournament()} tier={draftTournament().tiers[0]} viewMode="fit" chroma="green" />
+      </MemoryRouter>
+    );
+    expect(html).toMatch(/class="[^"]*items-center[^"]*justify-center[^"]*"/);
+  });
+
   it('a completed match keeps its loser at full opacity in OBS', () => {
     const { tournament, loserName } = lockedWithLoser();
     const html = renderObs(tournament, 'green');

@@ -9,38 +9,42 @@ export interface GutterRow {
   rank: number;
   name: string;
   value: string;
-  /** Short tag shown before the value, e.g. "2× MAX" for # of Maxes. */
+  /** Short tag shown before the value, e.g. "2" (the max count) for # of Maxes. */
   badge?: string;
   /** Tier color for rows already placed in a tier, shown as a left edge. */
   accentColor?: string;
 }
 
-export const DEFAULT_GUTTER_COUNT = 20;
+/** By default the gutter lists every player; the OBS operator crops or resizes the source. */
+export const DEFAULT_GUTTER_COUNT = Infinity;
 
-/** Parses `?count=`; anything missing or invalid falls back to the default. */
+/** Parses the optional `?count=` cap; anything missing or invalid means no cap. */
 export function parseGutterCount(param: string | null): number {
   const n = Number(param);
-  return Number.isInteger(n) && n > 0 ? Math.min(n, 128) : DEFAULT_GUTTER_COUNT;
+  return Number.isInteger(n) && n > 0 ? n : DEFAULT_GUTTER_COUNT;
 }
 
 /**
  * The gutter's number for one qualifier row, by qual format:
- * - POINTS: total points ("180 pts").
+ * - POINTS: total points, just the number ("6"). A player with 0 points shows their best single
+ *   score instead ("987,654"): that is the tiebreaker that orders them, so it decides their seed.
  * - AVERAGE_OF_X: the average, rounded to a whole score.
- * - HIGH_SCORE (# of Maxes): the max count as a badge plus the kicker; no badge with 0 maxes;
+ * - HIGH_SCORE (# of Maxes): the max count (just the number) as a chip plus the kicker; no chip with 0 maxes;
  *   no value when every score was a max (there is no kicker).
  */
 export function formatQualifierGutterValue(
-  row: Pick<LeaderboardRankRow, 'finalScore' | 'maxoutCount' | 'kickerScore'>,
+  row: Pick<LeaderboardRankRow, 'finalScore' | 'maxoutCount' | 'kickerScore' | 'peakScore'>,
   format: Tournament['qualFormat']
 ): Pick<GutterRow, 'value' | 'badge'> {
-  if (format === 'POINTS') return { value: `${row.finalScore} pts` };
+  if (format === 'POINTS') {
+    return { value: (row.finalScore > 0 ? row.finalScore : row.peakScore || 0).toLocaleString() };
+  }
   if (format === 'HIGH_SCORE') {
     const maxes = row.maxoutCount || 0;
     const kicker = row.kickerScore || 0;
     return {
       value: kicker > 0 ? kicker.toLocaleString() : '',
-      badge: maxes > 0 ? `${maxes}× MAX` : undefined,
+      badge: maxes > 0 ? String(maxes) : undefined,
     };
   }
   return { value: Math.round(row.finalScore).toLocaleString() };
@@ -63,7 +67,13 @@ export function getQualifierGutterRows(tournament: Tournament, count: number = D
 
   const hasBrackets = tournament.tiers.length > 0;
   return deriveLeaderboard(tournament)
-    .filter(row => !row.isDisqualified && row.attempts.length > 0 && row.finalScore > 0)
+    // Points keeps its 0-point players: they still qualify and are seeded by their best score.
+    .filter(
+      row =>
+        !row.isDisqualified &&
+        row.attempts.length > 0 &&
+        (row.finalScore > 0 || tournament.qualFormat === 'POINTS')
+    )
     .slice(0, count)
     .map((row, i) => ({
       key: row.player.id,

@@ -18,6 +18,8 @@ interface BracketBroadcastHeaderProps {
   /** Opaque card color; on chroma the pills are drawn as solid blends over it instead of rgba. */
   cardBg?: string;
   isDraft?: boolean;
+  /** Content at the right end of the header (OBS: the qualifier countdown). */
+  right?: React.ReactNode;
 }
 
 export const BracketBroadcastHeader: React.FC<BracketBroadcastHeaderProps> = ({
@@ -32,6 +34,7 @@ export const BracketBroadcastHeader: React.FC<BracketBroadcastHeaderProps> = ({
   primaryColor,
   cardBg,
   isDraft = false,
+  right,
 }) => {
   const getStageLabel = () => {
     if (!isAcceleratedHybrid) {
@@ -70,7 +73,13 @@ export const BracketBroadcastHeader: React.FC<BracketBroadcastHeaderProps> = ({
         borderBottomColor: isChroma ? undefined : colorWithAlpha(primaryColor, 0.25, 'var(--color-line)'),
       }}
     >
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Chroma: everything sits on one solid panel. The trophy's thin strokes and the pills'
+          anti-aliased outlines blended with the key color when drawn straight on it, and got keyed out. */}
+      <div
+        data-testid={isChroma ? 'broadcast-header-solid-panel' : undefined}
+        className={cn('flex flex-wrap items-center gap-3', isChroma && 'rounded-md py-2 px-3.5')}
+        style={isChroma ? { background: cardBg } : undefined}
+      >
         <div className="flex items-center gap-2">
           <Trophy size={isObsMode ? 18 : 20} color="var(--color-gold-bright)" />
           <span
@@ -108,15 +117,13 @@ export const BracketBroadcastHeader: React.FC<BracketBroadcastHeaderProps> = ({
         )}
 
         <span
-          className={cn(
-            'text-caption font-semibold',
-            isChroma ? 'rounded-full px-2.5 py-0.5 text-fg-secondary' : 'text-fg-muted'
-          )}
-          style={isChroma ? { background: cardBg } : undefined}
+          className={cn('text-caption font-semibold', isChroma ? 'text-fg-secondary' : 'text-fg-muted')}
         >
           {getStageLabel()}
         </span>
       </div>
+
+      {right}
     </div>
   );
 };

@@ -47,6 +47,8 @@ interface BracketVisualizerProps {
   compact?: boolean;
   chroma?: string | null;
   highlightedPlayerId?: string | null;
+  /** OBS: shown at the right end of the broadcast header (e.g. the qualifier countdown). */
+  obsHeaderRight?: React.ReactNode;
 }
 
 export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
@@ -58,6 +60,7 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
   compact = false,
   chroma,
   highlightedPlayerId,
+  obsHeaderRight,
 }) => {
   const [searchParams] = useSearchParams();
   const effectiveObsView = (obsView || (searchParams.get('view') as BracketViewMode) || (isObsMode ? 'fit' : 'standard')) as BracketViewMode;
@@ -703,6 +706,7 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
           primaryColor={primaryColor}
           cardBg={effectiveCardBg}
           isDraft={!tournament.isLocked}
+          right={obsHeaderRight}
         />
       )}
 
@@ -724,7 +728,9 @@ export const BracketVisualizer: React.FC<BracketVisualizerProps> = ({
         <div
           ref={fitContainerRef}
           className={cn(
-            'flex min-h-0 flex-1 flex-col items-center justify-start overflow-hidden',
+            // OBS centers the scaled bracket both ways; the in-app fit view stays top-aligned under its toolbar.
+            'flex min-h-0 flex-1 flex-col items-center overflow-hidden',
+            isObsMode ? 'justify-center' : 'justify-start',
             isObsMode ? 'w-screen pt-1' : 'w-full pt-2'
           )}
           style={{ background: effectiveCanvasBg }}

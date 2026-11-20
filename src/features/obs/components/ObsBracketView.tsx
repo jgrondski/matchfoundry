@@ -37,9 +37,7 @@ export const ObsBracketView: React.FC<ObsBracketViewProps> = ({
       )}
       style={{ background: chromaBg }}
     >
-      <div className="absolute top-4 right-4 z-100">
-        <TournamentQualTimerHud tournament={tournament} isObsMode={true} readOnly={true} />
-      </div>
+      {/* The countdown sits in the header row, so the fit view scales the bracket below it instead of under it. */}
       <BracketVisualizer
         tournament={tournament}
         tier={tier}
@@ -47,6 +45,7 @@ export const ObsBracketView: React.FC<ObsBracketViewProps> = ({
         canManage={false}
         obsView={viewMode}
         chroma={chroma}
+        obsHeaderRight={<TournamentQualTimerHud tournament={tournament} isObsMode={true} readOnly={true} />}
       />
     </div>
   );
